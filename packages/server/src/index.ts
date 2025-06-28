@@ -1,74 +1,29 @@
-import {
-    HandlerDecorations,
-    Lifecycle,
-    //PluginSpecificConfiguration,
-    //Request,
-    ReqRefDefaults,
-    //ResponseToolkit,
-    //RouteOptions,
-    Server,
-    ServerRoute,
-    //ServerOptions,
-    //server,
-    //RequestRoute,
-    //RouteSettings,
-    ReqRef,
-    ServerOptions,
-    ServerApplicationState,
-    server
-    //RequestQuery,
-    //RequestApplicationState,
-    //UserCredentials,
-    //AppCredentials,
-    //ServerAuthSchemeObjectApi,
-    //RouteRules,
-    //RouteOptionsApp,
-    //InternalRequestDefaults
-} from '@hapi/hapi';
-//import stream from 'node:stream'
+import Hapi from '@hapi/hapi';
 import Hoek from '@hapi/hoek'
 import Boom from '@hapi/boom'
-import { KaviAuthOptions } from './auth';
 
-export type PartialServerRoute<Refs extends ReqRef = ReqRefDefaults> = Partial<ServerRoute<Refs>>
+export type PartialServerRoute<Refs extends Hapi.ReqRef = Hapi.ReqRefDefaults> = Partial<Hapi.ServerRoute<Refs>>
 
-export interface KaviServerRoute<Refs extends ReqRef = ReqRefDefaults> extends PartialServerRoute<Refs> {
+export interface KaviServerRoute<Refs extends Hapi.ReqRef = Hapi.ReqRefDefaults> extends PartialServerRoute<Refs> {
     /**
      * if true, it will set options.auth.startegy = 'kavi'
      */
     auth?: boolean
 }
 
-/*
-export interface KaviRequestDefaults extends InternalRequestDefaults {
-    Server: Server;
-
-    Payload: stream.Readable | Buffer | string | object;
-    Query: RequestQuery;
-    Params: Record<string, any>;
-    Pres: Record<string, any>;
-    Headers: Record<string, any>;
-    RequestApp: RequestApplicationState;
-
-    AuthUser: UserCredentials;
-    AuthApp: AppCredentials;
-    AuthApi: ServerAuthSchemeObjectApi;
-    AuthCredentialsExtra: Record<string, unknown>;
-    AuthArtifactsExtra: Record<string, unknown>;
-
-    Rules: RouteRules;
-    Bind: object | null;
-    RouteApp: RouteOptionsApp;
+export type KaviAuthOptions = {
+    tokenType?: string;
+    validate?: (request: Hapi.Request<Hapi.ReqRefDefaults>, token: string, h: Hapi.ResponseToolkit<Hapi.ReqRefDefaults>) =>
+        Promise<{ isValid?: boolean, artifacts?: unknown, credentials?: Hapi.AuthCredentials, message?: string, scheme?: string }>
 }
-    */
 
-export interface KaviServerOptions extends ServerOptions {
+export interface KaviServerOptions extends Hapi.ServerOptions {
     auth?: KaviAuthOptions
 }
 
-export class KaviServer<A = ServerApplicationState> {
+export class KaviServer<A = Hapi.ServerApplicationState> {
 
-    #server: Server<A>;
+    #server: Hapi.Server<A>;
 
     get server() {
         return this.#server
@@ -77,7 +32,7 @@ export class KaviServer<A = ServerApplicationState> {
     constructor(opts?: KaviServerOptions | undefined) {
         const { auth: authOpts, ...serverOpts } = opts || {}
 
-        this.#server = server(serverOpts)
+        this.#server = Hapi.server(serverOpts)
 
         // register the auth scheme
         this.#server.auth.scheme('kavi-auth', (_server, options) => {
@@ -135,9 +90,9 @@ export class KaviServer<A = ServerApplicationState> {
         this.#server.auth.strategy('kavi', 'kavi-auth', authOpts);
     }
 
-    route<Refs extends ReqRef = ReqRefDefaults>(
+    route<Refs extends Hapi.ReqRef = Hapi.ReqRefDefaults>(
         serverRoute: KaviServerRoute<Refs>,
-        handler: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>): this {
+        handler: Hapi.HandlerDecorations | Hapi.Lifecycle.Method<Refs, Hapi.Lifecycle.ReturnValue<Refs>>): this {
         // Set defaults
         if (!serverRoute.method) serverRoute.method = '*';
         if (!serverRoute.path) serverRoute.path = '/';
@@ -164,7 +119,7 @@ export class KaviServer<A = ServerApplicationState> {
 
         route.handler = handler
 
-        this.#server.route(route as ServerRoute<Refs>);
+        this.#server.route(route as Hapi.ServerRoute<Refs>);
 
         return this;
     }
