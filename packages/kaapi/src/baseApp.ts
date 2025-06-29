@@ -8,7 +8,7 @@ import { KaapiServerRoute, KaapiServer, KaapiServerOptions } from '@kaapi/server
 import { ILogger } from './services/log';
 import { IMessaging, IMessagingSender, IMessagingSubscribeConfig, IPublishMethod, ISubscribeMethod } from './services/messaging';
 
-export interface IKaviApp extends IMessaging {
+export interface IKaapiApp extends IMessaging {
     log: ILogger
     emit: IPublishMethod
     on: ISubscribeMethod
@@ -18,7 +18,7 @@ export interface IKaviApp extends IMessaging {
         handler: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>): this
 }
 
-export abstract class KaviBaseApp implements IKaviApp {
+export abstract class KaapiBaseApp implements IKaapiApp {
     abstract log: ILogger
     abstract emit<T = unknown>(topic: string, message: T): Promise<void>
     abstract on<T = unknown>(topic: string, handler: (message: T, sender: IMessagingSender) => void | Promise<void>, conf?: IMessagingSubscribeConfig | undefined): Promise<void>
@@ -28,7 +28,7 @@ export abstract class KaviBaseApp implements IKaviApp {
 
     protected version?: string
 
-    protected kaviServer?: KaapiServer;
+    protected kaapiServer?: KaapiServer;
 
     route<Refs extends ReqRef = ReqRefDefaults>(
         serverRoute: KaapiServerRoute<Refs>,
@@ -39,9 +39,9 @@ export abstract class KaviBaseApp implements IKaviApp {
 
     toString() {
         let result = `${this.version} || 0.0.0`
-        if (this.kaviServer) {
-            result += `, server: ${this.kaviServer?.server.info.uri}, `
-            result += `state: ${this.kaviServer?.server.info.started ? new Date(this.kaviServer?.server.info.started) : 'STOPPED'}`
+        if (this.kaapiServer) {
+            result += `, server: ${this.kaapiServer?.server.info.uri}, `
+            result += `state: ${this.kaapiServer?.server.info.started ? new Date(this.kaapiServer?.server.info.started) : 'STOPPED'}`
         }
         return result
     }

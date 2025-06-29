@@ -1,4 +1,4 @@
-import { IMessaging, IMessagingSender } from './messaging'
+import { IMessaging, IMessagingSender } from '@kaapi/kaapi'
 
 
 export interface CustomMessagingSubscribeConfig {

@@ -1,24 +1,24 @@
 import { KaapiServer, KaapiServerOptions } from '@kaapi/server';
-import { IKaviApp, KaviBaseApp } from './baseApp';
+import { IKaapiApp, KaapiBaseApp } from './baseApp';
 import { createLogger, ILogger } from './services/log';
 import { IMessaging, IMessagingSender, IMessagingSubscribeConfig } from './services/messaging';
 import qs from 'qs'
 import winston from 'winston';
 
-export interface KaviAppOptions extends KaapiServerOptions {
+export interface KaapiAppOptions extends KaapiServerOptions {
     logger?: ILogger,
     loggerOptions?: winston.LoggerOptions,
     messaging?: IMessaging
 }
 
-export class Kavi extends KaviBaseApp implements IKaviApp {
+export class Kaapi extends KaapiBaseApp implements IKaapiApp {
     public readonly log;
 
     protected messaging?: IMessaging;
 
     #defaultServerOpts?: KaapiServerOptions
 
-    constructor(opts?: KaviAppOptions) {
+    constructor(opts?: KaapiAppOptions) {
         super()
 
         const { logger, loggerOptions, messaging, ...serverOpts } = opts || {}
@@ -57,38 +57,38 @@ export class Kavi extends KaviBaseApp implements IKaviApp {
     }
 
     private async _startServer() {
-        await this.kaviServer?.server.start()
-        this.log.verbose('📢  Server listening on %s', this.kaviServer?.server.info.uri);
-        this.log.verbose(`${this.kaviServer?.server.info.id} ${this.kaviServer?.server.info.started ? new Date(this.kaviServer.server.info.started) : this.kaviServer?.server.info.started}`);
+        await this.kaapiServer?.server.start()
+        this.log.verbose('📢  Server listening on %s', this.kaapiServer?.server.info.uri);
+        this.log.verbose(`${this.kaapiServer?.server.info.id} ${this.kaapiServer?.server.info.started ? new Date(this.kaapiServer.server.info.started) : this.kaapiServer?.server.info.started}`);
     }
 
     /**
      * Initializes and starts the server if needed and returns it
      */
     server(opts?: KaapiServerOptions): KaapiServer {
-        if (!this.kaviServer) {
-            this.kaviServer = this._createServer(opts);
+        if (!this.kaapiServer) {
+            this.kaapiServer = this._createServer(opts);
             this._startServer()
         }
-        return this.kaviServer
+        return this.kaapiServer
     }
 
     /**
      * Initializes and starts the server if needed and returns it
      */
     async serverAsync(opts?: KaapiServerOptions): Promise<KaapiServer> {
-        if (!this.kaviServer) {
-            this.kaviServer = this._createServer(opts);
+        if (!this.kaapiServer) {
+            this.kaapiServer = this._createServer(opts);
             await this._startServer()
         }
-        return this.kaviServer
+        return this.kaapiServer
     }
 
     /**
      * Initializes and starts the server if needed and returns it
      */
     async listen(port?: string | number, host?: string): Promise<KaapiServer> {
-        let r = this.kaviServer
+        let r = this.kaapiServer
         if (!r) {
             const opts: KaapiServerOptions = {
                 port,

@@ -1,9 +1,9 @@
-import inert from '@hapi/inert';
-import { Kavi } from './app';
+import { Kaapi } from '@kaapi/kaapi';
 import Boom from '@hapi/boom'
-import { CustomMessaging } from './services/custom-messaging';
+import inert from '@hapi/inert';
+import { CustomMessaging } from './CustomMessaging';
 
-const app = new Kavi({
+const app = new Kaapi({
     port: 3000,
     host: 'localhost',
     auth: {
@@ -33,41 +33,10 @@ const app = new Kavi({
 
 app.server().server.register(inert)
 
+//#region routing
+
 // 404
-//app.route({}, () => Boom.notFound('Nothing here'))
-
-app.route<{ Query: { name?: string } }>({
-    method: 'GET',
-    path: '/',
-}, ({ query: { name } }) => `Hello ${name || 'World'}!`)
-
-app.route<{ AuthUser: { username: string } }>({
-    method: 'GET',
-    path: '/myprofile',
-    auth: true,
-    options: {
-        description: 'Me',
-        tags: ['Session']
-    }
-}, ({ auth: { credentials: { user } } }) => `Hello ${user?.username || 'World'}!`)
-
-app.route({
-    method: 'GET',
-    path: '/myhtml',
-}, (_, h) => h.response(`<!DOCTYPE html>
-<html lang="en">
- <head>
-  <meta charset="UTF-8">
-  <meta name="Generator" content="EditPlus®">
-  <meta name="Author" content="">
-  <meta name="Keywords" content="">
-  <meta name="Description" content="">
-  <title>HTML Page</title>
- </head>
- <body>
-  <h2>One Good Ol' HTML Page!</h2>
- </body>
-</html>`).type('text/html').code(200))
+app.route({}, () => Boom.notFound('Nothing here'))
 
 app.route({
     method: 'GET',
@@ -79,7 +48,6 @@ app.route({
     file: `${process.cwd()}/public/profile-icon.png`
 })
 
-
 app.route({
     method: 'GET',
     path: '/error',
@@ -90,10 +58,16 @@ app.route({
     throw Boom.badRequest('An error now?')
 })
 
+//#endregion routing
+
+//#region messaging
+
 app.publish('main', { message: 'coucou' })
 
 app.subscribe('main', (m: { message: string }, sender) => {
     console.log(sender.id, ':', m.message)
 }, {
-    groupId: ''
+    
 })
+
+//#endregion messaging

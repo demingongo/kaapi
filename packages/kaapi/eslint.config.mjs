@@ -40,14 +40,10 @@ export default defineConfig([
         rules: {
             '@stylistic/js/quotes': ['warn', 'single'],
             '@stylistic/js/quote-props': ['error', 'as-needed'],
-            '@typescript-eslint/no-unused-expressions': 'off',
             '@typescript-eslint/no-unused-vars': [
                 'error',
                 {
-                    argsIgnorePattern: '^_',
-                    caughtErrorsIgnorePattern: '^_',
-                    destructuredArrayIgnorePattern: '^_',
-                    varsIgnorePattern: '^_'
+                    caughtErrorsIgnorePattern: '^_'
                 }
             ]
         },
