@@ -1,11 +1,8 @@
-import { KaviServer } from '@kavi/server'
+import { Kavi } from './app';
 
-const kaviServer = new KaviServer({
+const app = new Kavi({
     port: 3000,
     host: 'localhost',
-    routes: {
-        cors: true
-    },
     auth: {
         validate: async (_request, token, _h) => {
             console.log('my token is', token)
@@ -14,21 +11,24 @@ const kaviServer = new KaviServer({
                 credentials: { user: { username: 'Niko' } }
             }
         },
+    },
+    loggerOptions: {
+        level: 'debug'
     }
 })
 
-kaviServer.route<{ Query: { name?: string } }>({
+app.route<{ Query: { name?: string } }>({
     method: 'GET',
     path: '/',
 }, ({ query: { name } }) => `Hello ${name || 'World'}!`)
 
-kaviServer.route<{ AuthUser: { username: string } }>({
+app.route<{ AuthUser: { username: string } }>({
     method: 'GET',
     path: '/myprofile',
     auth: true
 }, ({ auth: { credentials: { user } } }) => `Hello ${user?.username || 'World'}!`)
 
-kaviServer.route({
+app.route({
     method: 'GET',
     path: '/myhtml',
 }, (_, h) => h.response(`<!DOCTYPE html>
@@ -45,8 +45,3 @@ kaviServer.route({
   <h2>One Good Ol' HTML Page!</h2>
  </body>
 </html>`).type('text/html').code(200))
-
-kaviServer.server.start().then(
-    () => console.log('Server running on %s', kaviServer.server.info.uri),
-    console.error
-)
