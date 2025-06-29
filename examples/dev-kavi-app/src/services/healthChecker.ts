@@ -282,7 +282,7 @@ export class HealthChecker {
         return info
     }
 
-    async render(_: Request, h: ResponseToolkit): Promise<ResponseObject> {
+    async render<Refs extends ReqRef = ReqRefDefaults>(_: Request<Refs>, h: ResponseToolkit<Refs>): Promise<ResponseObject> {
         return h.response(await this.generatePage()).header('Content-Type', 'text/html');
     }
 

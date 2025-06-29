@@ -1,5 +1,7 @@
+import inert from '@hapi/inert';
 import { Kavi } from './app';
 import Boom from '@hapi/boom'
+import { CustomMessaging } from './services/custom-messaging';
 
 const app = new Kavi({
     port: 3000,
@@ -25,8 +27,14 @@ const app = new Kavi({
     },
     loggerOptions: {
         level: 'debug'
-    }
+    },
+    messaging: new CustomMessaging()
 })
+
+app.server().server.register(inert)
+
+// 404
+//app.route({}, () => Boom.notFound('Nothing here'))
 
 app.route<{ Query: { name?: string } }>({
     method: 'GET',
@@ -60,3 +68,32 @@ app.route({
   <h2>One Good Ol' HTML Page!</h2>
  </body>
 </html>`).type('text/html').code(200))
+
+app.route({
+    method: 'GET',
+    path: '/file',
+    options: {
+        description: 'Profile picture'
+    }
+}, {
+    file: `${process.cwd()}/public/profile-icon.png`
+})
+
+
+app.route({
+    method: 'GET',
+    path: '/error',
+    options: {
+        description: 'Profile picture'
+    }
+}, () => {
+    throw Boom.badRequest('An error now?')
+})
+
+app.publish('main', { message: 'coucou' })
+
+app.subscribe('main', (m: { message: string }, sender) => {
+    console.log(sender.id, ':', m.message)
+}, {
+    groupId: ''
+})

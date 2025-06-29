@@ -99,7 +99,7 @@ export class KaviServer<A = Hapi.ServerApplicationState> {
         handler: Hapi.HandlerDecorations | Hapi.Lifecycle.Method<Refs, Hapi.Lifecycle.ReturnValue<Refs>>): this {
         // Set defaults
         if (!serverRoute.method) serverRoute.method = '*';
-        if (!serverRoute.path) serverRoute.path = '/';
+        if (!serverRoute.path) serverRoute.path =  '/{any*}';
 
         const { auth, ...route } = serverRoute
 

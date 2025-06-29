@@ -102,13 +102,13 @@ export class Kavi extends KaviBaseApp implements IKaviApp {
     async emit<T = unknown>(topic: string, message: T): Promise<void> {
         return await this.messaging?.publish(topic, message)
     }
-    async on<T = unknown, Config = IMessagingSubscribeConfig>(topic: string, handler: (message: T, sender: IMessagingSender) => Promise<void> | void, conf?: Partial<Config>): Promise<void> {
+    async on<T = unknown>(topic: string, handler: (message: T, sender: IMessagingSender) => Promise<void> | void, conf?: IMessagingSubscribeConfig): Promise<void> {
         return await this.messaging?.subscribe(topic, handler, conf)
     }
     async publish<T = unknown>(topic: string, message: T): Promise<void> {
         return await this.messaging?.publish(topic, message)
     }
-    async subscribe<T = unknown, Config = IMessagingSubscribeConfig>(topic: string, handler: (message: T, sender: IMessagingSender) => Promise<void> | void, conf?: Partial<Config>): Promise<void> {
+    async subscribe<T = unknown>(topic: string, handler: (message: T, sender: IMessagingSender) => Promise<void> | void, conf?: IMessagingSubscribeConfig): Promise<void> {
         return await this.messaging?.subscribe(topic, handler, conf)
     }
 }

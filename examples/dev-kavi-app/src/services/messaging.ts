@@ -1,14 +1,11 @@
 export interface IMessagingSender {
-    name?: string,
-    service?: string,
-    timestamp?: string,
-    uuid?: string,
+    id?: string
+    name?: string
+    timestamp?: string
     [x: string]: string | undefined
 }
 
-export interface IMessagingSubscribeConfig {
-    [x: string]: unknown | undefined
-}
+export type IMessagingSubscribeConfig = object
 
 export interface IPublishMethod {
     <T = unknown>(topic: string, message: T): Promise<void>
