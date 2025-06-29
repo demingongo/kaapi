@@ -1,5 +1,5 @@
 {
-  "name": "kavi",
+  "name": "kaapi",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -19,7 +19,7 @@
   "author": "demingongo",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/demingongo/kavi.git"
+    "url": "git+https://github.com/demingongo/kaapi.git"
   },
   "license": "MIT",
   "packageManager": "pnpm@10.8.0",

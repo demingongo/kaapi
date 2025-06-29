@@ -44,8 +44,6 @@ export class KaapiServer<A = Hapi.ServerApplicationState> {
                         tokenType: 'Bearer'
                     }, options || {});
 
-                    //console.log('request.route.settings.plugins=', request.route.settings.plugins)
-
                     const authorization = request.raw.req.headers.authorization;
 
                     const authSplit = authorization ? authorization.split(/\s+/) : ['', ''];
@@ -80,7 +78,6 @@ export class KaapiServer<A = Hapi.ServerApplicationState> {
                                 }
                             }
                         } catch (err) {
-                            console.error(err)
                             return Boom.internal(err instanceof Error ? err : `${err}`)
                         }
                     }
