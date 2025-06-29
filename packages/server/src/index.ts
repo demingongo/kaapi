@@ -32,6 +32,14 @@ export class KaapiServer<A = Hapi.ServerApplicationState> {
     constructor(opts?: KaapiServerOptions | undefined) {
         const { auth: authOpts, ...serverOpts } = opts || {}
 
+        if (serverOpts.routes?.auth && 
+            typeof serverOpts.routes.auth === 'object' &&
+            !serverOpts.routes.auth.strategies &&
+            !serverOpts.routes.auth.strategy
+        ) {
+            serverOpts.routes.auth.strategy = 'kaapi'
+        }
+
         this.#server = Hapi.server(serverOpts)
 
         // register the auth scheme
@@ -115,6 +123,9 @@ export class KaapiServer<A = Hapi.ServerApplicationState> {
             }
             if (typeof route.options.auth === 'object') {
                 route.options.auth.strategy = 'kaapi'
+                if (!route.options.auth.mode) {
+                    route.options.auth.mode = 'required'
+                }
             }
         }
 

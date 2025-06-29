@@ -3,6 +3,8 @@ import Boom from '@hapi/boom'
 import inert from '@hapi/inert';
 import { CustomMessaging } from './CustomMessaging';
 
+//#region init
+
 const app = new Kaapi({
     port: 3000,
     host: 'localhost',
@@ -23,15 +25,40 @@ const app = new Kaapi({
                 credentials: { user: { username: 'Niko' } },
                 message: !token ? 'Sorry buddy, you are UNauthorized' : undefined
             }
-        },
+        }
     },
     loggerOptions: {
         level: 'debug'
     },
-    messaging: new CustomMessaging()
+    messaging: new CustomMessaging(),
+    routes: {
+        auth: {
+            //strategy: 'kaapi',
+            mode: 'try'
+        }
+    }
 })
 
+//#endregion init
+
+//#region config
+
+// server static files
 app.server().server.register(inert)
+
+
+
+// commented because it can be set from the init (see above)
+// try auth on all routes (mode 'try' = still continue if it fails and auth was not required for the route)
+/*
+app.server().server.auth.default({
+    strategy: 'kaapi',
+    mode: 'try'
+})
+*/
+
+
+//#endregion config
 
 //#region routing
 
@@ -41,7 +68,11 @@ app.route({}, () => Boom.notFound('Nothing here'))
 app.route({
     method: 'GET',
     path: '/file',
+    auth: true,
     options: {
+        auth: {
+            mode: 'required'
+        },
         description: 'Profile picture'
     }
 }, {
@@ -67,7 +98,7 @@ app.publish('main', { message: 'coucou' })
 app.subscribe('main', (m: { message: string }, sender) => {
     console.log(sender.id, ':', m.message)
 }, {
-    
+
 })
 
 //#endregion messaging
