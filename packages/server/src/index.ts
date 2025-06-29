@@ -14,7 +14,7 @@ export interface KaviServerRoute<Refs extends Hapi.ReqRef = Hapi.ReqRefDefaults>
 export type KaviAuthOptions = {
     tokenType?: string;
     validate?: (request: Hapi.Request<Hapi.ReqRefDefaults>, token: string, h: Hapi.ResponseToolkit<Hapi.ReqRefDefaults>) =>
-        Promise<{ isValid?: boolean, artifacts?: unknown, credentials?: Hapi.AuthCredentials, message?: string, scheme?: string }>
+        Promise<{ isValid?: boolean, artifacts?: unknown, credentials?: Hapi.AuthCredentials, message?: string, scheme?: string } | Hapi.Auth>
 }
 
 export interface KaviServerOptions extends Hapi.ServerOptions {
@@ -60,6 +60,10 @@ export class KaviServer<A = Hapi.ServerApplicationState> {
                     if (settings.validate) {
                         try {
                             const result = await settings.validate?.(request, token, h)
+
+                            if (result && 'isAuth' in result) {
+                                return result
+                            }
 
                             if (result) {
                                 const { isValid, credentials, artifacts, message, scheme } = result;
