@@ -1,6 +1,6 @@
 import fs from 'fs'
 import { HandlerDecorations, Lifecycle, ReqRef, ReqRefDefaults, Request, ResponseObject, ResponseToolkit } from '@hapi/hapi';
-import { KaviServerRoute } from '@kavi/server';
+import { KaapiServerRoute } from '@kaapi/server';
 
 export const defaultPage = `
 <!DOCTYPE>
@@ -290,7 +290,7 @@ export class HealthChecker {
      * Adds routes "/_healthCheck", "<healthCheckPath>/_healthCheck" and "<healthCheckPath>/_healthCheck/<serviceName>"
      */
     register<Refs extends ReqRef = ReqRefDefaults>(
-        method: (serverRoute: KaviServerRoute, handler: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>) => unknown,
+        method: (serverRoute: KaapiServerRoute, handler: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>) => unknown,
         serviceInfo: Record<string, unknown> = {}
     ) {
         method({

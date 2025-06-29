@@ -1,11 +1,11 @@
-import { KaviServer, KaviServerOptions } from '@kavi/server';
+import { KaapiServer, KaapiServerOptions } from '@kaapi/server';
 import { IKaviApp, KaviBaseApp } from './baseApp';
 import { createLogger, ILogger } from './services/log';
 import { IMessaging, IMessagingSender, IMessagingSubscribeConfig } from './services/messaging';
 import qs from 'qs'
 import winston from 'winston';
 
-export interface KaviAppOptions extends KaviServerOptions {
+export interface KaviAppOptions extends KaapiServerOptions {
     logger?: ILogger,
     loggerOptions?: winston.LoggerOptions,
     messaging?: IMessaging
@@ -16,7 +16,7 @@ export class Kavi extends KaviBaseApp implements IKaviApp {
 
     protected messaging?: IMessaging;
 
-    #defaultServerOpts?: KaviServerOptions
+    #defaultServerOpts?: KaapiServerOptions
 
     constructor(opts?: KaviAppOptions) {
         super()
@@ -46,8 +46,8 @@ export class Kavi extends KaviBaseApp implements IKaviApp {
         }
     }
 
-    private _createServer(opts: KaviServerOptions = {}): KaviServer {
-        return new KaviServer({
+    private _createServer(opts: KaapiServerOptions = {}): KaapiServer {
+        return new KaapiServer({
             ...(this.#defaultServerOpts || {}),
             query: {
                 parser: (query) => qs.parse(query)
@@ -65,7 +65,7 @@ export class Kavi extends KaviBaseApp implements IKaviApp {
     /**
      * Initializes and starts the server if needed and returns it
      */
-    server(opts?: KaviServerOptions): KaviServer {
+    server(opts?: KaapiServerOptions): KaapiServer {
         if (!this.kaviServer) {
             this.kaviServer = this._createServer(opts);
             this._startServer()
@@ -76,7 +76,7 @@ export class Kavi extends KaviBaseApp implements IKaviApp {
     /**
      * Initializes and starts the server if needed and returns it
      */
-    async serverAsync(opts?: KaviServerOptions): Promise<KaviServer> {
+    async serverAsync(opts?: KaapiServerOptions): Promise<KaapiServer> {
         if (!this.kaviServer) {
             this.kaviServer = this._createServer(opts);
             await this._startServer()
@@ -87,10 +87,10 @@ export class Kavi extends KaviBaseApp implements IKaviApp {
     /**
      * Initializes and starts the server if needed and returns it
      */
-    async listen(port?: string | number, host?: string): Promise<KaviServer> {
+    async listen(port?: string | number, host?: string): Promise<KaapiServer> {
         let r = this.kaviServer
         if (!r) {
-            const opts: KaviServerOptions = {
+            const opts: KaapiServerOptions = {
                 port,
                 host
             };

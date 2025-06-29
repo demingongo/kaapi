@@ -1,7 +1,7 @@
 {
-  "name": "@kavi/server",
+  "name": "@kaapi/server",
   "version": "0.0.1",
-  "description": "kavi server",
+  "description": "kaapi server",
   "main": "lib/index.js",
   "scripts": {
     "lint": "eslint .",
@@ -11,7 +11,7 @@
   "author": "demingongo",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/demingongo/kavi.git",
+    "url": "git+https://github.com/demingongo/kaapi.git",
     "directory": "packages/server"
   },
   "license": "MIT",

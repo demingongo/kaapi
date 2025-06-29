@@ -1,5 +1,5 @@
 {
-  "name": "kavi-server",
+  "name": "examples-kaapi-server",
   "version": "1.0.0",
   "description": "",
   "private": true,
@@ -31,7 +31,7 @@
   },
   "dependencies": {
     "@hapi/hapi": "^21.4.0",
-    "@kavi/server": "workspace:^",
+    "@kaapi/server": "workspace:^",
     "tslib": "^2.8.1"
   }
 }

@@ -1,6 +1,6 @@
-import { KaviServer } from '@kavi/server'
+import { KaapiServer } from '@kaapi/server'
 
-const kaviServer = new KaviServer({
+const kaapiServer = new KaapiServer({
     port: 3000,
     host: 'localhost',
     routes: {
@@ -17,18 +17,18 @@ const kaviServer = new KaviServer({
     }
 })
 
-kaviServer.route<{ Query: { name?: string } }>({
+kaapiServer.route<{ Query: { name?: string } }>({
     method: 'GET',
     path: '/',
 }, ({ query: { name } }) => `Hello ${name || 'World'}!`)
 
-kaviServer.route<{ AuthUser: { username: string } }>({
+kaapiServer.route<{ AuthUser: { username: string } }>({
     method: 'GET',
     path: '/myprofile',
     auth: true
 }, ({ auth: { credentials: { user } } }) => `Hello ${user?.username || 'World'}!`)
 
-kaviServer.route({
+kaapiServer.route({
     method: 'GET',
     path: '/myhtml',
 }, (_, h) => h.response(`<!DOCTYPE html>
@@ -46,7 +46,7 @@ kaviServer.route({
  </body>
 </html>`).type('text/html').code(200))
 
-kaviServer.server.start().then(
-    () => console.log('Server running on %s', kaviServer.server.info.uri),
+kaapiServer.server.start().then(
+    () => console.log('Server running on %s', kaapiServer.server.info.uri),
     console.error
 )

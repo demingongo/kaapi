@@ -4,24 +4,24 @@ import Boom from '@hapi/boom'
 
 export type PartialServerRoute<Refs extends Hapi.ReqRef = Hapi.ReqRefDefaults> = Partial<Hapi.ServerRoute<Refs>>
 
-export interface KaviServerRoute<Refs extends Hapi.ReqRef = Hapi.ReqRefDefaults> extends PartialServerRoute<Refs> {
+export interface KaapiServerRoute<Refs extends Hapi.ReqRef = Hapi.ReqRefDefaults> extends PartialServerRoute<Refs> {
     /**
-     * if true, it will set options.auth.startegy = 'kavi'
+     * if true, it will set options.auth.startegy = 'kaapi'
      */
     auth?: boolean
 }
 
-export type KaviAuthOptions = {
+export type KaapiAuthOptions = {
     tokenType?: string;
     validate?: (request: Hapi.Request<Hapi.ReqRefDefaults>, token: string, h: Hapi.ResponseToolkit<Hapi.ReqRefDefaults>) =>
         Promise<{ isValid?: boolean, artifacts?: unknown, credentials?: Hapi.AuthCredentials, message?: string, scheme?: string } | Hapi.Auth>
 }
 
-export interface KaviServerOptions extends Hapi.ServerOptions {
-    auth?: KaviAuthOptions
+export interface KaapiServerOptions extends Hapi.ServerOptions {
+    auth?: KaapiAuthOptions
 }
 
-export class KaviServer<A = Hapi.ServerApplicationState> {
+export class KaapiServer<A = Hapi.ServerApplicationState> {
 
     #server: Hapi.Server<A>;
 
@@ -29,18 +29,18 @@ export class KaviServer<A = Hapi.ServerApplicationState> {
         return this.#server
     }
 
-    constructor(opts?: KaviServerOptions | undefined) {
+    constructor(opts?: KaapiServerOptions | undefined) {
         const { auth: authOpts, ...serverOpts } = opts || {}
 
         this.#server = Hapi.server(serverOpts)
 
         // register the auth scheme
-        this.#server.auth.scheme('kavi-auth', (_server, options) => {
+        this.#server.auth.scheme('kaapi-auth', (_server, options) => {
 
             return {
                 async authenticate(request, h) {
 
-                    const settings: KaviAuthOptions = Hoek.applyToDefaults({
+                    const settings: KaapiAuthOptions = Hoek.applyToDefaults({
                         tokenType: 'Bearer'
                     }, options || {});
 
@@ -91,11 +91,11 @@ export class KaviServer<A = Hapi.ServerApplicationState> {
         });
 
         // register the auth startegy
-        this.#server.auth.strategy('kavi', 'kavi-auth', authOpts);
+        this.#server.auth.strategy('kaapi', 'kaapi-auth', authOpts);
     }
 
     route<Refs extends Hapi.ReqRef = Hapi.ReqRefDefaults>(
-        serverRoute: KaviServerRoute<Refs>,
+        serverRoute: KaapiServerRoute<Refs>,
         handler: Hapi.HandlerDecorations | Hapi.Lifecycle.Method<Refs, Hapi.Lifecycle.ReturnValue<Refs>>): this {
         // Set defaults
         if (!serverRoute.method) serverRoute.method = '*';
@@ -117,7 +117,7 @@ export class KaviServer<A = Hapi.ServerApplicationState> {
                 route.options.auth = {}
             }
             if (typeof route.options.auth === 'object') {
-                route.options.auth.strategy = 'kavi'
+                route.options.auth.strategy = 'kaapi'
             }
         }
 

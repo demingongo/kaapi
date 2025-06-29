@@ -1,1 +1,1 @@
-# @kavi/server
+# @kaapi/server

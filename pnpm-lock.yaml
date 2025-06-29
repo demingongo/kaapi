@@ -12,7 +12,7 @@ importers:
         specifier: ^8.2.2
         version: 8.2.2(encoding@0.1.13)
 
-  examples/dev-kavi-app:
+  examples/dev-kaapi-app:
     dependencies:
       '@hapi/boom':
         specifier: ^10.0.1
@@ -26,7 +26,7 @@ importers:
       '@hapi/inert':
         specifier: ^7.1.0
         version: 7.1.0
-      '@kavi/server':
+      '@kaapi/server':
         specifier: workspace:^
         version: link:../../packages/server
       qs:
@@ -79,12 +79,12 @@ importers:
         specifier: ^8.35.0
         version: 8.35.0(eslint@9.30.0)(typescript@5.8.3)
 
-  examples/kavi-server:
+  examples/kaapi-server:
     dependencies:
       '@hapi/hapi':
         specifier: ^21.4.0
         version: 21.4.0
-      '@kavi/server':
+      '@kaapi/server':
         specifier: workspace:^
         version: link:../../packages/server
       tslib:
