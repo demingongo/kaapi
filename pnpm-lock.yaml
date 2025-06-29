@@ -131,8 +131,8 @@ importers:
         specifier: ^7.1.0
         version: 7.1.0
       '@kaapi/server':
-        specifier: ^0.0.1
-        version: 0.0.1
+        specifier: ^0.0.2
+        version: 0.0.2
       qs:
         specifier: ^6.14.0
         version: 6.14.0
@@ -443,8 +443,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
 
-  '@kaapi/server@0.0.1':
-    resolution: {integrity: sha512-R99lw4y11BqGDsfDjukfcs7K9r4e6XWNWkhS7eeTI967/TD3xrPnYierSk/mSjQSsiUxk3eJ6Ixr0ieeWVxW3w==}
+  '@kaapi/server@0.0.2':
+    resolution: {integrity: sha512-VEqBDZxFUJ+nQ21GZ9Yr21djf9nEIhz141TvZsgT5um3DcXAlCEdk5Dt1ArpLHcEqJZkSlQ4HjNgP0TAmsXiHw==}
 
   '@lerna/create@8.2.2':
     resolution: {integrity: sha512-1yn1MvWn2Yz0SFgTTQnef2m1YedF7KwqLLVIOrGkgQrkVHzsveAIk1A1RcRa2yyUh+siKI1YcJ7lUZIEt+qQ3Q==}
@@ -3283,7 +3283,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.0
 
-  '@kaapi/server@0.0.1':
+  '@kaapi/server@0.0.2':
     dependencies:
       '@hapi/boom': 10.0.1
       '@hapi/hapi': 21.4.0

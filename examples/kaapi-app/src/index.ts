@@ -10,9 +10,9 @@ const app = new Kaapi({
     host: 'localhost',
     auth: {
         validate: async (req, token, h) => {
-            console.log('my token is', token)
-            console.log('route description=', req.route.settings.description)
-            console.log('route tags=', req.route.settings.tags)
+            app.log('my token is', token)
+            app.log('route description=', req.route.settings.description)
+            app.log('route tags=', req.route.settings.tags)
 
             if (!token) {
                 // can call h.authenticated/h.unauthenticated directly
@@ -33,7 +33,7 @@ const app = new Kaapi({
     messaging: new CustomMessaging(),
     routes: {
         auth: {
-            //strategy: 'kaapi',
+            // strategy: 'kaapi', // default
             mode: 'try'
         }
     }
@@ -47,10 +47,9 @@ const app = new Kaapi({
 app.server().server.register(inert)
 
 
-
+/*
 // commented because it can be set from the init (see above)
 // try auth on all routes (mode 'try' = still continue if it fails and auth was not required for the route)
-/*
 app.server().server.auth.default({
     strategy: 'kaapi',
     mode: 'try'
@@ -68,11 +67,8 @@ app.route({}, () => Boom.notFound('Nothing here'))
 app.route({
     method: 'GET',
     path: '/file',
-    auth: true,
+    //auth: true, // mode 'required' if no mode is defined in the route 
     options: {
-        auth: {
-            mode: 'required'
-        },
         description: 'Profile picture'
     }
 }, {
@@ -96,7 +92,7 @@ app.route({
 app.publish('main', { message: 'coucou' })
 
 app.subscribe('main', (m: { message: string }, sender) => {
-    console.log(sender.id, ':', m.message)
+    app.log(sender.id, ':', m.message)
 }, {
 
 })
