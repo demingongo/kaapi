@@ -2,6 +2,7 @@ import { Kaapi } from '@kaapi/kaapi';
 import Boom from '@hapi/boom'
 import inert from '@hapi/inert';
 import { CustomMessaging } from './CustomMessaging';
+import Joi from 'joi'
 
 //#region init
 
@@ -9,10 +10,10 @@ const app = new Kaapi({
     port: 3000,
     host: 'localhost',
     auth: {
-        validate: async (req, token, h) => {
-            app.log('my token is', token)
-            app.log('route description=', req.route.settings.description)
-            app.log('route tags=', req.route.settings.tags)
+        validate: async (_req, token, h) => {
+            //app.log('my token is', token)
+            //app.log('route description=', req.route.settings.description)
+            //app.log('route tags=', req.route.settings.tags)
 
             if (!token) {
                 // can call h.authenticated/h.unauthenticated directly
@@ -35,6 +36,22 @@ const app = new Kaapi({
         auth: {
             // strategy: 'kaapi', // default
             mode: 'try'
+        }
+    },
+    docs: {
+        path: '/docs/api',
+        host: {
+            url: '',
+            description: 'An app built with Kaapi'
+        },
+        license: 'UNLICENSED',
+        version: '0.0.2',
+        title: 'examples-kaapi-app',
+        options: {
+            swagger: {
+                customCssUrl: '/public/swagger-ui.css',
+                customSiteTitle: 'examples-kaapi-app documentation'
+            }
         }
     }
 })
@@ -75,15 +92,44 @@ app.route({
     file: `${process.cwd()}/public/profile-icon.png`
 })
 
-app.route({
+// to not insert in documentation, add directly from server
+app.server().route({
     method: 'GET',
     path: '/error',
     options: {
-        description: 'Profile picture'
+        description: 'Just throwing an error'
     }
 }, () => {
     throw Boom.badRequest('An error now?')
 })
+
+app.route<{ Query: { name?: string } }>({
+    method: 'GET',
+    path: '/',
+    options: {
+        description: 'greet someone',
+        tags: ['Index'],
+        validate: {
+            query: Joi.object({
+                name: Joi.string().description('The name of the person to greet')
+            })
+        }
+    }
+}, ({ query: { name } }) => `Hello ${name || 'World'}!`)
+
+app.server().route<{ Params: { filename?: string } }>({
+    method: 'GET',
+    path: '/public/{filename*}',
+    options: {
+        description: 'get public file',
+        tags: ['Index'],
+        validate: {
+            params: Joi.object({
+                filename: Joi.string().description('The name of the file').required()
+            })
+        }
+    }
+}, ({ params: { filename } }, h) => h.file(`${process.cwd()}/public/${filename}`))
 
 //#endregion routing
 

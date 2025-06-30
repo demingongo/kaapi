@@ -1,0 +1,8 @@
+/* swagger-ui.css */
+
+.swagger-ui .topbar a.link[rel="noopener noreferrer"] svg {
+    display: none;
+}
+.swagger-ui .topbar {
+    display: none;
+}

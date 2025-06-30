@@ -34,6 +34,7 @@
     "@hapi/hoek": "^11.0.7",
     "@hapi/inert": "^7.1.0",
     "@kaapi/kaapi": "workspace:^",
+    "joi": "^17.13.3",
     "tslib": "^2.8.1"
   }
 }
