@@ -3,6 +3,9 @@ import Boom from '@hapi/boom'
 import inert from '@hapi/inert';
 import { CustomMessaging } from './CustomMessaging';
 import Joi from 'joi'
+import fs from 'node:fs/promises'
+import Stream from 'node:stream';
+import path from 'node:path'
 
 //#region init
 
@@ -39,9 +42,10 @@ const app = new Kaapi({
         }
     },
     docs: {
+        disabled: false,
         path: '/docs/api',
         host: {
-            url: '',
+            url: '', //'http://localhost:3000',
             description: 'An app built with Kaapi'
         },
         license: 'UNLICENSED',
@@ -103,6 +107,53 @@ app.server().route({
     throw Boom.badRequest('An error now?')
 })
 
+app.route<{
+    Payload: {
+        username: string, picture: {
+            _data: Stream,
+            hapi: {
+                filename: string,
+                headers: {
+                    'content-type': string
+                }
+            }
+        }
+    }
+}>({
+    method: 'POST',
+    path: '/upload',
+    options: {
+        description: 'Upload user pic',
+        tags: ['Index'],
+        validate: {
+            payload: Joi.object({
+                username: Joi.string().required(),
+                picture: Joi.object().required().tag('files')
+            })
+        },
+        payload: {
+            output: 'stream',
+            parse: true,
+            allow: 'multipart/form-data',
+            multipart: { output: 'stream' },
+            maxBytes: 1024 * 3_000_000
+        }
+    }
+}, async (req) => {
+    app.log.warn(req.payload.username)
+
+    app.log.warn('payload', Object.keys(req.payload))
+
+    app.log.warn('file keys', Object.keys(req.payload.picture.hapi))
+
+    const pic = req.payload.picture
+
+    await fs.writeFile(
+        path.join(__dirname, '..', 'uploads', pic.hapi.filename), pic._data)
+
+    return 'ok'
+})
+
 app.route<{ Query: { name?: string } }>({
     method: 'GET',
     path: '/',
@@ -142,5 +193,7 @@ app.subscribe('main', (m: { message: string }, sender) => {
 }, {
 
 })
+
+//console.log(Joi.object().required().tag('files'))
 
 //#endregion messaging

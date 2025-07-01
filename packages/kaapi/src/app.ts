@@ -4,9 +4,8 @@ import { createLogger, ILogger } from './services/log';
 import { IMessaging, IMessagingSender, IMessagingSubscribeConfig } from './services/messaging';
 import qs from 'qs'
 import winston from 'winston';
-import { Postman } from '@novice1/api-doc-generator';
 import { createDocsRouter, DocsConfig, DocsOptions } from './services/docs/docs';
-import { KaapiOpenAPI } from './services/docs/generators';
+import { KaapiOpenAPI, KaapiPostman } from './services/docs/generators';
 import { HandlerDecorations, Lifecycle, ReqRef, ReqRefDefaults } from '@hapi/hapi';
 
 export interface KaapiAppOptions extends KaapiServerOptions {
@@ -21,7 +20,7 @@ export class Kaapi extends KaapiBaseApp implements IKaapiApp {
 
     protected messaging?: IMessaging;
 
-    protected docs: { openapi: KaapiOpenAPI, postman: Postman }
+    protected docs: { openapi: KaapiOpenAPI, postman: KaapiPostman }
 
     get openapi() {
         return this.docs.openapi
@@ -38,6 +37,8 @@ export class Kaapi extends KaapiBaseApp implements IKaapiApp {
     #docsPath: string = '/docs/api'
 
     #docsOptions: DocsOptions = {}
+
+    #serverStarted = false
 
     constructor(opts?: KaapiAppOptions) {
         super()
@@ -68,7 +69,7 @@ export class Kaapi extends KaapiBaseApp implements IKaapiApp {
 
         this.docs = {
             openapi: new KaapiOpenAPI(docs?.openAPIOptions),
-            postman: new Postman(docs?.postmanOptions)
+            postman: new KaapiPostman(docs?.postmanOptions)
         }
 
         if (docs?.disabled) {
@@ -194,6 +195,7 @@ export class Kaapi extends KaapiBaseApp implements IKaapiApp {
     }
 
     private async _startServer() {
+        this.#serverStarted = true
         await this.kaapiServer?.server.start()
         this.log.verbose('📢  Server listening on %s', this.kaapiServer?.server.info.uri);
         this.log.verbose(`${this.kaapiServer?.server.info.id} ${this.kaapiServer?.server.info.started ? new Date(this.kaapiServer.server.info.started) : this.kaapiServer?.server.info.started}`);
@@ -204,7 +206,9 @@ export class Kaapi extends KaapiBaseApp implements IKaapiApp {
      */
     server(opts?: KaapiServerOptions): KaapiServer {
         if (!this.kaapiServer) {
-            this.kaapiServer = this._createServer(opts);
+            this.kaapiServer = this._createServer(opts); 
+        }
+        if (!this.#serverStarted) {
             this._startServer()
         }
         return this.kaapiServer
@@ -216,7 +220,19 @@ export class Kaapi extends KaapiBaseApp implements IKaapiApp {
     async serverAsync(opts?: KaapiServerOptions): Promise<KaapiServer> {
         if (!this.kaapiServer) {
             this.kaapiServer = this._createServer(opts);
+        }
+        if (!this.#serverStarted) {
             await this._startServer()
+        }
+        return this.kaapiServer
+    }
+
+    /**
+     * Initializes the server and returns it without starting it
+     */
+    idle(opts?: KaapiServerOptions): KaapiServer {
+        if (!this.kaapiServer) {
+            this.kaapiServer = this._createServer(opts);
         }
         return this.kaapiServer
     }
@@ -240,6 +256,7 @@ export class Kaapi extends KaapiBaseApp implements IKaapiApp {
         serverRoute: KaapiServerRoute<Refs>,
         handler: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>) {
         this.docs.openapi.addRoutes(serverRoute)
+        this.docs.postman.addRoutes(serverRoute)
         return super.route(serverRoute, handler)
     }
 

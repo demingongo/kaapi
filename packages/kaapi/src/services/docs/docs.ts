@@ -69,7 +69,7 @@ export interface DocsConfig {
 
 export function createDocsRouter<Refs extends ReqRef = ReqRefDefaults>(
     path: string,
-    { openapi }: { openapi: KaapiOpenAPI, postman: Postman },
+    { openapi, postman }: { openapi: KaapiOpenAPI, postman: Postman },
     options?: DocsOptions): [
         route: KaapiServerRoute<Refs>,
         handler: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>
@@ -98,6 +98,12 @@ export function createDocsRouter<Refs extends ReqRef = ReqRefDefaults>(
                 )
                 return h.response(html).header('Content-Type', 'text/html');
             } else if (req.url.pathname == `${path}${path.endsWith('/') ? '' : '/'}schema`) {
+                if (req.query && 
+                    typeof req.query === 'object' && 
+                    'format' in req.query && 
+                    req.query.format == 'postman') {
+                    return postman.result()
+                }
                 return openapi.result()
             } else {
                 if (trimQuery(req.url.pathname).endsWith('/package.json')) {
