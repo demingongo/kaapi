@@ -260,6 +260,20 @@ export class Kaapi extends KaapiBaseApp implements IKaapiApp {
         return super.route(serverRoute, handler)
     }
 
+    refreshDocs() {
+        if (!this.kaapiServer) return
+
+        this.docs.openapi.removeAll();
+        this.docs.postman.removeAll();
+
+        this.kaapiServer.server.table().forEach(
+            v => {
+                this.docs.openapi.addRequestRoute(v);
+                this.docs.postman.addRequestRoute(v);
+            }
+        )
+    }
+
     async emit<T = unknown>(topic: string, message: T): Promise<void> {
         return await this.messaging?.publish(topic, message)
     }

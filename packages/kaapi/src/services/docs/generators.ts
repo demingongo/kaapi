@@ -2,7 +2,7 @@ import { OpenAPI, Postman, ProcessedRoute } from '@novice1/api-doc-generator';
 import { OpenAPIJoiHelper } from '@novice1/api-doc-generator/lib/generators/openapi/helpers/joiHelper';
 import { KaapiServerRoute } from '@kaapi/server';
 import { RouteMeta } from '@novice1/routing';
-import { ReqRef, ReqRefDefaults } from '@hapi/hapi';
+import { ReqRef, ReqRefDefaults, RequestRoute } from '@hapi/hapi';
 import { JoiSchema } from '@novice1/api-doc-generator/lib/helpers/joiHelper';
 
 class CustomHelper extends OpenAPIJoiHelper {
@@ -57,6 +57,12 @@ function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(serverRoutes: KaapiS
         // require methods
         if (!sRoute.method) return
 
+        if (sRoute.options &&
+            typeof sRoute.options === 'object' &&
+            (sRoute.options.plugins?.kaapi?.docs === false || sRoute.options.plugins?.kaapi?.docs?.disabled)) {
+            return
+        }
+
         let methods: string[] = []
         if (Array.isArray(sRoute.method)) {
             methods = sRoute.method
@@ -106,19 +112,100 @@ function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(serverRoutes: KaapiS
     return routes
 }
 
+function formatRequestRoute<Refs extends ReqRef = ReqRefDefaults>(reqRoute: RequestRoute<Refs>): RouteMeta[] {
+
+    const sRoute: RequestRoute<Refs> = reqRoute;
+
+    const routes: RouteMeta[] = []
+
+    // only string paths
+    if (typeof sRoute.path != 'string') return routes
+
+    if (!sRoute.path) return routes
+
+    const path = sRoute.path
+
+    // require methods
+    if (!sRoute.method) return routes
+
+    if (sRoute.settings &&
+        typeof sRoute.settings === 'object' &&
+        (sRoute.settings.plugins?.kaapi?.docs === false || sRoute.settings.plugins?.kaapi?.docs?.disabled)) {
+        return routes
+    }
+
+
+    let methods: string[] = []
+    if (Array.isArray(sRoute.method)) {
+        methods = sRoute.method
+    } else {
+        methods = [sRoute.method]
+    }
+
+    const formattedRoutes: RouteMeta[] = methods.map(
+        method => {
+            const route: RouteMeta = {
+                methods: {
+                    [method.toLowerCase()]: true
+                },
+                path: path,
+                auth: !!sRoute.settings.auth?.mode,
+                //responses: sRoute.responses
+            };
+
+            if (typeof sRoute.settings != 'function') {
+                route.tags = sRoute.settings?.tags
+                route.description = sRoute.settings?.description
+
+                let files: Record<string, JoiSchema> | undefined = undefined
+                if (sRoute.settings?.payload && typeof sRoute.settings?.validate?.payload === 'object') {
+                    const helper = new CustomHelper({ value: sRoute.settings.validate.payload })
+                    if (helper.isValid() && helper.getType() === 'object') {
+                        files = helper.getFilesChildren()
+                        if (files && !Object.keys(files).length) {
+                            files = undefined
+                        }
+                    }
+                }
+
+                route.parameters = sRoute.settings?.validate ? { ...sRoute.settings?.validate, body: sRoute.settings?.validate.payload, files: files } : undefined
+                if (route.parameters && sRoute.settings?.payload?.allow) {
+                    route.parameters.consumes = Array.isArray(sRoute.settings.payload.allow) ? sRoute.settings.payload.allow : [sRoute.settings.payload.allow];
+                }
+            }
+
+            return route;
+        }
+    )
+
+    routes.push(...formattedRoutes)
+
+
+    return routes
+}
+
 export interface KaapiDocGenerator {
     addRoutes<Refs extends ReqRef = ReqRefDefaults>(serverRoute: KaapiServerRoute<Refs>): ProcessedRoute[];
     addRoutes<Refs extends ReqRef = ReqRefDefaults>(serverRoutes: KaapiServerRoute<Refs>[]): ProcessedRoute[];
+    addRequestRoute<Refs extends ReqRef = ReqRefDefaults>(serverRoute: RequestRoute<Refs>): ProcessedRoute[];
 }
 
 export class KaapiOpenAPI extends OpenAPI implements KaapiDocGenerator {
     addRoutes<Refs extends ReqRef = ReqRefDefaults>(serverRoutes: KaapiServerRoute<Refs>[] | KaapiServerRoute<Refs>): ProcessedRoute[] {
         return super.add(formatRoutes(serverRoutes))
     }
+
+    addRequestRoute<Refs extends ReqRef = ReqRefDefaults>(reqRoute: RequestRoute<Refs>): ProcessedRoute[] {
+        return super.add(formatRequestRoute(reqRoute))
+    }
 }
 
 export class KaapiPostman extends Postman implements KaapiDocGenerator {
     addRoutes<Refs extends ReqRef = ReqRefDefaults>(serverRoutes: KaapiServerRoute<Refs>[] | KaapiServerRoute<Refs>): ProcessedRoute[] {
         return super.add(formatRoutes(serverRoutes))
+    }
+
+    addRequestRoute<Refs extends ReqRef = ReqRefDefaults>(reqRoute: RequestRoute<Refs>): ProcessedRoute[] {
+        return super.add(formatRequestRoute(reqRoute))
     }
 }

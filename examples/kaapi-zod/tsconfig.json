@@ -1,9 +1,9 @@
 {
   // see https://www.typescriptlang.org/tsconfig to better understand tsconfigs
-  "include": ["types", "src"],
+  "include": ["src"],
   "exclude": ["node_modules"],
   "compilerOptions": {
-    "typeRoots": ["types", "node_modules/@types"],
+    "typeRoots": ["node_modules/@types", "src/types"],
     "module": "NodeNext",
     "lib": ["DOM", "ES6"],
     "target": "ES6",
@@ -12,7 +12,7 @@
     "declaration": true,
     // output .js.map sourcemap files for consumers
     "sourceMap": true,
-    "outDir": "./lib",
+    "outDir": "./dist",
     // match output dir to input dir. e.g. lib/index instead of lib/src/index
     "rootDir": "./src",
     // stricter type-checking for stronger correctness. Recommended by TS
