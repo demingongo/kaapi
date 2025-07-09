@@ -27,21 +27,7 @@ export type DocsTag = TagObject & Omit<Folder, 'item'>
 
 export type DocsSwaggerUIOptions = Omit<Omit<SwaggerUiOptions, 'swaggerUrl'>, 'swaggerUrls'>
 
-export type DocsRedocOptions = {
-    customCss?: string
-    customCssUrl?: string
-    customJs?: string
-}
-
-export interface DocsLogo {
-    url: string
-    alt?: string
-}
-
 export interface DocsOptions {
-    logo?: DocsLogo,
-    tagGroups?: Record<string, string[]>
-    redoc?: DocsRedocOptions
     swagger?: DocsSwaggerUIOptions
 }
 
