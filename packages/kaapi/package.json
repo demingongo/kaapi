@@ -1,7 +1,7 @@
 {
   "name": "@kaapi/kaapi",
   "version": "0.0.2",
-  "private": true,
+  "private": false,
   "description": "kaapi",
   "main": "lib/index.js",
   "scripts": {
