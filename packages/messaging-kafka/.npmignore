@@ -1,0 +1,4 @@
+eslint.config.mjs
+src/
+tsconfig.json
+scripts
