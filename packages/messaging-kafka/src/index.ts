@@ -1,4 +1,4 @@
-import { BrokersFunction, Consumer, ConsumerConfig, Kafka, Producer, RetryOptions, logLevel } from 'kafkajs'
+import { BrokersFunction, Consumer, ConsumerConfig, IHeaders, Kafka, Producer, RetryOptions, logLevel } from 'kafkajs'
 import { ILogger, IMessaging, IMessagingSender } from '@kaapi/kaapi'
 
 
@@ -19,7 +19,8 @@ export class KafkaMessaging implements IMessaging {
     #address?: string
     #name?: string
 
-    protected logger?: ILogger
+    protected kafka?: Kafka;
+    protected logger?: ILogger;
     protected producer?: Producer;
 
     constructor(arg: KafkaMessagingConfig) {
@@ -32,8 +33,8 @@ export class KafkaMessaging implements IMessaging {
         this.logger = arg.logger
     }
 
-    private async _createInstance() {
-        this.logger?.warn(`clientId=${this.#clientId}, address=${this.#address}`)
+    private _createInstance() {
+        this.logger?.info(`clientId=${this.#clientId}, address=${this.#address}`)
         if (!this.#brokers) return;
 
         return new Kafka({
@@ -65,8 +66,8 @@ export class KafkaMessaging implements IMessaging {
     }
 
     protected async getAdmin() {
-        // Get kafka connection
-        const kafka = await this._createInstance();
+        // Get kafka instance
+        const kafka = this.getKafka();
 
         // If we don't have a connection, abort
         if (!kafka) return;
@@ -76,17 +77,24 @@ export class KafkaMessaging implements IMessaging {
         return admin;
     }
 
+    getKafka() {
+        if (!this.kafka) {
+            this.kafka = this._createInstance()
+        }
+        return this.kafka
+    }
+
     // Get the consumer
     async getConsumer(topic: string, config?: Partial<ConsumerConfig>): Promise<Consumer | undefined> {
 
-        // Get kafka connection
-        const kafka = await this._createInstance();
+        // Get kafka instance
+        const kafka = this.getKafka();
 
-        // If we don't have a connection, abort
+        // If we don't have an instance, abort
         if (!kafka) return;
 
         let overridenConfig: ConsumerConfig = {
-            groupId: `${this.#name || 'groupId'}---${topic}`,
+            groupId: `${this.#name || 'group'}---${topic}`,
             readUncommitted: true
         }
 
@@ -103,10 +111,10 @@ export class KafkaMessaging implements IMessaging {
     // Get the producer
     async getProducer() {
         if (!this.producer) {
-            // Get kafka connection
-            const kafka = await this._createInstance();
+            // Get kafka instance
+            const kafka = this.getKafka();
 
-            // If we don't have a connection, abort
+            // If we don't have an instance, abort
             if (!kafka) return;
 
             const producer = kafka.producer();
@@ -125,7 +133,16 @@ export class KafkaMessaging implements IMessaging {
         const producer = await this.getProducer();
 
         // If we don't have a producer, abort
-        if (!producer) return this.logger?.error('📥 Could not find producer');
+        if (!producer) return this.logger?.error('📥 Could not get producer');
+
+        const headers: IHeaders = {}
+
+        if (this.#name) {
+            headers.name = this.#name
+        }
+        if (this.#address) {
+            headers.address = this.#address
+        }
 
         // Listen to the topic
         const res = await producer.send({
@@ -133,10 +150,7 @@ export class KafkaMessaging implements IMessaging {
             messages: [{
                 value: JSON.stringify(message),
                 timestamp: `${Date.now()}`,
-                headers: {
-                    name: this.#name,
-                    address: this.#address
-                }
+                headers
             }],
         });
 
@@ -153,7 +167,7 @@ export class KafkaMessaging implements IMessaging {
         const consumer = await this.getConsumer(topic, conf);
 
         // If we don't have a consumer, abort
-        if (!consumer) return;
+        if (!consumer) return this.logger?.error('📥 Could not get consumer');
 
         // Listen to the topic
         await consumer.subscribe({
@@ -166,7 +180,7 @@ export class KafkaMessaging implements IMessaging {
                 const partitions = await admin.fetchTopicOffsets(topic);
                 if (partitions) {
                     partitions.forEach((partition) => {
-                        this.logger?.info(`👂 Start "${topic}" offset: ${partition.offset} | hight: ${partition.high} | low: ${partition.low}`);
+                        this.logger?.info(`👂 Start "${topic}" offset: ${partition.offset} | high: ${partition.high} | low: ${partition.low}`);
                     })
                 }
             } catch (error) {
@@ -195,7 +209,7 @@ export class KafkaMessaging implements IMessaging {
                                 }
                             });
                             sender.timestamp = message.timestamp;
-                            sender.uuid = message.offset;
+                            sender.offset = message.offset;
                         } catch (e) {
                             this.logger?.error(`KafkaMessaging.subscribe('${topic}', …) error:`, e);
                         }
@@ -205,7 +219,7 @@ export class KafkaMessaging implements IMessaging {
                         );
 
                         if (res) await res;
-                        await resolveOffset(message.offset);
+                        resolveOffset(message.offset);
                         this.logger?.debug(`📥  Resolved offset ${message.offset} from KAFKA topic "${topic}"`);
                     } catch (e) {
                         this.logger?.error(`KafkaMessaging.subscribe('${topic}', …) handler throwed an error:`, e);

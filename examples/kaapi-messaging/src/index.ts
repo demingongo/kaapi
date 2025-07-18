@@ -1,4 +1,4 @@
-import { Kaapi, createLogger } from '@kaapi/kaapi'
+import { IMessagingSender, Kaapi, createLogger } from '@kaapi/kaapi'
 import { KafkaMessaging } from '@kaapi/messaging-kafka'
 
 const app = new Kaapi({
@@ -20,3 +20,20 @@ const app = new Kaapi({
 })
 
 app.listen()
+
+interface Sender extends IMessagingSender {
+    id?: string
+}
+
+interface Message {
+    text: string
+}
+
+app.subscribe<Message>('my-topic', (message, sender: Sender) => {
+    app.log.info(`Message received: ${message}`)
+    app.log.debug('Sender:', sender)
+})
+
+setTimeout(() => {
+    app.publish<Message>('my-topic', { text: 'Hello!' })
+}, 5000)
