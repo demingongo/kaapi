@@ -1,21 +1,16 @@
-import { BrokersFunction, Consumer, ConsumerConfig, IHeaders, Kafka, Producer, RetryOptions, logLevel } from 'kafkajs'
+import { Consumer, ConsumerConfig, IHeaders, Kafka, KafkaConfig, Producer, logLevel } from 'kafkajs'
 import { ILogger, IMessaging, IMessagingSender } from '@kaapi/kaapi'
 
-
-export interface KafkaMessagingConfig {
-    brokers: string[] | BrokersFunction
+export interface KafkaMessagingConfig extends KafkaConfig {
     logger?: ILogger
-    clientId?: string
     address?: string
     name?: string
-    retry?: RetryOptions
 }
 
 export class KafkaMessaging implements IMessaging {
 
-    #brokers: string[] | BrokersFunction
-    #clientId?: string
-    #retry?: RetryOptions
+    #config: KafkaConfig
+
     #address?: string
     #name?: string
 
@@ -24,22 +19,21 @@ export class KafkaMessaging implements IMessaging {
     protected producer?: Producer;
 
     constructor(arg: KafkaMessagingConfig) {
-        this.#brokers = arg.brokers
-        this.#name = arg.name
-        this.#address = arg.address
-        this.#clientId = arg.clientId;
-        this.#retry = arg.retry
 
-        this.logger = arg.logger
+        const { logger, address, name, ...kafkaConfig } = arg;
+
+        this.#config = kafkaConfig;
+
+        this.#name = name
+        this.#address = address
+        this.logger = logger
     }
 
     private _createInstance() {
-        this.logger?.info(`clientId=${this.#clientId}, address=${this.#address}`)
-        if (!this.#brokers) return;
+        this.logger?.info(`clientId=${this.#config.clientId}, address=${this.#address}`)
+        if (!this.#config.brokers) return;
 
         return new Kafka({
-            clientId: this.#clientId,
-            brokers: this.#brokers,
             logCreator: () => ({ namespace, level, label, log }) => {
                 let lvl: logLevel | null = level
                 if (!log[level]) lvl = null;
@@ -61,7 +55,7 @@ export class KafkaMessaging implements IMessaging {
                         this.logger?.silly('KAFKA', label, namespace, log.message);
                 }
             },
-            retry: this.#retry
+            ...this.#config,
         });
     }
 
