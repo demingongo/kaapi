@@ -1,10 +1,18 @@
 import { Consumer, ConsumerConfig, IHeaders, Kafka, KafkaConfig, Producer, logLevel } from 'kafkajs'
 import { ILogger, IMessaging, IMessagingSender } from '@kaapi/kaapi'
 
+export interface KafkaMessagingSender extends IMessagingSender {
+    offset?: string
+}
+
 export interface KafkaMessagingConfig extends KafkaConfig {
     logger?: ILogger
     address?: string
     name?: string
+}
+
+export interface KafkaMessagingSubscribeConfig extends Partial<ConsumerConfig> { 
+    fromBeginning?: boolean 
 }
 
 export class KafkaMessaging implements IMessaging {
@@ -154,11 +162,20 @@ export class KafkaMessaging implements IMessaging {
     /**
      * Listen to a topic
      */
-    async subscribe<T = unknown>(topic: string, handler: (message: T, sender: IMessagingSender) => Promise<void> | void, conf?: Partial<ConsumerConfig>) {
+    async subscribe<T = unknown>(topic: string, handler: (message: T, sender: KafkaMessagingSender) => Promise<void> | void, conf?: KafkaMessagingSubscribeConfig) {
         this.logger?.info(`👂  Subscribing KAFKA topic "${topic}"`);
 
+        let consumerConfig: Partial<ConsumerConfig> | undefined;
+        let fromBeginning: boolean | undefined;
+
+        if (conf) {
+            const { fromBeginning: tmpFromBeginning, ...tmpConsumerConfig } = conf
+            fromBeginning = tmpFromBeginning
+            consumerConfig = tmpConsumerConfig
+        }
+
         // Get kafka consumer
-        const consumer = await this.getConsumer(topic, conf);
+        const consumer = await this.getConsumer(topic, consumerConfig);
 
         // If we don't have a consumer, abort
         if (!consumer) return this.logger?.error('📥 Could not get consumer');
@@ -166,6 +183,7 @@ export class KafkaMessaging implements IMessaging {
         // Listen to the topic
         await consumer.subscribe({
             topic,
+            fromBeginning
         });
 
         const admin = await this.getAdmin();
@@ -194,7 +212,8 @@ export class KafkaMessaging implements IMessaging {
                 this.logger?.verbose(`📥  Received from KAFKA topic "${topic}" (${batch.messages.length} messages)`);
                 for (const message of batch.messages) {
                     try {
-                        const sender: IMessagingSender = {};
+                        const sender: KafkaMessagingSender = {};
+                        
                         try {
                             // unbufferize header values
                             Object.keys((message.headers || {})).forEach(key => {

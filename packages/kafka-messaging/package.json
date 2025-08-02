@@ -1,8 +1,8 @@
 {
-  "name": "@kaapi/messaging-kafka",
+  "name": "@kaapi/kafka-messaging",
   "version": "0.0.2",
   "private": false,
-  "description": "kafka messaging for kaapi",
+  "description": "kafka messaging client for kaapi",
   "main": "lib/index.js",
   "scripts": {
     "lint": "eslint .",
