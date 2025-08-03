@@ -124,7 +124,7 @@ export class KafkaMessaging implements IMessaging {
             await producer.connect();
             this.producer = producer;
 
-            this.logger?.debug('📥 Producer connected');
+            this.logger?.debug('✔️  Producer connected');
         }
 
         return this.producer;
@@ -135,7 +135,7 @@ export class KafkaMessaging implements IMessaging {
         const producer = await this.getProducer();
 
         // If we don't have a producer, abort
-        if (!producer) return this.logger?.error('📥 Could not get producer');
+        if (!producer) return this.logger?.error('❌  Could not get producer');
 
         const headers: IHeaders = {}
 
@@ -156,7 +156,7 @@ export class KafkaMessaging implements IMessaging {
             }],
         });
 
-        this.logger?.verbose(`📥  Sent to KAFKA topic "${topic}" (offset ${res[0].baseOffset})`);
+        this.logger?.verbose(`📤  Sent to KAFKA topic "${topic}" (offset ${res[0].baseOffset})`);
     }
 
     /**
@@ -178,7 +178,7 @@ export class KafkaMessaging implements IMessaging {
         const consumer = await this.getConsumer(topic, consumerConfig);
 
         // If we don't have a consumer, abort
-        if (!consumer) return this.logger?.error('📥 Could not get consumer');
+        if (!consumer) return this.logger?.error('❌  Could not get consumer');
 
         // Listen to the topic
         await consumer.subscribe({
@@ -192,7 +192,7 @@ export class KafkaMessaging implements IMessaging {
                 const partitions = await admin.fetchTopicOffsets(topic);
                 if (partitions) {
                     partitions.forEach((partition) => {
-                        this.logger?.info(`👂 Start "${topic}" offset: ${partition.offset} | high: ${partition.high} | low: ${partition.low}`);
+                        this.logger?.info(`👂  Start "${topic}" partition: ${partition.partition} | offset: ${partition.offset} | high: ${partition.high} | low: ${partition.low}`);
                     })
                 }
             } catch (error) {
@@ -233,7 +233,7 @@ export class KafkaMessaging implements IMessaging {
 
                         if (res) await res;
                         resolveOffset(message.offset);
-                        this.logger?.debug(`📥  Resolved offset ${message.offset} from KAFKA topic "${topic}"`);
+                        this.logger?.debug(`✔️  Resolved offset ${message.offset} from KAFKA topic "${topic}"`);
                     } catch (e) {
                         this.logger?.error(`KafkaMessaging.subscribe('${topic}', …) handler throwed an error:`, e);
                     }
