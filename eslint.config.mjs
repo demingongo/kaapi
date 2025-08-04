@@ -1,9 +1,9 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'eslint/config';
 import typescriptEslint from '@typescript-eslint/eslint-plugin';
 import globals from 'globals';
 import tsParser from '@typescript-eslint/parser';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import js from '@eslint/js';
 import { FlatCompat } from '@eslint/eslintrc';
 import stylisticJs from '@stylistic/eslint-plugin'
@@ -39,18 +39,13 @@ export default defineConfig([
 
         rules: {
             '@stylistic/js/quotes': ['warn', 'single'],
-            '@stylistic/js/quote-props': ['warn', 'as-needed'],
-            '@typescript-eslint/no-unused-expressions': 'off',
+            '@stylistic/js/quote-props': ['error', 'as-needed'],
             '@typescript-eslint/no-unused-vars': [
                 'error',
                 {
-                    argsIgnorePattern: '^_',
-                    caughtErrorsIgnorePattern: '^_',
-                    destructuredArrayIgnorePattern: '^_',
-                    varsIgnorePattern: '^_'
+                    caughtErrorsIgnorePattern: '^_'
                 }
-            ],
-            '@typescript-eslint/no-explicit-any': 'off'
+            ]
         },
     },
     {

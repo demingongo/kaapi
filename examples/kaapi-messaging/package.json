@@ -33,6 +33,7 @@
     "@kaapi/kaapi": "workspace:^",
     "@kaapi/kafka-messaging": "workspace:^",
     "kafkajs": "^2.2.4",
-    "tslib": "^2.8.1"
+    "tslib": "^2.8.1",
+    "winston": "^3.17.0"
   }
 }

@@ -2,7 +2,7 @@
   "name": "@kaapi/kaapi",
   "version": "0.0.2",
   "private": false,
-  "description": "kaapi",
+  "description": "TypeScript-based framework",
   "main": "lib/index.js",
   "scripts": {
     "lint": "eslint .",
@@ -17,20 +17,8 @@
   },
   "license": "MIT",
   "devDependencies": {
-    "@eslint/eslintrc": "^3.3.1",
-    "@eslint/js": "^9.30.0",
-    "@stylistic/eslint-plugin": "^5.0.0",
-    "@types/node": "^24.0.7",
     "@types/qs": "^6.14.0",
-    "@types/swagger-ui-dist": "^3.30.6",
-    "@typescript-eslint/eslint-plugin": "^8.35.0",
-    "@typescript-eslint/parser": "^8.35.0",
-    "eslint": "^9.30.0",
-    "globals": "^16.2.0",
-    "nodemon": "^3.1.10",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.8.3",
-    "typescript-eslint": "^8.35.0"
+    "@types/swagger-ui-dist": "^3.30.6"
   },
   "dependencies": {
     "@hapi/boom": "^10.0.1",
@@ -41,7 +29,7 @@
     "@novice1/api-doc-generator": "^1.0.2",
     "@novice1/routing": "^2.0.2",
     "qs": "^6.14.0",
-    "swagger-ui-dist": "^5.25.3",
+    "swagger-ui-dist": "^5.27.1",
     "tslib": "^2.8.1",
     "winston": "^3.17.0"
   }

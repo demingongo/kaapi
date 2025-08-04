@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ZodType } from 'zod/v4';
 type ZodSchema = ZodType<any, any> | undefined | null; 
 

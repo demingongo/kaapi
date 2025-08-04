@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Kaapi, ResponseToolkit, Request, KaapiServerRoute, HandlerDecorations, Lifecycle } from '@kaapi/kaapi';
 import { z, ZodType } from 'zod/v4'
 import Boom from '@hapi/boom'

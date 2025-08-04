@@ -1,14 +1,24 @@
 import { Kaapi, createLogger } from '@kaapi/kaapi'
 import { KafkaMessaging, KafkaMessagingSender, KafkaMessagingSubscribeConfig } from '@kaapi/kafka-messaging'
 import { PartitionAssigners } from 'kafkajs'
+import winston from 'winston'
 
 /**
  * KafkaMessaging
  */
 export const messenger = new KafkaMessaging({
-    brokers: [],
+    brokers: ['localhost:9094'],
     logger: createLogger({
-        level: 'debug'
+        level: 'debug',
+        transports: [
+            new winston.transports.Console({
+                format: winston.format.combine(
+                    winston.format.colorize(),
+                    winston.format.splat(),
+                    winston.format.simple()
+                ),
+            }),
+        ],
     }),
     name: 'examples-kaapi-messaging'
 })
@@ -94,7 +104,7 @@ export async function startMessaging(app: Kaapi) {
 
     // subscribe
     await app.subscribe<Message>(TOPIC, (message, sender: KafkaMessagingSender) => {
-        app.log.info(`Message received: ${message}`)
+        app.log.info('Message received:', message)
         app.log.debug('Sender:', sender)
     }, SUBSCRIBE_CONFIG)
 
