@@ -15,7 +15,7 @@ export interface IKaapiApp extends IMessaging {
     server(): KaapiServer;
     route<Refs extends ReqRef = ReqRefDefaults>(
         serverRoute: KaapiServerRoute<Refs>,
-        handler: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>): this
+        handler?: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>): this
 }
 
 export abstract class KaapiBaseApp implements IKaapiApp {
@@ -32,7 +32,7 @@ export abstract class KaapiBaseApp implements IKaapiApp {
 
     route<Refs extends ReqRef = ReqRefDefaults>(
         serverRoute: KaapiServerRoute<Refs>,
-        handler: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>) {
+        handler?: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>) {
         this.server().route<Refs>(serverRoute, handler)
         return this
     }

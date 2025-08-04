@@ -254,7 +254,7 @@ export class Kaapi extends KaapiBaseApp implements IKaapiApp {
 
     route<Refs extends ReqRef = ReqRefDefaults>(
         serverRoute: KaapiServerRoute<Refs>,
-        handler: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>) {
+        handler?: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>) {
         this.docs.openapi.addRoutes(serverRoute)
         this.docs.postman.addRoutes(serverRoute)
         return super.route(serverRoute, handler)

@@ -129,7 +129,7 @@ export class KaapiServer<A = Hapi.ServerApplicationState> {
             }
         }
 
-        if (!route.handler && handler)
+        if (handler)
             route.handler = handler
 
         this.#server.route(route as Hapi.ServerRoute<Refs>);
