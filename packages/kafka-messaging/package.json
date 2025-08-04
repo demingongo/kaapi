@@ -1,8 +1,8 @@
 {
   "name": "@kaapi/kafka-messaging",
-  "version": "0.0.2",
-  "private": true,
-  "description": "kafka messaging client for kaapi",
+  "version": "0.0.4",
+  "private": false,
+  "description": "Kafka-based messaging for kaapi",
   "main": "lib/index.js",
   "scripts": {
     "lint": "eslint .",
@@ -13,13 +13,13 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/demingongo/kaapi.git",
-    "directory": "packages/kaapi"
+    "directory": "packages/kafka-messaging"
   },
   "license": "MIT",
   "devDependencies": {
   },
   "dependencies": {
-    "@kaapi/kaapi": "^0.0.2",
+    "@kaapi/kaapi": "^0.0.4",
     "kafkajs": "^2.2.4",
     "tslib": "^2.8.1"
   }
