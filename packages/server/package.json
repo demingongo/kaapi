@@ -1,6 +1,6 @@
 {
   "name": "@kaapi/server",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "private": false,
   "description": "kaapi server",
   "main": "lib/index.js",
@@ -16,8 +16,6 @@
     "directory": "packages/server"
   },
   "license": "MIT",
-  "devDependencies": {
-  },
   "dependencies": {
     "@hapi/boom": "^10.0.1",
     "@hapi/hapi": "^21.4.0",

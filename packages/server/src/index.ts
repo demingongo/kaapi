@@ -101,7 +101,7 @@ export class KaapiServer<A = Hapi.ServerApplicationState> {
 
     route<Refs extends Hapi.ReqRef = Hapi.ReqRefDefaults>(
         serverRoute: KaapiServerRoute<Refs>,
-        handler: Hapi.HandlerDecorations | Hapi.Lifecycle.Method<Refs, Hapi.Lifecycle.ReturnValue<Refs>>): this {
+        handler?: Hapi.HandlerDecorations | Hapi.Lifecycle.Method<Refs, Hapi.Lifecycle.ReturnValue<Refs>>): this {
         // Set defaults
         if (!serverRoute.method) serverRoute.method = '*';
         if (!serverRoute.path) serverRoute.path =  '/{any*}';
@@ -129,7 +129,8 @@ export class KaapiServer<A = Hapi.ServerApplicationState> {
             }
         }
 
-        route.handler = handler
+        if (!route.handler && handler)
+            route.handler = handler
 
         this.#server.route(route as Hapi.ServerRoute<Refs>);
 
