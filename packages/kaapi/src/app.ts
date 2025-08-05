@@ -289,10 +289,11 @@ export class Kaapi extends KaapiBaseApp implements IKaapiApp {
     }
 
     async plug(plugins: KaapiPlugin[] | KaapiPlugin) {
+        const getCurrentApp = () => this
         const tool: KaapiTools = {
             log: this.log.bind(this.log),
             route<Refs extends ReqRef = ReqRefDefaults>(serverRoute: KaapiServerRoute<Refs>, handler?: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>) {
-                this.route(serverRoute, handler)
+                getCurrentApp().route(serverRoute, handler)
                 return this
             },
             scheme: this.idle().server.auth.scheme.bind(this.idle().server.auth),
