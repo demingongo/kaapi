@@ -371,8 +371,8 @@ importers:
         specifier: ^7.1.0
         version: 7.1.0
       '@kaapi/server':
-        specifier: ^0.0.5
-        version: 0.0.5
+        specifier: ^0.0.6
+        version: 0.0.6
       '@novice1/api-doc-generator':
         specifier: ^1.0.2
         version: 1.0.2
@@ -647,6 +647,9 @@ packages:
 
   '@kaapi/server@0.0.5':
     resolution: {integrity: sha512-yuyGVMHhjHezMqymEXtC5iHiu0R9XKISduRgbKWUiC8/ZOG/aoNrCb8BgN6CYjy1dexQZQObBQyWkW6MdOZG7Q==}
+
+  '@kaapi/server@0.0.6':
+    resolution: {integrity: sha512-DqsSg42vC9tfgIq28JagbWEFfR5YnpHhiNWbkzGsjZjyqSUkhhfZmlxIg0JqCjmYa74qREMJlKLurF50ZK+GIw==}
 
   '@lerna/create@8.2.3':
     resolution: {integrity: sha512-f+68+iojcQ0tZRMfCgQyJdsdz+YPu3/d+0Zo1RJz92bgBxTCiEU+dHACVq1n3sEjm/YWPnFGdag8U5EYYmP3WA==}
@@ -3731,6 +3734,13 @@ snapshots:
       - supports-color
 
   '@kaapi/server@0.0.5':
+    dependencies:
+      '@hapi/boom': 10.0.1
+      '@hapi/hapi': 21.4.0
+      '@hapi/hoek': 11.0.7
+      tslib: 2.8.1
+
+  '@kaapi/server@0.0.6':
     dependencies:
       '@hapi/boom': 10.0.1
       '@hapi/hapi': 21.4.0
