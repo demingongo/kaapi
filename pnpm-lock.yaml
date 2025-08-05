@@ -417,8 +417,8 @@ importers:
         specifier: ^10.0.1
         version: 10.0.1
       '@hapi/hapi':
-        specifier: ^21.4.0
-        version: 21.4.0
+        specifier: ^21.4.2
+        version: 21.4.2
       '@hapi/hoek':
         specifier: ^11.0.7
         version: 11.0.7
@@ -533,6 +533,10 @@ packages:
 
   '@hapi/hapi@21.4.0':
     resolution: {integrity: sha512-kqiRWbYYLSSt2rYbxyNj8svPsXP715p4W/K3OXpXeiiVLNSdBX4f+zfmC+dY6eyb6rqTqTAbx6x8b5HpJTkviQ==}
+    engines: {node: '>=14.15.0'}
+
+  '@hapi/hapi@21.4.2':
+    resolution: {integrity: sha512-wkjpjc80Hnl0cBfDAG+EtX876AGtpg9fpt6q9GXTnGyoW5C4+hBCem8MmBPuwlhlfJ9U9FYGm3Yf7nWp9+/NDQ==}
     engines: {node: '>=14.15.0'}
 
   '@hapi/heavy@8.0.1':
@@ -3556,6 +3560,27 @@ snapshots:
       '@hapi/topo': 6.0.2
       '@hapi/validate': 2.0.1
 
+  '@hapi/hapi@21.4.2':
+    dependencies:
+      '@hapi/accept': 6.0.3
+      '@hapi/ammo': 6.0.1
+      '@hapi/boom': 10.0.1
+      '@hapi/bounce': 3.0.2
+      '@hapi/call': 9.0.1
+      '@hapi/catbox': 12.1.1
+      '@hapi/catbox-memory': 6.0.2
+      '@hapi/heavy': 8.0.1
+      '@hapi/hoek': 11.0.7
+      '@hapi/mimos': 7.0.1
+      '@hapi/podium': 5.0.2
+      '@hapi/shot': 6.0.1
+      '@hapi/somever': 4.1.1
+      '@hapi/statehood': 8.2.0
+      '@hapi/subtext': 8.1.0
+      '@hapi/teamwork': 6.0.0
+      '@hapi/topo': 6.0.2
+      '@hapi/validate': 2.0.1
+
   '@hapi/heavy@8.0.1':
     dependencies:
       '@hapi/boom': 10.0.1
@@ -3736,7 +3761,7 @@ snapshots:
   '@kaapi/server@0.0.5':
     dependencies:
       '@hapi/boom': 10.0.1
-      '@hapi/hapi': 21.4.0
+      '@hapi/hapi': 21.4.2
       '@hapi/hoek': 11.0.7
       tslib: 2.8.1
 
