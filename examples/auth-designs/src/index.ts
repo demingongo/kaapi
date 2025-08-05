@@ -4,6 +4,7 @@ import {
 } from '@kaapi/kaapi'
 import Boom from '@hapi/boom'
 import { authenticationCodeDesign } from './oauth2Plugins'
+import { apiKeyAuthDesign } from './plugins/apiKeyDesign'
 
 const app = new Kaapi({
     port: 3000,
@@ -18,6 +19,7 @@ const app = new Kaapi({
 
 // register plugins
 app.plug(authenticationCodeDesign)
+app.plug(apiKeyAuthDesign)
 
 // 404
 app.route({}, () => Boom.notFound('Nothing here'))
@@ -28,7 +30,8 @@ app.route({
     auth: true,
     options: {
         auth: {
-            strategy: 'auth-design-oauth2'
+            strategies: ['apiKey', 'auth-design-oauth2'],
+            mode: 'try'
         },
         description: 'greet me',
         tags: ['Tests']

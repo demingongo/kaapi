@@ -113,6 +113,7 @@ export class KaapiServer<A = Hapi.ServerApplicationState> {
                 typeof route.options != 'function' && (
                     !route.options.auth ||
                     typeof route.options.auth === 'object' &&
+                    !route.options.auth.strategies &&
                     !route.options.auth.strategy)
             )) {
             if (!route.options) {
