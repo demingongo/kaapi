@@ -61,6 +61,7 @@ export class KaapiServer<A = Hapi.ServerApplicationState> {
 
                     if (tokenType.toLowerCase() !== settings.tokenType?.toLowerCase()) {
                         token = ''
+                        return Boom.unauthorized(null, tokenType)
                     }
 
                     if (settings.validate) {

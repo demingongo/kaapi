@@ -23,6 +23,7 @@ export const apiKeyAuthDesign: KaapiPlugin = {
 
                     if (tokenType.toLowerCase() !== settings.tokenType?.toLowerCase()) {
                         token = ''
+                        return Boom.unauthorized(null, 'Session')
                     }
 
                     if (token) {
