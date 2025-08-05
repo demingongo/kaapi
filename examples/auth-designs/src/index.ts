@@ -30,7 +30,7 @@ app.route({
     auth: true,
     options: {
         auth: {
-            strategies: ['auth-design-oauth2', 'apiKey', ]
+            strategies: ['auth-design-oauth2', 'apiKey']
         },
         description: 'greet me',
         tags: ['Tests']
