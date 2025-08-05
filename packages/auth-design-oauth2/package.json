@@ -19,7 +19,7 @@
   "dependencies": {
     "@hapi/boom": "^10.0.1",
     "@hapi/hoek": "^11.0.7",
-    "@kaapi/kaapi": "^0.0.6",
+    "@kaapi/kaapi": "^0.0.9",
     "@novice1/api-doc-generator": "^1.0.2",
     "tslib": "^2.8.1"
   }
