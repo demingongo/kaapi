@@ -122,6 +122,8 @@ export function createDocsRouter<Refs extends ReqRef = ReqRefDefaults>(
                         } else if (filepath.endsWith('.png')) {
                             readStreamOptions = {}
                             cT = 'image/png'
+                        } else if (filepath.endsWith('.html')) {
+                            cT = 'text/html'
                         }
                         return h.response(fs.createReadStream(filepath, readStreamOptions))
                             .ttl(cacheDuration).header(

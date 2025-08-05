@@ -1,6 +1,6 @@
 {
   "name": "@kaapi/kafka-messaging",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "private": false,
   "description": "Kafka-based messaging for kaapi",
   "main": "lib/index.js",
@@ -16,10 +16,8 @@
     "directory": "packages/kafka-messaging"
   },
   "license": "MIT",
-  "devDependencies": {
-  },
   "dependencies": {
-    "@kaapi/kaapi": "^0.0.4",
+    "@kaapi/kaapi": "^0.0.5",
     "kafkajs": "^2.2.4",
     "tslib": "^2.8.1"
   }

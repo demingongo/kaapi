@@ -306,7 +306,7 @@ export class Kaapi extends KaapiBaseApp implements IKaapiApp {
         const values = Array.isArray(plugins) ? plugins : [plugins]
 
         for (const plugin of values) {
-            await plugin.build(tool)
+            await plugin.integrate(tool)
         }
     }
 }

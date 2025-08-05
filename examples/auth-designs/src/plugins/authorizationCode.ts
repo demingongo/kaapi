@@ -1,6 +1,5 @@
 import {
-    Auth,
-    AuthCredentials,
+    KaapiAuthOptions,
     KaapiPlugin,
     KaapiTools,
     Lifecycle,
@@ -18,19 +17,6 @@ import Hoek from '@hapi/hoek'
 //#region Types
 
 export type OAuth2Error = 'invalid_request' | 'invalid_client' | 'invalid_grant' | 'invalid_scope' | 'unauthorized_client' | 'unsupported_grant_type' | 'invalid_token'
-
-export type OAuth2AuthOptions = {
-    tokenType?: string;
-    validate?<
-        Refs extends ReqRef = ReqRefDefaults
-    >(request: Request<Refs>, token: string, h: ResponseToolkit<Refs>): Promise<{
-        isValid?: boolean;
-        artifacts?: unknown;
-        credentials?: AuthCredentials;
-        message?: string;
-        scheme?: string;
-    } | Auth>;
-};
 
 //#endregion Types
 
@@ -199,7 +185,7 @@ export interface AuthDesignOAuth2Arg {
     tokenRoute: OAuth2ACTokenRoute<any>;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     refreshTokenRoute?: OAuth2ACRefreshTokenRoute<any>;
-    options?: OAuth2AuthOptions;
+    options?: KaapiAuthOptions;
     securitySchemeName?: string;
 }
 
@@ -208,7 +194,7 @@ export class AuthorizationCodeOAuth2 implements KaapiPlugin {
     protected securitySchemeName: string
     protected description?: string
     protected scopes?: Record<string, string>
-    protected options: OAuth2AuthOptions
+    protected options: KaapiAuthOptions
 
     protected pkce: boolean = false
 
@@ -278,7 +264,7 @@ export class AuthorizationCodeOAuth2 implements KaapiPlugin {
         return this.description;
     }
 
-    build(t: KaapiTools) {
+    integrate(t: KaapiTools) {
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const routesOptions: RouteOptions<any> = {
@@ -518,7 +504,7 @@ export class AuthorizationCodeOAuth2 implements KaapiPlugin {
             return {
                 async authenticate(request, h) {
 
-                    const settings: OAuth2AuthOptions = Hoek.applyToDefaults({
+                    const settings: KaapiAuthOptions = Hoek.applyToDefaults({
                         tokenType: 'Bearer'
                     }, options || {});
 
