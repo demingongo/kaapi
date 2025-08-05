@@ -344,8 +344,8 @@ importers:
         specifier: ^11.0.7
         version: 11.0.7
       '@kaapi/kaapi':
-        specifier: ^0.0.4
-        version: 0.0.4
+        specifier: ^0.0.5
+        version: 0.0.5
       '@novice1/api-doc-generator':
         specifier: ^1.0.2
         version: 1.0.2
@@ -368,8 +368,8 @@ importers:
         specifier: ^7.1.0
         version: 7.1.0
       '@kaapi/server':
-        specifier: ^0.0.4
-        version: 0.0.4
+        specifier: ^0.0.5
+        version: 0.0.5
       '@novice1/api-doc-generator':
         specifier: ^1.0.2
         version: 1.0.2
@@ -399,8 +399,8 @@ importers:
   packages/kafka-messaging:
     dependencies:
       '@kaapi/kaapi':
-        specifier: ^0.0.4
-        version: 0.0.4
+        specifier: ^0.0.5
+        version: 0.0.5
       kafkajs:
         specifier: ^2.2.4
         version: 2.2.4
@@ -636,11 +636,11 @@ packages:
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
 
-  '@kaapi/kaapi@0.0.4':
-    resolution: {integrity: sha512-op8F54I/hl/g4XH0Lft9tem29ZSDYlapWbFXe9J7HCd668OpIxn6OAX3/CPvQINTw5uyZSdeIR+UIZa33pVXyA==}
+  '@kaapi/kaapi@0.0.5':
+    resolution: {integrity: sha512-srDQkwZlHJJZnaO8+MUA37F9AFsZ6K63X3l9pBWx9zxCGRBx0CxLo3uJ0EK2oc3JbrgAj7J7FCxLMGHYa9Q1IA==}
 
-  '@kaapi/server@0.0.4':
-    resolution: {integrity: sha512-8s3vE5lvEbcX/dEqUWtdkhyPd5sz1W596wZzWxtcmQWVDuIfG7wuN8EN7VQg1oJlhYBofXmlKURHhY9CsJk/vA==}
+  '@kaapi/server@0.0.5':
+    resolution: {integrity: sha512-yuyGVMHhjHezMqymEXtC5iHiu0R9XKISduRgbKWUiC8/ZOG/aoNrCb8BgN6CYjy1dexQZQObBQyWkW6MdOZG7Q==}
 
   '@lerna/create@8.2.3':
     resolution: {integrity: sha512-f+68+iojcQ0tZRMfCgQyJdsdz+YPu3/d+0Zo1RJz92bgBxTCiEU+dHACVq1n3sEjm/YWPnFGdag8U5EYYmP3WA==}
@@ -3692,13 +3692,13 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.4
 
-  '@kaapi/kaapi@0.0.4':
+  '@kaapi/kaapi@0.0.5':
     dependencies:
       '@hapi/boom': 10.0.1
       '@hapi/hapi': 21.4.0
       '@hapi/hoek': 11.0.7
       '@hapi/inert': 7.1.0
-      '@kaapi/server': 0.0.4
+      '@kaapi/server': 0.0.5
       '@novice1/api-doc-generator': 1.0.2
       '@novice1/routing': 2.0.2
       qs: 6.14.0
@@ -3708,7 +3708,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@kaapi/server@0.0.4':
+  '@kaapi/server@0.0.5':
     dependencies:
       '@hapi/boom': 10.0.1
       '@hapi/hapi': 21.4.0
