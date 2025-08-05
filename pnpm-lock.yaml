@@ -48,6 +48,61 @@ importers:
         specifier: ^8.39.0
         version: 8.39.0(eslint@9.32.0)(typescript@5.9.2)
 
+  examples/auth-designs:
+    dependencies:
+      '@hapi/boom':
+        specifier: ^10.0.1
+        version: 10.0.1
+      '@kaapi/auth-design-oauth2':
+        specifier: workspace:^
+        version: link:../../packages/auth-design-oauth2
+      '@kaapi/kaapi':
+        specifier: workspace:^
+        version: link:../../packages/kaapi
+      '@novice1/api-doc-generator':
+        specifier: ^1.0.2
+        version: 1.0.2
+      tslib:
+        specifier: ^2.8.1
+        version: 2.8.1
+    devDependencies:
+      '@eslint/eslintrc':
+        specifier: ^3.3.1
+        version: 3.3.1
+      '@eslint/js':
+        specifier: ^9.30.0
+        version: 9.32.0
+      '@stylistic/eslint-plugin':
+        specifier: ^5.0.0
+        version: 5.2.2(eslint@9.32.0)
+      '@types/node':
+        specifier: ^24.0.7
+        version: 24.2.0
+      '@typescript-eslint/eslint-plugin':
+        specifier: ^8.35.0
+        version: 8.39.0(@typescript-eslint/parser@8.39.0(eslint@9.32.0)(typescript@5.9.2))(eslint@9.32.0)(typescript@5.9.2)
+      '@typescript-eslint/parser':
+        specifier: ^8.35.0
+        version: 8.39.0(eslint@9.32.0)(typescript@5.9.2)
+      eslint:
+        specifier: ^9.30.0
+        version: 9.32.0
+      globals:
+        specifier: ^16.2.0
+        version: 16.3.0
+      nodemon:
+        specifier: ^3.1.10
+        version: 3.1.10
+      ts-node:
+        specifier: ^10.9.2
+        version: 10.9.2(@types/node@24.2.0)(typescript@5.9.2)
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.2
+      typescript-eslint:
+        specifier: ^8.35.0
+        version: 8.39.0(eslint@9.32.0)(typescript@5.9.2)
+
   examples/kaapi-app:
     dependencies:
       '@hapi/boom':
