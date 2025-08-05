@@ -278,7 +278,7 @@ export class AuthorizationCodeOAuth2 implements KaapiPlugin {
         return this.description;
     }
 
-    build(t: KaapiTools) {
+    integrate(t: KaapiTools) {
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const routesOptions: RouteOptions<any> = {

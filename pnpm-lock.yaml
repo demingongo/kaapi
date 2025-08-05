@@ -56,6 +56,9 @@ importers:
       '@hapi/hoek':
         specifier: ^11.0.7
         version: 11.0.7
+      '@kaapi/auth-design-oauth2':
+        specifier: workspace:^
+        version: link:../../packages/auth-design-oauth2
       '@kaapi/kaapi':
         specifier: workspace:^
         version: link:../../packages/kaapi
@@ -344,8 +347,8 @@ importers:
         specifier: ^11.0.7
         version: 11.0.7
       '@kaapi/kaapi':
-        specifier: ^0.0.5
-        version: 0.0.5
+        specifier: ^0.0.6
+        version: 0.0.6
       '@novice1/api-doc-generator':
         specifier: ^1.0.2
         version: 1.0.2
@@ -638,6 +641,9 @@ packages:
 
   '@kaapi/kaapi@0.0.5':
     resolution: {integrity: sha512-srDQkwZlHJJZnaO8+MUA37F9AFsZ6K63X3l9pBWx9zxCGRBx0CxLo3uJ0EK2oc3JbrgAj7J7FCxLMGHYa9Q1IA==}
+
+  '@kaapi/kaapi@0.0.6':
+    resolution: {integrity: sha512-Yi4zINFOlo/Zs2U5mf/vSy2gfN7+ikyxq582to/MOEITIcoRrEJWxRbgZNn9mD9DajXptq9aGew3tnyYb9URTg==}
 
   '@kaapi/server@0.0.5':
     resolution: {integrity: sha512-yuyGVMHhjHezMqymEXtC5iHiu0R9XKISduRgbKWUiC8/ZOG/aoNrCb8BgN6CYjy1dexQZQObBQyWkW6MdOZG7Q==}
@@ -3693,6 +3699,22 @@ snapshots:
       '@jridgewell/sourcemap-codec': 1.5.4
 
   '@kaapi/kaapi@0.0.5':
+    dependencies:
+      '@hapi/boom': 10.0.1
+      '@hapi/hapi': 21.4.0
+      '@hapi/hoek': 11.0.7
+      '@hapi/inert': 7.1.0
+      '@kaapi/server': 0.0.5
+      '@novice1/api-doc-generator': 1.0.2
+      '@novice1/routing': 2.0.2
+      qs: 6.14.0
+      swagger-ui-dist: 5.27.1
+      tslib: 2.8.1
+      winston: 3.17.0
+    transitivePeerDependencies:
+      - supports-color
+
+  '@kaapi/kaapi@0.0.6':
     dependencies:
       '@hapi/boom': 10.0.1
       '@hapi/hapi': 21.4.0

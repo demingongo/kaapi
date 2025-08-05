@@ -8,7 +8,7 @@ import {
     OAuth2ACRefreshTokenRoute, 
     OAuth2ACTokenHandler, 
     OAuth2ACTokenRoute 
-} from './plugins/authorizationCode';
+} from '@kaapi/auth-design-oauth2';
 
 function buildSignInHTML(options: { title: string, error?: string }) {
     return `<!DOCTYPE html>
