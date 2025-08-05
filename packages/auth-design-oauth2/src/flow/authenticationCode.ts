@@ -531,6 +531,7 @@ export class AuthorizationCodeOAuth2 implements KaapiPlugin {
 
                     if (tokenType.toLowerCase() !== settings.tokenType?.toLowerCase()) {
                         token = ''
+                        return Boom.unauthorized(null, tokenType)
                     }
 
                     if (settings.validate) {

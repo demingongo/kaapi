@@ -1,6 +1,6 @@
 {
   "name": "@kaapi/kaapi",
-  "version": "0.0.8",
+  "version": "0.0.7",
   "private": false,
   "description": "TypeScript-based framework",
   "main": "lib/index.js",
@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@hapi/boom": "^10.0.1",
-    "@hapi/hapi": "^21.4.2",
+    "@hapi/hapi": "^21.4.0",
     "@hapi/hoek": "^11.0.7",
     "@hapi/inert": "^7.1.0",
     "@kaapi/server": "^0.0.7",

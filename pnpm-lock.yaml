@@ -362,7 +362,7 @@ importers:
         specifier: ^10.0.1
         version: 10.0.1
       '@hapi/hapi':
-        specifier: ^21.4.2
+        specifier: ^21.4.0
         version: 21.4.2
       '@hapi/hoek':
         specifier: ^11.0.7
@@ -417,7 +417,7 @@ importers:
         specifier: ^10.0.1
         version: 10.0.1
       '@hapi/hapi':
-        specifier: ^21.4.2
+        specifier: ^21.4.0
         version: 21.4.2
       '@hapi/hoek':
         specifier: ^11.0.7
