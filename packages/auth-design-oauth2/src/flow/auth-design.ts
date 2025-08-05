@@ -4,15 +4,11 @@ import { Auth, AuthCredentials, KaapiServerRoute, ReqRef, ReqRefDefaults, Respon
 import { BaseAuthUtil } from '@novice1/api-doc-generator/lib/utils/auth/baseAuthUtils';
 
 export interface IAuthDesign {
-    router?<Refs extends ReqRef = ReqRefDefaults>(): KaapiServerRoute<Refs>[]
+    routes?<Refs extends ReqRef = ReqRefDefaults>(): KaapiServerRoute<Refs>[]
     scheme(): BaseAuthUtil
-    strategy<
-        Refs extends ReqRef = ReqRefDefaults,
-        // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-        Options extends object = {}
-    >(): {
+    strategy(): {
         name: string,
-        scheme: ServerAuthScheme<Options, Refs>
+        scheme: ServerAuthScheme
     }
 }
 
@@ -69,13 +65,9 @@ export abstract class AuthDesignOAuth2 implements IAuthDesign {
         return this.description;
     }
 
-    strategy<
-        Refs extends ReqRef = ReqRefDefaults,
-        // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-        Options extends object = {}
-    >(): {
+    strategy(): {
         name: string,
-        scheme: ServerAuthScheme<Options, Refs>
+        scheme: ServerAuthScheme
     } {
         return {
             name: 'hello',
@@ -133,7 +125,7 @@ export abstract class AuthDesignOAuth2 implements IAuthDesign {
         }
     }
 
-    abstract router<Refs extends ReqRef = ReqRefDefaults>(): KaapiServerRoute<Refs>[]
+    abstract routes<Refs extends ReqRef = ReqRefDefaults>(): KaapiServerRoute<Refs>[]
 
     abstract scheme(): BaseAuthUtil
 

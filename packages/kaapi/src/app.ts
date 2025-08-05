@@ -7,6 +7,7 @@ import winston from 'winston';
 import { createDocsRouter, DocsConfig, DocsOptions } from './services/docs/docs';
 import { KaapiOpenAPI, KaapiPostman } from './services/docs/generators';
 import { HandlerDecorations, Lifecycle, ReqRef, ReqRefDefaults } from '@hapi/hapi';
+import { KaapiPlugin, KaapiTools } from './services/plugin';
 
 export interface KaapiAppOptions extends KaapiServerOptions {
     logger?: ILogger,
@@ -180,7 +181,7 @@ export class Kaapi extends KaapiBaseApp implements IKaapiApp {
                 this.docs,
                 this.#docsOptions
             )
-            this.server().route(route, handler)
+            this.idle().route(route, handler)
         }
     }
 
@@ -206,7 +207,7 @@ export class Kaapi extends KaapiBaseApp implements IKaapiApp {
      */
     server(opts?: KaapiServerOptions): KaapiServer {
         if (!this.kaapiServer) {
-            this.kaapiServer = this._createServer(opts); 
+            this.kaapiServer = this._createServer(opts);
         }
         if (!this.#serverStarted) {
             this._startServer()
@@ -285,5 +286,26 @@ export class Kaapi extends KaapiBaseApp implements IKaapiApp {
     }
     async subscribe<T = unknown>(topic: string, handler: (message: T, sender: IMessagingSender) => Promise<void> | void, conf?: IMessagingSubscribeConfig): Promise<void> {
         return await this.messaging?.subscribe(topic, handler, conf)
+    }
+
+    async plug(plugins: KaapiPlugin[] | KaapiPlugin) {
+        const tool: KaapiTools = {
+            log: this.log.bind(this.log),
+            route<Refs extends ReqRef = ReqRefDefaults>(serverRoute: KaapiServerRoute<Refs>, handler?: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>) {
+                this.route(serverRoute, handler)
+                return this
+            },
+            scheme: this.idle().server.auth.scheme.bind(this.idle().server.auth),
+            strategy: this.idle().server.auth.strategy.bind(this.idle().server.auth),
+            openapi: this.openapi,
+            postman: this.postman,
+            server: this.idle().server
+        }
+
+        const values = Array.isArray(plugins) ? plugins : [plugins]
+
+        for (const plugin of values) {
+            await plugin.build(tool)
+        }
     }
 }

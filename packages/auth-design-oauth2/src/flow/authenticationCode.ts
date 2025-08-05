@@ -36,7 +36,7 @@ function buildSignInHTML(options: { title: string, error?: string }) {
 </html>`
 }
 
-export const getAuthRoute: KaapiServerRoute<{
+export interface LoginAuthRefs {
     Query: { 
         client_id?: string, 
         code_challenge?: string, 
@@ -45,7 +45,9 @@ export const getAuthRoute: KaapiServerRoute<{
         state?: string,
         nonce?: string
     }
-}> = {
+}
+
+export const getAuthRoute: KaapiServerRoute<LoginAuthRefs> = {
     path: '/oauth2/ac/login',
     method: 'GET',
     handler: async ({ query: { nonce, client_id, code_challenge, redirect_uri, scope, state } }, h) => {
@@ -74,20 +76,14 @@ export const getAuthRoute: KaapiServerRoute<{
     }
 }
 
-export const postAuthRoute: KaapiServerRoute<{
-    Query: { 
-        client_id?: string, 
-        code_challenge?: string, 
-        redirect_uri?: string, 
-        scope?: string, 
-        state?: string,
-        nonce?: string
-    },
+export interface PostAuthRefs extends LoginAuthRefs {
     Payload: {
         email: string,
         password: string
     }
-}> = {
+}
+
+export const postAuthRoute: KaapiServerRoute<PostAuthRefs> = {
     path: '/oauth2/ac/login',
     method: 'POST',
     handler: async ({ query: { nonce, client_id, code_challenge, redirect_uri, scope, state }, payload: { email, password }  }, h) => {

@@ -53,9 +53,9 @@ importers:
       '@hapi/boom':
         specifier: ^10.0.1
         version: 10.0.1
-      '@kaapi/auth-design-oauth2':
-        specifier: workspace:^
-        version: link:../../packages/auth-design-oauth2
+      '@hapi/hoek':
+        specifier: ^11.0.7
+        version: 11.0.7
       '@kaapi/kaapi':
         specifier: workspace:^
         version: link:../../packages/kaapi
