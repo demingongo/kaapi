@@ -280,6 +280,24 @@ importers:
         specifier: ^8.35.0
         version: 8.39.0(eslint@9.32.0)(typescript@5.9.2)
 
+  packages/auth-design-oauth2:
+    dependencies:
+      '@hapi/boom':
+        specifier: ^10.0.1
+        version: 10.0.1
+      '@hapi/hoek':
+        specifier: ^11.0.7
+        version: 11.0.7
+      '@kaapi/kaapi':
+        specifier: ^0.0.4
+        version: 0.0.4
+      '@novice1/api-doc-generator':
+        specifier: ^1.0.2
+        version: 1.0.2
+      tslib:
+        specifier: ^2.8.1
+        version: 2.8.1
+
   packages/kaapi:
     dependencies:
       '@hapi/boom':

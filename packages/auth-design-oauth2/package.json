@@ -1,0 +1,26 @@
+{
+  "name": "@kaapi/auth-design-oauth2",
+  "version": "0.0.4",
+  "private": true,
+  "description": "OAuth2 design for kaapi",
+  "main": "lib/index.js",
+  "scripts": {
+    "lint": "eslint .",
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "demingongo",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/demingongo/kaapi.git",
+    "directory": "packages/auth-design-oauth2"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@hapi/boom": "^10.0.1",
+    "@hapi/hoek": "^11.0.7",
+    "@kaapi/kaapi": "^0.0.4",
+    "@novice1/api-doc-generator": "^1.0.2",
+    "tslib": "^2.8.1"
+  }
+}
