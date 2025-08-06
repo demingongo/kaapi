@@ -38,7 +38,7 @@ export default defineConfig([
         },
 
         rules: {
-            '@stylistic/js/quotes': ['warn', 'single'],
+            '@stylistic/js/quotes': ['error', 'single'],
             '@stylistic/js/quote-props': ['error', 'as-needed'],
             '@typescript-eslint/no-unused-vars': [
                 'error',
@@ -67,7 +67,7 @@ export default defineConfig([
         },
 
         rules: {
-            '@stylistic/js/quotes': ['warn', 'single'],
+            '@stylistic/js/quotes': ['error', 'single'],
             '@stylistic/js/quote-props': ['error', 'as-needed'],
         },
     }]);
