@@ -1,6 +1,6 @@
 {
   "name": "@kaapi/server",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "private": false,
   "description": "kaapi server",
   "main": "lib/index.js",
@@ -18,7 +18,7 @@
   "license": "MIT",
   "dependencies": {
     "@hapi/boom": "^10.0.1",
-    "@hapi/hapi": "21.4.0",
+    "@hapi/hapi": "^21.4.2",
     "@hapi/hoek": "^11.0.7",
     "tslib": "^2.8.1"
   }

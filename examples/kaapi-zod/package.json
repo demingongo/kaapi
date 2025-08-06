@@ -31,7 +31,7 @@
   },
   "dependencies": {
     "@hapi/boom": "^10.0.1",
-    "@hapi/hapi": "21.4.0",
+    "@hapi/hapi": "^21.4.2",
     "@hapi/hoek": "^11.0.7",
     "@hapi/inert": "^7.1.0",
     "@kaapi/kaapi": "workspace:^",
