@@ -116,33 +116,59 @@ export class KaapiServer<A = Hapi.ServerApplicationState> {
 
         const { auth, ...route } = serverRoute
 
-        if (auth &&
-            !this.#hasServerStrategies &&
-            !this.#server.auth.settings.default &&
-            (!route.options ||
-                typeof route.options != 'function' && (
-                    !route.options.auth ||
-                    typeof route.options.auth === 'object' &&
-                    !route.options.auth.strategies &&
-                    !route.options.auth.strategy)
-            )) {
-            if (!route.options) {
-                route.options = {}
-            }
-            if (!route.options.auth) {
-                route.options.auth = {}
-            }
-            if (typeof route.options.auth === 'object') {
-                console.error(`Implicit fallback for authorization is not recommended: route "${route.method}: ${route.path}"
-Define a per-route, a global or a default strategy.
-                    `)
-                route.options.auth.strategy = 'kaapi'
-                if (!route.options.auth.mode) {
-                    route.options.auth.mode = 'required'
+        if (auth === false) {
+            if (route.options &&
+                typeof route.options != 'function' &&
+                (typeof route.options.auth != 'boolean' ||
+                    route.options.auth !== false)
+            ) {
+                throw new Error(`Ambiguous auth configuration. It cannot be "${auth}" and "${route.options.auth}" simultaneously: "${route.method}: ${route.path}".`)
+            } else if (!route.options ||
+                typeof route.options != 'function') {
+                if (!route.options) {
+                    route.options = {}
+                }
+                if (!route.options.auth) {
+                    route.options.auth = false
                 }
             }
         }
 
+        if (auth) {
+            if (route.options &&
+                typeof route.options != 'function' &&
+                route.options.auth === false
+            ) {
+                throw new Error(`Ambiguous auth configuration. It cannot be "${auth}" and "${route.options.auth}" simultaneously: "${route.method}: ${route.path}".`)
+            } else if (
+                !this.#hasServerStrategies &&
+                !this.#server.auth.settings.default &&
+                (!route.options ||
+                    typeof route.options != 'function' && (
+                        !route.options.auth ||
+                        typeof route.options.auth === 'object' &&
+                        !route.options.auth.strategies &&
+                        !route.options.auth.strategy)
+                )) {
+                if (!route.options) {
+                    route.options = {}
+                }
+                if (!route.options.auth) {
+                    route.options.auth = {}
+                }
+                if (typeof route.options.auth === 'object') {
+                    console.error(`Implicit fallback for authorization is not recommended: "${route.method}: ${route.path}"
+Define a per-route, a global or a default strategy.
+                    `)
+                    route.options.auth.strategy = 'kaapi'
+                    if (!route.options.auth.mode) {
+                        route.options.auth.mode = 'required'
+                    }
+                }
+            }
+        }
+
+        // override handler
         if (handler)
             route.handler = handler
 

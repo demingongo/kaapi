@@ -2,13 +2,18 @@ import Boom from '@hapi/boom';
 import { KaapiPlugin } from '@kaapi/kaapi';
 import { ApiKeyLocation, ApiKeyUtil } from '@novice1/api-doc-generator'
 
+export interface IApiKeyAuthDesign extends KaapiPlugin {
+    scheme(): ApiKeyUtil;
+}
 
-export const apiKeyAuthDesign: KaapiPlugin = {
+export const apiKeyAuthDesign: IApiKeyAuthDesign = {
     integrate(tools) {
         tools.scheme('apiKey', (_server) => {
 
             return {
                 async authenticate(request, h) {
+
+                    console.log('checking apiKey', request.path)
 
                     const settings = {
                         tokenType: 'Session'
@@ -46,11 +51,17 @@ export const apiKeyAuthDesign: KaapiPlugin = {
 
         tools.strategy('apiKey', 'apiKey')
 
-        const securityScheme = new ApiKeyUtil('apiKey')
-            .setApiKeyLocation(ApiKeyLocation.header)
-            .setDescription('')
-            .setKey('Authorization')
+        console.log('apiKey auth strategy registered');
+
+        const securityScheme = this.scheme();
         tools.openapi?.addSecurityScheme(securityScheme)
             .setDefaultSecurity(securityScheme);
     },
+
+    scheme() {
+        return new ApiKeyUtil('apiKey')
+            .setApiKeyLocation(ApiKeyLocation.header)
+            .setDescription('')
+            .setKey('Authorization')
+    }
 }

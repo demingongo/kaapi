@@ -280,6 +280,9 @@ export class AuthorizationCodeOAuth2 implements KaapiPlugin {
 
     integrate(t: KaapiTools) {
 
+        t.scheme(this.securitySchemeName, this.strategyScheme())
+        t.strategy(this.securitySchemeName, this.securitySchemeName, this.options)
+
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const routesOptions: RouteOptions<any> = {
                     plugins: {
@@ -482,9 +485,6 @@ export class AuthorizationCodeOAuth2 implements KaapiPlugin {
             })
         }
 
-        t.scheme(this.securitySchemeName, this.strategyScheme())
-        t.strategy(this.securitySchemeName, this.securitySchemeName, this.options)
-
         const securityScheme = this.scheme()
         t.openapi?.addSecurityScheme(securityScheme)
             .setDefaultSecurity(securityScheme);
@@ -515,6 +515,8 @@ export class AuthorizationCodeOAuth2 implements KaapiPlugin {
     strategyScheme(): ServerAuthScheme {
         return (_server, options) => {
 
+            const securitySchemeName = this.securitySchemeName
+
             return {
                 async authenticate(request, h) {
 
@@ -531,7 +533,7 @@ export class AuthorizationCodeOAuth2 implements KaapiPlugin {
 
                     if (tokenType.toLowerCase() !== settings.tokenType?.toLowerCase()) {
                         token = ''
-                        return Boom.unauthorized(null, tokenType)
+                        return Boom.unauthorized(null, securitySchemeName)
                     }
 
                     if (settings.validate) {
@@ -561,7 +563,7 @@ export class AuthorizationCodeOAuth2 implements KaapiPlugin {
                         }
                     }
 
-                    return h.unauthenticated(Boom.unauthorized(), { credentials: {} })
+                    return Boom.unauthorized(null, securitySchemeName)
                 },
             }
         }

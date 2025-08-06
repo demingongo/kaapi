@@ -25,5 +25,5 @@ export interface KaapiTools {
 }
 
 export interface KaapiPlugin {
-    integrate(tool: KaapiTools): void | Promise<void>
+    integrate(t: KaapiTools): void | Promise<void>
 }

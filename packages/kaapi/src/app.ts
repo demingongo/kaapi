@@ -13,7 +13,8 @@ export interface KaapiAppOptions extends KaapiServerOptions {
     logger?: ILogger,
     loggerOptions?: winston.LoggerOptions,
     messaging?: IMessaging,
-    docs?: DocsConfig
+    docs?: DocsConfig,
+    extend?: KaapiPlugin[] | KaapiPlugin
 }
 
 export class Kaapi extends KaapiBaseApp implements IKaapiApp {
@@ -44,7 +45,7 @@ export class Kaapi extends KaapiBaseApp implements IKaapiApp {
     constructor(opts?: KaapiAppOptions) {
         super()
 
-        const { logger, loggerOptions, messaging, docs, ...serverOpts } = opts || {}
+        const { logger, loggerOptions, messaging, docs, extend, ...serverOpts } = opts || {}
 
         this.#defaultServerOpts = serverOpts
 
@@ -175,6 +176,19 @@ export class Kaapi extends KaapiBaseApp implements IKaapiApp {
             this.#docsOptions = docs.options
         }
 
+        if (extend) {
+            this.extend(extend)
+                .catch(err => {
+                    this.log.error('Error while plugging plugins', err)
+                }).finally(() => {
+                    this._createDocsRouter()
+                })
+        } else {
+            this._createDocsRouter()
+        }
+    }
+
+    private _createDocsRouter() {
         if (!this.#docsDisabled) {
             const [route, handler] = createDocsRouter(
                 this.#docsPath,
@@ -288,7 +302,7 @@ export class Kaapi extends KaapiBaseApp implements IKaapiApp {
         return await this.messaging?.subscribe(topic, handler, conf)
     }
 
-    async plug(plugins: KaapiPlugin[] | KaapiPlugin) {
+    async extend(plugins: KaapiPlugin[] | KaapiPlugin) {
         const getCurrentApp = () => this
         const tool: KaapiTools = {
             log: this.log.bind(this.log),
