@@ -25,6 +25,8 @@ export class KaapiServer<A = Hapi.ServerApplicationState> {
 
     #server: Hapi.Server<A>;
 
+    #hasServerStrategies: boolean = false;
+
     get server() {
         return this.#server
     }
@@ -32,12 +34,17 @@ export class KaapiServer<A = Hapi.ServerApplicationState> {
     constructor(opts?: KaapiServerOptions | undefined) {
         const { auth: authOpts, ...serverOpts } = opts || {}
 
-        if (serverOpts.routes?.auth && 
+        this.#hasServerStrategies = !!serverOpts.routes?.auth &&
+            typeof serverOpts.routes.auth === 'object' &&
+            (!!serverOpts.routes.auth.strategies || !!serverOpts.routes.auth?.strategy)
+
+        if (serverOpts.routes?.auth &&
             typeof serverOpts.routes.auth === 'object' &&
             !serverOpts.routes.auth.strategies &&
             !serverOpts.routes.auth.strategy
         ) {
             serverOpts.routes.auth.strategy = 'kaapi'
+            this.#hasServerStrategies = true
         }
 
         this.#server = Hapi.server(serverOpts)
@@ -61,7 +68,7 @@ export class KaapiServer<A = Hapi.ServerApplicationState> {
 
                     if (tokenType.toLowerCase() !== settings.tokenType?.toLowerCase()) {
                         token = ''
-                        return Boom.unauthorized(null, tokenType)
+                        return Boom.unauthorized(null, settings.tokenType || '')
                     }
 
                     if (settings.validate) {
@@ -91,7 +98,7 @@ export class KaapiServer<A = Hapi.ServerApplicationState> {
                         }
                     }
 
-                    return h.unauthenticated(Boom.unauthorized(), { credentials: {} })
+                    return Boom.unauthorized(null, settings.tokenType || '')
                 },
             }
         });
@@ -105,11 +112,13 @@ export class KaapiServer<A = Hapi.ServerApplicationState> {
         handler?: Hapi.HandlerDecorations | Hapi.Lifecycle.Method<Refs, Hapi.Lifecycle.ReturnValue<Refs>>): this {
         // Set defaults
         if (!serverRoute.method) serverRoute.method = '*';
-        if (!serverRoute.path) serverRoute.path =  '/{any*}';
+        if (!serverRoute.path) serverRoute.path = '/{any*}';
 
         const { auth, ...route } = serverRoute
 
         if (auth &&
+            !this.#hasServerStrategies &&
+            !this.#server.auth.settings.default &&
             (!route.options ||
                 typeof route.options != 'function' && (
                     !route.options.auth ||
@@ -124,6 +133,9 @@ export class KaapiServer<A = Hapi.ServerApplicationState> {
                 route.options.auth = {}
             }
             if (typeof route.options.auth === 'object') {
+                console.error(`Implicit fallback for authorization is not recommended: route "${route.method}: ${route.path}"
+Define a per-route, a global or a default strategy.
+                    `)
                 route.options.auth.strategy = 'kaapi'
                 if (!route.options.auth.mode) {
                     route.options.auth.mode = 'required'
