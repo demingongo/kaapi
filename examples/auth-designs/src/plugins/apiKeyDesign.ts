@@ -13,7 +13,7 @@ export const apiKeyAuthDesign: IApiKeyAuthDesign = {
             return {
                 async authenticate(request, h) {
 
-                    console.log('checking apiKey', request.path)
+                    console.log('checking apiKey', request.path, request.route.settings.auth)
 
                     const settings = {
                         tokenType: 'Session'

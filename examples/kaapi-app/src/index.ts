@@ -37,7 +37,7 @@ const app = new Kaapi({
     messaging: new CustomMessaging(),
     routes: {
         auth: {
-            // strategy: 'kaapi', // default
+            strategy: 'kaapi',
             mode: 'try'
         }
     },

@@ -17,6 +17,11 @@ const kaapiServer = new KaapiServer({
     }
 })
 
+kaapiServer.server.auth.default({
+    strategy: 'kaapi',
+    mode: 'try'
+})
+
 kaapiServer.route<{ Query: { name?: string } }>({
     method: 'GET',
     path: '/',
@@ -31,7 +36,7 @@ kaapiServer.route<{ AuthUser: { username: string } }>({
 kaapiServer.route({
     method: 'GET',
     path: '/myhtml',
-}, (_, h) => h.response(`<!DOCTYPE html>
+}, (_) => `<!DOCTYPE html>
 <html lang="en">
  <head>
   <meta charset="UTF-8">
@@ -44,7 +49,7 @@ kaapiServer.route({
  <body>
   <h2>One Good Ol' HTML Page!</h2>
  </body>
-</html>`).type('text/html').code(200))
+</html>`)
 
 kaapiServer.server.start().then(
     () => console.log('Server running on %s', kaapiServer.server.info.uri),

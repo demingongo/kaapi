@@ -27,6 +27,12 @@ const app = new Kaapi({
     },
     docs: {
         security: new BearerUtil('mySecurityScheme')
+    },
+    routes: {
+        auth: {
+            strategy: 'kaapi',
+            mode: 'try'
+        }
     }
 })
 
@@ -44,43 +50,6 @@ const normalizeBooleans = (obj: Record<string, any>) => {
     }
     return obj;
 }
-app.idle().server.register({
-    name: 'zod',
-    register(server) {
-        server.ext('onPreHandler', async (request: Request, h: ResponseToolkit) => {
-            const routeValidation = request?.route?.settings?.plugins?.zod as {
-                payload?: ZodType<any, any>;
-                query?: ZodType<any, any>;
-                params?: ZodType<any, any>;
-                headers?: ZodType<any, any>;
-                state?: ZodType<any, any>;
-            };
-
-            try {
-
-                // Adding loop so that in future adding in array will be enough
-                for (const prop of supportedProps) {
-                    if (routeValidation?.[prop] && parse[prop]) {
-                        if (prop === 'query') {
-                            const parsedProp = routeValidation[prop].parse(normalizeBooleans(request[prop]));
-                            Object.assign(request, { [prop]: parsedProp });
-                        }
-                        else {
-                            const parsedProp = routeValidation[prop].parse(request[prop]);
-                            Object.assign(request, { [prop]: parsedProp });
-                        }
-                    }
-                }
-
-                return h.continue;
-            } catch (err) {
-                const error = fromError(err).message;
-                app.log.error(error);
-                return Boom.badRequest(error);
-            }
-        });
-    },
-})
 
 type ReqSchema = {
     payload?: ZodSchema;
@@ -117,7 +86,7 @@ function myway<
         handler
     )
 }
-app.idle().server.decorate('server', 'myway', myway);
+//app.idle().server.decorate('server', 'myway', myway);
 
 //app.myway = myway
 
@@ -127,47 +96,94 @@ const schema = {
     })
 }
 
-//type QueryType = z.infer<typeof schema.query>
 
-app.server().route(
-    {
-        path: '/zod',
-        auth: false,
-        method: 'GET',
-        options: {
-            plugins: {
-                zod: schema,
-                kaapi: {
-                docs: false
-            }
-            }
-        }
-    },
-    (req) => req.query
-)
 
-myway({
-    path: '/oops',
-    method: 'POST',
-    auth: true,
-    options: {
-        plugins: {
-            kaapi: {
-                docs: {
-                    disabled: false
+async function start() {
+    await app.idle().server.register({
+        name: 'zod',
+        register(server) {
+            server.ext('onPreHandler', async (request: Request, h: ResponseToolkit) => {
+                const routeValidation = request?.route?.settings?.plugins?.zod as {
+                    payload?: ZodType<any, any>;
+                    query?: ZodType<any, any>;
+                    params?: ZodType<any, any>;
+                    headers?: ZodType<any, any>;
+                    state?: ZodType<any, any>;
+                };
+
+                try {
+
+                    // Adding loop so that in future adding in array will be enough
+                    for (const prop of supportedProps) {
+                        if (routeValidation?.[prop] && parse[prop]) {
+                            if (prop === 'query') {
+                                const parsedProp = routeValidation[prop].parse(normalizeBooleans(request[prop]));
+                                Object.assign(request, { [prop]: parsedProp });
+                            }
+                            else {
+                                const parsedProp = routeValidation[prop].parse(request[prop]);
+                                Object.assign(request, { [prop]: parsedProp });
+                            }
+                        }
+                    }
+
+                    return h.continue;
+                } catch (err) {
+                    const error = fromError(err).message;
+                    app.log.error(error);
+                    return Boom.badRequest(error);
+                }
+            });
+        },
+    })
+
+    //type QueryType = z.infer<typeof schema.query>
+
+    app.idle().route(
+        {
+            path: '/zod',
+            auth: false,
+            method: 'GET',
+            options: {
+                plugins: {
+                    zod: schema,
+                    kaapi: {
+                        docs: false
+                    }
                 }
             }
         },
-        validate: {
-            query: Joi.object({
-                version: Joi.number()
-            })
-        }
-    }
-}, {
-    payload: z.object({
-        message: z.string().nonempty().max(5120)
-    })
-}, ({ payload: { message } }) => `${message}`)
+        (req) => req.query
+    )
 
-app.refreshDocs()
+    myway({
+        path: '/oops',
+        method: 'POST',
+        auth: true,
+        options: {
+            plugins: {
+                kaapi: {
+                    docs: {
+                        disabled: false
+                    }
+                }
+            },
+            validate: {
+                payload: Joi.object({
+                    version: Joi.number()
+                })
+            }
+        }
+    }, {
+        payload: z.object({
+            version: z.number().max(5120)
+        })
+    }, ({ payload: { version } }) => `${version}`)
+
+    app.refreshDocs()
+}
+
+
+
+
+start()

@@ -25,27 +25,12 @@ export class KaapiServer<A = Hapi.ServerApplicationState> {
 
     #server: Hapi.Server<A>;
 
-    #hasServerStrategies: boolean = false;
-
     get server() {
         return this.#server
     }
 
     constructor(opts?: KaapiServerOptions | undefined) {
         const { auth: authOpts, ...serverOpts } = opts || {}
-
-        this.#hasServerStrategies = !!serverOpts.routes?.auth &&
-            typeof serverOpts.routes.auth === 'object' &&
-            (!!serverOpts.routes.auth.strategies || !!serverOpts.routes.auth?.strategy)
-
-        if (serverOpts.routes?.auth &&
-            typeof serverOpts.routes.auth === 'object' &&
-            !serverOpts.routes.auth.strategies &&
-            !serverOpts.routes.auth.strategy
-        ) {
-            serverOpts.routes.auth.strategy = 'kaapi'
-            this.#hasServerStrategies = true
-        }
 
         this.#server = Hapi.server(serverOpts)
 
@@ -119,6 +104,7 @@ export class KaapiServer<A = Hapi.ServerApplicationState> {
         if (auth === false) {
             if (route.options &&
                 typeof route.options != 'function' &&
+                typeof route.options.auth != 'undefined' &&
                 (typeof route.options.auth != 'boolean' ||
                     route.options.auth !== false)
             ) {
@@ -141,15 +127,11 @@ export class KaapiServer<A = Hapi.ServerApplicationState> {
             ) {
                 throw new Error(`Ambiguous auth configuration. It cannot be "${auth}" and "${route.options.auth}" simultaneously: "${route.method}: ${route.path}".`)
             } else if (
-                !this.#hasServerStrategies &&
-                !this.#server.auth.settings.default &&
-                (!route.options ||
-                    typeof route.options != 'function' && (
-                        !route.options.auth ||
-                        typeof route.options.auth === 'object' &&
-                        !route.options.auth.strategies &&
-                        !route.options.auth.strategy)
-                )) {
+                !route.options ||
+                typeof route.options != 'function' && (
+                    !route.options.auth ||
+                    typeof route.options.auth === 'object')
+            ) {
                 if (!route.options) {
                     route.options = {}
                 }
@@ -157,12 +139,10 @@ export class KaapiServer<A = Hapi.ServerApplicationState> {
                     route.options.auth = {}
                 }
                 if (typeof route.options.auth === 'object') {
-                    console.error(`Implicit fallback for authorization is not recommended: "${route.method}: ${route.path}"
-Define a per-route, a global or a default strategy.
-                    `)
-                    route.options.auth.strategy = 'kaapi'
-                    if (!route.options.auth.mode) {
+                    if (!route.options.auth.mode || route.options.auth.mode === 'required') {
                         route.options.auth.mode = 'required'
+                    } else {
+                        throw new Error(`Ambiguous auth configuration. It cannot be "${auth}" and "${route.options.auth.mode}" simultaneously: "${route.method}: ${route.path}".`)
                     }
                 }
             }

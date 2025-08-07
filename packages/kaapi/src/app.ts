@@ -256,15 +256,11 @@ export class Kaapi extends KaapiBaseApp implements IKaapiApp {
      * Initializes and starts the server if needed and returns it
      */
     async listen(port?: string | number, host?: string): Promise<KaapiServer> {
-        let r = this.kaapiServer
-        if (!r) {
-            const opts: KaapiServerOptions = {
-                port,
-                host
-            };
-            r = await this.serverAsync(opts)
-        }
-        return r
+        const opts: KaapiServerOptions = {
+            port,
+            host
+        };
+        return await this.serverAsync(opts)
     }
 
     route<Refs extends ReqRef = ReqRefDefaults>(

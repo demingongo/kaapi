@@ -57,7 +57,8 @@ app.route({
         /*
         // override the default auth strategy
         auth: {
-            strategies: ['apiKey']
+            strategies: ['apiKey'],
+            //mode: 'optional'
         },
         */
        
