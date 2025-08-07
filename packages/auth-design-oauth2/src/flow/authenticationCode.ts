@@ -1,15 +1,14 @@
 import {
     Auth,
     AuthCredentials,
-    KaapiPlugin,
+    AuthDesign,
     KaapiTools,
     Lifecycle,
     ReqRef,
     ReqRefDefaults,
     Request,
     ResponseToolkit,
-    RouteOptions,
-    ServerAuthScheme,
+    RouteOptions
 } from '@kaapi/kaapi'
 import { GrantType, OAuth2Util } from '@novice1/api-doc-generator'
 import Boom from '@hapi/boom'
@@ -203,7 +202,7 @@ export interface AuthDesignOAuth2Arg {
     securitySchemeName?: string;
 }
 
-export class AuthorizationCodeOAuth2 implements KaapiPlugin {
+export class AuthorizationCodeOAuth2 extends AuthDesign {
 
     protected securitySchemeName: string
     protected description?: string
@@ -228,6 +227,8 @@ export class AuthorizationCodeOAuth2 implements KaapiPlugin {
             securitySchemeName
         }: AuthDesignOAuth2Arg
     ) {
+        super()
+
         this.authorizationRoute = authorizationRoute
         this.tokenRoute = tokenRoute
         this.refreshTokenRoute = refreshTokenRoute
@@ -278,10 +279,89 @@ export class AuthorizationCodeOAuth2 implements KaapiPlugin {
         return this.description;
     }
 
-    integrate(t: KaapiTools) {
+    /**
+     * Returns the schema used for the documentation
+     */
+    docs() {
+        const docs = new OAuth2Util(this.securitySchemeName)
+            .setGrantType(this.isWithPkce() ? GrantType.authorizationCodeWithPkce : GrantType.authorizationCode)
+            .setScopes(this.getScopes() || {})
+            .setAuthUrl(this.authorizationRoute.path)
+            .setAccessTokenUrl(this.tokenRoute.path || '');
 
-        t.scheme(this.securitySchemeName, this.strategyScheme())
+        if (this.refreshTokenRoute?.path) {
+            docs.setRefreshUrl(this.refreshTokenRoute.path)
+        }
+
+        if (this.description) {
+            docs.setDescription(this.description)
+        }
+
+        return docs
+    }
+
+    /**
+     * Where authentication schemes and strategies are registered.
+     */
+    integrateStrategy(t: KaapiTools) {
+        t.scheme(this.securitySchemeName, (_server, options) => {
+
+            const securitySchemeName = this.securitySchemeName
+
+            return {
+                async authenticate(request, h) {
+
+                    const settings: OAuth2AuthOptions = Hoek.applyToDefaults({
+                        tokenType: 'Bearer'
+                    }, options || {});
+
+                    const authorization = request.raw.req.headers.authorization;
+
+                    const authSplit = authorization ? authorization.split(/\s+/) : ['', ''];
+
+                    const tokenType = authSplit[0]
+                    let token = authSplit[1]
+
+                    if (tokenType.toLowerCase() !== settings.tokenType?.toLowerCase()) {
+                        token = ''
+                        return Boom.unauthorized(null, securitySchemeName)
+                    }
+
+                    if (settings.validate) {
+                        try {
+                            const result = await settings.validate?.(request, token, h)
+
+                            if (result && 'isAuth' in result) {
+                                return result
+                            }
+
+                            if (result) {
+                                const { isValid, credentials, artifacts, message, scheme } = result;
+
+                                if (isValid && credentials) {
+                                    return h.authenticated({ credentials, artifacts })
+                                }
+
+                                if (message) {
+                                    return h.unauthenticated(Boom.unauthorized(message, scheme || settings.tokenType || ''), {
+                                        credentials: credentials || {},
+                                        artifacts
+                                    })
+                                }
+                            }
+                        } catch (err) {
+                            return Boom.internal(err instanceof Error ? err : `${err}`)
+                        }
+                    }
+
+                    return Boom.unauthorized(null, securitySchemeName)
+                },
+            }
+        })
         t.strategy(this.securitySchemeName, this.securitySchemeName, this.options)
+    }
+
+    integrateHook(t: KaapiTools) {
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const routesOptions: RouteOptions<any> = {
@@ -483,89 +563,6 @@ export class AuthorizationCodeOAuth2 implements KaapiPlugin {
                     }
                 }
             })
-        }
-
-        const securityScheme = this.scheme()
-        t.openapi?.addSecurityScheme(securityScheme)
-            .setDefaultSecurity(securityScheme);
-        if (securityScheme instanceof OAuth2Util && !securityScheme.getHost() && t.postman?.getHost().length) {
-            securityScheme.setHost(t.postman.getHost()[0])
-        }
-        t.postman?.setDefaultSecurity(securityScheme);
-    }
-
-    scheme() {
-        const docs = new OAuth2Util(this.securitySchemeName)
-            .setGrantType(this.isWithPkce() ? GrantType.authorizationCodeWithPkce : GrantType.authorizationCode)
-            .setScopes(this.getScopes() || {})
-            .setAuthUrl(this.authorizationRoute.path)
-            .setAccessTokenUrl(this.tokenRoute.path || '');
-
-        if (this.refreshTokenRoute?.path) {
-            docs.setRefreshUrl(this.refreshTokenRoute.path)
-        }
-
-        if (this.description) {
-            docs.setDescription(this.description)
-        }
-
-        return docs
-    }
-
-    strategyScheme(): ServerAuthScheme {
-        return (_server, options) => {
-
-            const securitySchemeName = this.securitySchemeName
-
-            return {
-                async authenticate(request, h) {
-
-                    const settings: OAuth2AuthOptions = Hoek.applyToDefaults({
-                        tokenType: 'Bearer'
-                    }, options || {});
-
-                    const authorization = request.raw.req.headers.authorization;
-
-                    const authSplit = authorization ? authorization.split(/\s+/) : ['', ''];
-
-                    const tokenType = authSplit[0]
-                    let token = authSplit[1]
-
-                    if (tokenType.toLowerCase() !== settings.tokenType?.toLowerCase()) {
-                        token = ''
-                        return Boom.unauthorized(null, securitySchemeName)
-                    }
-
-                    if (settings.validate) {
-                        try {
-                            const result = await settings.validate?.(request, token, h)
-
-                            if (result && 'isAuth' in result) {
-                                return result
-                            }
-
-                            if (result) {
-                                const { isValid, credentials, artifacts, message, scheme } = result;
-
-                                if (isValid && credentials) {
-                                    return h.authenticated({ credentials, artifacts })
-                                }
-
-                                if (message) {
-                                    return h.unauthenticated(Boom.unauthorized(message, scheme || settings.tokenType || ''), {
-                                        credentials: credentials || {},
-                                        artifacts
-                                    })
-                                }
-                            }
-                        } catch (err) {
-                            return Boom.internal(err instanceof Error ? err : `${err}`)
-                        }
-                    }
-
-                    return Boom.unauthorized(null, securitySchemeName)
-                },
-            }
         }
     }
 

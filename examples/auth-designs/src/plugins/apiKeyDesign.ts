@@ -1,14 +1,17 @@
 import Boom from '@hapi/boom';
-import { KaapiPlugin } from '@kaapi/kaapi';
+import { AuthDesign, KaapiTools } from '@kaapi/kaapi';
 import { ApiKeyLocation, ApiKeyUtil } from '@novice1/api-doc-generator'
 
-export interface IApiKeyAuthDesign extends KaapiPlugin {
-    scheme(): ApiKeyUtil;
-}
+class ApiKeyAuthDesign extends AuthDesign {
+    docs(): ApiKeyUtil {
+        return new ApiKeyUtil('apiKey')
+            .setApiKeyLocation(ApiKeyLocation.header)
+            .setDescription('')
+            .setKey('Authorization')
+    }
 
-export const apiKeyAuthDesign: IApiKeyAuthDesign = {
-    integrate(tools) {
-        tools.scheme('apiKey', (_server) => {
+    integrateStrategy(t: KaapiTools): void | Promise<void> {
+        t.scheme('apiKey', (_server) => {
 
             return {
                 async authenticate(request, h) {
@@ -48,20 +51,14 @@ export const apiKeyAuthDesign: IApiKeyAuthDesign = {
                 },
             }
         })
-
-        tools.strategy('apiKey', 'apiKey')
-
-        console.log('apiKey auth strategy registered');
-
-        const securityScheme = this.scheme();
-        tools.openapi?.addSecurityScheme(securityScheme)
-            .setDefaultSecurity(securityScheme);
-    },
-
-    scheme() {
-        return new ApiKeyUtil('apiKey')
-            .setApiKeyLocation(ApiKeyLocation.header)
-            .setDescription('')
-            .setKey('Authorization')
+        t.strategy('apiKey', 'apiKey')
+    }
+    
+    integrateHook(_t: KaapiTools): void | Promise<void> {
+        console.log('[ApiKeyAuthDesign] apiKey auth strategy registered');
     }
 }
+
+
+
+export const apiKeyAuthDesign = new ApiKeyAuthDesign() 

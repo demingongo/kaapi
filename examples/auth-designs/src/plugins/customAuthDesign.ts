@@ -39,8 +39,8 @@ export const customAuthDesign: ICustomAuthDesign = {
 
     scheme() {
         return new GroupAuthUtil([
-            apiKeyAuthDesign.scheme(),
-            authenticationCodeDesign.scheme()
+            apiKeyAuthDesign.docs(),
+            authenticationCodeDesign.docs()
         ])
     }
 }
