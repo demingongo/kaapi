@@ -1,1 +1,1 @@
-- @kaapi/server: `auth: true` should not set up startegy but only `mode: 'required'`. Strategy should be explicitly defined.
+- @kaapi/server: `auth: true` should not set up startegy but only `mode: 'required'`. Strategy should be explicitly defined. @done
