@@ -1,11 +1,12 @@
-import { KaapiPlugin } from '@kaapi/kaapi';
-import { GroupAuthUtil } from '@novice1/api-doc-generator'
+// plugins/customAuthDesign.ts
+
+import { KaapiPlugin, MultiAuthUtil } from '@kaapi/kaapi';
 import { apiKeyAuthDesign } from './apiKeyDesign';
 import { authenticationCodeDesign } from '../oauth2Plugins';
 import Boom from '@hapi/boom';
 
 export interface ICustomAuthDesign extends KaapiPlugin {
-    scheme(): GroupAuthUtil;
+    docs(): MultiAuthUtil;
 }
 
 export const customAuthDesign: ICustomAuthDesign = {
@@ -29,16 +30,22 @@ export const customAuthDesign: ICustomAuthDesign = {
         })
         tools.strategy('exceptions', 'exceptions')
 
-        apiKeyAuthDesign.integrate(tools);
-        authenticationCodeDesign.integrate(tools);
-
-        tools.openapi?.setDefaultSecurity(
-            this.scheme()
-        );
+        // in parallel
+        Promise.all([
+            apiKeyAuthDesign.integrate(tools),
+            authenticationCodeDesign.integrate(tools)
+        ]).then(() => {
+            tools.log('[customAuthDesign] auth strategies registered')
+            tools.openapi?.setDefaultSecurity(
+                this.docs()
+            );
+        }).catch(err => {
+            tools.log.error('[customAuthDesign] error registering auth strategies:', err);
+        })
     },
 
-    scheme() {
-        return new GroupAuthUtil([
+    docs() {
+        return new MultiAuthUtil([
             apiKeyAuthDesign.docs(),
             authenticationCodeDesign.docs()
         ])

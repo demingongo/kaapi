@@ -263,6 +263,17 @@ export class Kaapi extends KaapiBaseApp implements IKaapiApp {
         return await this.serverAsync(opts)
     }
 
+    /**
+     * Stops the server's listener by refusing to accept any new connections or requests (existing connections will continue until closed or timeout), where:
+     * @param options - (optional) object with:
+     * * timeout - overrides the timeout in millisecond before forcefully terminating a connection. Defaults to 5000 (5 seconds).
+     * @return Return value: none.
+     * [See docs](https://github.com/hapijs/hapi/blob/master/API.md#-await-serverstopoptions)
+     */
+    async stop(options?: { timeout: number; }): Promise<void> {
+        return await this.kaapiServer?.server.stop(options)
+    }
+
     route<Refs extends ReqRef = ReqRefDefaults>(
         serverRoute: KaapiServerRoute<Refs>,
         handler?: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>) {
@@ -300,10 +311,13 @@ export class Kaapi extends KaapiBaseApp implements IKaapiApp {
 
     async extend(plugins: KaapiPlugin[] | KaapiPlugin) {
         const getCurrentApp = () => this
+        const getDocs = () => this.docs
         const tool: KaapiTools = {
             log: this.log.bind(this.log),
             route<Refs extends ReqRef = ReqRefDefaults>(serverRoute: KaapiServerRoute<Refs>, handler?: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>) {
-                getCurrentApp().route(serverRoute, handler)
+                getDocs().openapi.addRoutes(serverRoute)
+                getDocs().postman.addRoutes(serverRoute)
+                getCurrentApp().idle().route(serverRoute, handler)
                 return this
             },
             scheme: this.idle().server.auth.scheme.bind(this.idle().server.auth),

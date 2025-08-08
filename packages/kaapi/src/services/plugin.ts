@@ -61,7 +61,12 @@ export interface KaapiPlugin {
 export abstract class AuthDesign implements KaapiPlugin {
     async integrate(t: KaapiTools): Promise<void> {
 
-        await this.integrateStrategy(t)
+        try {
+            await this.integrateStrategy(t);
+        } catch (err) {
+            t.log.error(`Plugin "${this.constructor.name}" failed to integrate auth strategy: ${err}`);
+            throw err;
+        }
 
         const securityScheme = this.docs();
         if (securityScheme) {
@@ -71,6 +76,8 @@ export abstract class AuthDesign implements KaapiPlugin {
                 securityScheme.setHost(t.postman.getHost()[0])
             }
             t.postman?.setDefaultSecurity(securityScheme);
+        } else {
+            t.log.warn(`Plugin "${this.constructor.name}" did not provide a security scheme (docs()).`);
         }
 
         await this.integrateHook(t)

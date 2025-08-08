@@ -1,0 +1,23 @@
+{
+  "name": "@kaapi/cli",
+  "version": "0.0.1",
+  "private": true,
+  "description": "CLI for kaapi",
+  "main": "lib/index.js",
+  "scripts": {
+    "lint": "eslint .",
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "demingongo",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/demingongo/kaapi.git",
+    "directory": "packages/auth-design-oauth2"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "ts-node": "^10.9.2",
+    "tslib": "^2.8.1"
+  }
+}

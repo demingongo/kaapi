@@ -1,70 +1,38 @@
-import {
-    Kaapi
-} from '@kaapi/kaapi'
+// index.ts
+
 import Boom from '@hapi/boom'
-import { customAuthDesign } from './plugins/customAuthDesign'
+import { appReady } from './server'
 
-const app = new Kaapi({
-    port: 3000,
-    host: 'localhost',
-    loggerOptions: {
-        level: 'debug'
-    },
-    docs: {
-        disabled: false
-    },
-    routes: {
-        // to forcefully set it in all the routes (route.settings.auth)
-        /*
-        auth: {
-            strategies: ['apiKey', 'auth-design-oauth2', 'exceptions'],
-            mode: 'try'
+appReady.then(app => {
+    app.log(`Kaapi server is ready: ${app}`)
+
+    // 404
+    app.route({
+        auth: false
+    }, () => Boom.notFound('Nothing here'))
+
+    app.route({
+        method: 'GET',
+        path: '/',
+        auth: true,
+        options: {
+
+            /*
+            // override the default auth strategy
+            auth: {
+                strategies: ['apiKey'],
+                //mode: 'optional'
+            },
+            */
+
+            //auth: false,
+
+            description: 'greet me',
+            tags: ['Tests']
         }
-        */
-    },
-    extend: customAuthDesign
+    }, () => 'Hello!')
 })
 
-// to not set it in all the routes but will be used in routes
-// with no auth defined
-app.idle().server.auth.default({
-    strategies: ['apiKey', 'auth-design-oauth2'],
-    mode: 'try'
+appReady.then(app => {
+    app.log('Kaapi server was already resolved so no 2nd execution of the appReady promise')
 })
-
-
-
-// register plugins
-/*
-app.extend(authenticationCodeDesign)
-app.extend(apiKeyAuthDesign)
-*/
-//app.extend(customAuthDesign)
-
-console.log('default strategy:', app.idle().server.auth.settings.default)
-
-// 404
-app.route({
-    auth: false
-}, () => Boom.notFound('Nothing here'))
-
-app.route({
-    method: 'GET',
-    path: '/',
-    auth: true,
-    options: {
-
-        /*
-        // override the default auth strategy
-        auth: {
-            strategies: ['apiKey'],
-            //mode: 'optional'
-        },
-        */
-       
-        //auth: false,
-
-        description: 'greet me',
-        tags: ['Tests']
-    }
-}, () => 'Hello!')

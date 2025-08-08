@@ -38,7 +38,7 @@ export abstract class KaapiBaseApp implements IKaapiApp {
     }
 
     toString() {
-        let result = `${this.version} || 0.0.0`
+        let result = `${this.version || '0.0.0'}`
         if (this.kaapiServer) {
             result += `, server: ${this.kaapiServer?.server.info.uri}, `
             result += `state: ${this.kaapiServer?.server.info.started ? new Date(this.kaapiServer?.server.info.started) : 'STOPPED'}`
