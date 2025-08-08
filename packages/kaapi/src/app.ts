@@ -313,7 +313,7 @@ export class Kaapi extends KaapiBaseApp implements IKaapiApp {
         const getCurrentApp = () => this
         const getDocs = () => this.docs
         const tool: KaapiTools = {
-            log: this.log.bind(this.log),
+            log: this.log,
             route<Refs extends ReqRef = ReqRefDefaults>(serverRoute: KaapiServerRoute<Refs>, handler?: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>) {
                 getDocs().openapi.addRoutes(serverRoute)
                 getDocs().postman.addRoutes(serverRoute)
