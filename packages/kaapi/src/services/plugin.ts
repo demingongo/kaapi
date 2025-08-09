@@ -62,7 +62,7 @@ export abstract class AuthDesign implements KaapiPlugin {
     async integrate(t: KaapiTools): Promise<void> {
 
         try {
-            await this.integrateStrategy(t);
+            this.integrateStrategy(t);
             t.log.debug(`Auth Design "${this.constructor.name}" set strategy (integrateStrategy).`);
         } catch (err) {
             t.log.error(`Auth Design "${this.constructor.name}" failed to integrate auth strategy: ${err}`);
@@ -102,5 +102,5 @@ export abstract class AuthDesign implements KaapiPlugin {
     /**
      * Where authentication schemes and strategies should be registered.
      */
-    abstract integrateStrategy(t: KaapiTools): void | Promise<void>
+    abstract integrateStrategy(t: KaapiTools): void
 }
