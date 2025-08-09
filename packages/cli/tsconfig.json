@@ -4,8 +4,7 @@
   "include": ["src"],
   "exclude": ["node_modules"],
   "compilerOptions": {
-    "outDir": "./lib",
-    // match output dir to input dir. e.g. lib/index instead of lib/src/index
+    "outDir": "./dist",
     "rootDir": "./src"
   }
 }

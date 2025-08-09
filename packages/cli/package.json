@@ -3,11 +3,14 @@
   "version": "0.0.1",
   "private": true,
   "description": "CLI for kaapi",
-  "main": "lib/index.js",
+  "main": "dist/index.js",
+  "bin": {
+    "kaapi": "dist/index.js"
+  },
   "scripts": {
     "lint": "eslint .",
     "build": "tsc",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node dist/index.js"
   },
   "author": "demingongo",
   "repository": {
@@ -17,7 +20,10 @@
   },
   "license": "MIT",
   "dependencies": {
-    "ts-node": "^10.9.2",
+    "lodash": "^4.17.21",
     "tslib": "^2.8.1"
+  },
+  "devDependencies": {
+    "@types/lodash": "^4.17.20"
   }
 }
