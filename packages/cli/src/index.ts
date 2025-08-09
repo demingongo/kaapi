@@ -1,3 +1,5 @@
+#! /usr/bin/env node
+
 import { loadKaapiConfig } from './loadConfig';
 
 (async () => {
