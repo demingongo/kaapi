@@ -4,6 +4,7 @@ import { KaapiServerRoute } from '@kaapi/server';
 import { KaapiOpenAPI, KaapiPostman } from './docs/generators';
 import { BaseAuthUtil } from '@novice1/api-doc-generator/lib/utils/auth/baseAuthUtils';
 import { OAuth2Util } from '@novice1/api-doc-generator';
+import { KaapiGroupAuthUtil } from './docs/utils';
 
 /**
  * 
@@ -103,4 +104,44 @@ export abstract class AuthDesign implements KaapiPlugin {
      * Where authentication schemes and strategies should be registered.
      */
     abstract integrateStrategy(t: KaapiTools): void
+}
+
+/**
+ * An auth design that groups multiple auth designs.
+ * 
+ * Usefull to regroup the auth schemes in the documentation and register the strategies in parallel.
+ * ```ts
+ * const authdesigns = new GroupAuthDesign([
+ *     authdesign1,
+ *     authdesign2
+ * ])
+ * app.extend(authdesigns)
+ * ```
+ */
+export class GroupAuthDesign extends AuthDesign {
+    
+    protected designs: AuthDesign[]
+
+    constructor(designs: AuthDesign[]) {
+        super();
+        this.designs = designs;
+    }
+
+    docs() {
+        return new KaapiGroupAuthUtil(this.designs
+            .map(d => d.docs())
+            .filter(d => typeof d != 'undefined')
+        )
+    }
+    integrateStrategy(t: KaapiTools) {
+        for(const d of this.designs) {
+            d.integrateStrategy(t)
+        }
+    }
+    async integrateHook(t: KaapiTools): Promise<void> {
+        await Promise.all(
+            this.designs
+            .map(d => d.integrateHook(t))
+        )
+    }
 }

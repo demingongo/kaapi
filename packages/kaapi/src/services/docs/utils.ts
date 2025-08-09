@@ -3,10 +3,9 @@ import { GroupAuthUtil, OAuth2Util } from '@novice1/api-doc-generator'
 import { BaseAuthUtil } from '@novice1/api-doc-generator/lib/utils/auth/baseAuthUtils';
 
 /**
- * Special class to set host
- * for Postman
+ * Special class to group multiple security schemes
  */
-export class MultiAuthUtil extends OAuth2Util {
+export class KaapiGroupAuthUtil extends OAuth2Util {
     protected authUtils: BaseAuthUtil[]
     protected groupAuth: GroupAuthUtil
     constructor(authUtils: BaseAuthUtil[]) {

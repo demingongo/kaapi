@@ -1,19 +1,31 @@
 // plugins/customAuthDesign.ts
 
+import { GroupAuthDesign } from '@kaapi/kaapi';
+import { apiKeyAuthDesign } from './apiKeyDesign';
+import { authenticationCodeDesign } from '../oauth2Plugins';
+
+/*
 import { 
     AuthDesign, 
     //KaapiPlugin, 
     KaapiTools, 
-    MultiAuthUtil 
+    KaapiGroupAuthUtil 
 } from '@kaapi/kaapi';
-import { apiKeyAuthDesign } from './apiKeyDesign';
-import { authenticationCodeDesign } from '../oauth2Plugins';
+*/
 //import Boom from '@hapi/boom';
 //import { BaseAuthUtil } from '@novice1/api-doc-generator/lib/utils/auth/baseAuthUtils';
 
+
+export const customAuthDesign = new GroupAuthDesign([
+    authenticationCodeDesign,
+    apiKeyAuthDesign
+])
+
+
+/*
 export class CustomAuthDesign extends AuthDesign {
     docs() {
-        return new MultiAuthUtil([
+        return new KaapiGroupAuthUtil([
             authenticationCodeDesign.docs(),
             apiKeyAuthDesign.docs(),
         ])
@@ -29,10 +41,11 @@ export class CustomAuthDesign extends AuthDesign {
 }
 
 export const customAuthDesign = new CustomAuthDesign()
+*/
 
 /*
 export interface ICustomAuthDesign extends KaapiPlugin {
-    docs(): MultiAuthUtil;
+    docs(): KaapiGroupAuthUtil;
 }
 
 export const customAuthDesign: ICustomAuthDesign = {
@@ -71,7 +84,7 @@ export const customAuthDesign: ICustomAuthDesign = {
     },
 
     docs() {
-        return new MultiAuthUtil([
+        return new KaapiGroupAuthUtil([
             apiKeyAuthDesign.docs(),
             authenticationCodeDesign.docs()
         ])
