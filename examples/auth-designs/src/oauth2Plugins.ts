@@ -4,8 +4,8 @@ import {
     AuthorizationCodeOAuth2, 
     OAuth2ACAuthorizationHandler, 
     OAuth2ACAuthorizationRoute, 
-    OAuth2ACRefreshTokenHandler, 
-    OAuth2ACRefreshTokenRoute, 
+    OAuth2RefreshTokenHandler, 
+    OAuth2RefreshTokenRoute, 
     OAuth2ACTokenHandler, 
     OAuth2ACTokenRoute 
 } from '@kaapi/auth-design-oauth2';
@@ -139,7 +139,7 @@ export const authenticationCodeDesign  = new AuthorizationCodeOAuth2(
                 return h.response({ error: 'invalid_request' }).code(400)
             }) as OAuth2ACTokenHandler,
         ),
-        refreshTokenRoute: new OAuth2ACRefreshTokenRoute(
+        refreshTokenRoute: new OAuth2RefreshTokenRoute(
             '/oauth2/ac/token',
             (async ({ clientId, clientSecret, refreshToken, scope }, _req, h) => {
 
@@ -153,7 +153,7 @@ export const authenticationCodeDesign  = new AuthorizationCodeOAuth2(
                 //#endregion @TODO: validation + refresh token
 
                 return h.response({ error: 'invalid_token' }).code(400)
-            }) as OAuth2ACRefreshTokenHandler,
+            }) as OAuth2RefreshTokenHandler,
         ),
         options: {
             validate: async (_req, token, h) => {
