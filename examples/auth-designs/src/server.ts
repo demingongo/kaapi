@@ -37,7 +37,7 @@ app.extend(apiKeyAuthDesign)
 // to not set it in all the routes but will be used in routes
 // with no auth defined
 app.idle().server.auth.default({
-    strategies: ['apiKey', 'auth-design-oauth2'],
+    strategies: customAuthDesign.getStrategies(),//['My bearer is your bearer', 'apiKey', 'oauth2-authorization-code'],
     mode: 'try'
 })
 app.log('default strategy:', app.idle().server.auth.settings.default)

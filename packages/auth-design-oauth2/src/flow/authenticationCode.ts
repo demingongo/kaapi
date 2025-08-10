@@ -137,12 +137,12 @@ export interface AuthorizationCodeOAuth2Arg {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     refreshTokenRoute?: OAuth2RefreshTokenRoute<any>;
     options?: OAuth2AuthOptions;
-    securitySchemeName?: string;
+    strategyName?: string;
 }
 
 export class AuthorizationCodeOAuth2 extends AuthDesign {
 
-    protected securitySchemeName: string
+    protected strategyName: string
     protected description?: string
     protected scopes?: Record<string, string>
     protected options: OAuth2AuthOptions
@@ -162,7 +162,7 @@ export class AuthorizationCodeOAuth2 extends AuthDesign {
             tokenRoute,
             refreshTokenRoute,
             options,
-            securitySchemeName
+            strategyName
         }: AuthorizationCodeOAuth2Arg
     ) {
         super()
@@ -171,7 +171,7 @@ export class AuthorizationCodeOAuth2 extends AuthDesign {
         this.tokenRoute = tokenRoute
         this.refreshTokenRoute = refreshTokenRoute
 
-        this.securitySchemeName = securitySchemeName || 'auth-design-oauth2'
+        this.strategyName = strategyName || 'oauth2-authorization-code'
         this.options = options ? { ...options } : {}
     }
 
@@ -209,8 +209,8 @@ export class AuthorizationCodeOAuth2 extends AuthDesign {
         return this.scopes
     }
 
-    getSecuritySchemeName(): string {
-        return this.securitySchemeName;
+    getStrategyName(): string {
+        return this.strategyName;
     }
 
     getDescription(): string | undefined {
@@ -221,7 +221,7 @@ export class AuthorizationCodeOAuth2 extends AuthDesign {
      * Returns the schema used for the documentation
      */
     docs() {
-        const docs = new OAuth2Util(this.securitySchemeName)
+        const docs = new OAuth2Util(this.strategyName)
             .setGrantType(this.isWithPkce() ? GrantType.authorizationCodeWithPkce : GrantType.authorizationCode)
             .setScopes(this.getScopes() || {})
             .setAuthUrl(this.authorizationRoute.path)
@@ -242,16 +242,14 @@ export class AuthorizationCodeOAuth2 extends AuthDesign {
      * Where authentication schemes and strategies are registered.
      */
     integrateStrategy(t: KaapiTools) {
-        t.scheme(this.securitySchemeName, (_server, options) => {
+        t.scheme(this.strategyName, (_server, options) => {
 
-            const securitySchemeName = this.securitySchemeName
+            const strategyName = this.strategyName
 
             return {
                 async authenticate(request, h) {
 
-                    const settings: OAuth2AuthOptions = Hoek.applyToDefaults({
-                        tokenType: 'Bearer'
-                    }, options || {});
+                    const settings: OAuth2AuthOptions = Hoek.applyToDefaults({}, options || {});
 
                     const authorization = request.raw.req.headers.authorization;
 
@@ -260,9 +258,9 @@ export class AuthorizationCodeOAuth2 extends AuthDesign {
                     const tokenType = authSplit[0]
                     let token = authSplit[1]
 
-                    if (tokenType.toLowerCase() !== settings.tokenType?.toLowerCase()) {
+                    if (tokenType.toLowerCase() !== 'bearer') {
                         token = ''
-                        return Boom.unauthorized(null, securitySchemeName)
+                        return Boom.unauthorized(null, strategyName)
                     }
 
                     if (settings.validate) {
@@ -270,6 +268,10 @@ export class AuthorizationCodeOAuth2 extends AuthDesign {
                             const result = await settings.validate?.(request, token, h)
 
                             if (result && 'isAuth' in result) {
+                                return result
+                            }
+
+                            if (result && 'isBoom' in result) {
                                 return result
                             }
 
@@ -281,7 +283,7 @@ export class AuthorizationCodeOAuth2 extends AuthDesign {
                                 }
 
                                 if (message) {
-                                    return h.unauthenticated(Boom.unauthorized(message, scheme || settings.tokenType || ''), {
+                                    return h.unauthenticated(Boom.unauthorized(message, scheme || 'Bearer'), {
                                         credentials: credentials || {},
                                         artifacts
                                     })
@@ -292,11 +294,11 @@ export class AuthorizationCodeOAuth2 extends AuthDesign {
                         }
                     }
 
-                    return Boom.unauthorized(null, securitySchemeName)
+                    return Boom.unauthorized(null, strategyName)
                 },
             }
         })
-        t.strategy(this.securitySchemeName, this.securitySchemeName, this.options)
+        t.strategy(this.strategyName, this.strategyName, this.options)
     }
 
     integrateHook(t: KaapiTools) {

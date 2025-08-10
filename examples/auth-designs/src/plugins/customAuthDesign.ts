@@ -3,6 +3,7 @@
 import { GroupAuthDesign } from '@kaapi/kaapi';
 import { apiKeyAuthDesign } from './apiKeyDesign';
 import { authenticationCodeDesign } from '../oauth2Plugins';
+import { bearerAuthDesign } from './bearerDesign';
 
 /*
 import { 
@@ -18,7 +19,8 @@ import {
 
 export const customAuthDesign = new GroupAuthDesign([
     authenticationCodeDesign,
-    apiKeyAuthDesign
+    apiKeyAuthDesign,
+    bearerAuthDesign
 ])
 
 

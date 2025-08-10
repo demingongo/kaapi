@@ -6,10 +6,9 @@ import {
     KaapiTools,
     ReqRef, ReqRefDefaults, Request, ResponseToolkit
 } from '@kaapi/kaapi';
-import { ApiKeyLocation, ApiKeyUtil } from '@novice1/api-doc-generator'
+import { BearerUtil } from '@novice1/api-doc-generator'
 
-export type ApiKeyAuthOptions = {
-    headerTokenType?: string;
+export type BearerAuthOptions = {
     validate?<
         Refs extends ReqRef = ReqRefDefaults
     >(request: Request<Refs>, token: string, h: ResponseToolkit<Refs>): Promise<{
@@ -21,34 +20,22 @@ export type ApiKeyAuthOptions = {
     } | Auth | Boom.Boom>;
 };
 
-export interface ApiKeyAuthArg {
-    /**
-     * Default: "Authorization"
-     */
-    key?: string
-    options?: ApiKeyAuthOptions;
+export interface BearerAuthArg {
+    options?: BearerAuthOptions;
     strategyName?: string;
 }
 
-export class ApiKeyAuthDesign extends AuthDesign {
+export class BearerAuthDesign extends AuthDesign {
 
-    #key = 'Authorization'
-    protected strategyName: string = 'auth-design-api-key'
+    readonly key = 'Authorization'
+    protected strategyName: string = 'auth-design-bearer'
     protected description?: string
-    protected apiKeyLocation: ApiKeyLocation = ApiKeyLocation.header
-    protected options: ApiKeyAuthOptions
-
-    public get key() {
-        return this.#key
-    }
+    protected options: BearerAuthOptions
 
     constructor(
-        arg?: ApiKeyAuthArg
+        arg?: BearerAuthArg
     ) {
         super()
-
-        if (arg?.key)
-            this.#key = arg.key;
 
         if (arg?.strategyName)
             this.strategyName = arg.strategyName;
@@ -69,25 +56,8 @@ export class ApiKeyAuthDesign extends AuthDesign {
         return this.description;
     }
 
-    inCookie(): this {
-        this.apiKeyLocation = ApiKeyLocation.cookie
-        return this
-    }
-
-    inHeader(): this {
-        this.apiKeyLocation = ApiKeyLocation.header
-        return this
-    }
-
-    inQuery(): this {
-        this.apiKeyLocation = ApiKeyLocation.query
-        return this
-    }
-
-    docs(): ApiKeyUtil {
-        const docs = new ApiKeyUtil(this.strategyName)
-            .setApiKeyLocation(this.apiKeyLocation)
-            .setKey(this.key)
+    docs(): BearerUtil {
+        const docs = new BearerUtil(this.strategyName)
 
         if (this.description) {
             docs.setDescription(this.description)
@@ -99,34 +69,27 @@ export class ApiKeyAuthDesign extends AuthDesign {
     integrateStrategy(t: KaapiTools): void | Promise<void> {
 
         const strategyName = this.strategyName
-        const apiKeyLocation = this.apiKeyLocation
 
         t.scheme(strategyName, (_server, options) => {
 
             return {
                 authenticate: async (request, h) => {
 
-                    console.log('checking apikey', request.path, request.route.settings.auth)
+                    console.log('checking bearer', request.path, request.route.settings.auth)
 
-                    const settings: ApiKeyAuthOptions = options || {};
+                    const settings: BearerAuthOptions = options || {};
 
-                    const authorization = apiKeyLocation == ApiKeyLocation.cookie ?
-                        request.state[this.key] as string | object | undefined : apiKeyLocation == ApiKeyLocation.query ?
-                            request.query[this.key] as string | string[] | undefined :
-                            request.raw.req.headers[this.key.toLowerCase()];
+                    const authorization = request.raw.req.headers[this.key.toLowerCase()];
 
-                    let token = typeof authorization === 'string' ? authorization : ''
 
-                    if (apiKeyLocation == ApiKeyLocation.header && settings.headerTokenType) {
-                        const authSplit = typeof authorization === 'string' ? authorization.split(/\s+/) : ['', ''];
+                    const authSplit = typeof authorization === 'string' ? authorization.split(/\s+/) : ['', ''];
 
-                        const tokenType = authSplit[0]
-                        token = authSplit[1]
+                    const tokenType = authSplit[0]
+                    let token = authSplit[1]
 
-                        if (tokenType.toLowerCase() !== settings.headerTokenType?.toLowerCase()) {
-                            token = ''
-                            return Boom.unauthorized(null, strategyName)
-                        }
+                    if (tokenType.toLowerCase() !== 'bearer') {
+                        token = ''
+                        return Boom.unauthorized(null, strategyName)
                     }
 
                     if (settings.validate) {
@@ -149,7 +112,7 @@ export class ApiKeyAuthDesign extends AuthDesign {
                                 }
 
                                 if (message) {
-                                    return h.unauthenticated(Boom.unauthorized(message, scheme || settings.headerTokenType || ''), {
+                                    return h.unauthenticated(Boom.unauthorized(message, scheme || 'Bearer'), {
                                         credentials: credentials || {},
                                         artifacts
                                     })
@@ -168,7 +131,7 @@ export class ApiKeyAuthDesign extends AuthDesign {
     }
 
     integrateHook(_t: KaapiTools): void | Promise<void> {
-        console.log('[ApiKeyAuthDesign] apiKey auth strategy registered');
+        console.log('[BearerAuthDesign] bearer auth strategy registered');
     }
 
     toString(): string {
@@ -176,10 +139,9 @@ export class ApiKeyAuthDesign extends AuthDesign {
     }
 }
 
-export const apiKeyAuthDesign = new ApiKeyAuthDesign({
-    strategyName: 'apiKey',
+export const bearerAuthDesign = new BearerAuthDesign({
+    strategyName: 'My bearer is your bearer',
     options: {
-        headerTokenType: 'Session',
         async validate() {
             return {
                 isValid: true,

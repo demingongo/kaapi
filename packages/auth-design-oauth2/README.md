@@ -1,3 +1,3 @@
 # @kaapi/auth-design-oauth2
 
-OAuth2 design for kaapi.
+Auth design for OAuth2 in kaapi.

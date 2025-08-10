@@ -104,6 +104,11 @@ export abstract class AuthDesign implements KaapiPlugin {
      * Where authentication schemes and strategies should be registered.
      */
     abstract integrateStrategy(t: KaapiTools): void
+
+    /**
+     * The name of the strategy, for info purpose
+     */
+    abstract getStrategyName(): string
 }
 
 /**
@@ -143,5 +148,13 @@ export class GroupAuthDesign extends AuthDesign {
             this.designs
             .map(d => d.integrateHook(t))
         )
+    }
+
+    getStrategyName(): string {
+        return this.getStrategies()[0] || ''
+    }
+
+    getStrategies(): string[] {
+        return this.designs.map(d => d.getStrategyName()).filter(n => n)
     }
 }

@@ -159,6 +159,9 @@ export const authenticationCodeDesign  = new AuthorizationCodeOAuth2(
             validate: async (_req, token, h) => {
                 if (token) {
                     //#region @TODO: validation
+                    if (token == 'alain') {
+                        return Boom.unauthorized(null, 'oauth2')
+                    }
 
                     //#endregion @TODO: validation
 

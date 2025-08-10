@@ -7,13 +7,13 @@ import {
     Request,
     ResponseToolkit
 } from '@kaapi/kaapi'
+import { Boom } from '@hapi/boom'
 
 //#region Types
 
 export type OAuth2Error = 'invalid_request' | 'invalid_client' | 'invalid_grant' | 'invalid_scope' | 'unauthorized_client' | 'unsupported_grant_type' | 'invalid_token'
 
 export type OAuth2AuthOptions = {
-    tokenType?: string;
     validate?<
         Refs extends ReqRef = ReqRefDefaults
     >(request: Request<Refs>, token: string, h: ResponseToolkit<Refs>): Promise<{
@@ -22,7 +22,7 @@ export type OAuth2AuthOptions = {
         credentials?: AuthCredentials;
         message?: string;
         scheme?: string;
-    } | Auth>;
+    } | Auth | Boom>;
 };
 
 //#endregion Types

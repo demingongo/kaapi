@@ -3,5 +3,9 @@
     - auth design generator (name of the class, camelCase it)
 - @kaapi/auth-design-oauth2
 - @kaapi/kaapi
+    - auth designs
+        - basic auth
+        - bearer
+        - apikey
     - make an example with @novice1/socket
     - need to think more about how we are going to handle readiness (registering plugins, strategies, ...)
