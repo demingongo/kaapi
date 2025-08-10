@@ -1,11 +1,19 @@
 - @kaapi/server: `auth: true` should not set up startegy but only `mode: 'required'`. Strategy should be explicitly defined. @done
-- @kaapi/cli
-    - auth design generator (name of the class, camelCase it)
-- @kaapi/auth-design-oauth2
+
 - @kaapi/kaapi
-    - auth designs
-        - basic auth
-        - bearer
-        - apikey
+    - create some auth designs:
+        - basic auth (to create from scratch)
+        - bearer (take it from the examples/auth-designs/src/plugins/apiKeyDesign.ts)
+        - apikey (take it from the examples/auth-designs/src/plugins/bearerDesign.ts)
+
+- @kaapi/auth-design-oauth2
+
+
+- @kaapi/kaapi
     - make an example with @novice1/socket
     - need to think more about how we are going to handle readiness (registering plugins, strategies, ...)
+
+- @kaapi/cli
+    - auth design generator (name of the class, camelCase it)
+
+
