@@ -1,14 +1,14 @@
 import Boom from '@hapi/boom'
 
 import {
-    AuthorizationCodeOAuth2,
+    OAuth2AuthorizationCode,
     OAuth2ACAuthorizationHandler,
     OAuth2ACAuthorizationRoute,
     OAuth2RefreshTokenHandler,
     OAuth2RefreshTokenRoute,
     OAuth2ACTokenHandler,
     OAuth2ACTokenRoute
-} from '@kaapi/auth-design-oauth2';
+} from '@kaapi/oauth2-auth-design';
 
 function buildSignInHTML(options: { title: string, error?: string }) {
     return `<!DOCTYPE html>
@@ -46,7 +46,7 @@ function buildSignInHTML(options: { title: string, error?: string }) {
 </html>`
 }
 
-export const authenticationCodeDesign = new AuthorizationCodeOAuth2(
+export const authenticationCodeDesign = new OAuth2AuthorizationCode(
     {
         authorizationRoute: new OAuth2ACAuthorizationRoute(
             '/oauth2/ac/login',

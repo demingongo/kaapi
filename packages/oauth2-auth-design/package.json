@@ -1,5 +1,5 @@
 {
-  "name": "@kaapi/auth-design-oauth2",
+  "name": "@kaapi/oauth2-auth-design",
   "version": "0.0.4",
   "private": true,
   "description": "OAuth2 design for kaapi",
@@ -13,7 +13,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/demingongo/kaapi.git",
-    "directory": "packages/auth-design-oauth2"
+    "directory": "packages/oauth2-auth-design"
   },
   "license": "MIT",
   "dependencies": {

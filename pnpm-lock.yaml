@@ -56,12 +56,12 @@ importers:
       '@hapi/hoek':
         specifier: ^11.0.7
         version: 11.0.7
-      '@kaapi/auth-design-oauth2':
-        specifier: workspace:^
-        version: link:../../packages/auth-design-oauth2
       '@kaapi/kaapi':
         specifier: workspace:^
         version: link:../../packages/kaapi
+      '@kaapi/oauth2-auth-design':
+        specifier: workspace:^
+        version: link:../../packages/oauth2-auth-design
       '@novice1/api-doc-generator':
         specifier: ^1.0.2
         version: 1.0.2
@@ -338,24 +338,6 @@ importers:
         specifier: ^8.35.0
         version: 8.39.0(eslint@9.32.0)(typescript@5.9.2)
 
-  packages/auth-design-oauth2:
-    dependencies:
-      '@hapi/boom':
-        specifier: ^10.0.1
-        version: 10.0.1
-      '@hapi/hoek':
-        specifier: ^11.0.7
-        version: 11.0.7
-      '@kaapi/kaapi':
-        specifier: workspace:^
-        version: link:../kaapi
-      '@novice1/api-doc-generator':
-        specifier: ^1.0.2
-        version: 1.0.2
-      tslib:
-        specifier: ^2.8.1
-        version: 2.8.1
-
   packages/cli:
     dependencies:
       '@clack/prompts':
@@ -426,6 +408,24 @@ importers:
       kafkajs:
         specifier: ^2.2.4
         version: 2.2.4
+      tslib:
+        specifier: ^2.8.1
+        version: 2.8.1
+
+  packages/oauth2-auth-design:
+    dependencies:
+      '@hapi/boom':
+        specifier: ^10.0.1
+        version: 10.0.1
+      '@hapi/hoek':
+        specifier: ^11.0.7
+        version: 11.0.7
+      '@kaapi/kaapi':
+        specifier: workspace:^
+        version: link:../kaapi
+      '@novice1/api-doc-generator':
+        specifier: ^1.0.2
+        version: 1.0.2
       tslib:
         specifier: ^2.8.1
         version: 2.8.1

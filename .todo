@@ -6,7 +6,7 @@
         - bearer (take it from the examples/auth-designs/src/plugins/apiKeyDesign.ts)
         - apikey (take it from the examples/auth-designs/src/plugins/bearerDesign.ts)
 
-- @kaapi/auth-design-oauth2
+- @kaapi/oauth2-auth-design
 
 
 - @kaapi/kaapi

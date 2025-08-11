@@ -18,7 +18,7 @@ export const app = new Kaapi({
         // to forcefully set it in all the routes (route.settings.auth)
         /*
         auth: {
-            strategies: ['apiKey', 'auth-design-oauth2', 'exceptions'],
+            strategies: ['apiKey', 'oauth2-auth-design', 'exceptions'],
             mode: 'try'
         }
         */
