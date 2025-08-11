@@ -1,13 +1,13 @@
 import Boom from '@hapi/boom'
 
-import { 
-    AuthorizationCodeOAuth2, 
-    OAuth2ACAuthorizationHandler, 
-    OAuth2ACAuthorizationRoute, 
-    OAuth2RefreshTokenHandler, 
-    OAuth2RefreshTokenRoute, 
-    OAuth2ACTokenHandler, 
-    OAuth2ACTokenRoute 
+import {
+    AuthorizationCodeOAuth2,
+    OAuth2ACAuthorizationHandler,
+    OAuth2ACAuthorizationRoute,
+    OAuth2RefreshTokenHandler,
+    OAuth2RefreshTokenRoute,
+    OAuth2ACTokenHandler,
+    OAuth2ACTokenRoute
 } from '@kaapi/auth-design-oauth2';
 
 function buildSignInHTML(options: { title: string, error?: string }) {
@@ -46,7 +46,7 @@ function buildSignInHTML(options: { title: string, error?: string }) {
 </html>`
 }
 
-export const authenticationCodeDesign  = new AuthorizationCodeOAuth2(
+export const authenticationCodeDesign = new AuthorizationCodeOAuth2(
     {
         authorizationRoute: new OAuth2ACAuthorizationRoute(
             '/oauth2/ac/login',
@@ -159,8 +159,8 @@ export const authenticationCodeDesign  = new AuthorizationCodeOAuth2(
             validate: async (_req, token, h) => {
                 if (token) {
                     //#region @TODO: validation
-                    if (token == 'alain') {
-                        return Boom.unauthorized(null, 'oauth2')
+                    if (token != 'generated_access_token') {
+                        return {}
                     }
 
                     //#endregion @TODO: validation
@@ -177,5 +177,9 @@ export const authenticationCodeDesign  = new AuthorizationCodeOAuth2(
         }
     }
 )
-.setDescription('This API uses OAuth 2 with the authentication code grant flow. [More info](https://oauth.net/2/grant-types/authorization-code/)')
-.setScopes({})
+    .setDescription('This API uses OAuth 2 with the authentication code grant flow. [More info](https://oauth.net/2/grant-types/authorization-code/)')
+    .setScopes({
+        profile: 'Access to your profile information',
+        email: 'Access to your email address',
+        offline_access: 'Access to your data when you are not connected'
+    })

@@ -1,49 +1,57 @@
+// APIKeyAuthDesign
+
 import Boom from '@hapi/boom';
 import {
     Auth,
     AuthCredentials,
+    ReqRef,
+    ReqRefDefaults,
+    Request,
+    ResponseToolkit
+} from '@hapi/hapi';
+import { ApiKeyLocation, ApiKeyUtil } from '@novice1/api-doc-generator';
+import {
     AuthDesign,
     KaapiTools,
-    ReqRef, ReqRefDefaults, Request, ResponseToolkit
-} from '@kaapi/kaapi';
-import { ApiKeyLocation, ApiKeyUtil } from '@novice1/api-doc-generator'
+} from '../plugin';
 
-export type ApiKeyAuthOptions = {
+
+export type APIKeyAuthOptions = {
     headerTokenType?: string;
     validate?<
         Refs extends ReqRef = ReqRefDefaults
-    >(request: Request<Refs>, token: string, h: ResponseToolkit<Refs>): Promise<{
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    >(request: Request<Refs>, token: any, h: ResponseToolkit<Refs>): Promise<{
         isValid?: boolean;
         artifacts?: unknown;
         credentials?: AuthCredentials;
         message?: string;
-        scheme?: string;
     } | Auth | Boom.Boom>;
 };
 
-export interface ApiKeyAuthArg {
+export interface APIKeyAuthArg {
     /**
      * Default: "Authorization"
      */
     key?: string
-    options?: ApiKeyAuthOptions;
+    options?: APIKeyAuthOptions;
     strategyName?: string;
 }
 
-export class ApiKeyAuthDesign extends AuthDesign {
+export class APIKeyAuthDesign extends AuthDesign {
 
     #key = 'Authorization'
-    protected strategyName: string = 'auth-design-api-key'
+    protected strategyName: string = 'api-key-auth-design'
     protected description?: string
     protected apiKeyLocation: ApiKeyLocation = ApiKeyLocation.header
-    protected options: ApiKeyAuthOptions
+    protected options: APIKeyAuthOptions
 
     public get key() {
         return this.#key
     }
 
     constructor(
-        arg?: ApiKeyAuthArg
+        arg?: APIKeyAuthArg
     ) {
         super()
 
@@ -100,22 +108,21 @@ export class ApiKeyAuthDesign extends AuthDesign {
 
         const strategyName = this.strategyName
         const apiKeyLocation = this.apiKeyLocation
+        const key = this.key
 
         t.scheme(strategyName, (_server, options) => {
 
             return {
                 authenticate: async (request, h) => {
 
-                    console.log('checking apikey', request.path, request.route.settings.auth)
-
-                    const settings: ApiKeyAuthOptions = options || {};
+                    const settings: APIKeyAuthOptions = options || {};
 
                     const authorization = apiKeyLocation == ApiKeyLocation.cookie ?
-                        request.state[this.key] as string | object | undefined : apiKeyLocation == ApiKeyLocation.query ?
-                            request.query[this.key] as string | string[] | undefined :
-                            request.raw.req.headers[this.key.toLowerCase()];
+                        request.state[key] : apiKeyLocation == ApiKeyLocation.query ?
+                            request.query[key] :
+                            request.raw.req.headers[key.toLowerCase()];
 
-                    let token = typeof authorization === 'string' ? authorization : ''
+                    let token = authorization
 
                     if (apiKeyLocation == ApiKeyLocation.header && settings.headerTokenType) {
                         const authSplit = typeof authorization === 'string' ? authorization.split(/\s+/) : ['', ''];
@@ -124,8 +131,7 @@ export class ApiKeyAuthDesign extends AuthDesign {
                         token = authSplit[1]
 
                         if (tokenType.toLowerCase() !== settings.headerTokenType?.toLowerCase()) {
-                            token = ''
-                            return Boom.unauthorized(null, strategyName)
+                            return Boom.unauthorized(null, settings.headerTokenType)
                         }
                     }
 
@@ -142,14 +148,14 @@ export class ApiKeyAuthDesign extends AuthDesign {
                             }
 
                             if (result) {
-                                const { isValid, credentials, artifacts, message, scheme } = result;
+                                const { isValid, credentials, artifacts, message } = result;
 
                                 if (isValid && credentials) {
                                     return h.authenticated({ credentials, artifacts })
                                 }
 
                                 if (message) {
-                                    return h.unauthenticated(Boom.unauthorized(message, scheme || settings.headerTokenType || ''), {
+                                    return h.unauthenticated(Boom.unauthorized(message, (ApiKeyLocation.header && settings.headerTokenType) || strategyName), {
                                         credentials: credentials || {},
                                         artifacts
                                     })
@@ -160,35 +166,14 @@ export class ApiKeyAuthDesign extends AuthDesign {
                         }
                     }
 
-                    return h.unauthenticated(Boom.unauthorized(), { credentials: {} })
+                    return Boom.unauthorized(null, (ApiKeyLocation.header && settings.headerTokenType) || strategyName)
                 },
             }
         })
         t.strategy(strategyName, strategyName, this.options)
     }
 
-    integrateHook(_t: KaapiTools): void | Promise<void> {
-        console.log('[ApiKeyAuthDesign] apiKey auth strategy registered');
-    }
-
     toString(): string {
         return this.getStrategyName()
     }
 }
-
-export const apiKeyAuthDesign = new ApiKeyAuthDesign({
-    strategyName: 'apiKey',
-    options: {
-        headerTokenType: 'Session',
-        async validate() {
-            return {
-                isValid: true,
-                credentials: {
-                    user: {
-                        username: 'kaapiuser'
-                    }
-                }
-            }
-        }
-    }
-}) 

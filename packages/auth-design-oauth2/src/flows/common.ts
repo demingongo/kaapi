@@ -21,7 +21,6 @@ export type OAuth2AuthOptions = {
         artifacts?: unknown;
         credentials?: AuthCredentials;
         message?: string;
-        scheme?: string;
     } | Auth | Boom>;
 };
 

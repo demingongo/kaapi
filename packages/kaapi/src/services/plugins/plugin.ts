@@ -1,10 +1,10 @@
 import { HandlerDecorations, InternalRouteOptionType, Lifecycle, MergeType, ReqRef, ReqRefDefaults, RouteOptionTypes, Server, ServerAuthScheme } from '@hapi/hapi';
-import { ILogger } from './log';
+import { ILogger } from '../log';
 import { KaapiServerRoute } from '@kaapi/server';
-import { KaapiOpenAPI, KaapiPostman } from './docs/generators';
+import { KaapiOpenAPI, KaapiPostman } from '../docs/generators';
 import { BaseAuthUtil } from '@novice1/api-doc-generator/lib/utils/auth/baseAuthUtils';
 import { OAuth2Util } from '@novice1/api-doc-generator';
-import { KaapiGroupAuthUtil } from './docs/utils';
+import { KaapiGroupAuthUtil } from '../docs/utils';
 
 /**
  * 

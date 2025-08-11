@@ -1,39 +1,45 @@
+// BasicAuthDesign
+
 import Boom from '@hapi/boom';
 import {
     Auth,
     AuthCredentials,
+    ReqRef,
+    ReqRefDefaults,
+    Request,
+    ResponseToolkit
+} from '@hapi/hapi';
+import { BasicAuthUtil } from '@novice1/api-doc-generator';
+import {
     AuthDesign,
     KaapiTools,
-    ReqRef, ReqRefDefaults, Request, ResponseToolkit
-} from '@kaapi/kaapi';
-import { BearerUtil } from '@novice1/api-doc-generator'
+} from '../plugin';
 
-export type BearerAuthOptions = {
+export type BasicAuthOptions = {
     validate?<
         Refs extends ReqRef = ReqRefDefaults
-    >(request: Request<Refs>, token: string, h: ResponseToolkit<Refs>): Promise<{
+    >(request: Request<Refs>, username: string, password: string, h: ResponseToolkit<Refs>): Promise<{
         isValid?: boolean;
         artifacts?: unknown;
         credentials?: AuthCredentials;
         message?: string;
-        scheme?: string;
     } | Auth | Boom.Boom>;
 };
 
-export interface BearerAuthArg {
-    options?: BearerAuthOptions;
+export interface BasicAuthArg {
+    options?: BasicAuthOptions;
     strategyName?: string;
 }
 
-export class BearerAuthDesign extends AuthDesign {
+export class BasicAuthDesign extends AuthDesign {
 
     readonly key = 'Authorization'
-    protected strategyName: string = 'auth-design-bearer'
+    protected strategyName: string = 'basic-auth-design'
     protected description?: string
-    protected options: BearerAuthOptions
+    protected options: BasicAuthOptions
 
     constructor(
-        arg?: BearerAuthArg
+        arg?: BasicAuthArg
     ) {
         super()
 
@@ -56,8 +62,8 @@ export class BearerAuthDesign extends AuthDesign {
         return this.description;
     }
 
-    docs(): BearerUtil {
-        const docs = new BearerUtil(this.strategyName)
+    docs(): BasicAuthUtil {
+        const docs = new BasicAuthUtil(this.strategyName)
 
         if (this.description) {
             docs.setDescription(this.description)
@@ -75,9 +81,7 @@ export class BearerAuthDesign extends AuthDesign {
             return {
                 authenticate: async (request, h) => {
 
-                    console.log('checking bearer', request.path, request.route.settings.auth)
-
-                    const settings: BearerAuthOptions = options || {};
+                    const settings: BasicAuthOptions = options || {};
 
                     const authorization = request.raw.req.headers[this.key.toLowerCase()];
 
@@ -87,14 +91,16 @@ export class BearerAuthDesign extends AuthDesign {
                     const tokenType = authSplit[0]
                     let token = authSplit[1]
 
-                    if (tokenType.toLowerCase() !== 'bearer') {
+                    if (tokenType.toLowerCase() !== 'basic') {
                         token = ''
                         return Boom.unauthorized(null, strategyName)
                     }
 
+                    const [username, password] = Buffer.from(token, 'base64').toString().split(':', 2);
+
                     if (settings.validate) {
                         try {
-                            const result = await settings.validate?.(request, token, h)
+                            const result = await settings.validate?.(request, username, password, h)
 
                             if (result && 'isAuth' in result) {
                                 return result
@@ -105,14 +111,14 @@ export class BearerAuthDesign extends AuthDesign {
                             }
 
                             if (result) {
-                                const { isValid, credentials, artifacts, message, scheme } = result;
+                                const { isValid, credentials, artifacts, message } = result;
 
                                 if (isValid && credentials) {
                                     return h.authenticated({ credentials, artifacts })
                                 }
 
                                 if (message) {
-                                    return h.unauthenticated(Boom.unauthorized(message, scheme || 'Bearer'), {
+                                    return h.unauthenticated(Boom.unauthorized(message, 'Basic'), {
                                         credentials: credentials || {},
                                         artifacts
                                     })
@@ -123,34 +129,14 @@ export class BearerAuthDesign extends AuthDesign {
                         }
                     }
 
-                    return h.unauthenticated(Boom.unauthorized(), { credentials: {} })
+                    return Boom.unauthorized(null, 'Basic')
                 },
             }
         })
         t.strategy(strategyName, strategyName, this.options)
     }
 
-    integrateHook(_t: KaapiTools): void | Promise<void> {
-        console.log('[BearerAuthDesign] bearer auth strategy registered');
-    }
-
     toString(): string {
         return this.getStrategyName()
     }
 }
-
-export const bearerAuthDesign = new BearerAuthDesign({
-    strategyName: 'My bearer is your bearer',
-    options: {
-        async validate() {
-            return {
-                isValid: true,
-                credentials: {
-                    user: {
-                        username: 'kaapiuser'
-                    }
-                }
-            }
-        }
-    }
-}) 

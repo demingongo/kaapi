@@ -10,7 +10,7 @@ import { Folder } from '@novice1/api-doc-generator/lib/generators/postman/defini
 import { BaseAuthUtil } from '@novice1/api-doc-generator/lib/utils/auth/baseAuthUtils'
 import { BaseResponseUtil } from '@novice1/api-doc-generator/lib/utils/responses/baseResponseUtils'
 import { OpenAPIOptions, Postman, PostmanOptions } from '@novice1/api-doc-generator'
-import { SwaggerUiGenerator, SwaggerUiOptions } from './SwaggerUiGenerator'
+import { SwaggerUiGenerator, SwaggerUiOptions } from './swagger-ui-generator'
 import { KaapiOpenAPI } from './generators'
 import { HandlerDecorations, Lifecycle, ReqRef, ReqRefDefaults } from '@hapi/hapi'
 import { KaapiServerRoute } from '@kaapi/server'

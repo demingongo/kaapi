@@ -1,7 +1,7 @@
 #! /usr/bin/env node
 
 import * as prompts from '@clack/prompts';
-import { loadKaapiConfig } from './loadConfig';
+import { loadKaapiConfig } from './load-config';
 import pckg from '../package.json';
 import mri from 'mri';
 

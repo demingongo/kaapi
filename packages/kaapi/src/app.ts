@@ -1,5 +1,5 @@
 import { KaapiServer, KaapiServerOptions, KaapiServerRoute } from '@kaapi/server';
-import { IKaapiApp, KaapiBaseApp } from './baseApp';
+import { IKaapiApp, KaapiBaseApp } from './base-app';
 import { createLogger, ILogger } from './services/log';
 import { IMessaging, IMessagingSender, IMessagingSubscribeConfig } from './services/messaging';
 import qs from 'qs'
@@ -7,7 +7,7 @@ import winston from 'winston';
 import { createDocsRouter, DocsConfig, DocsOptions } from './services/docs/docs';
 import { KaapiOpenAPI, KaapiPostman } from './services/docs/generators';
 import { HandlerDecorations, Lifecycle, ReqRef, ReqRefDefaults } from '@hapi/hapi';
-import { KaapiPlugin, KaapiTools } from './services/plugin';
+import { KaapiPlugin, KaapiTools } from './services/plugins/plugin';
 
 export interface KaapiAppOptions extends KaapiServerOptions {
     logger?: ILogger,

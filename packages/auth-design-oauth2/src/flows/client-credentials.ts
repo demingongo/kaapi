@@ -19,174 +19,67 @@ import {
     OAuth2RefreshTokenRoute 
 } from './common'
 
-//#region AuthorizationRoute
-
-export interface OAuth2ACAuthorizationParams {
-    clientId: string
-    responseType: string
-    redirectUri: string
-    scope?: string
-    state?: string
-    codeChallenge?: string
-}
-
-export type OAuth2ACAuthorizationHandler<
-    Refs extends ReqRef = ReqRefDefaults,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    R extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<Refs>
-> = (params: OAuth2ACAuthorizationParams, request: Request<Refs>, h: ResponseToolkit<Refs>) => R
-
-export interface IOAuth2ACAuthorizationRoute<
-    GetRefs extends ReqRef = ReqRefDefaults,
-    PostRefs extends ReqRef = ReqRefDefaults,
-> {
-    path: string,
-    handler: OAuth2ACAuthorizationHandler<GetRefs>
-    postHandler: OAuth2ACAuthorizationHandler<PostRefs>
-}
-
-export class OAuth2ACAuthorizationRoute<
-    GetRefs extends ReqRef = ReqRefDefaults,
-    PostRefs extends ReqRef = ReqRefDefaults,
-> implements IOAuth2ACAuthorizationRoute<GetRefs, PostRefs> {
-    protected _path: string;
-    protected _handler: OAuth2ACAuthorizationHandler<GetRefs>
-    protected _postHandler: OAuth2ACAuthorizationHandler<PostRefs>
-
-    get path() {
-        return this._path
-    }
-
-    get handler() {
-        return this._handler
-    }
-
-    get postHandler() {
-        return this._postHandler
-    }
-
-    constructor(
-        path: string,
-        handler: OAuth2ACAuthorizationHandler<GetRefs>,
-        postHandler: OAuth2ACAuthorizationHandler<PostRefs>
-    ) {
-        this._path = path;
-        this._handler = handler;
-        this._postHandler = postHandler;
-    }
-}
-
-//#endregion AuthorizationRoute
-
 //#region TokenRoute
 
-export interface OAuth2ACTokenParams {
+export interface OAuth2ClientCredsTokenParams {
     grantType: string
-    code: string
     clientId: string
-    clientSecret?: string
-    codeVerifier?: string
-    redirectUri?: string
+    clientSecret: string
+    scope?: string
 }
 
-export type OAuth2ACTokenHandler<
+export type OAuth2ClientCredsTokenHandler<
     Refs extends ReqRef = ReqRefDefaults,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     R extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<Refs>
-> = (params: OAuth2ACTokenParams, request: Request<Refs>, h: ResponseToolkit<Refs>) => R
+> = (params: OAuth2ClientCredsTokenParams, request: Request<Refs>, h: ResponseToolkit<Refs>) => R
 
-export interface IOAuth2ACTokenRoute<
+export interface IOAuth2ClientCredsTokenRoute<
     Refs extends ReqRef = ReqRefDefaults
 > {
     path: string,
-    handler: OAuth2ACTokenHandler<Refs>
-}
-
-export class OAuth2ACTokenRoute<
-    Refs extends ReqRef = ReqRefDefaults
-> implements IOAuth2ACTokenRoute<Refs> {
-    protected _path: string;
-    protected _handler: OAuth2ACTokenHandler<Refs>
-
-    get path() {
-        return this._path
-    }
-
-    get handler() {
-        return this._handler
-    }
-
-    constructor(
-        path: string,
-        handler: OAuth2ACTokenHandler<Refs>
-    ) {
-        this._path = path;
-        this._handler = handler;
-    }
+    handler: OAuth2ClientCredsTokenHandler<Refs>
 }
 
 //#endregion TokenRoute
 
-//#region AuthorizationCodeOAuth2
+//#region ClientCredsOAuth2
 
-export interface AuthorizationCodeOAuth2Arg {
+export interface ClientCredsOAuth2Arg {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    authorizationRoute: OAuth2ACAuthorizationRoute<any, any>;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    tokenRoute: OAuth2ACTokenRoute<any>;
+    tokenRoute: IOAuth2ClientCredsTokenRoute<any>;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     refreshTokenRoute?: OAuth2RefreshTokenRoute<any>;
     options?: OAuth2AuthOptions;
     strategyName?: string;
 }
 
-export class AuthorizationCodeOAuth2 extends AuthDesign {
+export class ClientCredsOAuth2 extends AuthDesign {
 
     protected strategyName: string
     protected description?: string
     protected scopes?: Record<string, string>
     protected options: OAuth2AuthOptions
-
-    protected pkce: boolean = false
-
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    protected authorizationRoute: IOAuth2ACAuthorizationRoute<any, any>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    protected tokenRoute: IOAuth2ACTokenRoute<any>
+    protected tokenRoute: IOAuth2ClientCredsTokenRoute<any>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     protected refreshTokenRoute?: IOAuth2RefreshTokenRoute<any>
 
     constructor(
         {
-            authorizationRoute,
             tokenRoute,
             refreshTokenRoute,
             options,
             strategyName
-        }: AuthorizationCodeOAuth2Arg
+        }: ClientCredsOAuth2Arg
     ) {
         super()
 
-        this.authorizationRoute = authorizationRoute
         this.tokenRoute = tokenRoute
         this.refreshTokenRoute = refreshTokenRoute
 
-        this.strategyName = strategyName || 'oauth2-authorization-code'
+        this.strategyName = strategyName || 'oauth2-client-credentials'
         this.options = options ? { ...options } : {}
-    }
-
-    withPkce(): this {
-        this.pkce = true
-        return this
-    }
-
-    withoutPkce(): this {
-        this.pkce = false
-        return this
-    }
-
-    isWithPkce(): boolean {
-        return this.pkce
     }
 
     setDescription(description: string): this {
@@ -222,9 +115,8 @@ export class AuthorizationCodeOAuth2 extends AuthDesign {
      */
     docs() {
         const docs = new OAuth2Util(this.strategyName)
-            .setGrantType(this.isWithPkce() ? GrantType.authorizationCodeWithPkce : GrantType.authorizationCode)
+            .setGrantType(GrantType.clientCredentials)
             .setScopes(this.getScopes() || {})
-            .setAuthUrl(this.authorizationRoute.path)
             .setAccessTokenUrl(this.tokenRoute.path || '');
 
         if (this.refreshTokenRoute?.path) {
@@ -244,8 +136,6 @@ export class AuthorizationCodeOAuth2 extends AuthDesign {
     integrateStrategy(t: KaapiTools) {
         t.scheme(this.strategyName, (_server, options) => {
 
-            const strategyName = this.strategyName
-
             return {
                 async authenticate(request, h) {
 
@@ -260,7 +150,7 @@ export class AuthorizationCodeOAuth2 extends AuthDesign {
 
                     if (tokenType.toLowerCase() !== 'bearer') {
                         token = ''
-                        return Boom.unauthorized(null, strategyName)
+                        return Boom.unauthorized(null, 'Bearer')
                     }
 
                     if (settings.validate) {
@@ -276,14 +166,14 @@ export class AuthorizationCodeOAuth2 extends AuthDesign {
                             }
 
                             if (result) {
-                                const { isValid, credentials, artifacts, message, scheme } = result;
+                                const { isValid, credentials, artifacts, message } = result;
 
                                 if (isValid && credentials) {
                                     return h.authenticated({ credentials, artifacts })
                                 }
 
                                 if (message) {
-                                    return h.unauthenticated(Boom.unauthorized(message, scheme || 'Bearer'), {
+                                    return h.unauthenticated(Boom.unauthorized(message, 'Bearer'), {
                                         credentials: credentials || {},
                                         artifacts
                                     })
@@ -294,7 +184,7 @@ export class AuthorizationCodeOAuth2 extends AuthDesign {
                         }
                     }
 
-                    return Boom.unauthorized(null, strategyName)
+                    return Boom.unauthorized(null, 'Bearer')
                 },
             }
         })
@@ -313,51 +203,6 @@ export class AuthorizationCodeOAuth2 extends AuthDesign {
                 }
 
         t
-            .route({
-                options: routesOptions,
-                path: this.authorizationRoute.path,
-                method: ['GET', 'POST'],
-                handler: async (req, h) => {
-                    // validating query
-                    if (
-                        req.query.client_id && typeof req.query.client_id === 'string' &&
-                        req.query.response_type === 'code' &&
-                        req.query.redirect_uri && typeof req.query.redirect_uri === 'string'
-                    ) {
-                        const params: OAuth2ACAuthorizationParams = {
-                            clientId: req.query.client_id,
-                            redirectUri: req.query.redirect_uri,
-                            responseType: req.query.response_type
-                        }
-                        if (req.query.scope && typeof req.query.scope === 'string') {
-                            params.scope = req.query.scope
-                        }
-                        if (req.query.state && typeof req.query.state === 'string') {
-                            params.state = req.query.state
-                        }
-                        if (req.query.code_challenge && typeof req.query.code_challenge === 'string') {
-                            params.codeChallenge = req.query.code_challenge
-                        }
-
-                        if (req.method.toLowerCase() === 'get') {
-                            return this.authorizationRoute.handler(params, req, h)
-                        } else {
-                            return this.authorizationRoute.postHandler(params, req, h)
-                        }
-                    } else {
-                        let errorDescription = ''
-                        if (!(req.query.client_id && typeof req.query.client_id === 'string')) {
-                            errorDescription = 'Request was missing the \'client_id\' parameter.'
-                        } else if (!(req.query.response_type === 'code')) {
-                            errorDescription = `Request does not support the 'response_type' '${req.query.response_type}'.`
-                        } else if (!(req.query.redirect_uri && typeof req.query.redirect_uri === 'string')) {
-                            errorDescription = 'Request was missing the \'redirect_uri\' parameter.'
-                        }
-
-                        return h.response({ error: 'invalid_request', error_description: errorDescription }).code(400)
-                    }
-                }
-            })
             .route<{
                 Payload: { client_id?: unknown, client_secret?: unknown, code_verifier?: unknown, code?: unknown, grant_type?: unknown, redirect_uri?: unknown, refresh_token?: unknown, scope?: unknown }
             }>({
@@ -367,23 +212,38 @@ export class AuthorizationCodeOAuth2 extends AuthDesign {
                 handler: async (req, h) => {
                     // validating body
                     if (
-                        req.payload.client_id && typeof req.payload.client_id === 'string' &&
-                        req.payload.code && typeof req.payload.code === 'string' &&
-                        req.payload.grant_type === 'authorization_code'
+                        req.payload.grant_type === 'client_credentials'
                     ) {
-                        const params: OAuth2ACTokenParams = {
-                            clientId: req.payload.client_id,
-                            grantType: req.payload.grant_type,
-                            code: req.payload.code
+                        let clientId: string,
+                            clientSecret: string,
+                            tmpClientId: string | undefined,
+                            tmpClientSecret: string | undefined;
+
+                        const authHeaderValue = req.raw.req.headers.authorization
+                        if (authHeaderValue) {
+                            // remove 'Basic ' and convert the base64 to string
+                            const value = Buffer.from(authHeaderValue.substring(5), 'base64').toString();
+                            // split client_id and client_secret from string
+                            [tmpClientId, tmpClientSecret] = value.split(':')
                         }
-                        if (req.payload.client_secret && typeof req.payload.client_secret === 'string') {
-                            params.clientSecret = req.payload.client_secret
+
+                        if (tmpClientId) {
+                            clientId = tmpClientId
+                        } else {
+                            return h.response({ error: 'invalid_request', error_description: 'Request was missing the \'client_id\' parameter.' }).code(400)
                         }
-                        if (req.payload.code_verifier && typeof req.payload.code_verifier === 'string') {
-                            params.codeVerifier = req.payload.code_verifier
+                        if (tmpClientSecret) {
+                            clientSecret = tmpClientSecret
+                        } else {
+                            return h.response({ error: 'invalid_request', error_description: 'Request was missing the \'client_secret\' parameter.' }).code(400)
                         }
-                        if (req.payload.redirect_uri && typeof req.payload.redirect_uri === 'string') {
-                            params.redirectUri = req.payload.redirect_uri
+                        const params: OAuth2ClientCredsTokenParams = {
+                            clientId: clientId,
+                            clientSecret: clientSecret,
+                            grantType: req.payload.grant_type
+                        }
+                        if (req.payload.scope && typeof req.payload.scope === 'string') {
+                            params.scope = req.payload.scope
                         }
 
                         return this.tokenRoute.handler(params, req, h)
@@ -508,4 +368,4 @@ export class AuthorizationCodeOAuth2 extends AuthDesign {
 
 }
 
-//#endregion AuthorizationCodeOAuth2
+//#endregion ClientCredsOAuth2
