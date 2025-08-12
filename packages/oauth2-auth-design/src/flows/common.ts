@@ -1,6 +1,7 @@
 import {
     Auth,
     AuthCredentials,
+    AuthDesign,
     Lifecycle,
     ReqRef,
     ReqRefDefaults,
@@ -8,8 +9,13 @@ import {
     ResponseToolkit
 } from '@kaapi/kaapi'
 import { Boom } from '@hapi/boom'
+import { JWKSStore } from '../utils/jwks-store';
+import { getInMemoryJWKSStore } from '../utils/in-memory-jwks-store';
+import { JWKSGenerator, OAuth2JwtPayload } from '../utils/jwks-generator';
 
 //#region Types
+
+export type WithRequired<T, K extends keyof T> = T & { [P in K]-?: T[P] }
 
 export type OAuth2Error = 'invalid_request' | 'invalid_client' | 'invalid_grant' | 'invalid_scope' | 'unauthorized_client' | 'unsupported_grant_type' | 'invalid_token'
 
@@ -24,11 +30,15 @@ export type OAuth2AuthOptions = {
     } | Auth | Boom>;
 };
 
+export interface OIDCHelpers {
+    createIDToken: (payload: WithRequired<Partial<OAuth2JwtPayload>, 'sub'>) => Promise<string>
+}
+
 //#endregion Types
 
 //#region RefreshTokenRoute
 
-export interface OAuth2RefreshTokenParams {
+export interface OAuth2RefreshTokenParams extends Partial<OIDCHelpers> {
     grantType: string
     refreshToken: string
     clientId: string
@@ -73,3 +83,121 @@ export class OAuth2RefreshTokenRoute<
 }
 
 //#endregion RefreshTokenRoute
+
+//#region OAuth2TokenResponse
+
+export class OAuth2TokenResponse {
+
+    protected accessToken: string
+
+    protected tokenType = 'bearer'
+    /**
+     * in seconds
+     */
+    protected expiresIn?: number
+    protected refreshToken?: string
+    protected scope?: string
+    protected idToken?: string
+
+    constructor({ access_token, expires_in, refresh_token, scope, id_token }: { access_token: string, expires_in?: number, refresh_token?: string, scope?: string, id_token?: string }) {
+        this.accessToken = access_token
+        this.expiresIn = expires_in
+        this.refreshToken = refresh_token
+        this.scope = scope
+        this.idToken = id_token
+    }
+
+    setAccessToken(value: string): this {
+        this.accessToken = value
+        return this;
+    }
+    getAccessToken(): string {
+        return this.accessToken;
+    }
+
+    getTokenType(): string {
+        return this.tokenType;
+    }
+
+    /**
+     * @param value number of seconds
+     */
+    setExpiresIn(value?: number): this {
+        this.expiresIn = value
+        return this;
+    }
+    /**
+     * @returns number of seconds
+     */
+    getExpiresIn(): number | undefined {
+        return this.expiresIn;
+    }
+
+    setRefreshToken(value?: string): this {
+        this.refreshToken = value
+        return this;
+    }
+    getRefreshToken(): string | undefined {
+        return this.refreshToken;
+    }
+
+    setScope(value?: string | string[]): this {
+        this.scope = Array.isArray(value) ? value.join(' ') : value
+        return this;
+    }
+    getScope(): string | undefined {
+        return this.scope;
+    }
+
+    setIDToken(value?: string): this {
+        this.idToken = value
+        return this;
+    }
+    getIDToken(): string | undefined {
+        return this.idToken;
+    }
+
+    toObject(): { access_token: string, token_type: string, expires_in?: number, refresh_token?: string, scope?: string, id_token?: string } {
+        return {
+            access_token: this.getAccessToken(),
+            token_type: this.getTokenType(),
+            expires_in: this.getExpiresIn(),
+            refresh_token: this.getRefreshToken(),
+            scope: this.getScope(),
+            id_token: this.getIDToken(),
+        }
+    }
+
+    toJSON(): { access_token: string, token_type: string, expires_in?: number, refresh_token?: string, scope?: string, id_token?: string } {
+        return this.toObject()
+    }
+}
+
+//#region OAuth2TokenResponse
+
+//#region OAuth2AuthDesign
+
+export abstract class OAuth2AuthDesign extends AuthDesign {
+
+    #jwksGenerator: JWKSGenerator
+
+    get jwksGenerator(): JWKSGenerator {
+        return this.#jwksGenerator
+    }
+
+    constructor(jwksStore?: JWKSStore, ttlSeconds?: number) {
+        super()
+        this.#jwksGenerator = new JWKSGenerator(jwksStore || getInMemoryJWKSStore(), ttlSeconds)
+    }
+
+    setTokenTTL(ttlSeconds?: number): this {
+        this.#jwksGenerator.ttl = ttlSeconds
+        return this
+    }
+
+    getTokenTTL(): number | undefined {
+        return this.#jwksGenerator.ttl
+    }
+}
+
+//#endregion OAuth2AuthDesign

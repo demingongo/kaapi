@@ -3,6 +3,46 @@ import jose from 'node-jose'
 import jwktopem from 'jwk-to-pem'
 import { JWKSStore } from './jwks-store'
 
+export { JwtPayload } from 'jsonwebtoken'
+
+export interface OAuth2JwtPayload extends JwtPayload {
+    /**
+     * Identifier of the Identity Provider (IdP), usually a URL
+     */
+    iss: string
+    /**
+     * Identifier for the authenticated user (unique per iss)
+     */
+    sub: string
+    /**
+     * Client ID of the relying party (the app that receives the token)
+     */
+    aud: string | string[]
+    /**
+     *  Must be present if a nonce was included in the original request (used to prevent replay attacks)
+     */
+    nonce?: string
+    /**
+     * Time when the user actually authenticated. Required if the max_age parameter was used in the auth request
+     */
+    auth_time?: number
+}
+
+export async function createIDToken(
+    generator: JWKSGenerator,
+    payload: OAuth2JwtPayload
+): Promise<string> {
+    
+    const ttlSeconds = generator.ttl
+    const now = Math.floor(Date.now() / 1000)
+                                           
+    return await generator.sign({
+        ...( payload ),
+        exp: typeof ttlSeconds === 'number' ? now + ttlSeconds : payload?.exp,
+        iat: now
+    })
+}
+
 /**
  * JWKSGenerator class
  */
@@ -11,6 +51,21 @@ export class JWKSGenerator {
     #store: JWKSStore
 
     #ttlSeconds?: number
+
+    /**
+     * ttl in seconds
+     */
+    get ttl(): number | undefined {
+        return this.#ttlSeconds
+    }
+
+    /**
+     * ttl in seconds
+     */
+    set ttl(ttlSeconds: number | undefined) {
+        if (['number', 'undefined'].includes(typeof ttlSeconds))
+            this.#ttlSeconds = ttlSeconds
+    }
 
     constructor(store: JWKSStore, ttlSeconds?: number) {
         this.#store = store
@@ -57,7 +112,7 @@ export class JWKSGenerator {
         await this._saveKeyStore(keyStore)
     }
 
-    async sign(payload: string | Buffer | JwtPayload) {
+    async sign(payload: JwtPayload) {
         const keyStore = await this._generateIfEmpty()
         const key = keyStore.all({ use: 'sig' })
             .pop()

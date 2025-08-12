@@ -32,3 +32,12 @@ export class InMemoryJWKSStore implements JWKSStore {
         }
     }
 }
+
+let inMemoryJWKSStore: InMemoryJWKSStore;
+
+export function getInMemoryJWKSStore(): InMemoryJWKSStore {
+    if (!inMemoryJWKSStore) {
+        inMemoryJWKSStore = new InMemoryJWKSStore()
+    }
+    return inMemoryJWKSStore
+}

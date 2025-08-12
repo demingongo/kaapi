@@ -1,5 +1,4 @@
 import {
-    AuthDesign,
     KaapiTools,
     Lifecycle,
     ReqRef,
@@ -11,13 +10,17 @@ import {
 import { GrantType, OAuth2Util } from '@novice1/api-doc-generator'
 import Boom from '@hapi/boom'
 import Hoek from '@hapi/hoek'
-import { 
-    IOAuth2RefreshTokenRoute, 
-    OAuth2AuthOptions, 
-    OAuth2Error, 
-    OAuth2RefreshTokenParams, 
-    OAuth2RefreshTokenRoute 
+import {
+    IOAuth2RefreshTokenRoute,
+    OAuth2AuthDesign,
+    OAuth2AuthOptions,
+    OAuth2Error,
+    OAuth2RefreshTokenParams,
+    OAuth2RefreshTokenRoute,
+    OIDCHelpers
 } from './common'
+import { createIDToken } from '../utils/jwks-generator'
+import { JWKSStore } from '../utils/jwks-store'
 
 //#region AuthorizationRoute
 
@@ -80,7 +83,7 @@ export class OAuth2ACAuthorizationRoute<
 
 //#region TokenRoute
 
-export interface OAuth2ACTokenParams {
+export interface OAuth2ACTokenParams extends OIDCHelpers {
     grantType: string
     code: string
     clientId: string
@@ -138,9 +141,10 @@ export interface OAuth2AuthorizationCodeArg {
     refreshTokenRoute?: OAuth2RefreshTokenRoute<any>;
     options?: OAuth2AuthOptions;
     strategyName?: string;
+    jwksStore?: JWKSStore;
 }
 
-export class OAuth2AuthorizationCode extends AuthDesign {
+export class OAuth2AuthorizationCode extends OAuth2AuthDesign {
 
     protected strategyName: string
     protected description?: string
@@ -162,10 +166,12 @@ export class OAuth2AuthorizationCode extends AuthDesign {
             tokenRoute,
             refreshTokenRoute,
             options,
-            strategyName
+            strategyName,
+
+            jwksStore
         }: OAuth2AuthorizationCodeArg
     ) {
-        super()
+        super(jwksStore)
 
         this.authorizationRoute = authorizationRoute
         this.tokenRoute = tokenRoute
@@ -303,12 +309,12 @@ export class OAuth2AuthorizationCode extends AuthDesign {
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const routesOptions: RouteOptions<any> = {
-                    plugins: {
-                        kaapi: {
-                            docs: false
-                        }
-                    }
+            plugins: {
+                kaapi: {
+                    docs: false
                 }
+            }
+        }
 
         t
             .route({
@@ -364,15 +370,25 @@ export class OAuth2AuthorizationCode extends AuthDesign {
                 method: 'POST',
                 handler: async (req, h) => {
                     // validating body
+
                     if (
                         req.payload.client_id && typeof req.payload.client_id === 'string' &&
                         req.payload.code && typeof req.payload.code === 'string' &&
                         req.payload.grant_type === 'authorization_code'
                     ) {
+
                         const params: OAuth2ACTokenParams = {
                             clientId: req.payload.client_id,
                             grantType: req.payload.grant_type,
-                            code: req.payload.code
+                            code: req.payload.code,
+
+                            createIDToken: async (payload) => {
+                                return await createIDToken(this.jwksGenerator, {
+                                    aud: `${req.payload.client_id}`,
+                                    iss: t.postman?.getHost()[0] || '',
+                                    ...payload
+                                })
+                            }
                         }
                         if (req.payload.client_secret && typeof req.payload.client_secret === 'string') {
                             params.clientSecret = req.payload.client_secret
@@ -399,7 +415,15 @@ export class OAuth2AuthorizationCode extends AuthDesign {
                             const params: OAuth2RefreshTokenParams = {
                                 clientId: `${req.payload.client_id}`,
                                 grantType: req.payload.grant_type,
-                                refreshToken: `${req.payload.refresh_token}`
+                                refreshToken: `${req.payload.refresh_token}`,
+
+                                createIDToken: async (payload) => {
+                                    return await createIDToken(this.jwksGenerator, {
+                                        aud: `${req.payload.client_id}`,
+                                        iss: t.postman?.getHost()[0] || '',
+                                        ...payload
+                                    })
+                                }
                             }
 
                             if (hasClientSecret) {
@@ -469,7 +493,15 @@ export class OAuth2AuthorizationCode extends AuthDesign {
                         const params: OAuth2RefreshTokenParams = {
                             clientId: `${req.payload.client_id}`,
                             grantType: `${req.payload.grant_type}`,
-                            refreshToken: `${req.payload.refresh_token}`
+                            refreshToken: `${req.payload.refresh_token}`,
+
+                            createIDToken: async (payload) => {
+                                return await createIDToken(this.jwksGenerator, {
+                                    aud: `${req.payload.client_id}`,
+                                    iss: t.postman?.getHost()[0] || '',
+                                    ...payload
+                                })
+                            }
                         }
 
                         if (hasClientSecret) {
