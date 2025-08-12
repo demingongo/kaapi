@@ -16,7 +16,6 @@ import {
     OAuth2AuthOptions,
     OAuth2Error,
     OAuth2RefreshTokenParams,
-    OAuth2RefreshTokenRoute,
     OIDCHelpers
 } from './common'
 import { createIDToken } from '../utils/jwks-generator'
@@ -83,7 +82,7 @@ export class OAuth2ACAuthorizationRoute<
 
 //#region TokenRoute
 
-export interface OAuth2ACTokenParams extends OIDCHelpers {
+export interface OAuth2ACTokenParams extends Partial<OIDCHelpers> {
     grantType: string
     code: string
     clientId: string
@@ -134,11 +133,11 @@ export class OAuth2ACTokenRoute<
 
 export interface OAuth2AuthorizationCodeArg {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    authorizationRoute: OAuth2ACAuthorizationRoute<any, any>;
+    authorizationRoute: IOAuth2ACAuthorizationRoute<any, any>;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    tokenRoute: OAuth2ACTokenRoute<any>;
+    tokenRoute: IOAuth2ACTokenRoute<any>;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    refreshTokenRoute?: OAuth2RefreshTokenRoute<any>;
+    refreshTokenRoute?: IOAuth2RefreshTokenRoute<any>;
     options?: OAuth2AuthOptions;
     strategyName?: string;
     jwksStore?: JWKSStore;
@@ -307,6 +306,8 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign {
 
     integrateHook(t: KaapiTools) {
 
+        const hasOpenIDScope = () => typeof this.getScopes()?.['openid'] != 'undefined'
+
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const routesOptions: RouteOptions<any> = {
             plugins: {
@@ -382,13 +383,13 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign {
                             grantType: req.payload.grant_type,
                             code: req.payload.code,
 
-                            createIDToken: async (payload) => {
+                            createIDToken: hasOpenIDScope() ? (async (payload) => {
                                 return await createIDToken(this.jwksGenerator, {
                                     aud: `${req.payload.client_id}`,
                                     iss: t.postman?.getHost()[0] || '',
                                     ...payload
                                 })
-                            }
+                            }) : undefined
                         }
                         if (req.payload.client_secret && typeof req.payload.client_secret === 'string') {
                             params.clientSecret = req.payload.client_secret
@@ -417,13 +418,13 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign {
                                 grantType: req.payload.grant_type,
                                 refreshToken: `${req.payload.refresh_token}`,
 
-                                createIDToken: async (payload) => {
+                                createIDToken: hasOpenIDScope() ? (async (payload) => {
                                     return await createIDToken(this.jwksGenerator, {
                                         aud: `${req.payload.client_id}`,
                                         iss: t.postman?.getHost()[0] || '',
                                         ...payload
                                     })
-                                }
+                                }) : undefined
                             }
 
                             if (hasClientSecret) {
@@ -495,13 +496,13 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign {
                             grantType: `${req.payload.grant_type}`,
                             refreshToken: `${req.payload.refresh_token}`,
 
-                            createIDToken: async (payload) => {
+                            createIDToken: hasOpenIDScope() ? (async (payload) => {
                                 return await createIDToken(this.jwksGenerator, {
                                     aud: `${req.payload.client_id}`,
                                     iss: t.postman?.getHost()[0] || '',
                                     ...payload
                                 })
-                            }
+                            }) : undefined
                         }
 
                         if (hasClientSecret) {

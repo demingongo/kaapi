@@ -12,7 +12,8 @@ export const app = new Kaapi({
         level: 'debug'
     },
     docs: {
-        disabled: false
+        disabled: false,
+        host: { url: 'http://localhost:3000' }
     },
     routes: {
         // to forcefully set it in all the routes (route.settings.auth)

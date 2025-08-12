@@ -99,8 +99,13 @@ export class JWKSGenerator {
         return keyStore
     }
 
-    async generateIfEmpty(): Promise<void> {
-        await this._generateIfEmpty()
+    async generateIfEmpty(): Promise<object> {
+        const keyStore = await this._generateIfEmpty()
+        const json = keyStore.toJSON()
+        if (json && 'keys' in json && Array.isArray(json.keys)) {
+            json.keys.reverse()
+        }
+        return json
     }
 
     /**

@@ -72,11 +72,11 @@ export abstract class AuthDesign implements KaapiPlugin {
 
         const securityScheme = this.docs();
         if (securityScheme) {
-            t.openapi?.addSecurityScheme(securityScheme)
-                .setDefaultSecurity(securityScheme);
             if (securityScheme instanceof OAuth2Util && !securityScheme.getHost() && t.postman?.getHost().length) {
                 securityScheme.setHost(t.postman.getHost()[0])
             }
+            t.openapi?.addSecurityScheme(securityScheme)
+                .setDefaultSecurity(securityScheme);
             t.postman?.setDefaultSecurity(securityScheme);
             t.log.debug(`Auth Design "${this.constructor.name}" set security scheme (docs).`);
         } else {
