@@ -20,65 +20,10 @@ import {
 } from './common'
 import { createIDToken } from '../utils/jwks-generator'
 import { JWKSStore } from '../utils/jwks-store'
-
-//#region AuthorizationRoute
-
-export interface OAuth2ACAuthorizationParams {
-    clientId: string
-    responseType: string
-    redirectUri: string
-    scope?: string
-    state?: string
-    codeChallenge?: string
-}
-
-export type OAuth2ACAuthorizationHandler<
-    Refs extends ReqRef = ReqRefDefaults,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    R extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<Refs>
-> = (params: OAuth2ACAuthorizationParams, request: Request<Refs>, h: ResponseToolkit<Refs>) => R
-
-export interface IOAuth2ACAuthorizationRoute<
-    GetRefs extends ReqRef = ReqRefDefaults,
-    PostRefs extends ReqRef = ReqRefDefaults,
-> {
-    path: string,
-    handler: OAuth2ACAuthorizationHandler<GetRefs>
-    postHandler: OAuth2ACAuthorizationHandler<PostRefs>
-}
-
-export class OAuth2ACAuthorizationRoute<
-    GetRefs extends ReqRef = ReqRefDefaults,
-    PostRefs extends ReqRef = ReqRefDefaults,
-> implements IOAuth2ACAuthorizationRoute<GetRefs, PostRefs> {
-    protected _path: string;
-    protected _handler: OAuth2ACAuthorizationHandler<GetRefs>
-    protected _postHandler: OAuth2ACAuthorizationHandler<PostRefs>
-
-    get path() {
-        return this._path
-    }
-
-    get handler() {
-        return this._handler
-    }
-
-    get postHandler() {
-        return this._postHandler
-    }
-
-    constructor(
-        path: string,
-        handler: OAuth2ACAuthorizationHandler<GetRefs>,
-        postHandler: OAuth2ACAuthorizationHandler<PostRefs>
-    ) {
-        this._path = path;
-        this._handler = handler;
-        this._postHandler = postHandler;
-    }
-}
-
-//#endregion AuthorizationRoute
+import { 
+    IOAuth2ACAuthorizationRoute, 
+    OAuth2ACAuthorizationParams 
+} from './auth-code/authorization-route'
 
 //#region TokenRoute
 
@@ -342,6 +287,9 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign {
                         }
                         if (req.query.code_challenge && typeof req.query.code_challenge === 'string') {
                             params.codeChallenge = req.query.code_challenge
+                        }
+                        if (req.query.nonce && typeof req.query.nonce === 'string') {
+                            params.nonce = req.query.nonce
                         }
 
                         if (req.method.toLowerCase() === 'get') {
