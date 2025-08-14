@@ -179,7 +179,7 @@ export class Kaapi extends KaapiBaseApp implements IKaapiApp {
         if (extend) {
             this.extend(extend)
                 .catch(err => {
-                    this.log.error('Error while plugging plugins', err)
+                    this.log.error('Error while extending (app.extend)', err)
                 }).finally(() => {
                     this._createDocsRouter()
                 })

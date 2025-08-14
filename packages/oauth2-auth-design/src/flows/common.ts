@@ -15,9 +15,18 @@ import { JWKSGenerator, OAuth2JwtPayload } from '../utils/jwks-generator';
 
 //#region Types
 
+export type PathValue = `/${string}`;
+
 export type WithRequired<T, K extends keyof T> = T & { [P in K]-?: T[P] }
 
 export type OAuth2Error = 'invalid_request' | 'invalid_client' | 'invalid_grant' | 'invalid_scope' | 'unauthorized_client' | 'unsupported_grant_type' | 'invalid_token'
+
+export type OAuth2ErrorBody = {
+    error: OAuth2Error
+    error_description?: string
+    error_uri?: string
+    [key: string]: unknown
+}
 
 export type OAuth2AuthOptions = {
     validate?<
@@ -86,7 +95,22 @@ export class OAuth2RefreshTokenRoute<
 
 //#region OAuth2TokenResponse
 
-export class OAuth2TokenResponse {
+export interface OAuth2TokenResponseBody { 
+    access_token: string
+    token_type: string
+    expires_in?: number 
+    refresh_token?: string
+    scope?: string
+    id_token?: string 
+    error?: never
+    [key: string]: unknown
+}
+
+export interface IOAuth2TokenResponse {
+    toJSON(): OAuth2TokenResponseBody
+}
+
+export class OAuth2TokenResponse implements IOAuth2TokenResponse {
 
     protected accessToken: string
 
@@ -115,6 +139,10 @@ export class OAuth2TokenResponse {
         return this.accessToken;
     }
 
+    setTokenType(value: string): this {
+        this.tokenType = value
+        return this;
+    }
     getTokenType(): string {
         return this.tokenType;
     }

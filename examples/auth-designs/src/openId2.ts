@@ -4,7 +4,6 @@ import {
     OAuth2ACAuthorizationRoute,
     OAuth2RefreshTokenHandler,
     OAuth2RefreshTokenRoute,
-    OAuth2ACTokenHandler,
     OAuth2ACTokenRoute,
     OpenIDAuthDesign,
     OpenIDJWKSRoute,
@@ -14,6 +13,7 @@ import {
 
 export const openIDDesign2 = new OpenIDAuthDesign(
     {
+        jwksStore: undefined,
         jwksRoute: new OpenIDJWKSRoute('/openid/jwks'),
         /*
         userInfoRoute: new OpenIDUserInfoRoute('/openid/session', async () => {
@@ -42,9 +42,9 @@ export const openIDDesign2 = new OpenIDAuthDesign(
 
                 return null
             }),
-        tokenRoute: new OAuth2ACTokenRoute(
-            '/oauth2/ac/token',
-            (async ({ clientId, clientSecret, code, codeVerifier, redirectUri, createIDToken }, _req, h) => {
+        tokenRoute: OAuth2ACTokenRoute.buildDefault()
+            .setPath('/oauth2/ac/token')
+            .generateToken(async ({ clientId, clientSecret, code, codeVerifier, redirectUri, createIDToken }, _req) => {
 
                 console.log('code', code)
                 console.log('codeVerifier', codeVerifier)
@@ -53,38 +53,36 @@ export const openIDDesign2 = new OpenIDAuthDesign(
                 console.log('clientSecret', clientSecret)
 
                 if (!clientSecret && !codeVerifier) {
-                    return h.response({ error: 'invalid_client', error_description: 'Request was missing the \'client_secret\' parameter.' }).code(400)
+                    return { error: 'invalid_client', error_description: 'Request was missing the \'client_secret\' parameter.' }
                 }
                 try {
                     //#region @TODO: validation + token
                     const accessToken = 'generated_access_token'
                     const refreshToken = 'generated_refresh_token'
                     const scope: string[] = ['openid']
-                    return h.response(
-                        new OAuth2TokenResponse({access_token: accessToken})
-                            .setExpiresIn(36000)
-                            .setRefreshToken(refreshToken)
-                            .setScope(scope)
-                            .setIDToken(
-                                await createIDToken?.({
-                                    sub: '248289761001',
-                                    name: 'Jane Doe',
-                                    given_name: 'Jane',
-                                    family_name: 'Doe',
-                                    preferred_username: 'janed',
-                                    email: 'janed@example.com',
-                                    email_verified: true,
-                                    picture: 'https://example.com/janed.jpg'
-                                })
-                            )).code(200)
+                    return new OAuth2TokenResponse({ access_token: accessToken })
+                        .setExpiresIn(36000)
+                        .setRefreshToken(refreshToken)
+                        .setScope(scope)
+                        .setIDToken(
+                            await createIDToken?.({
+                                sub: '248289761001',
+                                name: 'Jane Doe',
+                                given_name: 'Jane',
+                                family_name: 'Doe',
+                                preferred_username: 'janed',
+                                email: 'janed@example.com',
+                                email_verified: true,
+                                picture: 'https://example.com/janed.jpg'
+                            })
+                        )
                     //#endregion @TODO: validation + token
                 } catch (err) {
                     console.error(err)
                 }
 
-                return h.response({ error: 'invalid_request' }).code(400)
-            }) as OAuth2ACTokenHandler,
-        ),
+                return null
+            }),
         refreshTokenRoute: new OAuth2RefreshTokenRoute(
             '/oauth2/ac/token',
             (async ({ clientId, clientSecret, refreshToken, scope }, _req, h) => {

@@ -6,8 +6,7 @@ import {
     ResponseToolkit
 } from '@kaapi/kaapi'
 import { encode } from 'html-entities'
-
-export type PathValue = `/${string}`;
+import { OAuth2Error, OAuth2ErrorBody, PathValue } from '../common'
 
 //#region AuthorizationRoute
 
@@ -79,7 +78,7 @@ export class OAuth2ACAuthorizationRoute<
 
 //#region Defaults
 
-export type AuthErrorType = 'client_id' | 'redirect_uri' | 'invalid_request' | 'credentials' | 'unknown'
+export type AuthErrorType = OAuth2Error | 'credentials' | 'unknown'
 
 export type AuthResponseRenderer<Refs extends ReqRef = ReqRefDefaults> = (
     reason: { 
@@ -103,8 +102,8 @@ export type AuthCodeGenerator<Refs extends ReqRef = ReqRefDefaults> = (
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const render: AuthResponseRenderer<any> = ({ error, errorMessage, emailField, passwordField }) => {
-    if (error && ['client_id', 'redirect_uri'].includes(error)) {
-        return { error: 'Bad \'client_id\' parameter.' }
+    if (error && ['invalid_client'].includes(error)) {
+        return { error, error_description: errorMessage } as OAuth2ErrorBody
     }
     return `<!DOCTYPE html>
 <html lang="en">
@@ -164,7 +163,7 @@ export class DefaultOAuth2ACAuthorizationRoute<
                             emailField: this.#emailField, 
                             passwordField: this.#passwordField, 
                             code: 400, 
-                            error: 'client_id',
+                            error: 'invalid_client',
                             errorMessage: 'Bad \'client_id\' parameter' 
                         },
                         { clientId, redirectUri, ...props },
@@ -177,7 +176,7 @@ export class DefaultOAuth2ACAuthorizationRoute<
                             emailField: this.#emailField, 
                             passwordField: this.#passwordField, 
                             code: 400, 
-                            error: 'redirect_uri',
+                            error: 'invalid_client',
                             errorMessage: 'Bad \'redirect_uri\' parameter' 
                         },
                         { clientId, redirectUri, ...props },
@@ -200,7 +199,7 @@ export class DefaultOAuth2ACAuthorizationRoute<
                             emailField: this.#emailField, 
                             passwordField: this.#passwordField, 
                             code: 400, 
-                            error: 'client_id',
+                            error: 'invalid_client',
                             errorMessage: 'Bad \'client_id\' parameter' 
                         },
                         props,
@@ -213,7 +212,7 @@ export class DefaultOAuth2ACAuthorizationRoute<
                             emailField: this.#emailField, 
                             passwordField: this.#passwordField, 
                             code: 400, 
-                            error: 'redirect_uri',
+                            error: 'invalid_client',
                             errorMessage: 'Bad \'redirect_uri\' parameter' 
                         },
                         props,

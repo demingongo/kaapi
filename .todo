@@ -7,6 +7,7 @@
         - apikey (take it from the examples/auth-designs/src/plugins/bearerDesign.ts)
 
 - @kaapi/oauth2-auth-design
+    - check out token type DPoP (Demonstration of Proof-of-Possession)
 
 
 - @kaapi/kaapi

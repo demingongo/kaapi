@@ -1,10 +1,5 @@
 import {
     KaapiTools,
-    Lifecycle,
-    ReqRef,
-    ReqRefDefaults,
-    Request,
-    ResponseToolkit,
     RouteOptions
 } from '@kaapi/kaapi'
 import { GrantType, OAuth2Util } from '@novice1/api-doc-generator'
@@ -15,8 +10,7 @@ import {
     OAuth2AuthDesign,
     OAuth2AuthOptions,
     OAuth2Error,
-    OAuth2RefreshTokenParams,
-    OIDCHelpers
+    OAuth2RefreshTokenParams
 } from './common'
 import { createIDToken } from '../utils/jwks-generator'
 import { JWKSStore } from '../utils/jwks-store'
@@ -24,55 +18,7 @@ import {
     IOAuth2ACAuthorizationRoute, 
     OAuth2ACAuthorizationParams 
 } from './auth-code/authorization-route'
-
-//#region TokenRoute
-
-export interface OAuth2ACTokenParams extends Partial<OIDCHelpers> {
-    grantType: string
-    code: string
-    clientId: string
-    clientSecret?: string
-    codeVerifier?: string
-    redirectUri?: string
-}
-
-export type OAuth2ACTokenHandler<
-    Refs extends ReqRef = ReqRefDefaults,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    R extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<Refs>
-> = (params: OAuth2ACTokenParams, request: Request<Refs>, h: ResponseToolkit<Refs>) => R
-
-export interface IOAuth2ACTokenRoute<
-    Refs extends ReqRef = ReqRefDefaults
-> {
-    path: string,
-    handler: OAuth2ACTokenHandler<Refs>
-}
-
-export class OAuth2ACTokenRoute<
-    Refs extends ReqRef = ReqRefDefaults
-> implements IOAuth2ACTokenRoute<Refs> {
-    protected _path: string;
-    protected _handler: OAuth2ACTokenHandler<Refs>
-
-    get path() {
-        return this._path
-    }
-
-    get handler() {
-        return this._handler
-    }
-
-    constructor(
-        path: string,
-        handler: OAuth2ACTokenHandler<Refs>
-    ) {
-        this._path = path;
-        this._handler = handler;
-    }
-}
-
-//#endregion TokenRoute
+import { IOAuth2ACTokenRoute, OAuth2ACTokenParams } from './auth-code/token-route'
 
 //#region OAuth2AuthorizationCode
 
