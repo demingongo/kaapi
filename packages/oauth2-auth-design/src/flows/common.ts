@@ -40,6 +40,7 @@ export type OAuth2AuthOptions = {
 };
 
 export interface OIDCHelpers {
+    readonly ttl?: number
     createIDToken: (payload: WithRequired<Partial<OAuth2JwtPayload>, 'sub'>) => Promise<string>
 }
 

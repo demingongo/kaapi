@@ -10,7 +10,6 @@ import {
     OAuth2TokenResponse
 } from '@kaapi/oauth2-auth-design';
 
-
 export const openIDDesign2 = new OpenIDAuthDesign(
     {
         jwksStore: undefined,
@@ -44,13 +43,14 @@ export const openIDDesign2 = new OpenIDAuthDesign(
             }),
         tokenRoute: OAuth2ACTokenRoute.buildDefault()
             .setPath('/oauth2/ac/token')
-            .generateToken(async ({ clientId, clientSecret, code, codeVerifier, redirectUri, createIDToken }, _req) => {
+            .generateToken(async ({ clientId, clientSecret, code, codeVerifier, redirectUri, ttl, createIDToken }, _req) => {
 
                 console.log('code', code)
                 console.log('codeVerifier', codeVerifier)
                 console.log('redirectUri', redirectUri)
                 console.log('clientId', clientId)
                 console.log('clientSecret', clientSecret)
+                console.log('ttl', ttl)
 
                 if (!clientSecret && !codeVerifier) {
                     return { error: 'invalid_client', error_description: 'Request was missing the \'client_secret\' parameter.' }
@@ -61,7 +61,7 @@ export const openIDDesign2 = new OpenIDAuthDesign(
                     const refreshToken = 'generated_refresh_token'
                     const scope: string[] = ['openid']
                     return new OAuth2TokenResponse({ access_token: accessToken })
-                        .setExpiresIn(36000)
+                        .setExpiresIn(ttl)
                         .setRefreshToken(refreshToken)
                         .setScope(scope)
                         .setIDToken(
@@ -85,12 +85,13 @@ export const openIDDesign2 = new OpenIDAuthDesign(
             }),
         refreshTokenRoute: new OAuth2RefreshTokenRoute(
             '/oauth2/ac/token',
-            (async ({ clientId, clientSecret, refreshToken, scope }, _req, h) => {
+            (async ({ clientId, clientSecret, refreshToken, scope, ttl }, _req, h) => {
 
                 console.log('clientId', clientId)
                 console.log('clientSecret', clientSecret)
                 console.log('refreshToken', refreshToken)
                 console.log('scope', scope)
+                console.log('ttl', ttl)
 
                 //#region @TODO: validation + refresh token
 

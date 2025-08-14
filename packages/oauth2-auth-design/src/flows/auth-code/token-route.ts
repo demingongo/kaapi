@@ -22,6 +22,7 @@ export interface OAuth2ACTokenParams extends Partial<OIDCHelpers> {
     clientSecret?: string
     codeVerifier?: string
     redirectUri?: string
+    readonly ttl?: number
 }
 
 export type OAuth2ACTokenHandler<

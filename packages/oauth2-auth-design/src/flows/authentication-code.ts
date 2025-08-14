@@ -14,9 +14,9 @@ import {
 } from './common'
 import { createIDToken } from '../utils/jwks-generator'
 import { JWKSStore } from '../utils/jwks-store'
-import { 
-    IOAuth2ACAuthorizationRoute, 
-    OAuth2ACAuthorizationParams 
+import {
+    IOAuth2ACAuthorizationRoute,
+    OAuth2ACAuthorizationParams
 } from './auth-code/authorization-route'
 import { IOAuth2ACTokenRoute, OAuth2ACTokenParams } from './auth-code/token-route'
 
@@ -277,6 +277,7 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign {
                             grantType: req.payload.grant_type,
                             code: req.payload.code,
 
+                            ttl: this.jwksGenerator.ttl,
                             createIDToken: hasOpenIDScope() ? (async (payload) => {
                                 return await createIDToken(this.jwksGenerator, {
                                     aud: `${req.payload.client_id}`,
@@ -312,6 +313,7 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign {
                                 grantType: req.payload.grant_type,
                                 refreshToken: `${req.payload.refresh_token}`,
 
+                                ttl: this.jwksGenerator.ttl,
                                 createIDToken: hasOpenIDScope() ? (async (payload) => {
                                     return await createIDToken(this.jwksGenerator, {
                                         aud: `${req.payload.client_id}`,
@@ -390,6 +392,7 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign {
                             grantType: `${req.payload.grant_type}`,
                             refreshToken: `${req.payload.refresh_token}`,
 
+                            ttl: this.jwksGenerator.ttl,
                             createIDToken: hasOpenIDScope() ? (async (payload) => {
                                 return await createIDToken(this.jwksGenerator, {
                                     aud: `${req.payload.client_id}`,
