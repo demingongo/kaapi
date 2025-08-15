@@ -15,10 +15,10 @@ import {
     KaapiTools,
 } from '../plugin';
 
-export type BasicAuthOptions = {
-    validate?<
-        Refs extends ReqRef = ReqRefDefaults
-    >(request: Request<Refs>, username: string, password: string, h: ResponseToolkit<Refs>): Promise<{
+export type BasicAuthOptions<
+    Refs extends ReqRef = ReqRefDefaults
+> = {
+    validate?(request: Request<Refs>, username: string, password: string, h: ResponseToolkit<Refs>): Promise<{
         isValid?: boolean;
         artifacts?: unknown;
         credentials?: AuthCredentials;

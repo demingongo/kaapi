@@ -35,6 +35,7 @@ appReady.then(app => {
     app.route({
         path: '/info'
     }, (request) => {
+        app.log.debug('request.app.oauth2?.proofThumbprint:', request.app.oauth2?.proofThumbprint)
         const forwardedProto = request.headers['x-forwarded-proto'];
         const protocol = forwardedProto ? forwardedProto : request.server.info.protocol;
         const url = protocol

@@ -11,6 +11,7 @@ import {
     OAuth2AuthorizationCode
 } from '@kaapi/oauth2-auth-design';
 import { DPoPToken } from '@kaapi/oauth2-auth-design/lib/utils/token-types';
+import '@kaapi/oauth2-auth-design'
 
 export const openIDDesign2 = new OAuth2AuthorizationCode(
     {
@@ -103,7 +104,8 @@ export const openIDDesign2 = new OAuth2AuthorizationCode(
             }) as OAuth2RefreshTokenHandler,
         ),
         options: {
-            validate: async (_req, token, h) => {
+            async validate(req, token, h) {
+                console.log( 'req.app.oauth2.proofThumbprint:', req.app.oauth2?.proofThumbprint)
                 if (token) {
                     //#region @TODO: validation
                     if (token != 'generated_access_token') {

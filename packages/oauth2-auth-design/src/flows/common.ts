@@ -12,7 +12,7 @@ import { Boom } from '@hapi/boom'
 import { JWKSStore } from '../utils/jwks-store';
 import { getInMemoryJWKSStore } from '../utils/in-memory-jwks-store';
 import { JWKSGenerator, OAuth2JwtPayload } from '../utils/jwks-generator';
-import { TokenType } from '../utils/token-types';
+import { BearerToken, TokenType } from '../utils/token-types';
 
 //#region Types
 
@@ -29,10 +29,10 @@ export type OAuth2ErrorBody = {
     [key: string]: unknown
 }
 
-export type OAuth2AuthOptions = {
-    validate?<
-        Refs extends ReqRef = ReqRefDefaults
-    >(request: Request<Refs>, token: string, h: ResponseToolkit<Refs>): Promise<{
+export type OAuth2AuthOptions<
+    Refs extends ReqRef = ReqRefDefaults
+> = {
+    validate?(request: Request<Refs>, token: string, h: ResponseToolkit<Refs>): Promise<{
         isValid?: boolean;
         artifacts?: unknown;
         credentials?: AuthCredentials;
@@ -97,13 +97,13 @@ export class OAuth2RefreshTokenRoute<
 
 //#region OAuth2TokenResponse
 
-export interface OAuth2TokenResponseBody { 
+export interface OAuth2TokenResponseBody {
     access_token: string
     token_type: string
-    expires_in?: number 
+    expires_in?: number
     refresh_token?: string
     scope?: string
-    id_token?: string 
+    id_token?: string
     error?: never
     [key: string]: unknown
 }
@@ -209,21 +209,23 @@ export class OAuth2TokenResponse implements IOAuth2TokenResponse {
 
 export abstract class OAuth2AuthDesign extends AuthDesign {
 
-    protected _tokenType: TokenType
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    protected _tokenType: TokenType<any>
 
     get tokenType(): string {
         return this._tokenType.prefix
     }
 
-    constructor(){
+    constructor() {
         super()
-        this._tokenType = {
+        this._tokenType = new BearerToken()
+        /*{
             prefix: 'Bearer',
             isValid: () => ({ isValid: true })
-        }
+        }*/
     }
 
-    setTokenType(value: TokenType): this {
+    setTokenType<Refs extends ReqRef = ReqRefDefaults>(value: TokenType<Refs>): this {
         this._tokenType = value
         return this
     }

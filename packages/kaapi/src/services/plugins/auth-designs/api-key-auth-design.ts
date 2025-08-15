@@ -16,12 +16,12 @@ import {
 } from '../plugin';
 
 
-export type APIKeyAuthOptions = {
+export type APIKeyAuthOptions<
+    Refs extends ReqRef = ReqRefDefaults
+> = {
     headerTokenType?: string;
-    validate?<
-        Refs extends ReqRef = ReqRefDefaults
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    >(request: Request<Refs>, token: any, h: ResponseToolkit<Refs>): Promise<{
+    validate?(request: Request<Refs>, token: any, h: ResponseToolkit<Refs>): Promise<{
         isValid?: boolean;
         artifacts?: unknown;
         credentials?: AuthCredentials;

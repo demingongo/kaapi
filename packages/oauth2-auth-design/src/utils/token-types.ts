@@ -3,10 +3,10 @@ import {
     ReqRefDefaults,
     Request
 } from '@kaapi/kaapi'
-import { 
-    jwtVerify, 
-    importJWK, 
-    calculateJwkThumbprint 
+import {
+    jwtVerify,
+    importJWK,
+    calculateJwkThumbprint
 } from 'jose';
 import { InMemoryTmpCache } from './in-memory-cache';
 
@@ -17,7 +17,7 @@ export type TokenTypeValidationResponse = {
 
 export type TokenTypeValidation<
     Refs extends ReqRef = ReqRefDefaults
-> = (req: Request<Refs>, token: string, ttl: number, host?: string) => TokenTypeValidationResponse | Promise<TokenTypeValidationResponse>
+> = (req: Request<Refs>, token: string, ttl: number) => TokenTypeValidationResponse | Promise<TokenTypeValidationResponse>
 
 export interface TokenType<
     Refs extends ReqRef = ReqRefDefaults
@@ -26,7 +26,7 @@ export interface TokenType<
     /**
      * 401 if not valid
      */
-    isValid: (req: Request<Refs>, token: string, host?: string) => TokenTypeValidationResponse | Promise<TokenTypeValidationResponse>
+    isValid: (req: Request<Refs>, token: string) => TokenTypeValidationResponse | Promise<TokenTypeValidationResponse>
 }
 
 export interface IBearerToken<
@@ -42,11 +42,41 @@ export interface IDPoPToken<
     readonly ttl?: number
 }
 
+export class BearerToken<
+    Refs extends ReqRef = ReqRefDefaults
+> implements IBearerToken<Refs> {
+    #ttl: number = 300
+    #_handler: TokenTypeValidation<Refs>
+
+    get prefix(): 'Bearer' {
+        return 'Bearer'
+    }
+
+    constructor() {
+        this.#_handler = async (_, token) => {
+            if (!token) return {}
+
+            return { isValid: true }
+        }
+    }
+
+    validate(handler: TokenTypeValidation<Refs>): this {
+        this.#_handler = handler
+        return this
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    async isValid(req: Request<any>, token: string): Promise<TokenTypeValidationResponse> {
+        return await this.#_handler(req, token, this.#ttl)
+    }
+}
+
 export class DPoPToken<
     Refs extends ReqRef = ReqRefDefaults
 > implements IDPoPToken<Refs> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    #handler: TokenTypeValidation<any>
     #ttl: number = 300
-    #_handler: TokenTypeValidation<Refs>
     #cache = new InMemoryTmpCache<string>()
 
     get prefix(): 'DPoP' {
@@ -54,8 +84,7 @@ export class DPoPToken<
     }
 
     constructor() {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        this.#_handler = async (req: Request<any>, token, ttl, host) => {
+        this.#handler = async (req: Request<ReqRefDefaults>, token, ttl) => {
             if (!token) return {}
 
             const dpopHeader = req.raw.req.headers.dpop;
@@ -68,7 +97,13 @@ export class DPoPToken<
                 }, { algorithms: ['ES256'] });
 
                 if (payload.htm !== req.method.toUpperCase()) throw new Error('HTM mismatch');
-                const fullUrl = `${host || ''}${req.path}`;
+
+                const forwardedProto = req.headers['x-forwarded-proto'];
+                const protocol = forwardedProto ? forwardedProto : req.server.info.protocol;
+                const fullUrl = protocol
+                    + '://'
+                    + req.info.host
+                    + req.path;
                 if (payload.htu !== fullUrl) throw new Error('HTU mismatch');
 
                 const now = Math.floor(Date.now() / 1000);
@@ -81,11 +116,12 @@ export class DPoPToken<
                 this.#cache.set(payload.jti, ttl);
 
                 // Optional: bind proof to access token
-                
+
                 if (protectedHeader.jwk) {
                     // const tokenThumbprint = ... extract from token cnf.jkt
                     const proofThumbprint = await calculateJwkThumbprint(protectedHeader.jwk, 'sha256');
-                    req.proofThumbprint = proofThumbprint
+                    req.app.oauth2 = req.app.oauth2 || {}
+                    req.app.oauth2.proofThumbprint = proofThumbprint
                     // if (tokenThumbprint !== proofThumbprint) throw new Error('Token binding mismatch');
                 }
                 //req.dpopProof = payload;
@@ -103,7 +139,13 @@ export class DPoPToken<
         return this
     }
 
-    async isValid(req: Request<Refs>, token: string, host?: string): Promise<TokenTypeValidationResponse> {
-        return await this.#_handler(req, token, this.#ttl, host)
+    validate(handler: TokenTypeValidation<Refs>): this {
+        this.#handler = handler
+        return this
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    async isValid(req: Request<any>, token: string): Promise<TokenTypeValidationResponse> {
+        return await this.#handler(req, token, this.#ttl)
     }
 }
