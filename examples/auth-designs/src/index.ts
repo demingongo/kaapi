@@ -31,6 +31,18 @@ appReady.then(app => {
             tags: ['Tests']
         }
     }, () => 'Hello!')
+
+    app.route({
+        path: '/info'
+    }, (request) => {
+        const forwardedProto = request.headers['x-forwarded-proto'];
+        const protocol = forwardedProto ? forwardedProto : request.server.info.protocol;
+        const url = protocol
+            + '://'
+            + request.info.host
+            + request.path
+        return url
+    })
 })
 
 appReady.then(app => {

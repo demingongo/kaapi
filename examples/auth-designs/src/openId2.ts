@@ -10,6 +10,7 @@ import {
     OAuth2TokenResponse,
     OAuth2AuthorizationCode
 } from '@kaapi/oauth2-auth-design';
+import { DPoPToken } from '@kaapi/oauth2-auth-design/lib/utils/token-types';
 
 export const openIDDesign2 = new OAuth2AuthorizationCode(
     {
@@ -129,5 +130,5 @@ export const openIDDesign2 = new OAuth2AuthorizationCode(
         email: 'Access to your email address',
         offline_access: 'Access to your data when you are not connected'
     })
-    //.setTokenType('DPoP')
+    .setTokenType(new DPoPToken())
     .setTokenTTL(36000)

@@ -6,7 +6,7 @@ import {
 import { 
     jwtVerify, 
     importJWK, 
-    //calculateJwkThumbprint 
+    calculateJwkThumbprint 
 } from 'jose';
 import { InMemoryTmpCache } from './in-memory-cache';
 
@@ -84,7 +84,8 @@ export class DPoPToken<
                 
                 if (protectedHeader.jwk) {
                     // const tokenThumbprint = ... extract from token cnf.jkt
-                    //const proofThumbprint = await calculateJwkThumbprint(protectedHeader.jwk, 'sha256');
+                    const proofThumbprint = await calculateJwkThumbprint(protectedHeader.jwk, 'sha256');
+                    req.proofThumbprint = proofThumbprint
                     // if (tokenThumbprint !== proofThumbprint) throw new Error('Token binding mismatch');
                 }
                 //req.dpopProof = payload;

@@ -223,8 +223,9 @@ export abstract class OAuth2AuthDesign extends AuthDesign {
         }
     }
 
-    setTokenType(value: TokenType) {
+    setTokenType(value: TokenType): this {
         this._tokenType = value
+        return this
     }
 }
 
