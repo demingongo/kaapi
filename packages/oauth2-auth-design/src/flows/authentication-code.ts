@@ -138,6 +138,8 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
      * Where authentication schemes and strategies are registered.
      */
     integrateStrategy(t: KaapiTools) {
+        const tokenTypePrefix = this.tokenType
+        const tokenTypeInstance = this._tokenType
         t.scheme(this.strategyName, (_server, options) => {
 
             return {
@@ -152,9 +154,13 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
                     const tokenType = authSplit[0]
                     let token = authSplit[1]
 
-                    if (tokenType.toLowerCase() !== 'bearer') {
+                    if (tokenType.toLowerCase() !== tokenTypePrefix.toLowerCase()) {
                         token = ''
-                        return Boom.unauthorized(null, 'Bearer')
+                        return Boom.unauthorized(null, tokenTypePrefix)
+                    }
+
+                    if (!(await tokenTypeInstance.isValid(request, token)).isValid) {
+                        return Boom.unauthorized(null, tokenTypePrefix)
                     }
 
                     if (settings.validate) {
@@ -177,7 +183,7 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
                                 }
 
                                 if (message) {
-                                    return h.unauthenticated(Boom.unauthorized(message, 'Bearer'), {
+                                    return h.unauthenticated(Boom.unauthorized(message, tokenTypePrefix), {
                                         credentials: credentials || {},
                                         artifacts
                                     })
@@ -188,7 +194,7 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
                         }
                     }
 
-                    return Boom.unauthorized(null, 'Bearer')
+                    return Boom.unauthorized(null, tokenTypePrefix)
                 },
             }
         })

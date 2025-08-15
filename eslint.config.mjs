@@ -20,7 +20,7 @@ export default defineConfig([
     { ignores: ['lib/'] },
     {
         extends: compat.extends('eslint:recommended', 'plugin:@typescript-eslint/recommended'),
-        files: ['src/**/*.ts', '*.{ts,mjs}'],
+        files: ['{src,test}/**/*.ts', '*.{ts,mjs}'],
 
         plugins: {
             '@typescript-eslint': typescriptEslint,

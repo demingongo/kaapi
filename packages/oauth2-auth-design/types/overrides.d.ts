@@ -1,7 +1,12 @@
+import {
+    JWTPayload
+} from 'jose';
+
 declare module '@kaapi/kaapi' {
   interface RequestApplicationState {
     oauth2?: {
-      proofThumbprint?: string;
+      dpopPayload?: JWTPayload;
+      dpopThumbprint?: string;
     };
   }
 }

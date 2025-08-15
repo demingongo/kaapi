@@ -112,19 +112,20 @@ export class DPoPToken<
                 if (Math.abs(now - payload.iat) > ttl) throw new Error('Proof expired');
 
                 if (!payload.jti) throw new Error('Missing JTI');
+                
                 if (await this.#cache.has(payload.jti)) throw new Error('Replay detected');
                 this.#cache.set(payload.jti, ttl);
 
-                // Optional: bind proof to access token
+                req.app.oauth2 = req.app.oauth2 || {}
+                req.app.oauth2.dpopPayload = payload;
 
+                // Optional: bind proof to access token
                 if (protectedHeader.jwk) {
                     // const tokenThumbprint = ... extract from token cnf.jkt
-                    const proofThumbprint = await calculateJwkThumbprint(protectedHeader.jwk, 'sha256');
-                    req.app.oauth2 = req.app.oauth2 || {}
-                    req.app.oauth2.proofThumbprint = proofThumbprint
+                    const dpopThumbprint = await calculateJwkThumbprint(protectedHeader.jwk, 'sha256');
+                    req.app.oauth2.dpopThumbprint = dpopThumbprint
                     // if (tokenThumbprint !== proofThumbprint) throw new Error('Token binding mismatch');
                 }
-                //req.dpopProof = payload;
 
                 return { isValid: true }
             } catch (err) {

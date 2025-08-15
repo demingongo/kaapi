@@ -32,9 +32,10 @@
   "dependencies": {
     "@hapi/boom": "^10.0.1",
     "@hapi/hoek": "^11.0.7",
-    "@kaapi/oauth2-auth-design": "workspace:^",
     "@kaapi/kaapi": "workspace:^",
+    "@kaapi/oauth2-auth-design": "workspace:^",
     "@novice1/api-doc-generator": "^1.0.2",
+    "joi": "^17.13.3",
     "tslib": "^2.8.1"
   }
 }

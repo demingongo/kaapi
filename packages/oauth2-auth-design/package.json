@@ -7,7 +7,7 @@
   "scripts": {
     "lint": "eslint .",
     "build": "tsc && node ./scripts/buildDT.mjs",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "kaukau --require ts-node/register --config kaukau-src.mjs"
   },
   "author": "demingongo",
   "repository": {
@@ -31,6 +31,8 @@
   "devDependencies": {
     "@types/jsonwebtoken": "^9.0.10",
     "@types/jwk-to-pem": "^2.0.3",
-    "@types/node-jose": "^1.1.13"
+    "@types/node-jose": "^1.1.13",
+    "kaukau": "^4.1.6",
+    "uuid": "^11.1.0"
   }
 }

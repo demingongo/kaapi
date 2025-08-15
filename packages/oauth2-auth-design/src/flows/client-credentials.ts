@@ -1,5 +1,4 @@
 import {
-    AuthDesign,
     KaapiTools,
     Lifecycle,
     ReqRef,
@@ -13,6 +12,7 @@ import Boom from '@hapi/boom'
 import Hoek from '@hapi/hoek'
 import { 
     IOAuth2RefreshTokenRoute, 
+    OAuth2AuthDesign, 
     OAuth2AuthOptions, 
     OAuth2Error, 
     OAuth2RefreshTokenParams, 
@@ -54,7 +54,7 @@ export interface OAuth2ClientCredsArg {
     strategyName?: string;
 }
 
-export class OAuth2ClientCreds extends AuthDesign {
+export class OAuth2ClientCreds extends OAuth2AuthDesign {
 
     protected strategyName: string
     protected description?: string
@@ -134,6 +134,8 @@ export class OAuth2ClientCreds extends AuthDesign {
      * Where authentication schemes and strategies are registered.
      */
     integrateStrategy(t: KaapiTools) {
+        const tokenTypePrefix = this.tokenType
+        const tokenTypeInstance = this._tokenType
         t.scheme(this.strategyName, (_server, options) => {
 
             return {
@@ -148,9 +150,13 @@ export class OAuth2ClientCreds extends AuthDesign {
                     const tokenType = authSplit[0]
                     let token = authSplit[1]
 
-                    if (tokenType.toLowerCase() !== 'bearer') {
+                    if (tokenType.toLowerCase() !== tokenTypePrefix.toLowerCase()) {
                         token = ''
-                        return Boom.unauthorized(null, 'Bearer')
+                        return Boom.unauthorized(null, tokenTypePrefix)
+                    }
+
+                    if (!(await tokenTypeInstance.isValid(request, token)).isValid) {
+                        return Boom.unauthorized(null, tokenTypePrefix)
                     }
 
                     if (settings.validate) {
@@ -173,7 +179,7 @@ export class OAuth2ClientCreds extends AuthDesign {
                                 }
 
                                 if (message) {
-                                    return h.unauthenticated(Boom.unauthorized(message, 'Bearer'), {
+                                    return h.unauthenticated(Boom.unauthorized(message, tokenTypePrefix), {
                                         credentials: credentials || {},
                                         artifacts
                                     })
@@ -184,7 +190,7 @@ export class OAuth2ClientCreds extends AuthDesign {
                         }
                     }
 
-                    return Boom.unauthorized(null, 'Bearer')
+                    return Boom.unauthorized(null, tokenTypePrefix)
                 },
             }
         })

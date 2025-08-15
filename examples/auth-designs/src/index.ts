@@ -2,6 +2,7 @@
 
 import Boom from '@hapi/boom'
 import { appReady } from './server'
+import Joi from 'joi'
 
 appReady.then(app => {
     app.log(`Kaapi server is ready: ${app}`)
@@ -17,6 +18,12 @@ appReady.then(app => {
         auth: true,
         options: {
 
+            validate: {
+                headers: Joi.object({
+                    dpop: Joi.string().required()
+                }).unknown()
+            },
+
             /*
             // override the default auth strategy
             auth: {
@@ -30,12 +37,13 @@ appReady.then(app => {
             description: 'greet me',
             tags: ['Tests']
         }
-    }, () => 'Hello!')
+    }, (req) => 'Hello!' + (req.auth.credentials.user && 'name' in req.auth.credentials.user ? ` ${req.auth.credentials.user.name}` : ''))
 
     app.route({
-        path: '/info'
+        path: '/info',
+        method: 'GET'
     }, (request) => {
-        app.log.debug('request.app.oauth2?.proofThumbprint:', request.app.oauth2?.proofThumbprint)
+        app.log.debug('request.app.oauth2?.proofThumbprint:', request.app.oauth2?.dpopThumbprint)
         const forwardedProto = request.headers['x-forwarded-proto'];
         const protocol = forwardedProto ? forwardedProto : request.server.info.protocol;
         const url = protocol

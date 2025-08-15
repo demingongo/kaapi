@@ -10,8 +10,13 @@ import {
     OAuth2TokenResponse,
     OAuth2AuthorizationCode
 } from '@kaapi/oauth2-auth-design';
-import { DPoPToken } from '@kaapi/oauth2-auth-design/lib/utils/token-types';
+import { 
+    //BearerToken, 
+    DPoPToken 
+} from '@kaapi/oauth2-auth-design/lib/utils/token-types';
 import '@kaapi/oauth2-auth-design'
+
+const tokenType = new DPoPToken()
 
 export const openIDDesign2 = new OAuth2AuthorizationCode(
     {
@@ -79,6 +84,7 @@ export const openIDDesign2 = new OAuth2AuthorizationCode(
                                 picture: 'https://example.com/janed.jpg'
                             })
                         )
+                        .setTokenType(tokenType)
                     //#endregion @TODO: validation + token
                 } catch (err) {
                     console.error(err)
@@ -105,8 +111,9 @@ export const openIDDesign2 = new OAuth2AuthorizationCode(
         ),
         options: {
             async validate(req, token, h) {
-                console.log( 'req.app.oauth2.proofThumbprint:', req.app.oauth2?.proofThumbprint)
+                console.log( 'validate => req.app.oauth2.proofThumbprint:', req.app.oauth2?.dpopThumbprint)
                 if (token) {
+                    console.log('token=', token)
                     //#region @TODO: validation
                     if (token != 'generated_access_token') {
                         return {}
@@ -117,7 +124,13 @@ export const openIDDesign2 = new OAuth2AuthorizationCode(
                     // authorized to go further
                     return {
                         isValid: !!token,
-                        credentials: {}
+                        credentials: {
+                            user: {
+                                sub: '248289761001',
+                                name: 'Jane Doe',
+                                given_name: 'Jane',
+                            }
+                        }
                     }
                 }
 
@@ -132,5 +145,5 @@ export const openIDDesign2 = new OAuth2AuthorizationCode(
         email: 'Access to your email address',
         offline_access: 'Access to your data when you are not connected'
     })
-    .setTokenType(new DPoPToken())
+    .setTokenType(tokenType)
     .setTokenTTL(36000)
