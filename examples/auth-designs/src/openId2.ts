@@ -5,15 +5,16 @@ import {
     OAuth2RefreshTokenHandler,
     OAuth2RefreshTokenRoute,
     OAuth2ACTokenRoute,
-    OpenIDAuthDesign,
-    OpenIDJWKSRoute,
-    OAuth2TokenResponse
+    //OpenIDAuthDesign,
+    //OpenIDJWKSRoute,
+    OAuth2TokenResponse,
+    OAuth2AuthorizationCode
 } from '@kaapi/oauth2-auth-design';
 
-export const openIDDesign2 = new OpenIDAuthDesign(
+export const openIDDesign2 = new OAuth2AuthorizationCode(
     {
         jwksStore: undefined,
-        jwksRoute: new OpenIDJWKSRoute('/openid/jwks'),
+        //jwksRoute: new OpenIDJWKSRoute('/openid/jwks'),
         /*
         userInfoRoute: new OpenIDUserInfoRoute('/openid/session', async () => {
             return {
@@ -128,4 +129,5 @@ export const openIDDesign2 = new OpenIDAuthDesign(
         email: 'Access to your email address',
         offline_access: 'Access to your data when you are not connected'
     })
+    //.setTokenType('DPoP')
     .setTokenTTL(36000)

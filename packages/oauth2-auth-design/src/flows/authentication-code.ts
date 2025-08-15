@@ -7,7 +7,7 @@ import Boom from '@hapi/boom'
 import Hoek from '@hapi/hoek'
 import {
     IOAuth2RefreshTokenRoute,
-    OAuth2AuthDesign,
+    OAuth2WithJWKSAuthDesign,
     OAuth2AuthOptions,
     OAuth2Error,
     OAuth2RefreshTokenParams
@@ -34,7 +34,7 @@ export interface OAuth2AuthorizationCodeArg {
     jwksStore?: JWKSStore;
 }
 
-export class OAuth2AuthorizationCode extends OAuth2AuthDesign {
+export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
 
     protected strategyName: string
     protected description?: string

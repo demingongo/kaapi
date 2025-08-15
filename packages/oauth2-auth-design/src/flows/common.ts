@@ -12,6 +12,7 @@ import { Boom } from '@hapi/boom'
 import { JWKSStore } from '../utils/jwks-store';
 import { getInMemoryJWKSStore } from '../utils/in-memory-jwks-store';
 import { JWKSGenerator, OAuth2JwtPayload } from '../utils/jwks-generator';
+import { TokenType } from '../utils/token-types';
 
 //#region Types
 
@@ -140,8 +141,8 @@ export class OAuth2TokenResponse implements IOAuth2TokenResponse {
         return this.accessToken;
     }
 
-    setTokenType(value: string): this {
-        this.tokenType = value
+    setTokenType(value: string | TokenType): this {
+        this.tokenType = typeof value == 'string' ? value : value.prefix
         return this;
     }
     getTokenType(): string {
@@ -202,11 +203,32 @@ export class OAuth2TokenResponse implements IOAuth2TokenResponse {
     }
 }
 
-//#region OAuth2TokenResponse
+//#endregion OAuth2TokenResponse
 
 //#region OAuth2AuthDesign
 
 export abstract class OAuth2AuthDesign extends AuthDesign {
+
+    protected _tokenType: TokenType
+
+    get tokenType(): string {
+        return this._tokenType.prefix
+    }
+
+    constructor(){
+        super()
+        this._tokenType = {
+            prefix: 'Bearer',
+            isValid: () => ({ isValid: true })
+        }
+    }
+
+    setTokenType(value: TokenType) {
+        this._tokenType = value
+    }
+}
+
+export abstract class OAuth2WithJWKSAuthDesign extends OAuth2AuthDesign {
 
     #jwksGenerator: JWKSGenerator
 
