@@ -5,10 +5,10 @@ import {
     OAuth2RefreshTokenHandler,
     OAuth2RefreshTokenRoute,
     OAuth2ACTokenRoute,
-    //OpenIDAuthDesign,
-    //OpenIDJWKSRoute,
+    OpenIDAuthDesign,
+    OpenIDJWKSRoute,
     OAuth2TokenResponse,
-    OAuth2AuthorizationCode
+    //OAuth2AuthorizationCode
 } from '@kaapi/oauth2-auth-design';
 import { 
     //BearerToken, 
@@ -18,10 +18,14 @@ import '@kaapi/oauth2-auth-design'
 
 const tokenType = new DPoPToken()
 
-export const openIDDesign2 = new OAuth2AuthorizationCode(
+export const openIDDesign2 = new OpenIDAuthDesign(
     {
+        openidConfiguration: {
+            // to announce the use of dpop in openid-configuration
+            ...tokenType.configuration
+        },
         jwksStore: undefined,
-        //jwksRoute: new OpenIDJWKSRoute('/openid/jwks'),
+        jwksRoute: new OpenIDJWKSRoute('/openid/jwks'),
         /*
         userInfoRoute: new OpenIDUserInfoRoute('/openid/session', async () => {
             return {

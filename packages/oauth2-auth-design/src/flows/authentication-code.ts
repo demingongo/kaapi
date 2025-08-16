@@ -19,6 +19,7 @@ import {
     OAuth2ACAuthorizationParams
 } from './auth-code/authorization-route'
 import { IOAuth2ACTokenRoute, OAuth2ACTokenParams } from './auth-code/token-route'
+import { TokenTypeValidationResponse } from '../utils/token-types'
 
 //#region OAuth2AuthorizationCode
 
@@ -205,6 +206,8 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
 
         const hasOpenIDScope = () => typeof this.getScopes()?.['openid'] != 'undefined'
 
+        const tokenTypeInstance = this._tokenType
+
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const routesOptions: RouteOptions<any> = {
             plugins: {
@@ -300,6 +303,11 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
                         }
                         if (req.payload.redirect_uri && typeof req.payload.redirect_uri === 'string') {
                             params.redirectUri = req.payload.redirect_uri
+                        }
+
+                        const ttR: TokenTypeValidationResponse = tokenTypeInstance.isValidTokenRequest ? (await tokenTypeInstance.isValidTokenRequest(req)) : { isValid: true }
+                        if (!ttR.isValid) {
+                            return h.response({ error: 'invalid_request', error_description: ttR.message || '' }).code(400)
                         }
 
                         return this.tokenRoute.handler(params, req, h)

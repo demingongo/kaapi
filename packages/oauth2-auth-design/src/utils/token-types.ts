@@ -19,6 +19,10 @@ export type TokenTypeValidation<
     Refs extends ReqRef = ReqRefDefaults
 > = (req: Request<Refs>, token: string, ttl: number) => TokenTypeValidationResponse | Promise<TokenTypeValidationResponse>
 
+export type TokenRequestValidation<
+    Refs extends ReqRef = ReqRefDefaults
+> = (req: Request<Refs>, ttl: number) => TokenTypeValidationResponse | Promise<TokenTypeValidationResponse>
+
 export interface TokenType<
     Refs extends ReqRef = ReqRefDefaults
 > {
@@ -27,6 +31,8 @@ export interface TokenType<
      * 401 if not valid
      */
     isValid: (req: Request<Refs>, token: string) => TokenTypeValidationResponse | Promise<TokenTypeValidationResponse>
+
+    isValidTokenRequest?: (req: Request<Refs>) => TokenTypeValidationResponse | Promise<TokenTypeValidationResponse>
 }
 
 export interface IBearerToken<
@@ -39,7 +45,6 @@ export interface IDPoPToken<
     Refs extends ReqRef = ReqRefDefaults
 > extends TokenType<Refs> {
     readonly prefix: 'DPoP'
-    readonly ttl?: number
 }
 
 export class BearerToken<
@@ -50,6 +55,12 @@ export class BearerToken<
 
     get prefix(): 'Bearer' {
         return 'Bearer'
+    }
+
+    get configuration() {
+        return {
+            token_endpoint_auth_signing_alg_values_supported: ['RS256']
+        }
     }
 
     constructor() {
@@ -76,6 +87,8 @@ export class DPoPToken<
 > implements IDPoPToken<Refs> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     #handler: TokenTypeValidation<any>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    #tokenRequestHandler: TokenRequestValidation<any>
     #ttl: number = 300
     #cache = new InMemoryTmpCache<string>()
 
@@ -83,12 +96,29 @@ export class DPoPToken<
         return 'DPoP'
     }
 
+    get configuration() {
+        return {
+            token_endpoint_auth_signing_alg_values_supported: ['RS256', 'ES256'],
+            dpop_signing_alg_values_supported: ['ES256'],
+            require_dpop: true
+        }
+    }
+
     constructor() {
         this.#handler = async (req: Request<ReqRefDefaults>, token, ttl) => {
             if (!token) return {}
+            return await this._handleDefault(req, ttl)
+        }
 
-            const dpopHeader = req.raw.req.headers.dpop;
-            if (!dpopHeader || typeof dpopHeader != 'string') return {}
+        this.#tokenRequestHandler = async (req: Request<ReqRefDefaults>, ttl) => {
+            return await this._handleDefault(req, ttl)
+        }
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    private async _handleDefault(req: Request<any>, ttl: number): Promise<TokenTypeValidationResponse> {
+        const dpopHeader = req.raw.req.headers.dpop;
+            if (!dpopHeader || typeof dpopHeader != 'string') return { message: 'Missing Demonstration of Proof-of-Possession' }
 
             try {
                 const { payload, protectedHeader } = await jwtVerify(dpopHeader, async (header) => {
@@ -132,7 +162,6 @@ export class DPoPToken<
                 console.error('Invalid DPoP proof:', err)
                 return { message: `${err}` }
             }
-        }
     }
 
     setTTL(value: number): this {
@@ -140,9 +169,19 @@ export class DPoPToken<
         return this
     }
 
+    validateTokenRequest(handler: TokenRequestValidation<Refs>): this {
+        this.#tokenRequestHandler = handler
+        return this
+    }
+
     validate(handler: TokenTypeValidation<Refs>): this {
         this.#handler = handler
         return this
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    async isValidTokenRequest(req: Request<any>): Promise<TokenTypeValidationResponse> {
+        return await this.#tokenRequestHandler(req, this.#ttl)
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
