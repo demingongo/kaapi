@@ -214,10 +214,7 @@ export class OpenIDAuthDesign extends OAuth2AuthorizationCode {
                     code_challenge_methods_supported: challengeAlgo ? [
                         challengeAlgo
                     ] : [],
-                    token_endpoint_auth_methods_supported: [
-                        'client_secret_post',
-                        'none'
-                    ],
+                    token_endpoint_auth_methods_supported: this.getTokenEndpointAuthMethods(),
                     ...this.openidConfiguration
                 }
             }

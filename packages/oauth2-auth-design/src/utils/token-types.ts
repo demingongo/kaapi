@@ -58,9 +58,7 @@ export class BearerToken<
     }
 
     get configuration() {
-        return {
-            token_endpoint_auth_signing_alg_values_supported: ['RS256']
-        }
+        return {}
     }
 
     constructor() {
@@ -98,7 +96,6 @@ export class DPoPToken<
 
     get configuration() {
         return {
-            token_endpoint_auth_signing_alg_values_supported: ['RS256', 'ES256'],
             dpop_signing_alg_values_supported: ['ES256'],
             require_dpop: true
         }

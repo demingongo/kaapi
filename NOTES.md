@@ -903,3 +903,198 @@ paths:
           description: OK
 
 ```
+
+-------------
+
+Sure — here's a full list of all the standard values for the OpenID Connect discovery field:
+
+---
+
+## 🔐 `token_endpoint_auth_methods_supported`
+
+This field appears in the [OpenID Connect Discovery document](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderMetadata) (`.well-known/openid-configuration`) and indicates which **client authentication methods** are supported at the **token endpoint**.
+
+### 🧾 Example:
+
+```json
+"token_endpoint_auth_methods_supported": [
+  "client_secret_basic",
+  "client_secret_post",
+  "client_secret_jwt",
+  "private_key_jwt",
+  "none"
+]
+```
+
+---
+
+## 🔍 Comparison of Authentication Methods
+
+| Method                | Client Type  | Authentication                         | Signature                           | Credential Type               | Use Case Example                             |
+| --------------------- | ------------ | -------------------------------------- | ----------------------------------- | ----------------------------- | -------------------------------------------- |
+| `client_secret_basic` | Confidential | HTTP Basic Auth (Authorization header) | ❌                                   | `client_id` + `client_secret` | Most common default (RFC 6749)               |
+| `client_secret_post`  | Confidential | POST body params                       | ❌                                   | `client_id` + `client_secret` | Simpler to debug, but exposes secret in body |
+| `client_secret_jwt`   | Confidential | JWT in body (`client_assertion`)       | ✅ HMAC (e.g. `HS256`)               | `client_id` + `client_secret` | More secure than plain secret                |
+| `private_key_jwt`     | Confidential | JWT in body (`client_assertion`)       | ✅ RSA/ECDSA (e.g. `RS256`, `ES256`) | `client_id` + **private key** | Strong security with asymmetric keys         |
+| `none`                | Public       | No client authentication               | ❌                                   | Just `client_id` (no secret)  | Used with PKCE for mobile/SPAs               |
+
+---
+
+## 🔧 Detailed Breakdown
+
+### 1. `client_secret_basic`
+
+* **How:** HTTP `Authorization: Basic base64(client_id:client_secret)`
+* **Secure:** ✅
+* **Visible in body:** ❌
+* **Spec:** [RFC 6749 Section 2.3.1](https://datatracker.ietf.org/doc/html/rfc6749#section-2.3.1)
+* **Default in many OAuth servers (e.g., Spring, Keycloak)**
+
+### 2. `client_secret_post`
+
+* **How:** `client_id` and `client_secret` sent as POST form parameters
+* **Secure:** ⚠️ Only if HTTPS is enforced
+* **Visible in body:** ✅
+* **Easier to implement manually or debug**
+
+### 3. `client_secret_jwt`
+
+* **How:** Client creates a signed JWT with `HS256` using its `client_secret`
+* **Fields:** `iss`, `sub`, `aud`, `exp`, `jti`
+* **JWT passed in:** `client_assertion`
+* **Assertion type:** `urn:ietf:params:oauth:client-assertion-type:jwt-bearer`
+* **Benefit:** Prevents replay and tampering (JWT)
+* **Downside:** Still uses symmetric key (client secret)
+
+### 4. `private_key_jwt`
+
+* **How:** Client creates a signed JWT with `RS256`, `ES256`, etc. using a **private key**
+* **Strongest option** if properly implemented
+* **Recommended for high-security clients**
+* **Public key must be registered** in client metadata (e.g., via `jwks` or `jwks_uri`)
+
+### 5. `none`
+
+* **How:** Client sends only `client_id`
+* **For public clients** that can’t keep a secret (e.g., SPAs, mobile apps)
+* **Requires PKCE** for security (Proof Key for Code Exchange)
+* **Never for confidential clients**
+
+---
+
+## ✅ Summary Table
+
+| Method                | Secure? | Requires Client Secret? | JWT Signed? | Common Use                                 |
+| --------------------- | ------- | ----------------------- | ----------- | ------------------------------------------ |
+| `client_secret_basic` | ✅       | Yes                     | ❌           | Default, widely supported                  |
+| `client_secret_post`  | ✅/⚠️    | Yes                     | ❌           | Simpler clients                            |
+| `client_secret_jwt`   | ✅       | Yes                     | ✅ (`HS256`) | Token endpoint auth with replay protection |
+| `private_key_jwt`     | ✅✅      | No (uses private key)   | ✅ (`RS256`) | Most secure (asymmetric)                   |
+| `none`                | ⚠️      | No                      | ❌           | Public clients with PKCE                   |
+
+---
+
+## 🧠 When to Use What?
+
+* 🏢 **Enterprise clients** → `private_key_jwt`
+* ⚙️ **Internal/confidential clients** → `client_secret_basic`
+* 🌐 **SPAs/mobile apps** → `none` (with PKCE)
+* 🔒 **Extra security** → `client_secret_jwt` or `private_key_jwt`
+* 🛠️ **Manual/testing** → `client_secret_post` (easy to debug)
+
+---
+
+Great question — when **DPoP** (Demonstration of Proof-of-Possession) is supported, it's easy to mix it up with `token_endpoint_auth_signing_alg_values_supported`, but they are **not directly related**.
+
+Let’s break it down properly:
+
+---
+
+## 🔑 TL;DR
+
+> 🔸 If your client authenticates with `private_key_jwt` or `client_secret_jwt`, **then** `token_endpoint_auth_signing_alg_values_supported` applies.
+
+> 🔸 **DPoP does not use this field directly**, but **DPoP proofs do use their own signing algorithm**, defined elsewhere.
+
+---
+
+## 🔍 So What Should It Contain If DPoP Is Supported?
+
+### ➤ It depends on **what client authentication methods** are supported.
+
+If your server supports:
+
+* ✅ `private_key_jwt`
+* ✅ `client_secret_jwt`
+
+Then it should list signing algorithms valid for **those methods** (e.g. `RS256`, `ES256`, `HS256`).
+
+### ✅ Example:
+
+```json
+{
+  "token_endpoint_auth_methods_supported": [
+    "private_key_jwt",
+    "client_secret_basic",
+    "client_secret_post",
+    "dpop"  // Not standard here, but used in practice
+  ],
+  "token_endpoint_auth_signing_alg_values_supported": [
+    "RS256",
+    "ES256",
+    "HS256"
+  ]
+}
+```
+
+> ✅ These signing algorithms are for **client authentication via JWTs**, not for **DPoP**.
+
+---
+
+## 💡 DPoP Proofs: Where Does the Signature Algorithm Go?
+
+DPoP uses its **own signed JWT** (called a "DPoP proof") with the following:
+
+* Signed with **ES256** (per spec recommendation)
+* Header:
+
+  ```json
+  {
+    "typ": "dpop+jwt",
+    "alg": "ES256",
+    "jwk": { ... }   // Public key
+  }
+  ```
+* Body includes `htu`, `htm`, `iat`, `jti`
+
+🛑 The signing algorithm used for DPoP proofs **is not declared** in `token_endpoint_auth_signing_alg_values_supported`.
+
+Instead, it’s expected that the server will accept only certain algorithms for DPoP (commonly just `ES256`), and clients must sign DPoP proofs accordingly.
+
+---
+
+## 🔐 Where to Advertise DPoP Support?
+
+If you're building an OpenID Provider, you should advertise DPoP support like this:
+
+```json
+"dpop_signing_alg_values_supported": ["ES256", "RS256"]
+```
+
+This is **not part of the official OpenID Discovery spec**, but **many modern providers (like Auth0, Okta)** include it anyway for clarity.
+
+> 💡 You can also use `authorization_endpoint` or `token_endpoint` headers to indicate DPoP support (per [RFC 9449](https://www.rfc-editor.org/rfc/rfc9449)).
+
+---
+
+## ✅ Final Answer
+
+If you support DPoP **and** client auth via JWTs:
+
+| Field                                              | Purpose                                                                      | Should contain                     |
+| -------------------------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------- |
+| `token_endpoint_auth_signing_alg_values_supported` | JWT-based **client authentication** (`private_key_jwt`, `client_secret_jwt`) | e.g. `["RS256", "ES256", "HS256"]` |
+| *(optional)* `dpop_signing_alg_values_supported`   | To advertise DPoP proof algorithms (non-standard)                            | e.g. `["ES256"]`                   |
+
+---
+

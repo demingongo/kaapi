@@ -134,7 +134,7 @@ export const openIDDesign = new OpenIDAuthDesign(
                 console.log('clientSecret', clientSecret)
 
                 if (!clientSecret && !codeVerifier) {
-                    return h.response({ error: 'invalid_client', error_description: 'Request was missing the \'client_secret\' parameter.' }).code(400)
+                    return h.response({ error: 'invalid_request', error_description: 'Token Request was missing the \'client_secret\' parameter.' }).code(400)
                 }
                 try {
                     //#region @TODO: validation + token

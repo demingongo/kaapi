@@ -89,7 +89,7 @@ export class DefaultOAuth2ACTokenRoute<
     constructor() {
         super('/oauth2/token', async (props, req, h) => {
             if (!props.clientSecret && !props.codeVerifier) {
-                return h.response({ error: 'invalid_client', error_description: 'Request was missing the \'client_secret\' parameter.' }).code(400)
+                return h.response({ error: 'invalid_request', error_description: 'Token request was missing the \'client_secret\' parameter.' }).code(400)
             }
 
             const r = await this.#generateToken(props, req)

@@ -11,12 +11,12 @@ import {
     //OAuth2AuthorizationCode
 } from '@kaapi/oauth2-auth-design';
 import { 
-    //BearerToken, 
-    DPoPToken 
+    BearerToken, 
+    //DPoPToken 
 } from '@kaapi/oauth2-auth-design/lib/utils/token-types';
 import '@kaapi/oauth2-auth-design'
 
-const tokenType = new DPoPToken()
+const tokenType = new BearerToken()
 
 export const openIDDesign2 = new OpenIDAuthDesign(
     {
@@ -65,7 +65,7 @@ export const openIDDesign2 = new OpenIDAuthDesign(
                 console.log('ttl', ttl)
 
                 if (!clientSecret && !codeVerifier) {
-                    return { error: 'invalid_client', error_description: 'Request was missing the \'client_secret\' parameter.' }
+                    return { error: 'invalid_request', error_description: 'Token Request was missing the \'client_secret\' parameter.' }
                 }
                 try {
                     //#region @TODO: validation + token
@@ -151,3 +151,5 @@ export const openIDDesign2 = new OpenIDAuthDesign(
     })
     .setTokenType(tokenType)
     .setTokenTTL(36000)
+    .clientSecretBasicAuthenticationMethod()
+    .clientSecretPostAuthenticationMethod()

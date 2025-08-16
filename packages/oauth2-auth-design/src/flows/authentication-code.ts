@@ -2,7 +2,7 @@ import {
     KaapiTools,
     RouteOptions
 } from '@kaapi/kaapi'
-import { GrantType, OAuth2Util } from '@novice1/api-doc-generator'
+import { ClientAuthentication, GrantType, OAuth2Util } from '@novice1/api-doc-generator'
 import Boom from '@hapi/boom'
 import Hoek from '@hapi/hoek'
 import {
@@ -10,7 +10,9 @@ import {
     OAuth2WithJWKSAuthDesign,
     OAuth2AuthOptions,
     OAuth2Error,
-    OAuth2RefreshTokenParams
+    OAuth2RefreshTokenParams,
+    OAuth2ClientAuthentication,
+    TokenEndpointAuthMethod
 } from './common'
 import { createIDToken } from '../utils/jwks-generator'
 import { JWKSStore } from '../utils/jwks-store'
@@ -43,6 +45,11 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
     protected options: OAuth2AuthOptions
 
     protected pkce: boolean = false
+
+    protected clientAuthenticationMethods = {
+        header: false,
+        body: false
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     protected authorizationRoute: IOAuth2ACAuthorizationRoute<any, any>
@@ -86,6 +93,27 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
         return this.pkce
     }
 
+    addClientAuthenticationMethod(value: OAuth2ClientAuthentication): this {
+        if (value == ClientAuthentication.body) {
+            this.clientSecretPostAuthenticationMethod()
+        } else if (value == ClientAuthentication.header) {
+            this.clientSecretBasicAuthenticationMethod()
+        } else if (value == 'none') {
+            this.withPkce()
+        }
+        return this
+    }
+
+    clientSecretBasicAuthenticationMethod(): this {
+        this.clientAuthenticationMethods.header = true
+        return this
+    }
+
+    clientSecretPostAuthenticationMethod(): this {
+        this.clientAuthenticationMethods.body = true
+        return this
+    }
+
     setDescription(description: string): this {
         this.description = description;
         return this;
@@ -114,6 +142,35 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
         return this.description;
     }
 
+    getTokenEndpointAuthMethods(): TokenEndpointAuthMethod[] {
+        const clientAuthenticationMethods = { 
+            body: this.clientAuthenticationMethods.body,
+            header: this.clientAuthenticationMethods.header,
+            none: this.isWithPkce()
+        }
+
+        if (!clientAuthenticationMethods.body &&
+            !clientAuthenticationMethods.header &&
+            !clientAuthenticationMethods.none
+        ) {
+            clientAuthenticationMethods.header = true
+        }
+
+        const result: TokenEndpointAuthMethod[] = []
+
+        if (clientAuthenticationMethods.header) {
+            result.push('client_secret_basic')
+        }
+        if (clientAuthenticationMethods.body) {
+            result.push('client_secret_post')
+        }
+        if (clientAuthenticationMethods.none) {
+            result.push('none')
+        }
+
+        return result
+    }
+
     /**
      * Returns the schema used for the documentation
      */
@@ -123,6 +180,16 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
             .setScopes(this.getScopes() || {})
             .setAuthUrl(this.authorizationRoute.path)
             .setAccessTokenUrl(this.tokenRoute.path || '');
+
+        const supported = this.getTokenEndpointAuthMethods()
+
+        if (supported.includes('client_secret_post')) {
+            docs.setChallengeAlgorithm(ClientAuthentication.body)
+        } else if (
+            supported.includes('client_secret_basic')
+        ) {
+            docs.setChallengeAlgorithm(ClientAuthentication.header)
+        }
 
         if (this.refreshTokenRoute?.path) {
             docs.setRefreshUrl(this.refreshTokenRoute.path)
@@ -208,6 +275,8 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
 
         const tokenTypeInstance = this._tokenType
 
+        const supported = this.getTokenEndpointAuthMethods()
+
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const routesOptions: RouteOptions<any> = {
             plugins: {
@@ -274,29 +343,60 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
                 method: 'POST',
                 handler: async (req, h) => {
                     // validating body
+                    let clientId: string | undefined;
+                    let clientSecret: string | undefined;
+
+                    if (supported.includes('client_secret_basic')) {
+                        const authorization = req.raw.req.headers.authorization;
+
+                        const [authType, base64Credentials] = authorization ? authorization.split(/\s+/) : ['', ''];
+
+                        if (authType.toLowerCase() == 'basic') {
+                            const decoded = Buffer.from(base64Credentials, 'base64').toString('utf-8').split(':');
+                            if (!decoded[0] || !decoded[1]) {
+                                return h.response({ error: 'invalid_client', error_description: 'Error in client_secret_basic' }).code(400)
+                            } else {
+                                clientId = decoded[0];
+                                clientSecret = decoded[1];
+                            }
+                        }
+                    }
+
+                    if (!clientId && (supported.includes('client_secret_post') || supported.includes('none'))) {
+                        if (req.payload.client_id && typeof req.payload.client_id === 'string') {
+                            clientId = req.payload.client_id
+                        }
+                        if (supported.includes('client_secret_post') && req.payload.client_secret && typeof req.payload.client_secret === 'string') {
+                            clientSecret = req.payload.client_secret
+                        }
+                    }
+
+                    if (!clientSecret && !supported.includes('none')) {
+                        return h.response({ error: 'invalid_request', error_description: 'Request was missing the \'client_secret\' parameter.' }).code(400)
+                    }
 
                     if (
-                        req.payload.client_id && typeof req.payload.client_id === 'string' &&
+                        clientId &&
                         req.payload.code && typeof req.payload.code === 'string' &&
                         req.payload.grant_type === 'authorization_code'
                     ) {
 
                         const params: OAuth2ACTokenParams = {
-                            clientId: req.payload.client_id,
+                            clientId,
                             grantType: req.payload.grant_type,
                             code: req.payload.code,
 
                             ttl: this.jwksGenerator.ttl,
                             createIDToken: hasOpenIDScope() ? (async (payload) => {
                                 return await createIDToken(this.jwksGenerator, {
-                                    aud: `${req.payload.client_id}`,
+                                    aud: clientId,
                                     iss: t.postman?.getHost()[0] || '',
                                     ...payload
                                 })
                             }) : undefined
                         }
-                        if (req.payload.client_secret && typeof req.payload.client_secret === 'string') {
-                            params.clientSecret = req.payload.client_secret
+                        if (clientSecret) {
+                            params.clientSecret = clientSecret
                         }
                         if (req.payload.code_verifier && typeof req.payload.code_verifier === 'string') {
                             params.codeVerifier = req.payload.code_verifier
@@ -315,30 +415,28 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
                         this.tokenRoute.path == this.refreshTokenRoute?.path &&
                         req.payload.grant_type === 'refresh_token'
                     ) {
-                        const hasClientId = req.payload.client_id && typeof req.payload.client_id === 'string'
-                        const hasClientSecret = req.payload.client_secret && typeof req.payload.client_secret === 'string'
                         const hasRefreshToken = req.payload.refresh_token && typeof req.payload.refresh_token === 'string'
                         if (
-                            hasClientId &&
+                            clientId &&
                             hasRefreshToken
                         ) {
                             const params: OAuth2RefreshTokenParams = {
-                                clientId: `${req.payload.client_id}`,
+                                clientId,
                                 grantType: req.payload.grant_type,
                                 refreshToken: `${req.payload.refresh_token}`,
 
                                 ttl: this.jwksGenerator.ttl,
                                 createIDToken: hasOpenIDScope() ? (async (payload) => {
                                     return await createIDToken(this.jwksGenerator, {
-                                        aud: `${req.payload.client_id}`,
+                                        aud: clientId,
                                         iss: t.postman?.getHost()[0] || '',
                                         ...payload
                                     })
                                 }) : undefined
                             }
 
-                            if (hasClientSecret) {
-                                params.clientSecret = `${req.payload.client_secret}`
+                            if (clientSecret) {
+                                params.clientSecret = clientSecret
                             }
 
                             if (req.payload.scope && typeof req.payload.scope === 'string') {
@@ -349,12 +447,9 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
                         } else {
                             let error: OAuth2Error = 'unauthorized_client';
                             let errorDescription = ''
-                            if (!(req.payload.client_id && typeof req.payload.client_id === 'string')) {
+                            if (!clientId) {
                                 error = 'invalid_request'
                                 errorDescription = 'Request was missing the \'client_id\' parameter.'
-                            } else if (!(req.payload.client_secret && typeof req.payload.client_secret === 'string')) {
-                                error = 'invalid_request'
-                                errorDescription = 'Request was missing the \'client_secret\' parameter.'
                             } else if (!(req.payload.refresh_token && typeof req.payload.refresh_token === 'string')) {
                                 error = 'invalid_request'
                                 errorDescription = 'Request was missing the \'refresh_token\' parameter.'
@@ -369,7 +464,7 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
                             req.payload.grant_type != 'refresh_token')) {
                             error = 'unsupported_grant_type'
                             errorDescription = `Request does not support the 'grant_type' '${req.payload.grant_type}'.`
-                        } else if (!(req.payload.client_id && typeof req.payload.client_id === 'string')) {
+                        } else if (!clientId) {
                             error = 'invalid_request'
                             errorDescription = 'Request was missing the \'client_id\' parameter.'
                         } else if (!(req.payload.code && typeof req.payload.code === 'string')) {
@@ -392,32 +487,62 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
                 method: 'POST',
                 handler: async (req, h) => {
                     // validating body
-                    const hasClientId = req.payload.client_id && typeof req.payload.client_id === 'string'
-                    const hasClientSecret = req.payload.client_secret && typeof req.payload.client_secret === 'string'
+                    let clientId: string | undefined;
+                    let clientSecret: string | undefined;
+
+                    if (supported.includes('client_secret_basic')) {
+                        const authorization = req.raw.req.headers.authorization;
+
+                        const [authType, base64Credentials] = authorization ? authorization.split(/\s+/) : ['', ''];
+
+                        if (authType.toLowerCase() == 'basic') {
+                            const decoded = Buffer.from(base64Credentials, 'base64').toString('utf-8').split(':');
+                            if (!decoded[0] || !decoded[1]) {
+                                return h.response({ error: 'invalid_client', error_description: 'Error in client_secret_basic' }).code(400)
+                            } else {
+                                clientId = decoded[0];
+                                clientSecret = decoded[1];
+                            }
+                        }
+                    }
+
+                    if (!clientId && (supported.includes('client_secret_post') || supported.includes('none'))) {
+                        if (req.payload.client_id && typeof req.payload.client_id === 'string') {
+                            clientId = req.payload.client_id
+                        }
+                        if (supported.includes('client_secret_post') && req.payload.client_secret && typeof req.payload.client_secret === 'string') {
+                            clientSecret = req.payload.client_secret
+                        }
+                    }
+
+                    if (!clientSecret && !supported.includes('none')) {
+                        return h.response({ error: 'invalid_request', error_description: 'Request was missing the \'client_secret\' parameter.' }).code(400)
+                    }
+
                     const hasRefreshToken = req.payload.refresh_token && typeof req.payload.refresh_token === 'string'
                     const isRefreshTokenGrantType = req.payload.grant_type === 'refresh_token'
                     if (
-                        hasClientId &&
+                        clientId &&
                         hasRefreshToken &&
                         isRefreshTokenGrantType
                     ) {
                         const params: OAuth2RefreshTokenParams = {
-                            clientId: `${req.payload.client_id}`,
+                            clientId,
                             grantType: `${req.payload.grant_type}`,
                             refreshToken: `${req.payload.refresh_token}`,
 
                             ttl: this.jwksGenerator.ttl,
                             createIDToken: hasOpenIDScope() ? (async (payload) => {
                                 return await createIDToken(this.jwksGenerator, {
-                                    aud: `${req.payload.client_id}`,
+                                    aud: clientId,
                                     iss: t.postman?.getHost()[0] || '',
                                     ...payload
                                 })
                             }) : undefined
                         }
 
-                        if (hasClientSecret) {
-                            params.clientSecret = `${req.payload.client_secret}`
+                        if (clientSecret) {
+                            params.clientSecret = clientSecret
                         }
 
                         if (req.payload.scope && typeof req.payload.scope === 'string') {
@@ -431,12 +556,9 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
                         if (req.payload.grant_type != 'refresh_token') {
                             error = 'unsupported_grant_type'
                             errorDescription = `Request does not support the 'grant_type' '${req.payload.grant_type}'.`
-                        } else if (!(req.payload.client_id && typeof req.payload.client_id === 'string')) {
+                        } else if (!clientId) {
                             error = 'invalid_request'
                             errorDescription = 'Request was missing the \'client_id\' parameter.'
-                        } else if (!(req.payload.client_secret && typeof req.payload.client_secret === 'string')) {
-                            error = 'invalid_request'
-                            errorDescription = 'Request was missing the \'client_secret\' parameter.'
                         } else if (!(req.payload.refresh_token && typeof req.payload.refresh_token === 'string')) {
                             error = 'invalid_request'
                             errorDescription = 'Request was missing the \'refresh_token\' parameter.'

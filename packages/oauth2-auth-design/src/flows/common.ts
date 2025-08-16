@@ -13,6 +13,7 @@ import { JWKSStore } from '../utils/jwks-store';
 import { getInMemoryJWKSStore } from '../utils/in-memory-jwks-store';
 import { JWKSGenerator, OAuth2JwtPayload } from '../utils/jwks-generator';
 import { BearerToken, TokenType } from '../utils/token-types';
+import { ClientAuthentication } from '@novice1/api-doc-generator';
 
 //#region Types
 
@@ -44,6 +45,10 @@ export interface OIDCHelpers {
     readonly ttl?: number
     createIDToken: (payload: WithRequired<Partial<OAuth2JwtPayload>, 'sub'>) => Promise<string>
 }
+
+export type OAuth2ClientAuthentication = ClientAuthentication | 'none'
+
+export type TokenEndpointAuthMethod = 'client_secret_basic' | 'client_secret_post' | 'client_secret_jwt' | 'private_key_jwt' | 'none'
 
 //#endregion Types
 
