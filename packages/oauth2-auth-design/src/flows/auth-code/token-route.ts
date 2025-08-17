@@ -92,7 +92,13 @@ export class DefaultOAuth2ACTokenRoute<
                 return h.response({ error: 'invalid_request', error_description: 'Token request was missing the \'client_secret\' parameter.' }).code(400)
             }
 
-            const r = await this.#generateToken(props, req)
+            let r: OAuth2TokenResponseBody | IOAuth2TokenResponse | OAuth2ErrorBody | null = null
+
+            try {
+                r = await this.#generateToken(props, req)
+            } catch (err) {
+                return h.response({ error: 'invalid_request', error_description: `${err}` }).code(400)
+            }
 
             if (!r) return h.response({ error: 'invalid_request' }).code(400)
 

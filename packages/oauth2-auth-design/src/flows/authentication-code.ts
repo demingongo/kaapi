@@ -10,9 +10,7 @@ import {
     OAuth2WithJWKSAuthDesign,
     OAuth2AuthOptions,
     OAuth2Error,
-    OAuth2RefreshTokenParams,
-    OAuth2ClientAuthentication,
-    TokenEndpointAuthMethod
+    OAuth2RefreshTokenParams
 } from './common'
 import { createIDToken } from '../utils/jwks-generator'
 import { JWKSStore } from '../utils/jwks-store'
@@ -22,6 +20,10 @@ import {
 } from './auth-code/authorization-route'
 import { IOAuth2ACTokenRoute, OAuth2ACTokenParams } from './auth-code/token-route'
 import { TokenTypeValidationResponse } from '../utils/token-types'
+import { 
+    OAuth2ClientAuthentication,
+    TokenEndpointAuthMethod 
+} from '../utils/client-auth-methods'
 
 //#region OAuth2AuthorizationCode
 
