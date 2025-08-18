@@ -8,13 +8,14 @@ import {
     OpenIDAuthDesign,
     OpenIDJWKSRoute,
     OAuth2TokenResponse,
-    //OAuth2AuthorizationCode
-} from '@kaapi/oauth2-auth-design';
-import { 
-    BearerToken, 
+    //OAuth2AuthorizationCode,
+    BearerToken,
+    ClientSecretPost,
+    ClientSecretBasic,
+    ClientSecretJwt,
+    PrivateKeyJwt, 
     //DPoPToken 
-} from '@kaapi/oauth2-auth-design/lib/utils/token-types';
-import '@kaapi/oauth2-auth-design'
+} from '@kaapi/oauth2-auth-design';
 
 const tokenType = new BearerToken()
 
@@ -151,5 +152,10 @@ export const openIDDesign2 = new OpenIDAuthDesign(
     })
     .setTokenType(tokenType)
     .setTokenTTL(36000)
-    .clientSecretBasicAuthenticationMethod()
-    .clientSecretPostAuthenticationMethod()
+    .addClientAuthenticationMethod(new ClientSecretPost())
+    .addClientAuthenticationMethod(new ClientSecretBasic())
+    .addClientAuthenticationMethod(new ClientSecretJwt())
+    .addClientAuthenticationMethod(new PrivateKeyJwt())
+    //.clientSecretBasicAuthenticationMethod()
+    //.clientSecretPostAuthenticationMethod()
+    //.noneAuthenticationMethod() // or .withPkce()

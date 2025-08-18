@@ -89,7 +89,7 @@ export class DefaultOAuth2ACTokenRoute<
     constructor() {
         super('/oauth2/token', async (props, req, h) => {
             if (!props.clientSecret && !props.codeVerifier) {
-                return h.response({ error: 'invalid_request', error_description: 'Token request was missing the \'client_secret\' parameter.' }).code(400)
+                return h.response({ error: 'invalid_request', error_description: 'Token request was missing \'client_secret\' or \'code_verifier\'.' }).code(400)
             }
 
             let r: OAuth2TokenResponseBody | IOAuth2TokenResponse | OAuth2ErrorBody | null = null

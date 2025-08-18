@@ -141,7 +141,7 @@ export class OpenIDAuthDesign extends OAuth2AuthorizationCode {
 
         super(props)
 
-        this.pkce = true
+        this.withPkce()
         this.strategyName = strategyName || 'open-id-auth-design'
         this.jwksRoute = jwksRoute
         this.userInfoRoute = userInfoRoute

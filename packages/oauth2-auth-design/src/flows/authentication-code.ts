@@ -1,5 +1,7 @@
 import {
     KaapiTools,
+    ReqRefDefaults,
+    Request,
     RouteOptions
 } from '@kaapi/kaapi'
 import { ClientAuthentication, GrantType, OAuth2Util } from '@novice1/api-doc-generator'
@@ -20,10 +22,6 @@ import {
 } from './auth-code/authorization-route'
 import { IOAuth2ACTokenRoute, OAuth2ACTokenParams } from './auth-code/token-route'
 import { TokenTypeValidationResponse } from '../utils/token-types'
-import { 
-    OAuth2ClientAuthentication,
-    TokenEndpointAuthMethod 
-} from '../utils/client-auth-methods'
 
 //#region OAuth2AuthorizationCode
 
@@ -83,11 +81,12 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
 
     withPkce(): this {
         this.pkce = true
-        return this
+        return super.noneAuthenticationMethod()
     }
 
     withoutPkce(): this {
         this.pkce = false
+        this._clientAuthMethods.none = undefined
         return this
     }
 
@@ -95,25 +94,8 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
         return this.pkce
     }
 
-    addClientAuthenticationMethod(value: OAuth2ClientAuthentication): this {
-        if (value == ClientAuthentication.body) {
-            this.clientSecretPostAuthenticationMethod()
-        } else if (value == ClientAuthentication.header) {
-            this.clientSecretBasicAuthenticationMethod()
-        } else if (value == 'none') {
-            this.withPkce()
-        }
-        return this
-    }
-
-    clientSecretBasicAuthenticationMethod(): this {
-        this.clientAuthenticationMethods.header = true
-        return this
-    }
-
-    clientSecretPostAuthenticationMethod(): this {
-        this.clientAuthenticationMethods.body = true
-        return this
+    noneAuthenticationMethod(): this {
+        return this.withPkce()
     }
 
     setDescription(description: string): this {
@@ -142,35 +124,6 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
 
     getDescription(): string | undefined {
         return this.description;
-    }
-
-    getTokenEndpointAuthMethods(): TokenEndpointAuthMethod[] {
-        const clientAuthenticationMethods = { 
-            body: this.clientAuthenticationMethods.body,
-            header: this.clientAuthenticationMethods.header,
-            none: this.isWithPkce()
-        }
-
-        if (!clientAuthenticationMethods.body &&
-            !clientAuthenticationMethods.header &&
-            !clientAuthenticationMethods.none
-        ) {
-            clientAuthenticationMethods.header = true
-        }
-
-        const result: TokenEndpointAuthMethod[] = []
-
-        if (clientAuthenticationMethods.header) {
-            result.push('client_secret_basic')
-        }
-        if (clientAuthenticationMethods.body) {
-            result.push('client_secret_post')
-        }
-        if (clientAuthenticationMethods.none) {
-            result.push('none')
-        }
-
-        return result
     }
 
     /**
@@ -278,6 +231,7 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
         const tokenTypeInstance = this._tokenType
 
         const supported = this.getTokenEndpointAuthMethods()
+        const authMethodsInstances = this.clientAuthMethods
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const routesOptions: RouteOptions<any> = {
@@ -338,43 +292,54 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
                 }
             })
             .route<{
-                Payload: { client_id?: unknown, client_secret?: unknown, code_verifier?: unknown, code?: unknown, grant_type?: unknown, redirect_uri?: unknown, refresh_token?: unknown, scope?: unknown }
+                Payload: { code_verifier?: unknown, code?: unknown, grant_type?: unknown, redirect_uri?: unknown, refresh_token?: unknown, scope?: unknown }
             }>({
                 options: routesOptions,
                 path: this.tokenRoute.path,
                 method: 'POST',
                 handler: async (req, h) => {
-                    // validating body
+
+                    // Grant validation
+                    const supportedGrants = ['authorization_code']
+                    if (this.tokenRoute.path == this.refreshTokenRoute?.path) {
+                        supportedGrants.push('refresh_token')
+                    }
+                    if (!(typeof req.payload.grant_type === 'string' && supportedGrants.includes(req.payload.grant_type))) {
+                        return h.response({ error: 'unsupported_grant_type', error_description: `Request does not support the 'grant_type' '${req.payload.grant_type}'.` }).code(400)
+                    }
+
+                    // Client authentication is present?
                     let clientId: string | undefined;
                     let clientSecret: string | undefined;
 
-                    if (supported.includes('client_secret_basic')) {
-                        const authorization = req.raw.req.headers.authorization;
-
-                        const [authType, base64Credentials] = authorization ? authorization.split(/\s+/) : ['', ''];
-
-                        if (authType.toLowerCase() == 'basic') {
-                            const decoded = Buffer.from(base64Credentials, 'base64').toString('utf-8').split(':');
-                            if (!decoded[0] || !decoded[1]) {
-                                return h.response({ error: 'invalid_client', error_description: 'Error in client_secret_basic' }).code(400)
+                    for (const am of supported) {
+                        const amInstance = authMethodsInstances[am]
+                        if (amInstance) {
+                            //console.log('Check', amInstance.method, '...')
+                            const v = await amInstance.extractParams(req as unknown as Request<ReqRefDefaults>)
+                            if (v.hasAuthMethod) {
+                                //console.log(amInstance.method, 'IS BEING USED')
+                                clientId = v.clientId
+                                clientSecret = v.clientSecret
+                                if (!v.clientId) {
+                                    return h.response({ error: 'invalid_request', error_description: `Error ${amInstance.method}: Missing client_id` }).code(400)
+                                }
+                                if (!amInstance.secretIsOptional && !v.clientSecret) {
+                                    return h.response({ error: 'invalid_request', error_description: `Error ${amInstance.method}: Missing client_secret` }).code(400)
+                                }
+                                break;
                             } else {
-                                clientId = decoded[0];
-                                clientSecret = decoded[1];
+                                //console.log(amInstance.method, 'was not used')
                             }
                         }
                     }
 
-                    if (!clientId && (supported.includes('client_secret_post') || supported.includes('none'))) {
-                        if (req.payload.client_id && typeof req.payload.client_id === 'string') {
-                            clientId = req.payload.client_id
-                        }
-                        if (supported.includes('client_secret_post') && req.payload.client_secret && typeof req.payload.client_secret === 'string') {
-                            clientSecret = req.payload.client_secret
-                        }
-                    }
-
-                    if (!clientSecret && !supported.includes('none')) {
-                        return h.response({ error: 'invalid_request', error_description: 'Request was missing the \'client_secret\' parameter.' }).code(400)
+                    if (!clientId) {
+                        return h
+                            .response({
+                                error: 'invalid_request',
+                                error_description: `Supported token endpoint authentication methods: ${supported.join(', ')}`
+                            }).code(400)
                     }
 
                     if (
@@ -462,11 +427,7 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
                     } else {
                         let error: OAuth2Error = 'unauthorized_client';
                         let errorDescription = ''
-                        if (req.payload.grant_type != 'authorization_code' || (this.tokenRoute.path == this.refreshTokenRoute?.path &&
-                            req.payload.grant_type != 'refresh_token')) {
-                            error = 'unsupported_grant_type'
-                            errorDescription = `Request does not support the 'grant_type' '${req.payload.grant_type}'.`
-                        } else if (!clientId) {
+                        if (!clientId) {
                             error = 'invalid_request'
                             errorDescription = 'Request was missing the \'client_id\' parameter.'
                         } else if (!(req.payload.code && typeof req.payload.code === 'string')) {
@@ -482,43 +443,47 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
         // refreshToken
         if (this.refreshTokenRoute?.path && this.refreshTokenRoute.path != this.tokenRoute.path) {
             t.route<{
-                Payload: { client_id?: unknown, client_secret?: unknown, grant_type?: unknown, refresh_token?: unknown, scope?: unknown }
+                Payload: { grant_type?: unknown, refresh_token?: unknown, scope?: unknown }
             }>({
                 options: routesOptions,
                 path: this.refreshTokenRoute.path,
                 method: 'POST',
                 handler: async (req, h) => {
-                    // validating body
+
+                    // Grant validation
+                    const supportedGrants = ['refresh_token']
+                    if (!(typeof req.payload.grant_type === 'string' && supportedGrants.includes(req.payload.grant_type))) {
+                        return h.response({ error: 'unsupported_grant_type', error_description: `Request does not support the 'grant_type' '${req.payload.grant_type}'.` }).code(400)
+                    }
+
+                    // Client authentication is present?
                     let clientId: string | undefined;
                     let clientSecret: string | undefined;
 
-                    if (supported.includes('client_secret_basic')) {
-                        const authorization = req.raw.req.headers.authorization;
-
-                        const [authType, base64Credentials] = authorization ? authorization.split(/\s+/) : ['', ''];
-
-                        if (authType.toLowerCase() == 'basic') {
-                            const decoded = Buffer.from(base64Credentials, 'base64').toString('utf-8').split(':');
-                            if (!decoded[0] || !decoded[1]) {
-                                return h.response({ error: 'invalid_client', error_description: 'Error in client_secret_basic' }).code(400)
-                            } else {
-                                clientId = decoded[0];
-                                clientSecret = decoded[1];
+                    for (const am of supported) {
+                        const amInstance = authMethodsInstances[am]
+                        if (amInstance) {
+                            const v = await amInstance.extractParams(req as unknown as Request<ReqRefDefaults>)
+                            if (v.hasAuthMethod) {
+                                clientId = v.clientId
+                                clientSecret = v.clientSecret
+                                if (!v.clientId) {
+                                    return h.response({ error: 'invalid_request', error_description: `Error ${amInstance.method}: Missing client_id` }).code(400)
+                                }
+                                if (!amInstance.secretIsOptional && !v.clientSecret) {
+                                    return h.response({ error: 'invalid_request', error_description: `Error ${amInstance.method}: Missing client_secret` }).code(400)
+                                }
+                                break;
                             }
                         }
                     }
 
-                    if (!clientId && (supported.includes('client_secret_post') || supported.includes('none'))) {
-                        if (req.payload.client_id && typeof req.payload.client_id === 'string') {
-                            clientId = req.payload.client_id
-                        }
-                        if (supported.includes('client_secret_post') && req.payload.client_secret && typeof req.payload.client_secret === 'string') {
-                            clientSecret = req.payload.client_secret
-                        }
-                    }
-
-                    if (!clientSecret && !supported.includes('none')) {
-                        return h.response({ error: 'invalid_request', error_description: 'Request was missing the \'client_secret\' parameter.' }).code(400)
+                    if (!clientId) {
+                        return h
+                            .response({
+                                error: 'invalid_request',
+                                error_description: `Supported token endpoint authentication methods: ${supported.join(', ')}`
+                            }).code(400)
                     }
 
                     const hasRefreshToken = req.payload.refresh_token && typeof req.payload.refresh_token === 'string'
@@ -555,10 +520,7 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
                     } else {
                         let error: OAuth2Error = 'unauthorized_client';
                         let errorDescription = ''
-                        if (req.payload.grant_type != 'refresh_token') {
-                            error = 'unsupported_grant_type'
-                            errorDescription = `Request does not support the 'grant_type' '${req.payload.grant_type}'.`
-                        } else if (!clientId) {
+                        if (!clientId) {
                             error = 'invalid_request'
                             errorDescription = 'Request was missing the \'client_id\' parameter.'
                         } else if (!(req.payload.refresh_token && typeof req.payload.refresh_token === 'string')) {

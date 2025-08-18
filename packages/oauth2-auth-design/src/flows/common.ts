@@ -13,6 +13,7 @@ import { JWKSStore } from '../utils/jwks-store';
 import { getInMemoryJWKSStore } from '../utils/in-memory-jwks-store';
 import { JWKSGenerator, OAuth2JwtPayload } from '../utils/jwks-generator';
 import { BearerToken, TokenType } from '../utils/token-types';
+import { ClientAuthMethod, ClientSecretBasic, ClientSecretPost, NoneAuthMethod, sortTokenEndpointAuthMethods, TokenEndpointAuthMethod } from '../utils/client-auth-methods';
 
 //#region Types
 
@@ -209,11 +210,42 @@ export class OAuth2TokenResponse implements IOAuth2TokenResponse {
 
 export abstract class OAuth2AuthDesign extends AuthDesign {
 
+    protected _clientAuthMethods: Record<TokenEndpointAuthMethod, ClientAuthMethod | undefined> = {
+        client_secret_basic: undefined,
+        client_secret_post: undefined,
+        client_secret_jwt: undefined,
+        private_key_jwt: undefined,
+        none: undefined
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     protected _tokenType: TokenType<any>
 
+
     get tokenType(): string {
         return this._tokenType.prefix
+    }
+
+    protected get clientAuthMethods(): Record<TokenEndpointAuthMethod, ClientAuthMethod | undefined> {
+        const result: Record<TokenEndpointAuthMethod, ClientAuthMethod | undefined> = {
+            client_secret_basic: undefined,
+            client_secret_post: undefined,
+            client_secret_jwt: undefined,
+            private_key_jwt: undefined,
+            none: undefined
+        }
+
+        const keys = Object.keys(this._clientAuthMethods).map(key => {
+            const k = key as TokenEndpointAuthMethod
+            result[k] = this._clientAuthMethods[k]
+            return this._clientAuthMethods[k] ? key : undefined
+        }).filter((key): key is TokenEndpointAuthMethod => !!key)
+
+        if (!keys.length) {
+            result.client_secret_basic = new ClientSecretBasic()
+        }
+
+        return result
     }
 
     constructor() {
@@ -227,6 +259,46 @@ export abstract class OAuth2AuthDesign extends AuthDesign {
 
     setTokenType<Refs extends ReqRef = ReqRefDefaults>(value: TokenType<Refs>): this {
         this._tokenType = value
+        return this
+    }
+
+    getTokenEndpointAuthMethods(): TokenEndpointAuthMethod[] {
+        const result = Object.keys(this._clientAuthMethods).map(key => {
+            return this._clientAuthMethods[key as TokenEndpointAuthMethod] ? key : undefined
+        }).filter((key): key is TokenEndpointAuthMethod => !!key)
+
+        if (!result.length) {
+            result.push('client_secret_basic')
+        }
+
+        return sortTokenEndpointAuthMethods(result);
+    }
+
+    clientSecretBasicAuthenticationMethod(): this {
+        this._clientAuthMethods.client_secret_basic = new ClientSecretBasic()
+        return this
+    }
+
+    clientSecretPostAuthenticationMethod(): this {
+        this._clientAuthMethods.client_secret_post = new ClientSecretPost()
+        return this
+    }
+
+    noneAuthenticationMethod(): this {
+        this._clientAuthMethods.none = new NoneAuthMethod()
+        return this
+    }
+
+    addClientAuthenticationMethod(value: 'client_secret_basic' | 'client_secret_post' | 'none' | ClientAuthMethod): this {
+        if (value == 'client_secret_basic') {
+            this.clientSecretPostAuthenticationMethod()
+        } else if (value == 'client_secret_post') {
+            this.clientSecretBasicAuthenticationMethod()
+        } else if (value == 'none') {
+            this.noneAuthenticationMethod()
+        } else {
+            this._clientAuthMethods[value.method] = value
+        }
         return this
     }
 }
