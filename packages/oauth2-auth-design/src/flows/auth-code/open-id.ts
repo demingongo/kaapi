@@ -182,7 +182,7 @@ export class OpenIDAuthDesign extends OAuth2AuthorizationCode {
                 }
             },
             handler: () => {
-                return {
+                const wellKnownOpenIDConfig: Record<string, string | string[] | undefined> = {
                     issuer: host,
                     authorization_endpoint: `${host}${this.authorizationRoute.path}`,
                     token_endpoint: `${host}${this.tokenRoute.path}`,
@@ -214,9 +214,25 @@ export class OpenIDAuthDesign extends OAuth2AuthorizationCode {
                     code_challenge_methods_supported: challengeAlgo ? [
                         challengeAlgo
                     ] : [],
-                    token_endpoint_auth_methods_supported: this.getTokenEndpointAuthMethods(),
-                    ...this.openidConfiguration
+                    token_endpoint_auth_methods_supported: this.getTokenEndpointAuthMethods()
                 }
+
+                if (this.clientAuthMethods.client_secret_jwt?.algorithms?.length) {
+                    wellKnownOpenIDConfig.token_endpoint_auth_signing_alg_values_supported = wellKnownOpenIDConfig.token_endpoint_auth_signing_alg_values_supported || []
+                    wellKnownOpenIDConfig.token_endpoint_auth_signing_alg_values_supported = [
+                        ...wellKnownOpenIDConfig.token_endpoint_auth_signing_alg_values_supported,
+                        ...this.clientAuthMethods.client_secret_jwt.algorithms
+                    ]
+                }
+                if (this.clientAuthMethods.private_key_jwt?.algorithms?.length) {
+                    wellKnownOpenIDConfig.token_endpoint_auth_signing_alg_values_supported = wellKnownOpenIDConfig.token_endpoint_auth_signing_alg_values_supported || []
+                    wellKnownOpenIDConfig.token_endpoint_auth_signing_alg_values_supported = [
+                        ...wellKnownOpenIDConfig.token_endpoint_auth_signing_alg_values_supported,
+                        ...this.clientAuthMethods.private_key_jwt.algorithms
+                    ]
+                }
+
+                return { wellKnownOpenIDConfig, ...this.openidConfiguration }
             }
         })
 

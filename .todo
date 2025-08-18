@@ -8,8 +8,9 @@
 
 - @kaapi/oauth2-auth-design
     - check out token type DPoP (Demonstration of Proof-of-Possession)
-    - client_secret_basic as it is considered more secure than client_secret_post 
-    - should also support "client_secret_jwt" and "private_key_jwt" and token_endpoint_auth_signing_alg_values_supported
+    - client_secret_basic as it is considered more secure than client_secret_post which is usually used for debug @done
+    - should also support "client_secret_jwt" and "private_key_jwt" and token_endpoint_auth_signing_alg_values_supported @done
+    - use Client Authentication Methods (client_secret_jwt, ...) in client credentials flow
 
 
 - @kaapi/kaapi
