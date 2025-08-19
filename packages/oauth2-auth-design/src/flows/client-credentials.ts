@@ -10,14 +10,15 @@ import {
 import { GrantType, OAuth2Util } from '@novice1/api-doc-generator'
 import Boom from '@hapi/boom'
 import Hoek from '@hapi/hoek'
-import { 
-    IOAuth2RefreshTokenRoute, 
-    OAuth2AuthDesign, 
-    OAuth2AuthOptions, 
-    OAuth2Error, 
-    OAuth2RefreshTokenParams, 
-    OAuth2RefreshTokenRoute 
+import {
+    IOAuth2RefreshTokenRoute,
+    OAuth2AuthDesign,
+    OAuth2AuthOptions,
+    OAuth2Error,
+    OAuth2RefreshTokenParams,
+    OAuth2RefreshTokenRoute
 } from './common'
+import { ClientAuthMethod } from '../utils/client-auth-methods'
 
 //#region TokenRoute
 
@@ -80,6 +81,24 @@ export class OAuth2ClientCreds extends OAuth2AuthDesign {
 
         this.strategyName = strategyName || 'oauth2-client-credentials'
         this.options = options ? { ...options } : {}
+    }
+
+    /**
+     * NOT IMPLEMENTEND FOR CLIENT CREDENTIALS FLOW
+     */
+    noneAuthenticationMethod(): this {
+        return this
+    }
+
+    addClientAuthenticationMethod(value: 'client_secret_basic' | 'client_secret_post' | 'none' | ClientAuthMethod): this {
+        if (typeof value === 'string') {
+            if (value == 'none') {
+                return this
+            }
+        } else if (value.method == 'none') {
+            return this
+        }
+        return super.addClientAuthenticationMethod(value)
     }
 
     setDescription(description: string): this {
@@ -204,12 +223,12 @@ export class OAuth2ClientCreds extends OAuth2AuthDesign {
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const routesOptions: RouteOptions<any> = {
-                    plugins: {
-                        kaapi: {
-                            docs: false
-                        }
-                    }
+            plugins: {
+                kaapi: {
+                    docs: false
                 }
+            }
+        }
 
         t
             .route<{
@@ -234,7 +253,7 @@ export class OAuth2ClientCreds extends OAuth2AuthDesign {
                         clientSecret,
                         error,
                         errorDescription
-                    } = await this._extractClientParams(req as unknown as Request<ReqRefDefaults>, authMethodsInstances, supported); 
+                    } = await this._extractClientParams(req as unknown as Request<ReqRefDefaults>, authMethodsInstances, supported);
 
                     if (error) {
                         return h.response({ error: error, error_description: errorDescription || undefined }).code(400)
@@ -362,7 +381,7 @@ export class OAuth2ClientCreds extends OAuth2AuthDesign {
                         clientSecret,
                         error,
                         errorDescription
-                    } = await this._extractClientParams(req as unknown as Request<ReqRefDefaults>, authMethodsInstances, supported); 
+                    } = await this._extractClientParams(req as unknown as Request<ReqRefDefaults>, authMethodsInstances, supported);
 
                     if (error) {
                         return h.response({ error: error, error_description: errorDescription || undefined }).code(400)
