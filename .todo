@@ -1,16 +1,16 @@
 - @kaapi/server: `auth: true` should not set up startegy but only `mode: 'required'`. Strategy should be explicitly defined. @done
 
 - @kaapi/kaapi
-    - create some auth designs:
-        - basic auth (to create from scratch)
-        - bearer (take it from the examples/auth-designs/src/plugins/apiKeyDesign.ts)
-        - apikey (take it from the examples/auth-designs/src/plugins/bearerDesign.ts)
+    - create some auth designs: @done
+        - basic auth (to create from scratch) @done
+        - bearer (take it from the examples/auth-designs/src/plugins/apiKeyDesign.ts) @done
+        - apikey (take it from the examples/auth-designs/src/plugins/bearerDesign.ts) @done
 
 - @kaapi/oauth2-auth-design
     - check out token type DPoP (Demonstration of Proof-of-Possession)
     - client_secret_basic as it is considered more secure than client_secret_post which is usually used for debug @done
     - should also support "client_secret_jwt" and "private_key_jwt" and token_endpoint_auth_signing_alg_values_supported @done
-    - use Client Authentication Methods (client_secret_jwt, ...) in client credentials flow
+    - use Client Authentication Methods (client_secret_jwt, ...) in client credentials flow @done
 
 
 - @kaapi/kaapi
