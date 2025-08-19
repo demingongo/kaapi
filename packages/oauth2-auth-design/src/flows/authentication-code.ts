@@ -317,7 +317,7 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
                     } = await this._extractClientParams(req as unknown as Request<ReqRefDefaults>, authMethodsInstances, supported); 
 
                     if (error) {
-                        return h.response({ error: 'invalid_request', error_description: errorDescription || undefined }).code(400)
+                        return h.response({ error: error, error_description: errorDescription || undefined }).code(400)
                     }
 
                     if (!clientId) {
@@ -451,7 +451,7 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
                     } = await this._extractClientParams(req as unknown as Request<ReqRefDefaults>, authMethodsInstances, supported); 
 
                     if (error) {
-                        return h.response({ error: 'invalid_request', error_description: errorDescription || undefined }).code(400)
+                        return h.response({ error: error, error_description: errorDescription || undefined }).code(400)
                     }
 
                     if (!clientId) {

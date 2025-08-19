@@ -199,6 +199,9 @@ export class OAuth2ClientCreds extends OAuth2AuthDesign {
 
     integrateHook(t: KaapiTools) {
 
+        const supported = this.getTokenEndpointAuthMethods()
+        const authMethodsInstances = this.clientAuthMethods
+
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const routesOptions: RouteOptions<any> = {
                     plugins: {
@@ -210,12 +213,41 @@ export class OAuth2ClientCreds extends OAuth2AuthDesign {
 
         t
             .route<{
-                Payload: { client_id?: unknown, client_secret?: unknown, code_verifier?: unknown, code?: unknown, grant_type?: unknown, redirect_uri?: unknown, refresh_token?: unknown, scope?: unknown }
+                Payload: { code_verifier?: unknown, code?: unknown, grant_type?: unknown, redirect_uri?: unknown, refresh_token?: unknown, scope?: unknown }
             }>({
                 options: routesOptions,
                 path: this.tokenRoute.path,
                 method: 'POST',
                 handler: async (req, h) => {
+                    // Grant validation
+                    const supportedGrants = ['client_credentials']
+                    if (this.tokenRoute.path == this.refreshTokenRoute?.path) {
+                        supportedGrants.push('refresh_token')
+                    }
+                    if (!(typeof req.payload.grant_type === 'string' && supportedGrants.includes(req.payload.grant_type))) {
+                        return h.response({ error: 'unsupported_grant_type', error_description: `Request does not support the 'grant_type' '${req.payload.grant_type}'.` }).code(400)
+                    }
+
+                    // Client authentication is present?
+                    const {
+                        clientId,
+                        clientSecret,
+                        error,
+                        errorDescription
+                    } = await this._extractClientParams(req as unknown as Request<ReqRefDefaults>, authMethodsInstances, supported); 
+
+                    if (error) {
+                        return h.response({ error: error, error_description: errorDescription || undefined }).code(400)
+                    }
+
+                    if (!clientId || !clientSecret) {
+                        return h
+                            .response({
+                                error: 'invalid_request',
+                                error_description: `Supported token endpoint authentication methods: ${supported.join(', ')}`
+                            }).code(400)
+                    }
+
                     // validating body
                     if (
                         req.payload.grant_type === 'client_credentials'
@@ -257,21 +289,19 @@ export class OAuth2ClientCreds extends OAuth2AuthDesign {
                         this.tokenRoute.path == this.refreshTokenRoute?.path &&
                         req.payload.grant_type === 'refresh_token'
                     ) {
-                        const hasClientId = req.payload.client_id && typeof req.payload.client_id === 'string'
-                        const hasClientSecret = req.payload.client_secret && typeof req.payload.client_secret === 'string'
                         const hasRefreshToken = req.payload.refresh_token && typeof req.payload.refresh_token === 'string'
                         if (
-                            hasClientId &&
+                            clientId &&
                             hasRefreshToken
                         ) {
                             const params: OAuth2RefreshTokenParams = {
-                                clientId: `${req.payload.client_id}`,
+                                clientId,
                                 grantType: req.payload.grant_type,
                                 refreshToken: `${req.payload.refresh_token}`
                             }
 
-                            if (hasClientSecret) {
-                                params.clientSecret = `${req.payload.client_secret}`
+                            if (clientSecret) {
+                                params.clientSecret = clientSecret
                             }
 
                             if (req.payload.scope && typeof req.payload.scope === 'string') {
@@ -282,10 +312,10 @@ export class OAuth2ClientCreds extends OAuth2AuthDesign {
                         } else {
                             let error: OAuth2Error = 'unauthorized_client';
                             let errorDescription = ''
-                            if (!(req.payload.client_id && typeof req.payload.client_id === 'string')) {
+                            if (!clientId) {
                                 error = 'invalid_request'
                                 errorDescription = 'Request was missing the \'client_id\' parameter.'
-                            } else if (!(req.payload.client_secret && typeof req.payload.client_secret === 'string')) {
+                            } else if (!clientSecret) {
                                 error = 'invalid_request'
                                 errorDescription = 'Request was missing the \'client_secret\' parameter.'
                             } else if (!(req.payload.refresh_token && typeof req.payload.refresh_token === 'string')) {
@@ -298,16 +328,12 @@ export class OAuth2ClientCreds extends OAuth2AuthDesign {
                     } else {
                         let error: OAuth2Error = 'unauthorized_client';
                         let errorDescription = ''
-                        if (req.payload.grant_type != 'authorization_code' || (this.tokenRoute.path == this.refreshTokenRoute?.path &&
-                            req.payload.grant_type != 'refresh_token')) {
-                            error = 'unsupported_grant_type'
-                            errorDescription = `Request does not support the 'grant_type' '${req.payload.grant_type}'.`
-                        } else if (!(req.payload.client_id && typeof req.payload.client_id === 'string')) {
+                        if (!clientId) {
                             error = 'invalid_request'
                             errorDescription = 'Request was missing the \'client_id\' parameter.'
-                        } else if (!(req.payload.code && typeof req.payload.code === 'string')) {
+                        } else if (!clientSecret) {
                             error = 'invalid_request'
-                            errorDescription = 'Request was missing the \'code\' parameter.'
+                            errorDescription = 'Request was missing the \'client_secret\' parameter.'
                         }
                         return h.response({ error, error_description: errorDescription }).code(400)
                     }
@@ -318,30 +344,50 @@ export class OAuth2ClientCreds extends OAuth2AuthDesign {
         // refreshToken
         if (this.refreshTokenRoute?.path && this.refreshTokenRoute.path != this.tokenRoute.path) {
             t.route<{
-                Payload: { client_id?: unknown, client_secret?: unknown, grant_type?: unknown, refresh_token?: unknown, scope?: unknown }
+                Payload: { grant_type?: unknown, refresh_token?: unknown, scope?: unknown }
             }>({
                 options: routesOptions,
                 path: this.refreshTokenRoute.path,
                 method: 'POST',
                 handler: async (req, h) => {
+                    // Grant validation
+                    const supportedGrants = ['refresh_token']
+                    if (!(typeof req.payload.grant_type === 'string' && supportedGrants.includes(req.payload.grant_type))) {
+                        return h.response({ error: 'unsupported_grant_type', error_description: `Request does not support the 'grant_type' '${req.payload.grant_type}'.` }).code(400)
+                    }
+
+                    // Client authentication is present?
+                    const {
+                        clientId,
+                        clientSecret,
+                        error,
+                        errorDescription
+                    } = await this._extractClientParams(req as unknown as Request<ReqRefDefaults>, authMethodsInstances, supported); 
+
+                    if (error) {
+                        return h.response({ error: error, error_description: errorDescription || undefined }).code(400)
+                    }
+
+                    if (!clientId || !clientSecret) {
+                        return h
+                            .response({
+                                error: 'invalid_request',
+                                error_description: `Supported token endpoint authentication methods: ${supported.join(', ')}`
+                            }).code(400)
+                    }
                     // validating body
-                    const hasClientId = req.payload.client_id && typeof req.payload.client_id === 'string'
-                    const hasClientSecret = req.payload.client_secret && typeof req.payload.client_secret === 'string'
                     const hasRefreshToken = req.payload.refresh_token && typeof req.payload.refresh_token === 'string'
                     const isRefreshTokenGrantType = req.payload.grant_type === 'refresh_token'
                     if (
-                        hasClientId &&
+                        clientId &&
                         hasRefreshToken &&
                         isRefreshTokenGrantType
                     ) {
                         const params: OAuth2RefreshTokenParams = {
-                            clientId: `${req.payload.client_id}`,
+                            clientId,
+                            clientSecret,
                             grantType: `${req.payload.grant_type}`,
                             refreshToken: `${req.payload.refresh_token}`
-                        }
-
-                        if (hasClientSecret) {
-                            params.clientSecret = `${req.payload.client_secret}`
                         }
 
                         if (req.payload.scope && typeof req.payload.scope === 'string') {
@@ -352,13 +398,10 @@ export class OAuth2ClientCreds extends OAuth2AuthDesign {
                     } else {
                         let error: OAuth2Error = 'unauthorized_client';
                         let errorDescription = ''
-                        if (req.payload.grant_type != 'refresh_token') {
-                            error = 'unsupported_grant_type'
-                            errorDescription = `Request does not support the 'grant_type' '${req.payload.grant_type}'.`
-                        } else if (!(req.payload.client_id && typeof req.payload.client_id === 'string')) {
+                        if (!clientId) {
                             error = 'invalid_request'
                             errorDescription = 'Request was missing the \'client_id\' parameter.'
-                        } else if (!(req.payload.client_secret && typeof req.payload.client_secret === 'string')) {
+                        } else if (!clientSecret) {
                             error = 'invalid_request'
                             errorDescription = 'Request was missing the \'client_secret\' parameter.'
                         } else if (!(req.payload.refresh_token && typeof req.payload.refresh_token === 'string')) {
