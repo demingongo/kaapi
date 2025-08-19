@@ -257,6 +257,47 @@ export abstract class OAuth2AuthDesign extends AuthDesign {
         }*/
     }
 
+    protected async _extractClientParams(
+        req: Request<ReqRefDefaults>,
+        authMethodsInstances: Record<TokenEndpointAuthMethod, ClientAuthMethod | undefined>,
+        checkOrder: TokenEndpointAuthMethod[],
+    ): Promise<{ clientId?: string; clientSecret?: string; error?: OAuth2Error; errorDescription?: string }> {
+        let clientId: string | undefined;
+        let clientSecret: string | undefined;
+        let error: OAuth2Error | undefined;
+        let errorDescription: string | undefined;
+
+        for (const am of checkOrder) {
+            const amInstance = authMethodsInstances[am]
+            if (amInstance) {
+                //console.log('Check', amInstance.method, '...')
+                const v = await amInstance.extractParams(req as unknown as Request<ReqRefDefaults>)
+                if (v.hasAuthMethod) {
+                    //console.log(amInstance.method, 'IS BEING USED')
+                    clientId = v.clientId
+                    clientSecret = v.clientSecret
+                    if (!v.clientId) {
+                        error = 'invalid_request'
+                        errorDescription = `Error ${amInstance.method}: Missing client_id`
+                    } else if (!amInstance.secretIsOptional && !v.clientSecret) {
+                        error = 'invalid_request'
+                        errorDescription = `Error ${amInstance.method}: Missing client_secret`
+                    }
+                    break;
+                } else {
+                    //console.log(amInstance.method, 'was not used')
+                }
+            }
+        }
+
+        return {
+            error,
+            errorDescription,
+            clientId,
+            clientSecret
+        }
+    }
+
     setTokenType<Refs extends ReqRef = ReqRefDefaults>(value: TokenType<Refs>): this {
         this._tokenType = value
         return this

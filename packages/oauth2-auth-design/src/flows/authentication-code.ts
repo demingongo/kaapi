@@ -309,29 +309,15 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
                     }
 
                     // Client authentication is present?
-                    let clientId: string | undefined;
-                    let clientSecret: string | undefined;
+                    const {
+                        clientId,
+                        clientSecret,
+                        error,
+                        errorDescription
+                    } = await this._extractClientParams(req as unknown as Request<ReqRefDefaults>, authMethodsInstances, supported); 
 
-                    for (const am of supported) {
-                        const amInstance = authMethodsInstances[am]
-                        if (amInstance) {
-                            //console.log('Check', amInstance.method, '...')
-                            const v = await amInstance.extractParams(req as unknown as Request<ReqRefDefaults>)
-                            if (v.hasAuthMethod) {
-                                //console.log(amInstance.method, 'IS BEING USED')
-                                clientId = v.clientId
-                                clientSecret = v.clientSecret
-                                if (!v.clientId) {
-                                    return h.response({ error: 'invalid_request', error_description: `Error ${amInstance.method}: Missing client_id` }).code(400)
-                                }
-                                if (!amInstance.secretIsOptional && !v.clientSecret) {
-                                    return h.response({ error: 'invalid_request', error_description: `Error ${amInstance.method}: Missing client_secret` }).code(400)
-                                }
-                                break;
-                            } else {
-                                //console.log(amInstance.method, 'was not used')
-                            }
-                        }
+                    if (error) {
+                        return h.response({ error: 'invalid_request', error_description: errorDescription || undefined }).code(400)
                     }
 
                     if (!clientId) {
@@ -457,25 +443,15 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
                     }
 
                     // Client authentication is present?
-                    let clientId: string | undefined;
-                    let clientSecret: string | undefined;
+                    const {
+                        clientId,
+                        clientSecret,
+                        error,
+                        errorDescription
+                    } = await this._extractClientParams(req as unknown as Request<ReqRefDefaults>, authMethodsInstances, supported); 
 
-                    for (const am of supported) {
-                        const amInstance = authMethodsInstances[am]
-                        if (amInstance) {
-                            const v = await amInstance.extractParams(req as unknown as Request<ReqRefDefaults>)
-                            if (v.hasAuthMethod) {
-                                clientId = v.clientId
-                                clientSecret = v.clientSecret
-                                if (!v.clientId) {
-                                    return h.response({ error: 'invalid_request', error_description: `Error ${amInstance.method}: Missing client_id` }).code(400)
-                                }
-                                if (!amInstance.secretIsOptional && !v.clientSecret) {
-                                    return h.response({ error: 'invalid_request', error_description: `Error ${amInstance.method}: Missing client_secret` }).code(400)
-                                }
-                                break;
-                            }
-                        }
+                    if (error) {
+                        return h.response({ error: 'invalid_request', error_description: errorDescription || undefined }).code(400)
                     }
 
                     if (!clientId) {

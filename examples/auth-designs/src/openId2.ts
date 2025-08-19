@@ -10,10 +10,10 @@ import {
     OAuth2TokenResponse,
     //OAuth2AuthorizationCode,
     BearerToken,
-    ClientSecretPost,
-    ClientSecretBasic,
-    ClientSecretJwt,
-    PrivateKeyJwt, 
+    //ClientSecretPost,
+    //ClientSecretBasic,
+    //ClientSecretJwt,
+    //PrivateKeyJwt, 
     //DPoPToken 
 } from '@kaapi/oauth2-auth-design';
 
@@ -152,10 +152,11 @@ export const openIDDesign2 = new OpenIDAuthDesign(
     })
     .setTokenType(tokenType)
     .setTokenTTL(36000)
-    .addClientAuthenticationMethod(new ClientSecretPost())
-    .addClientAuthenticationMethod(new ClientSecretBasic())
-    .addClientAuthenticationMethod(new ClientSecretJwt())
-    .addClientAuthenticationMethod(new PrivateKeyJwt())
+    //.addClientAuthenticationMethod(new ClientSecretPost())
+    //.addClientAuthenticationMethod(new ClientSecretBasic())
+    //.addClientAuthenticationMethod(new ClientSecretJwt())
+    //.addClientAuthenticationMethod(new PrivateKeyJwt())
     //.clientSecretBasicAuthenticationMethod()
-    //.clientSecretPostAuthenticationMethod()
-    //.noneAuthenticationMethod() // or .withPkce()
+    .clientSecretPostAuthenticationMethod() // to debug (used in SwaggerUI)
+    //.noneAuthenticationMethod() // or .withPkce() (default)
+    //.withoutPkce() // to remove 'none'

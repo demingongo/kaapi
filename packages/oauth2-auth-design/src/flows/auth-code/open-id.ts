@@ -232,7 +232,7 @@ export class OpenIDAuthDesign extends OAuth2AuthorizationCode {
                     ]
                 }
 
-                return { wellKnownOpenIDConfig, ...this.openidConfiguration }
+                return { ...wellKnownOpenIDConfig, ...this.openidConfiguration }
             }
         })
 
