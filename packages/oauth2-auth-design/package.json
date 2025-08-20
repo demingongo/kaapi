@@ -1,7 +1,7 @@
 {
   "name": "@kaapi/oauth2-auth-design",
-  "version": "0.0.4",
-  "private": true,
+  "version": "0.0.13",
+  "private": false,
   "description": "OAuth2 auth design for kaapi",
   "main": "lib/index.js",
   "exports": {
