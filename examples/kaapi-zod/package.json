@@ -17,28 +17,28 @@
   "packageManager": "pnpm@10.8.0",
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
-    "@eslint/js": "^9.30.0",
-    "@stylistic/eslint-plugin": "^5.0.0",
-    "@types/node": "^24.2.1",
-    "@typescript-eslint/eslint-plugin": "^8.35.0",
-    "@typescript-eslint/parser": "^8.35.0",
-    "eslint": "^9.30.0",
-    "globals": "^16.2.0",
+    "@eslint/js": "^9.33.0",
+    "@stylistic/eslint-plugin": "^5.2.3",
+    "@types/node": "^24.3.0",
+    "@typescript-eslint/eslint-plugin": "^8.40.0",
+    "@typescript-eslint/parser": "^8.40.0",
+    "eslint": "^9.33.0",
+    "globals": "^16.3.0",
     "nodemon": "^3.1.10",
     "ts-node": "^10.9.2",
-    "typescript": "^5.8.3",
-    "typescript-eslint": "^8.35.0"
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.40.0"
   },
   "dependencies": {
     "@hapi/boom": "^10.0.1",
-    "@hapi/hapi": "^21.4.2",
+    "@hapi/hapi": "^21.4.3",
     "@hapi/hoek": "^11.0.7",
     "@hapi/inert": "^7.1.0",
     "@kaapi/kaapi": "workspace:^",
     "@novice1/api-doc-generator": "^1.0.2",
-    "joi": "^17.13.3",
+    "joi": "^18.0.1",
     "tslib": "^2.8.1",
-    "zod": "^3.25.67",
-    "zod-validation-error": "^3.5.2"
+    "zod": "^3.25.76",
+    "zod-validation-error": "^3.5.3"
   }
 }

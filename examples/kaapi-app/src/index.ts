@@ -65,13 +65,18 @@ const app = new Kaapi({
 //#region config
 
 // server static files
-app.server().server.register(inert)
+app.idle().server.register(inert).then(
+    () => {
+        app.listen()
+        app.refreshDocs()
+    }
+)
 
 
 /*
 // commented because it can be set from the init (see above)
 // try auth on all routes (mode 'try' = still continue if it fails and auth was not required for the route)
-app.server().server.auth.default({
+app.idle().server.auth.default({
     strategy: 'kaapi',
     mode: 'try'
 })
@@ -83,9 +88,9 @@ app.server().server.auth.default({
 //#region routing
 
 // 404
-app.route({}, () => Boom.notFound('Nothing here'))
+app.idle().route({}, () => Boom.notFound('Nothing here'))
 
-app.route({
+app.idle().route({
     method: 'GET',
     path: '/file',
     //auth: true, // mode 'required' if no mode is defined in the route 
@@ -97,7 +102,7 @@ app.route({
 })
 
 // to not insert in documentation, add directly from server
-app.server().route({
+app.idle().route({
     method: 'GET',
     path: '/error',
     options: {
@@ -107,7 +112,7 @@ app.server().route({
     throw Boom.badRequest('An error now?')
 })
 
-app.route<{
+app.idle().route<{
     Payload: {
         username: string, picture: {
             _data: Stream,
@@ -154,7 +159,7 @@ app.route<{
     return 'ok'
 })
 
-app.route<{ Query: { name?: string } }>({
+app.idle().route<{ Query: { name?: string } }>({
     method: 'GET',
     path: '/',
     options: {
@@ -168,7 +173,7 @@ app.route<{ Query: { name?: string } }>({
     }
 }, ({ query: { name } }) => `Hello ${name || 'World'}!`)
 
-app.server().route<{ Params: { filename?: string } }>({
+app.idle().route<{ Params: { filename?: string } }>({
     method: 'GET',
     path: '/public/{filename*}',
     options: {

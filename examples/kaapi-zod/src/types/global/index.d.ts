@@ -1,7 +1,7 @@
 import { ZodType } from 'zod/v4';
 type ZodSchema = ZodType<any, any> | undefined | null; 
 
-declare module '@hapi/hapi' {
+declare module '@kaapi/kaapi' {
   interface PluginSpecificConfiguration {
     zod?: {
       payload?: ZodSchema;
@@ -12,5 +12,6 @@ declare module '@hapi/hapi' {
     };
   }
 }
+
 
 export { };
