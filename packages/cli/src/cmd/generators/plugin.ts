@@ -1,4 +1,4 @@
-import { camelCase } from 'lodash';
+import { camelCase, kebabCase } from '../../utils';
 import { FileGenerator, Question, QuestionType } from '../../definitions';
 
 export type PluginFileGenerator = FileGenerator & {
@@ -49,4 +49,7 @@ export const ${this.pluginName}: KaapiPlugin = {
 
         return r
     },
+    getFilename() {
+        return kebabCase(`${this.pluginName}`) + '.ts'
+    }
 }

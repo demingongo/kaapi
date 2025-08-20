@@ -36,6 +36,7 @@ export interface FileGenerator {
     getFileContent(): string
 
     getQuestions?(): Question[]
+    getFilename?(): string
 }
 
 export interface Config {

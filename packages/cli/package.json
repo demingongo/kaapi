@@ -1,7 +1,6 @@
 {
   "name": "@kaapi/cli",
   "version": "0.0.1",
-  "private": true,
   "description": "CLI for kaapi",
   "main": "dist/index.js",
   "bin": {
