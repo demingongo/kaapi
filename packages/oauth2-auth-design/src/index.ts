@@ -5,6 +5,7 @@ export * from './flows/auth-code/open-id'
 export * from './flows/authentication-code'
 export * from './flows/client-credentials'
 
+export * from './utils/cache-set'
 export * from './utils/client-auth-methods'
 export * from './utils/in-memory-jwks-store'
 export * from './utils/jwks-generator'

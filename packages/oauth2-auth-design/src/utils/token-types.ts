@@ -8,7 +8,7 @@ import {
     importJWK,
     calculateJwkThumbprint
 } from 'jose';
-import { InMemoryTmpCache } from './in-memory-cache';
+import { InMemoryTmpCache, StringCacheSet } from './cache-set';
 
 export type TokenTypeValidationResponse = {
     isValid?: boolean
@@ -88,7 +88,7 @@ export class DPoPToken<
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     #tokenRequestHandler: TokenRequestValidation<any>
     #ttl: number = 300
-    #cache = new InMemoryTmpCache<string>()
+    #cache: StringCacheSet = new InMemoryTmpCache<string>()
 
     get prefix(): 'DPoP' {
         return 'DPoP'
@@ -141,7 +141,7 @@ export class DPoPToken<
                 if (!payload.jti) throw new Error('Missing JTI');
                 
                 if (await this.#cache.has(payload.jti)) throw new Error('Replay detected');
-                this.#cache.set(payload.jti, ttl);
+                await this.#cache.add(payload.jti, ttl);
 
                 req.app.oauth2 = req.app.oauth2 || {}
                 req.app.oauth2.dpopPayload = payload;
@@ -159,6 +159,11 @@ export class DPoPToken<
                 console.error('Invalid DPoP proof:', err)
                 return { message: `${err}` }
             }
+    }
+
+    setCacheSet(value: StringCacheSet): this {
+        this.#cache = value
+        return this
     }
 
     setTTL(value: number): this {

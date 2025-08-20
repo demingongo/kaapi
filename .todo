@@ -11,6 +11,8 @@
     - client_secret_basic as it is considered more secure than client_secret_post which is usually used for debug @done
     - should also support "client_secret_jwt" and "private_key_jwt" and token_endpoint_auth_signing_alg_values_supported @done
     - use Client Authentication Methods (client_secret_jwt, ...) in client credentials flow @done
+    - package json exports: "." and "bin"
+    - cli create templates
 
 
 - @kaapi/kaapi

@@ -9,13 +9,13 @@ import {
     IOAuth2TokenResponse,
     OAuth2TokenResponseBody,
     OAuth2ErrorBody,
-    OIDCHelpers,
+    OpenIDHelpers,
     PathValue
 } from '../common'
 
 //#region TokenRoute
 
-export interface OAuth2ACTokenParams extends Partial<OIDCHelpers> {
+export interface OAuth2ACTokenParams extends Partial<OpenIDHelpers> {
     grantType: string
     code: string
     clientId: string

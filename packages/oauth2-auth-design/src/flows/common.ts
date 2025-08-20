@@ -41,7 +41,7 @@ export type OAuth2AuthOptions<
     } | Auth | Boom>;
 };
 
-export interface OIDCHelpers {
+export interface OpenIDHelpers {
     readonly ttl?: number
     createIDToken: (payload: WithRequired<Partial<OAuth2JwtPayload>, 'sub'>) => Promise<string>
 }
@@ -50,7 +50,7 @@ export interface OIDCHelpers {
 
 //#region RefreshTokenRoute
 
-export interface OAuth2RefreshTokenParams extends Partial<OIDCHelpers> {
+export interface OAuth2RefreshTokenParams extends Partial<OpenIDHelpers> {
     grantType: string
     refreshToken: string
     clientId: string

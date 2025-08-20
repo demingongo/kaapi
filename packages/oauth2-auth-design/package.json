@@ -2,8 +2,14 @@
   "name": "@kaapi/oauth2-auth-design",
   "version": "0.0.4",
   "private": true,
-  "description": "OAuth2 design for kaapi",
+  "description": "OAuth2 auth design for kaapi",
   "main": "lib/index.js",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    }
+  },
   "scripts": {
     "lint": "eslint .",
     "build": "tsc && node ./scripts/buildDT.mjs",
