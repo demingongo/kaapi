@@ -14,7 +14,7 @@
 
 
 - @kaapi/kaapi
-    - make an example with @novice1/socket
+    - make an example with @novice1/socket @done
     - need to think more about how we are going to handle readiness (registering plugins, strategies, ...)
 
 - @kaapi/cli

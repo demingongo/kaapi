@@ -210,8 +210,8 @@ export class Kaapi extends KaapiBaseApp implements IKaapiApp {
     }
 
     private async _startServer() {
-        this.#serverStarted = true
         await this.kaapiServer?.server.start()
+        this.#serverStarted = true
         this.log.verbose('📢  Server listening on %s', this.kaapiServer?.server.info.uri);
         this.log.verbose(`${this.kaapiServer?.server.info.id} ${this.kaapiServer?.server.info.started ? new Date(this.kaapiServer.server.info.started) : this.kaapiServer?.server.info.started}`);
     }
