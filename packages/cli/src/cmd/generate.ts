@@ -59,7 +59,6 @@ async function doContinue(cwd: string): Promise<boolean> {
     prompts.log.info('action: generate')
 
     if (!await isKaapiProjectRoot(cwd)) {
-        //return error(2, 'Current working directory has no package.json')
         const isOk = await prompts.select({
             message: 'Current working directory is not the root of a kaapi project, continue?',
             options: [{
@@ -182,9 +181,16 @@ export default (async function generate(argv, { cancel, config, error, cwd, acti
         return error(2, `No generator was found ${fileGeneratorName ? `(name: ${fileGeneratorName})` : ''}`)
     }
 
-    const { _: _c, generator: _g, type: _t, ...initOptions } = argv
+    const { _: _c, generator: _g, type: _t, list: _l, help: _h, ...initOptions } = argv
 
-    fileGenerator.init(initOptions)
+    const defOptions = fileGenerator.options || {}
+    const gOptions: Record<string, unknown> = {}
+
+    for (const k in defOptions) {
+        if (typeof initOptions[k] != 'undefined') gOptions[k] = initOptions[k]
+    }
+
+    fileGenerator.init(gOptions)
 
     const questions = fileGenerator.getQuestions?.() || []
 
@@ -238,17 +244,33 @@ export default (async function generate(argv, { cancel, config, error, cwd, acti
         return error(2, `Invalid filename: ${r}`)
     }
 
+    const target = `plugins/${filename}`
+    try {
+        await fs.access(target)
+        const isOk = await prompts.select({
+            message: `File ${target} already exists, overwrite?`,
+            options: [{
+                label: 'yes',
+                value: 'y',
+            },
+            {
+                label: 'No',
+                value: 'n',
+            }],
+            initialValue: 'n'
+        })
+        if (prompts.isCancel(isOk) || isOk == 'n') return cancel()
+    } catch (_err) {
+        //
+    }
     const spinner = prompts.spinner({ indicator: 'dots' })
-
-    spinner.start(`Creating plugins/${filename}`)
+    spinner.start(`Creating ${target}`)
     try {
         await fs.mkdir('plugins', { recursive: true })
     } catch (_err) {
         //
     }
-    await fs.writeFile(`plugins/${filename}`, content)
+    await fs.writeFile(`${target}`, content)
     spinner.stop(`Created plugins/${filename}`)
 
-    prompts.log.success('')
-
-}) as CmdAction<{ type?: 'plugin' | 'auth-design', generator?: string, list?: string, help?: boolean }>
+}) as CmdAction<{ type?: 'plugin' | 'auth-design', generator?: string, list?: boolean, help?: boolean, [key: string]: unknown }>

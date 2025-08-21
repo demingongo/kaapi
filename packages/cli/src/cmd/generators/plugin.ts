@@ -16,8 +16,6 @@ export const pluginGenerator: PluginFileGenerator = {
     pluginName: '',
 
     init: function (options: Record<string, unknown>): void {
-
-        console.log('options:', options)
         if (typeof options['plugin-name'] == 'string') {
             this.pluginName = camelCase(options['plugin-name'])
         }
