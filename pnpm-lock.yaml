@@ -496,6 +496,9 @@ importers:
       '@hapi/hoek':
         specifier: ^11.0.7
         version: 11.0.7
+      '@kaapi/cli':
+        specifier: workspace:^
+        version: link:../cli
       '@kaapi/kaapi':
         specifier: workspace:^
         version: link:../kaapi
