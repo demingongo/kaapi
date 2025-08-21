@@ -2,7 +2,17 @@
   "name": "@kaapi/cli",
   "version": "0.0.1",
   "description": "CLI for kaapi",
-  "main": "dist/index.js",
+  "main": "dist/definitions.js",
+  "exports": {
+    "./definitions": {
+      "types": "./dist/definitions.d.ts",
+      "default": "./dist/definitions.js"
+    },
+    "./utils": {
+      "types": "./dist/utils.d.ts",
+      "default": "./dist/utils.js"
+    }
+  },
   "bin": {
     "kaapi": "dist/index.js"
   },

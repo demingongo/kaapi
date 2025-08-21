@@ -28,13 +28,13 @@ export function isValidFilename(input: string) {
 
 export async function isKaapiProjectRoot(path: string): Promise<boolean> {
   try {
-    const pckPath = nodePath.join(path, 'package.json')
+    const pkgPath = nodePath.join(path, 'package.json')
 
-    //await fs.access(pckPath);
-    const pckContent = await fs.readFile(pckPath)
-    const pck = JSON.parse(Buffer.from(pckContent).toString('utf-8'))
+    //await fs.access(pkgPath);
+    const pkgContent = await fs.readFile(pkgPath)
+    const pkg = JSON.parse(Buffer.from(pkgContent).toString('utf-8'))
     
-    if(typeof pck?.dependencies?.['@kaapi/kaapi'] != 'string') {
+    if(typeof pkg?.dependencies?.['@kaapi/kaapi'] != 'string') {
         return false
     }
 
