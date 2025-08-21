@@ -4,7 +4,7 @@ import { pathToFileURL } from 'url';
 import * as prompts from '@clack/prompts';
 import { Config } from './definitions';
 
-export async function loadKaapiConfig(): Promise<Config> {
+export async function loadKaapiConfig(silent?: boolean): Promise<Config> {
     const configNames = ['kaapi.config.mjs', 'kaapi.config.js'];
     let configPath: string | undefined;
 
@@ -17,7 +17,7 @@ export async function loadKaapiConfig(): Promise<Config> {
     }
 
     if (!configPath) {
-        prompts.log.warn('No kaapi config file found.');
+        if(!silent) prompts.log.warn('No kaapi config file found.');
         return {}
     }
 
@@ -27,7 +27,7 @@ export async function loadKaapiConfig(): Promise<Config> {
     const configModule = await import(configModuleUrl);
     const config = configModule.default || configModule;
 
-    prompts.log.info(`Loaded kaapi config: ${configPath}`)
+    if(!silent) prompts.log.info(`Loaded kaapi config: ${configPath}`)
 
     return config;
 }

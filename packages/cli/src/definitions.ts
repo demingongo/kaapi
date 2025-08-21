@@ -27,8 +27,10 @@ export type Question<Value extends Readonly<string | boolean | number> = Readonl
 export type FileGeneratorType = 'plugin' | 'auth-design'
 
 export interface FileGenerator {
-    name: string
-    type: FileGeneratorType
+    readonly name: string
+    readonly type: FileGeneratorType
+    readonly description?: string
+    readonly options?: Record<string, string>
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     init(options: Record<string, any>): void
@@ -44,6 +46,7 @@ export interface Config {
 }
 
 export interface CmdContext {
+    action: string
     config: Config
     cwd: string
     cancel: () => void

@@ -29,15 +29,17 @@ const error = (code: number, message: string) => {
 }
 
 (async () => {
-    prompts.intro(`${pckg.name} ${pckg.version}`)
-    const config = await loadKaapiConfig();
-    console.log('Loaded kaapi config:', config);
+    if (!argv.help)
+        prompts.intro(`${pckg.name} ${pckg.version}`)
+    const config = await loadKaapiConfig(!!argv.help);
+    //console.log('Loaded kaapi config:', config);
 
     const opts: CmdContext = {
         config,
         cwd,
         cancel,
-        error
+        error,
+        action: ''
     }
 
     let cmd = argv._[0]
@@ -45,6 +47,12 @@ const error = (code: number, message: string) => {
         : ''
 
     if (!cmd) {
+
+        if (argv.help) {
+            // TODO: list actions
+            return
+        }
+
         const action = await prompts.select({
             message: 'What do you want to do?:',
             options: Object.keys(CMDS).map((label) => {
@@ -64,10 +72,11 @@ const error = (code: number, message: string) => {
         cmd = ALIASES[cmd] || cmd
         const action = CMDS[cmd]
         if (action) {
+            opts.action = cmd
             await action(argv, opts)
         }
     }
 
-
-    prompts.outro()
+    if (!argv.help)
+        prompts.outro('Operation ended')
 })();

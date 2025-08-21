@@ -8,10 +8,16 @@ export type PluginFileGenerator = FileGenerator & {
 export const pluginGenerator: PluginFileGenerator = {
     name: 'kaapi-plugin',
     type: 'plugin',
+    description: 'Creates a simple plugin for kaapi.',
+    options: {
+        'plugin-name': 'The name of the plugin'
+    },
 
     pluginName: '',
 
     init: function (options: Record<string, unknown>): void {
+
+        console.log('options:', options)
         if (typeof options['plugin-name'] == 'string') {
             this.pluginName = camelCase(options['plugin-name'])
         }

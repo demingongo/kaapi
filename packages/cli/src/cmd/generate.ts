@@ -1,33 +1,84 @@
 import * as prompts from '@clack/prompts';
+import fs from 'node:fs/promises'
 import { CmdAction, FileGenerator, FileGeneratorType, QuestionType } from '../definitions';
 import { pluginGenerator } from './generators/plugin';
-import { kebabCase } from '../utils';
+import { isKaapiProjectRoot, isValidFilename, kebabCase } from '../utils';
 
 const FILE_TYPES: Record<FileGeneratorType, string> = {
     'auth-design': 'Auth Design',
     plugin: 'Plugin'
 }
 
-/**
- * Allows only:
- * - Letters (a-z, A-Z)
- * - Numbers (0-9)
- * - Dashes (-)
- * - Underscores (_)
- * - Dots (.)
- * 
- * Enforces:
- * - Minimum 4 characters
- * - At least one dot (.)
- * - At least one letter after the last dot
- */
-function isValidFilename(input: string) {
-  const regex = /^(?=[a-zA-Z0-9._-]{4,}$)(?=.*\.)[a-zA-Z0-9_-]*\.[a-zA-Z]+$/;
-  return regex.test(input);
+function createHelpMessage(action: string, fileGenerator?: FileGenerator, generatorOptions?: Record<string, string>): string {
+
+    const defaultDescription = 'Interactive CLI to generate files.'
+
+    let optionsString = ''
+
+    if (generatorOptions && Object.keys(generatorOptions).length) {
+        const longestOptionLength = Object.keys(generatorOptions).map(k => k.length).reverse()[0]
+
+        for (const p in generatorOptions) {
+            optionsString += `    --${p.padEnd(longestOptionLength - p.length, ' ')}          ${generatorOptions[p]} 
+`
+        }
+    }
+
+    let defaultHelp = `\
+  
+  Usage: kaapi ${action} [OPTION]...
+  
+  ${defaultDescription}
+  
+  Options:
+    --generator NAME          use a generator
+    --type TYPE               type of generator
+    --list                    list generators
+
+  Available types:
+  auth-design
+  plugin
+`
+
+    if (fileGenerator) {
+        defaultHelp = `\
+  
+  Usage: kaapi ${action} --generator ${fileGenerator.name} [OPTION]...
+  
+  ${fileGenerator.description || defaultDescription}
+  
+  Options:
+${optionsString}
+`
+    }
+
+    return defaultHelp
 }
 
-export default (async function generate(argv, { cancel, config, error }) {
-    prompts.log.info('generate ...')
+async function doContinue(cwd: string): Promise<boolean> {
+    prompts.log.info('action: generate')
+
+    if (!await isKaapiProjectRoot(cwd)) {
+        //return error(2, 'Current working directory has no package.json')
+        const isOk = await prompts.select({
+            message: 'Current working directory is not the root of a kaapi project, continue?',
+            options: [{
+                label: 'yes',
+                value: 'y',
+            },
+            {
+                label: 'No',
+                value: 'n',
+            }],
+            initialValue: 'n'
+        })
+        if (prompts.isCancel(isOk) || isOk == 'n') return false
+    }
+
+    return true
+}
+
+export default (async function generate(argv, { cancel, config, error, cwd, action }) {
 
     let generators: FileGenerator[] = [
         pluginGenerator
@@ -44,7 +95,14 @@ export default (async function generate(argv, { cancel, config, error }) {
         return error(2, `No generator was found ${filterType ? `(type: ${filterType})` : ''}`)
     }
 
+    if (!fileGeneratorName && argv.help) {
+        console.log(createHelpMessage(action))
+        return
+    }
+
     if (!fileGeneratorName) {
+        if (!(await doContinue(cwd))) return cancel()
+
         if (filterType) {
             if (Object.keys(FILE_TYPES).includes(filterType)) {
                 generators = generators.filter(g => g.type == filterType) || []
@@ -112,13 +170,21 @@ export default (async function generate(argv, { cancel, config, error }) {
         fileGeneratorName = fileGenerator.name
     } else {
         fileGenerator = generators.filter(g => g.name == fileGeneratorName)[0]
+        if (fileGenerator && argv.help) {
+            console.log(createHelpMessage(action, fileGenerator, fileGenerator.options))
+            return 
+        }
+
+        if (!(await doContinue(cwd))) return cancel()
     }
 
     if (!fileGenerator) {
         return error(2, `No generator was found ${fileGeneratorName ? `(name: ${fileGeneratorName})` : ''}`)
     }
 
-    fileGenerator.init(argv)
+    const { _: _c, generator: _g, type: _t, ...initOptions } = argv
+
+    fileGenerator.init(initOptions)
 
     const questions = fileGenerator.getQuestions?.() || []
 
@@ -144,21 +210,21 @@ export default (async function generate(argv, { cancel, config, error }) {
 
     const content = fileGenerator.getFileContent()
 
-    if (content) {
-        prompts.log.success(content)
+    if (!content) {
+        return error(2, `No content (generator: ${fileGeneratorName})`)
     }
 
     let filename = fileGenerator.getFilename?.()
-    
+
     if (filename) {
-        if(!isValidFilename(filename)) {
+        if (!isValidFilename(filename)) {
             prompts.log.error(`Invalid filename: ${filename}`)
             filename = kebabCase(filterType) + '.ts'
         }
     } else {
         filename = kebabCase(filterType) + '.ts'
     }
-    
+
     const r = await prompts.text({
         message: 'The name of the file?',
         defaultValue: `${filename}`,
@@ -169,9 +235,20 @@ export default (async function generate(argv, { cancel, config, error }) {
     if (isValidFilename(r)) {
         filename = r
     } else {
-        return error(2, `Invalid filename: ${filename}`)
+        return error(2, `Invalid filename: ${r}`)
     }
 
-    prompts.log.warn(`TODO: create file ${filename}`)
+    const spinner = prompts.spinner({ indicator: 'dots' })
 
-}) as CmdAction<{ type?: 'plugin' | 'auth-design', generator?: string, class?: string }>
+    spinner.start(`Creating plugins/${filename}`)
+    try {
+        await fs.mkdir('plugins', { recursive: true })
+    } catch (_err) {
+        //
+    }
+    await fs.writeFile(`plugins/${filename}`, content)
+    spinner.stop(`Created plugins/${filename}`)
+
+    prompts.log.success('')
+
+}) as CmdAction<{ type?: 'plugin' | 'auth-design', generator?: string, list?: string, help?: boolean }>
