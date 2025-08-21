@@ -16,10 +16,10 @@ function createHelpMessage(action: string, fileGenerator?: FileGenerator, genera
     let optionsString = ''
 
     if (generatorOptions && Object.keys(generatorOptions).length) {
-        const longestOptionLength = Object.keys(generatorOptions).map(k => k.length).reverse()[0]
+        const longestOptionLength = (Object.keys(generatorOptions).map(k => k.length).sort((a, b) => b - a)[0] || 1)
 
         for (const p in generatorOptions) {
-            optionsString += `    --${p.padEnd(longestOptionLength - p.length, ' ')}          ${generatorOptions[p]} 
+            optionsString += `    --${p.padEnd(longestOptionLength, ' ')}          ${generatorOptions[p]} 
 `
         }
     }
@@ -53,6 +53,18 @@ ${optionsString}
     }
 
     return defaultHelp
+}
+
+function cleanupOptionsDefinition(defOptions?: Record<string, string>) {
+    const options: Record<string, string> = {}
+
+    if (defOptions) {
+        for (const k in defOptions) {
+            if (!['_', 'generator', 'help', 'list', 'type'].includes(k)) options[k] = defOptions[k]
+        }
+    }
+
+    return options
 }
 
 async function doContinue(cwd: string): Promise<boolean> {
@@ -89,6 +101,8 @@ export default (async function generate(argv, { cancel, config, error, cwd, acti
 
     let fileGeneratorName: string = typeof argv.generator === 'string' ? argv.generator : '';
     let fileGenerator: FileGenerator | undefined;
+
+    const { _: _c, generator: _g, type: _t, list: _l, help: _h, ...initOptions } = argv
 
     if (!generators.length) {
         return error(2, `No generator was found ${filterType ? `(type: ${filterType})` : ''}`)
@@ -170,7 +184,7 @@ export default (async function generate(argv, { cancel, config, error, cwd, acti
     } else {
         fileGenerator = generators.filter(g => g.name == fileGeneratorName)[0]
         if (fileGenerator && argv.help) {
-            console.log(createHelpMessage(action, fileGenerator, fileGenerator.options))
+            console.log(createHelpMessage(action, fileGenerator, cleanupOptionsDefinition(fileGenerator.options)))
             return 
         }
 
@@ -181,9 +195,7 @@ export default (async function generate(argv, { cancel, config, error, cwd, acti
         return error(2, `No generator was found ${fileGeneratorName ? `(name: ${fileGeneratorName})` : ''}`)
     }
 
-    const { _: _c, generator: _g, type: _t, list: _l, help: _h, ...initOptions } = argv
-
-    const defOptions = fileGenerator.options || {}
+    const defOptions = cleanupOptionsDefinition(fileGenerator.options || {})
     const gOptions: Record<string, unknown> = {}
 
     for (const k in defOptions) {
