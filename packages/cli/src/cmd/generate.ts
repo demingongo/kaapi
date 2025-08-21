@@ -9,7 +9,7 @@ const FILE_TYPES: Record<FileGeneratorType, string> = {
     plugin: 'Plugin'
 }
 
-function createHelpMessage(action: string, fileGenerator?: FileGenerator, generatorOptions?: Record<string, string>): string {
+function createHelpMessage(action: string, fileGenerators: FileGenerator[], fileGenerator?: FileGenerator, generatorOptions?: Record<string, string>): string {
 
     const defaultDescription = 'Interactive CLI to generate files.'
 
@@ -27,29 +27,36 @@ function createHelpMessage(action: string, fileGenerator?: FileGenerator, genera
     let defaultHelp = `\
   
   Usage: kaapi ${action} [OPTION]...
-  
+
   ${defaultDescription}
-  
+
   Options:
     --generator NAME          use a generator
     --type TYPE               type of generator
-    --list                    list generators
 
   Available types:
-  auth-design
-  plugin
+    auth-design
+    plugin
 `
 
     if (fileGenerator) {
         defaultHelp = `\
   
   Usage: kaapi ${action} --generator ${fileGenerator.name} [OPTION]...
-  
+
   ${fileGenerator.description || defaultDescription}
-  
+
   Options:
 ${optionsString}
 `
+    } else {
+        defaultHelp += `
+  Available generators:
+`
+        for(const g of fileGenerators) {
+            defaultHelp += `    ${g.name}
+`
+        }
     }
 
     return defaultHelp
@@ -60,7 +67,7 @@ function cleanupOptionsDefinition(defOptions?: Record<string, string>) {
 
     if (defOptions) {
         for (const k in defOptions) {
-            if (!['_', 'generator', 'help', 'list', 'type'].includes(k)) options[k] = defOptions[k]
+            if (!['_', 'generator', 'help', 'type'].includes(k)) options[k] = defOptions[k]
         }
     }
 
@@ -102,14 +109,14 @@ export default (async function generate(argv, { cancel, config, error, cwd, acti
     let fileGeneratorName: string = typeof argv.generator === 'string' ? argv.generator : '';
     let fileGenerator: FileGenerator | undefined;
 
-    const { _: _c, generator: _g, type: _t, list: _l, help: _h, ...initOptions } = argv
+    const { _: _c, generator: _g, type: _t, help: _h, ...initOptions } = argv
 
     if (!generators.length) {
         return error(2, `No generator was found ${filterType ? `(type: ${filterType})` : ''}`)
     }
 
     if (!fileGeneratorName && argv.help) {
-        console.log(createHelpMessage(action))
+        console.log(createHelpMessage(action, generators))
         return
     }
 
@@ -184,7 +191,7 @@ export default (async function generate(argv, { cancel, config, error, cwd, acti
     } else {
         fileGenerator = generators.filter(g => g.name == fileGeneratorName)[0]
         if (fileGenerator && argv.help) {
-            console.log(createHelpMessage(action, fileGenerator, cleanupOptionsDefinition(fileGenerator.options)))
+            console.log(createHelpMessage(action, generators, fileGenerator, cleanupOptionsDefinition(fileGenerator.options)))
             return 
         }
 
@@ -285,4 +292,4 @@ export default (async function generate(argv, { cancel, config, error, cwd, acti
     await fs.writeFile(`${target}`, content)
     spinner.stop(`Created plugins/${filename}`)
 
-}) as CmdAction<{ type?: 'plugin' | 'auth-design', generator?: string, list?: boolean, help?: boolean, [key: string]: unknown }>
+}) as CmdAction<{ type?: 'plugin' | 'auth-design', generator?: string, help?: boolean, [key: string]: unknown }>
