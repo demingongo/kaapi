@@ -29,6 +29,7 @@ const socketApp = createServerApp()
     )
     .onConnection((socket) => {
         console.log('Socket connected:', socket.id);
+        socket.emit('reply', 'Eye C U')
     });
 
 const app = new Kaapi({
@@ -61,9 +62,21 @@ const app = new Kaapi({
 //#region config
 
 // server static files
-app.idle().server.register(inert)
+app.base().register(inert).then(
+    () => {
+        app.listen().then(ks => {
+            socketApp.build(ks.base.listener, {
+                cors: {
+                    origin: '*', // Or specify allowed origin(s) like 'http://localhost:3001'
+                    methods: ['GET', 'POST'],
+                    credentials: true
+                }
+            })
+        })
+    }
+)
 
-app.idle().server.auth.default({
+app.base().auth.default({
     strategy: 'kaapi',
     mode: 'try'
 })
@@ -73,9 +86,9 @@ app.idle().server.auth.default({
 //#region routing
 
 // 404
-app.idle().route({}, () => Boom.notFound('Nothing here'))
+app.route({}, () => Boom.notFound('Nothing here'))
 
-app.idle().route({
+app.route({
     method: 'GET',
     path: '/socketapp',
     options: {
@@ -85,7 +98,7 @@ app.idle().route({
     file: `${process.cwd()}/public/socketapp.html`
 })
 
-app.idle().route({
+app.route({
     method: 'GET',
     path: '/file',
     //auth: true, // mode 'required' if no mode is defined in the route 
@@ -97,7 +110,7 @@ app.idle().route({
 })
 
 // to not insert in documentation, add directly from server
-app.idle().route({
+app.route({
     method: 'GET',
     path: '/error',
     options: {
@@ -107,7 +120,7 @@ app.idle().route({
     throw Boom.badRequest('An error now?')
 })
 
-app.idle().route<{
+app.route<{
     Payload: {
         username: string, picture: {
             _data: Stream,
@@ -154,7 +167,7 @@ app.idle().route<{
     return 'ok'
 })
 
-app.idle().route<{ Query: { name?: string } }>({
+app.route<{ Query: { name?: string } }>({
     method: 'GET',
     path: '/',
     options: {
@@ -168,7 +181,7 @@ app.idle().route<{ Query: { name?: string } }>({
     }
 }, ({ query: { name } }) => `Hello ${name || 'World'}!`)
 
-app.idle().route<{ Params: { filename?: string } }>({
+app.route<{ Params: { filename?: string } }>({
     method: 'GET',
     path: '/public/{filename*}',
     options: {
@@ -186,12 +199,6 @@ app.idle().route<{ Params: { filename?: string } }>({
 
 //#region start
 
-app.listen().then(ks => {
-    socketApp.build(ks.server.listener, {cors: {
-        origin: '*', // Or specify allowed origin(s) like 'http://localhost:3001'
-        methods: ['GET', 'POST'],
-        credentials: true
-    }})
-})
+
 
 //#endregion start

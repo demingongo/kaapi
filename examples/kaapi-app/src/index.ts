@@ -65,10 +65,10 @@ const app = new Kaapi({
 //#region config
 
 // server static files
-app.idle().server.register(inert).then(
+app.base().register(inert).then(
     () => {
         app.listen()
-        app.refreshDocs()
+        //app.refreshDocs() // can be used to sort routes by paths and discover routes that were added directly to .base()
     }
 )
 
@@ -88,9 +88,9 @@ app.idle().server.auth.default({
 //#region routing
 
 // 404
-app.idle().route({}, () => Boom.notFound('Nothing here'))
+app.route({}, () => Boom.notFound('Nothing here'))
 
-app.idle().route({
+app.route({
     method: 'GET',
     path: '/file',
     //auth: true, // mode 'required' if no mode is defined in the route 
@@ -102,7 +102,7 @@ app.idle().route({
 })
 
 // to not insert in documentation, add directly from server
-app.idle().route({
+app.route({
     method: 'GET',
     path: '/error',
     options: {
@@ -112,7 +112,7 @@ app.idle().route({
     throw Boom.badRequest('An error now?')
 })
 
-app.idle().route<{
+app.route<{
     Payload: {
         username: string, picture: {
             _data: Stream,
@@ -159,7 +159,7 @@ app.idle().route<{
     return 'ok'
 })
 
-app.idle().route<{ Query: { name?: string } }>({
+app.route<{ Query: { name?: string } }>({
     method: 'GET',
     path: '/',
     options: {
@@ -167,13 +167,16 @@ app.idle().route<{ Query: { name?: string } }>({
         tags: ['Index'],
         validate: {
             query: Joi.object({
-                name: Joi.string().description('The name of the person to greet')
+                name: Joi.string().description('The name of the person to greet').trim()
             })
         }
     }
 }, ({ query: { name } }) => `Hello ${name || 'World'}!`)
 
-app.idle().route<{ Params: { filename?: string } }>({
+/**
+ * Not recommended because the documentation does not understand paths with "*"
+ */
+app.route<{ Params: { filename?: string } }>({
     method: 'GET',
     path: '/public/{filename*}',
     options: {
@@ -183,9 +186,22 @@ app.idle().route<{ Params: { filename?: string } }>({
             params: Joi.object({
                 filename: Joi.string().description('The name of the file').required()
             })
+        },
+        plugins: {
+            kaapi: {
+                docs: {
+                    story: `_Notes:_
+
+- __Not recommended because the documentation does not understand paths with "*".__
+                    `
+                }
+            }
         }
     }
-}, ({ params: { filename } }, h) => h.file(`${process.cwd()}/public/${filename}`))
+}, ({ params: { filename } }, h) => {
+    app.log.info(`file: ${process.cwd()}/public/${filename}`)
+    return h.file(`${process.cwd()}/public/${filename}`)
+})
 
 //#endregion routing
 

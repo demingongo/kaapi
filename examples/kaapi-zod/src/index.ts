@@ -99,7 +99,7 @@ const schema = {
 
 
 async function start() {
-    await app.idle().server.register({
+    await app.base().register({
         name: 'zod',
         register(server) {
             server.ext('onPreHandler', async (request: Request, h: ResponseToolkit) => {
@@ -139,7 +139,7 @@ async function start() {
 
     //type QueryType = z.infer<typeof schema.query>
 
-    app.idle().route(
+    app.route(
         {
             path: '/zod',
             auth: false,
@@ -181,6 +181,8 @@ async function start() {
     }, ({ payload: { version } }) => `${version}`)
 
     app.refreshDocs()
+
+    app.listen()
 }
 
 

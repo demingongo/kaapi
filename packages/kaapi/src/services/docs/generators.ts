@@ -100,6 +100,11 @@ function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(serverRoutes: KaapiS
                     if (route.parameters && sRoute.options?.payload?.allow) {
                         route.parameters.consumes = Array.isArray(sRoute.options.payload.allow) ? sRoute.options.payload.allow : [sRoute.options.payload.allow];
                     }
+                    if (route.parameters && typeof sRoute.options?.plugins?.kaapi?.docs === 'object') {
+                        if (sRoute.options.plugins.kaapi.docs.story) {
+                            route.parameters.story = sRoute.options.plugins.kaapi?.docs.story
+                        }
+                    }
                 }
 
                 return route;
@@ -171,6 +176,11 @@ function formatRequestRoute<Refs extends ReqRef = ReqRefDefaults>(reqRoute: Requ
                 route.parameters = sRoute.settings?.validate ? { ...sRoute.settings?.validate, body: sRoute.settings?.validate.payload, files: files } : undefined
                 if (route.parameters && sRoute.settings?.payload?.allow) {
                     route.parameters.consumes = Array.isArray(sRoute.settings.payload.allow) ? sRoute.settings.payload.allow : [sRoute.settings.payload.allow];
+                }
+                if (route.parameters && typeof sRoute.settings.plugins?.kaapi?.docs === 'object') {
+                    if (sRoute.settings.plugins.kaapi.docs.story) {
+                        route.parameters.story = sRoute.settings.plugins.kaapi.docs.story
+                    }
                 }
             }
 

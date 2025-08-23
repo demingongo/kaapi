@@ -18,7 +18,7 @@ export interface IKaapiApp extends IMessaging {
         handler?: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>): this
 }
 
-export abstract class KaapiBaseApp implements IKaapiApp {
+export abstract class AbstractKaapiApp implements IKaapiApp {
     abstract log: ILogger
     abstract emit<T = unknown>(topic: string, message: T): Promise<void>
     abstract on<T = unknown>(topic: string, handler: (message: T, sender: IMessagingSender) => void | Promise<void>, conf?: IMessagingSubscribeConfig | undefined): Promise<void>
@@ -40,8 +40,8 @@ export abstract class KaapiBaseApp implements IKaapiApp {
     toString() {
         let result = `${this.version || '0.0.0'}`
         if (this.kaapiServer) {
-            result += `, server: ${this.kaapiServer?.server.info.uri}, `
-            result += `state: ${this.kaapiServer?.server.info.started ? new Date(this.kaapiServer?.server.info.started) : 'STOPPED'}`
+            result += `, server: ${this.kaapiServer?.base.info.uri}, `
+            result += `state: ${this.kaapiServer?.base.info.started ? new Date(this.kaapiServer?.base.info.started) : 'STOPPED'}`
         }
         return result
     }

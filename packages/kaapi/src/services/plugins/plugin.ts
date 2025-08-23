@@ -90,7 +90,6 @@ export abstract class AuthDesign implements KaapiPlugin {
      * Whatever needs to be done to complete the integration.
      * (e.g.: register a route, ...)
      */
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     integrateHook(_t: KaapiTools): void | Promise<void> {
         
     }

@@ -5,6 +5,7 @@ declare module '@hapi/hapi' {
     kaapi?: {
       docs?: {
         disabled?: boolean;
+        story?: string;
       } | false
     };
   }

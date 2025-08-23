@@ -1,12 +1,12 @@
 import { KaapiServer, KaapiServerOptions, KaapiServerRoute } from '@kaapi/server';
-import { IKaapiApp, KaapiBaseApp } from './base-app';
+import { IKaapiApp, AbstractKaapiApp } from './abstract-app';
 import { createLogger, ILogger } from './services/log';
 import { IMessaging, IMessagingSender, IMessagingSubscribeConfig } from './services/messaging';
 import qs from 'qs'
 import winston from 'winston';
 import { createDocsRouter, DocsConfig, DocsOptions } from './services/docs/docs';
 import { KaapiOpenAPI, KaapiPostman } from './services/docs/generators';
-import { HandlerDecorations, Lifecycle, ReqRef, ReqRefDefaults } from '@hapi/hapi';
+import { HandlerDecorations, Lifecycle, ReqRef, ReqRefDefaults, Server } from '@hapi/hapi';
 import { KaapiPlugin, KaapiTools } from './services/plugins/plugin';
 
 export interface KaapiAppOptions extends KaapiServerOptions {
@@ -17,7 +17,7 @@ export interface KaapiAppOptions extends KaapiServerOptions {
     extend?: KaapiPlugin[] | KaapiPlugin
 }
 
-export class Kaapi extends KaapiBaseApp implements IKaapiApp {
+export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
     public readonly log;
 
     protected messaging?: IMessaging;
@@ -195,49 +195,32 @@ export class Kaapi extends KaapiBaseApp implements IKaapiApp {
                 this.docs,
                 this.#docsOptions
             )
-            this.idle().route(route, handler)
+            this.server().route(route, handler)
         }
     }
 
-    private _createServer(opts: KaapiServerOptions = {}): KaapiServer {
+    private _createServer(): KaapiServer {
         return new KaapiServer({
-            ...(this.#defaultServerOpts || {}),
             query: {
                 parser: (query) => qs.parse(query)
             },
-            ...opts
+            ...(this.#defaultServerOpts || {})
         })
     }
 
     private async _startServer() {
-        await this.kaapiServer?.server.start()
+        await this.kaapiServer?.base.start()
         this.#serverStarted = true
-        this.log.verbose('📢  Server listening on %s', this.kaapiServer?.server.info.uri);
-        this.log.verbose(`${this.kaapiServer?.server.info.id} ${this.kaapiServer?.server.info.started ? new Date(this.kaapiServer.server.info.started) : this.kaapiServer?.server.info.started}`);
+        this.log.verbose('📢  Server listening on %s', this.kaapiServer?.base.info.uri);
+        this.log.verbose(`${this.kaapiServer?.base.info.id} ${this.kaapiServer?.base.info.started ? new Date(this.kaapiServer.base.info.started) : this.kaapiServer?.base.info.started}`);
     }
 
     /**
      * Initializes and starts the server if needed and returns it
      */
-    server(opts?: KaapiServerOptions): KaapiServer {
+    server(): KaapiServer {
         if (!this.kaapiServer) {
-            this.kaapiServer = this._createServer(opts);
-        }
-        if (!this.#serverStarted) {
-            this._startServer()
-        }
-        return this.kaapiServer
-    }
-
-    /**
-     * Initializes and starts the server if needed and returns it
-     */
-    async serverAsync(opts?: KaapiServerOptions): Promise<KaapiServer> {
-        if (!this.kaapiServer) {
-            this.kaapiServer = this._createServer(opts);
-        }
-        if (!this.#serverStarted) {
-            await this._startServer()
+            this.kaapiServer = this._createServer();
         }
         return this.kaapiServer
     }
@@ -245,22 +228,20 @@ export class Kaapi extends KaapiBaseApp implements IKaapiApp {
     /**
      * Initializes the server and returns it without starting it
      */
-    idle(opts?: KaapiServerOptions): KaapiServer {
-        if (!this.kaapiServer) {
-            this.kaapiServer = this._createServer(opts);
-        }
-        return this.kaapiServer
+    base(): Server {
+        const server = this.server()
+        return server.base
     }
 
     /**
      * Initializes and starts the server if needed and returns it
      */
-    async listen(port?: string | number, host?: string): Promise<KaapiServer> {
-        const opts: KaapiServerOptions = {
-            port,
-            host
-        };
-        return await this.serverAsync(opts)
+    async listen(): Promise<KaapiServer> {
+        const server = this.server()
+        if (!this.#serverStarted) {
+            await this._startServer()
+        }
+        return server
     }
 
     /**
@@ -271,7 +252,7 @@ export class Kaapi extends KaapiBaseApp implements IKaapiApp {
      * [See docs](https://github.com/hapijs/hapi/blob/master/API.md#-await-serverstopoptions)
      */
     async stop(options?: { timeout: number; }): Promise<void> {
-        return await this.kaapiServer?.server.stop(options)
+        return await this.kaapiServer?.base.stop(options)
     }
 
     route<Refs extends ReqRef = ReqRefDefaults>(
@@ -288,7 +269,7 @@ export class Kaapi extends KaapiBaseApp implements IKaapiApp {
         this.docs.openapi.removeAll();
         this.docs.postman.removeAll();
 
-        this.kaapiServer.server.table().forEach(
+        this.kaapiServer.base.table().forEach(
             v => {
                 this.docs.openapi.addRequestRoute(v);
                 this.docs.postman.addRequestRoute(v);
@@ -317,14 +298,14 @@ export class Kaapi extends KaapiBaseApp implements IKaapiApp {
             route<Refs extends ReqRef = ReqRefDefaults>(serverRoute: KaapiServerRoute<Refs>, handler?: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>) {
                 getDocs().openapi.addRoutes(serverRoute)
                 getDocs().postman.addRoutes(serverRoute)
-                getCurrentApp().idle().route(serverRoute, handler)
+                getCurrentApp().server().route(serverRoute, handler)
                 return this
             },
-            scheme: this.idle().server.auth.scheme.bind(this.idle().server.auth),
-            strategy: this.idle().server.auth.strategy.bind(this.idle().server.auth),
+            scheme: this.base().auth.scheme.bind(this.base().auth),
+            strategy: this.base().auth.strategy.bind(this.base().auth),
             openapi: this.openapi,
             postman: this.postman,
-            server: this.idle().server
+            server: this.base()
         }
 
         const values = Array.isArray(plugins) ? plugins : [plugins]

@@ -23,19 +23,19 @@ export interface KaapiServerOptions extends Hapi.ServerOptions {
 
 export class KaapiServer<A = Hapi.ServerApplicationState> {
 
-    #server: Hapi.Server<A>;
+    #base: Hapi.Server<A>;
 
-    get server() {
-        return this.#server
+    get base() {
+        return this.#base
     }
 
     constructor(opts?: KaapiServerOptions | undefined) {
         const { auth: authOpts, ...serverOpts } = opts || {}
 
-        this.#server = Hapi.server(serverOpts)
+        this.#base = Hapi.server(serverOpts)
 
         // register the auth scheme
-        this.#server.auth.scheme('kaapi-auth', (_server, options) => {
+        this.#base.auth.scheme('kaapi-auth', (_server, options) => {
 
             return {
                 async authenticate(request, h) {
@@ -89,7 +89,7 @@ export class KaapiServer<A = Hapi.ServerApplicationState> {
         });
 
         // register the auth startegy
-        this.#server.auth.strategy('kaapi', 'kaapi-auth', authOpts);
+        this.#base.auth.strategy('kaapi', 'kaapi-auth', authOpts);
     }
 
     route<Refs extends Hapi.ReqRef = Hapi.ReqRefDefaults>(
@@ -152,7 +152,7 @@ export class KaapiServer<A = Hapi.ServerApplicationState> {
         if (handler)
             route.handler = handler
 
-        this.#server.route(route as Hapi.ServerRoute<Refs>);
+        this.#base.route(route as Hapi.ServerRoute<Refs>);
 
         return this;
     }

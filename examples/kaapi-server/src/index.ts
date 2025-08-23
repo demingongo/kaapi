@@ -17,7 +17,7 @@ const kaapiServer = new KaapiServer({
     }
 })
 
-kaapiServer.server.auth.default({
+kaapiServer.base.auth.default({
     strategy: 'kaapi',
     mode: 'try'
 })
@@ -51,7 +51,7 @@ kaapiServer.route({
  </body>
 </html>`)
 
-kaapiServer.server.start().then(
-    () => console.log('Server running on %s', kaapiServer.server.info.uri),
+kaapiServer.base.start().then(
+    () => console.log('Server running on %s', kaapiServer.base.info.uri),
     console.error
 )
