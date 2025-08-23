@@ -1,4 +1,4 @@
-import { Kaapi } from '@kaapi/kaapi';
+import { Kaapi, BasicAuthDesign } from '@kaapi/kaapi';
 import Boom from '@hapi/boom'
 import inert from '@hapi/inert';
 import { CustomMessaging } from './CustomMessaging';
@@ -8,6 +8,27 @@ import Stream from 'node:stream';
 import path from 'node:path'
 
 //#region init
+
+const basicAuthDesign = new BasicAuthDesign({
+    strategyName: 'basic-auth',
+    auth: {
+        async validate(_, username, password) {
+            if (username == 'admin' && password == 'password') {
+                return {
+                    isValid: true,
+                    credentials: {
+                        user: {
+                            name: 'admin'
+                        }
+                    }
+                }
+            }
+            return {
+                isValid: false
+            }
+        }
+    }
+});
 
 const app = new Kaapi({
     port: 3000,
@@ -37,7 +58,7 @@ const app = new Kaapi({
     messaging: new CustomMessaging(),
     routes: {
         auth: {
-            strategy: 'kaapi',
+            strategy: 'basic-auth',
             mode: 'try'
         }
     },
@@ -57,7 +78,8 @@ const app = new Kaapi({
                 customSiteTitle: 'examples-kaapi-app documentation'
             }
         }
-    }
+    },
+    extend: [ basicAuthDesign ]
 })
 
 //#endregion init
@@ -70,7 +92,26 @@ app.base().register(inert).then(
         app.listen()
         //app.refreshDocs() // can be used to sort routes by paths and discover routes that were added directly to .base()
     }
-)
+);
+
+app.base().ext('onPreResponse', (request, h) => {
+    const response = request.response;
+
+    // You can check if it's an error
+    if ('isBoom' in response) {
+        // Handle errors (e.g., customize auth failure)
+        const statusCode = response.output.statusCode;
+
+        // Example: override 401 Unauthorized error message
+        if (statusCode === 401) {
+            return h
+                .response({ message: 'Custom unauthorized response.' })
+                .code(401);
+        }
+    }
+
+    return h.continue;
+});
 
 
 /*
@@ -92,8 +133,14 @@ app.route({}, () => Boom.notFound('Nothing here'))
 
 app.route({
     method: 'GET',
+    auth: true,
+    path: '/profile'
+}, ({ auth: { credentials: { user } } }) => `Hello ${user && 'name' in user ? user.name : 'World'}!`)
+
+app.route({
+    method: 'GET',
     path: '/file',
-    //auth: true, // mode 'required' if no mode is defined in the route 
+    auth: true, // mode 'required' if no mode is defined in the route 
     options: {
         description: 'Profile picture'
     }

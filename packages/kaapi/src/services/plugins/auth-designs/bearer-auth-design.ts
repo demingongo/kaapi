@@ -27,7 +27,7 @@ export type BearerAuthOptions<
 };
 
 export interface BearerAuthArg {
-    options?: BearerAuthOptions;
+    auth?: BearerAuthOptions;
     strategyName?: string;
 }
 
@@ -36,7 +36,7 @@ export class BearerAuthDesign extends AuthDesign {
     readonly key = 'Authorization'
     protected strategyName: string = 'bearer-auth-design'
     protected description?: string
-    protected options: BearerAuthOptions
+    protected auth: BearerAuthOptions
 
     constructor(
         arg?: BearerAuthArg
@@ -46,7 +46,7 @@ export class BearerAuthDesign extends AuthDesign {
         if (arg?.strategyName)
             this.strategyName = arg.strategyName;
 
-        this.options = arg?.options ? { ...arg.options } : {}
+        this.auth = arg?.auth ? { ...arg.auth } : {}
     }
 
     setDescription(description: string): this {
@@ -131,7 +131,7 @@ export class BearerAuthDesign extends AuthDesign {
                 },
             }
         })
-        t.strategy(strategyName, strategyName, this.options)
+        t.strategy(strategyName, strategyName, this.auth)
     }
 
     toString(): string {

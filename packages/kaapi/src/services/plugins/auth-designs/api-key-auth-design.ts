@@ -19,6 +19,9 @@ import {
 export type APIKeyAuthOptions<
     Refs extends ReqRef = ReqRefDefaults
 > = {
+    /**
+     * e.g.: "Bearer" or "Session" or ...
+     */
     headerTokenType?: string;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     validate?(request: Request<Refs>, token: any, h: ResponseToolkit<Refs>): Promise<{
@@ -31,10 +34,10 @@ export type APIKeyAuthOptions<
 
 export interface APIKeyAuthArg {
     /**
-     * Default: "Authorization"
+     * Default: "Authorization" (header)
      */
     key?: string
-    options?: APIKeyAuthOptions;
+    auth?: APIKeyAuthOptions;
     strategyName?: string;
 }
 
@@ -44,7 +47,7 @@ export class APIKeyAuthDesign extends AuthDesign {
     protected strategyName: string = 'api-key-auth-design'
     protected description?: string
     protected apiKeyLocation: ApiKeyLocation = ApiKeyLocation.header
-    protected options: APIKeyAuthOptions
+    protected auth: APIKeyAuthOptions
 
     public get key() {
         return this.#key
@@ -61,7 +64,7 @@ export class APIKeyAuthDesign extends AuthDesign {
         if (arg?.strategyName)
             this.strategyName = arg.strategyName;
 
-        this.options = arg?.options ? { ...arg.options } : {}
+        this.auth = arg?.auth ? { ...arg.auth } : {}
     }
 
     setDescription(description: string): this {
@@ -170,7 +173,7 @@ export class APIKeyAuthDesign extends AuthDesign {
                 },
             }
         })
-        t.strategy(strategyName, strategyName, this.options)
+        t.strategy(strategyName, strategyName, this.auth)
     }
 
     toString(): string {

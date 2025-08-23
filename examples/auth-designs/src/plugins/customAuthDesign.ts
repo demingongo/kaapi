@@ -11,7 +11,7 @@ import { openIDDesign2 } from '../openId2';
 
 export const basicAuthDesign = new BasicAuthDesign({
     //strategyName: 'API Key',
-    options: {
+    auth: {
         async validate(_, username, password) {
             if (username == 'admin' && password == 'password') {
                 return {
@@ -30,7 +30,7 @@ export const basicAuthDesign = new BasicAuthDesign({
 
 export const apiKeyAuthDesign = new APIKeyAuthDesign({
     //strategyName: 'API Key',
-    options: {
+    auth: {
         headerTokenType: 'Session',
         async validate(_, token) {
             if (token == 'admin') {
@@ -50,7 +50,7 @@ export const apiKeyAuthDesign = new APIKeyAuthDesign({
 
 export const bearerAuthDesign = new BearerAuthDesign({
     //strategyName: 'Bearer Auth Design',
-    options: {
+    auth: {
         async validate(_, token) {
             if (token == 'admin') {
                 return {

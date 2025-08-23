@@ -33,7 +33,7 @@
     "@kaapi/kaapi": "workspace:^",
     "@novice1/api-doc-generator": "^1.0.2",
     "html-entities": "^2.6.0",
-    "jose": "^6.0.12",
+    "jose": "^6.0.13",
     "jsonwebtoken": "^9.0.2",
     "jwk-to-pem": "^2.0.7",
     "node-jose": "^2.2.0",

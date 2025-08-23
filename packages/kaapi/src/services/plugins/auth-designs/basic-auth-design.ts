@@ -27,7 +27,7 @@ export type BasicAuthOptions<
 };
 
 export interface BasicAuthArg {
-    options?: BasicAuthOptions;
+    auth?: BasicAuthOptions;
     strategyName?: string;
 }
 
@@ -36,7 +36,7 @@ export class BasicAuthDesign extends AuthDesign {
     readonly key = 'Authorization'
     protected strategyName: string = 'basic-auth-design'
     protected description?: string
-    protected options: BasicAuthOptions
+    protected auth: BasicAuthOptions
 
     constructor(
         arg?: BasicAuthArg
@@ -46,7 +46,7 @@ export class BasicAuthDesign extends AuthDesign {
         if (arg?.strategyName)
             this.strategyName = arg.strategyName;
 
-        this.options = arg?.options ? { ...arg.options } : {}
+        this.auth = arg?.auth ? { ...arg.auth } : {}
     }
 
     setDescription(description: string): this {
@@ -133,7 +133,7 @@ export class BasicAuthDesign extends AuthDesign {
                 },
             }
         })
-        t.strategy(strategyName, strategyName, this.options)
+        t.strategy(strategyName, strategyName, this.auth)
     }
 
     toString(): string {
