@@ -1,4 +1,4 @@
-import { Kaapi, BasicAuthDesign } from '@kaapi/kaapi';
+import { Kaapi, APIKeyAuthDesign } from '@kaapi/kaapi';
 import Boom from '@hapi/boom'
 import inert from '@hapi/inert';
 import { CustomMessaging } from './CustomMessaging';
@@ -9,11 +9,11 @@ import path from 'node:path'
 
 //#region init
 
-const basicAuthDesign = new BasicAuthDesign({
-    strategyName: 'basic-auth',
+const apiKeyAuthDesign = new APIKeyAuthDesign({
+    strategyName: 'api-key-auth-design',
     auth: {
-        async validate(_, username, password) {
-            if (username == 'admin' && password == 'password') {
+        async validate(_, token) {
+            if (token == 'secret') {
                 return {
                     isValid: true,
                     credentials: {
@@ -26,9 +26,13 @@ const basicAuthDesign = new BasicAuthDesign({
             return {
                 isValid: false
             }
-        }
-    }
-});
+        },
+        headerTokenType: 'Session'
+    }, 
+    key: 'Authorization'
+})
+.inHeader()
+.setDescription('Session token type')
 
 const app = new Kaapi({
     port: 3000,
@@ -58,7 +62,7 @@ const app = new Kaapi({
     messaging: new CustomMessaging(),
     routes: {
         auth: {
-            strategy: 'basic-auth',
+            strategy: apiKeyAuthDesign.getStrategyName(), // or 'api-key-auth-design'
             mode: 'try'
         }
     },
@@ -72,14 +76,14 @@ const app = new Kaapi({
         license: 'UNLICENSED',
         version: '0.0.2',
         title: 'examples-kaapi-app',
-        options: {
+        ui: {
             swagger: {
                 customCssUrl: '/public/swagger-ui.css',
                 customSiteTitle: 'examples-kaapi-app documentation'
             }
         }
     },
-    extend: [ basicAuthDesign ]
+    extend: [ apiKeyAuthDesign ]
 })
 
 //#endregion init
@@ -133,8 +137,13 @@ app.route({}, () => Boom.notFound('Nothing here'))
 
 app.route({
     method: 'GET',
-    auth: true,
-    path: '/profile'
+    path: '/profile',
+    options: {
+        auth: {
+            strategy: 'api-key-auth-design',
+            mode: 'required'
+        }
+    }
 }, ({ auth: { credentials: { user } } }) => `Hello ${user && 'name' in user ? user.name : 'World'}!`)
 
 app.route({
@@ -188,7 +197,7 @@ app.route<{
             parse: true,
             allow: 'multipart/form-data',
             multipart: { output: 'stream' },
-            maxBytes: 1024 * 3_000_000
+            maxBytes: 1024 * 3_000
         }
     }
 }, async (req) => {

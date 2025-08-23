@@ -48,7 +48,7 @@ const app = new Kaapi({
         license: 'UNLICENSED',
         version: '0.0.2',
         title: 'examples-kaapi-app',
-        options: {
+        ui: {
             swagger: {
                 customCssUrl: '/public/swagger-ui.css',
                 customSiteTitle: 'examples-kaapi-app documentation'

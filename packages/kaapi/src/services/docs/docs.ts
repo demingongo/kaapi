@@ -27,7 +27,7 @@ export type DocsTag = TagObject & Omit<Folder, 'item'>
 
 export type DocsSwaggerUIOptions = Omit<Omit<SwaggerUiOptions, 'swaggerUrl'>, 'swaggerUrls'>
 
-export interface DocsOptions {
+export interface DocsUIOptions {
     swagger?: DocsSwaggerUIOptions
 }
 
@@ -47,7 +47,7 @@ export interface DocsConfig {
     schemas?: Record<string, SchemaObject | ReferenceObject>
     responses?: BaseResponseUtil
     tags?: DocsTag[]
-    options?: DocsOptions
+    ui?: DocsUIOptions
 
     openAPIOptions?: OpenAPIOptions
     postmanOptions?: PostmanOptions
@@ -56,7 +56,7 @@ export interface DocsConfig {
 export function createDocsRouter<Refs extends ReqRef = ReqRefDefaults>(
     path: string,
     { openapi, postman }: { openapi: KaapiOpenAPI, postman: Postman },
-    options?: DocsOptions): [
+    options?: DocsUIOptions): [
         route: KaapiServerRoute<Refs>,
         handler: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>
     ] {

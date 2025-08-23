@@ -4,7 +4,7 @@ import { createLogger, ILogger } from './services/log';
 import { IMessaging, IMessagingSender, IMessagingSubscribeConfig } from './services/messaging';
 import qs from 'qs'
 import winston from 'winston';
-import { createDocsRouter, DocsConfig, DocsOptions } from './services/docs/docs';
+import { createDocsRouter, DocsConfig, DocsUIOptions } from './services/docs/docs';
 import { KaapiOpenAPI, KaapiPostman } from './services/docs/generators';
 import { HandlerDecorations, Lifecycle, ReqRef, ReqRefDefaults, Server } from '@hapi/hapi';
 import { KaapiPlugin, KaapiTools } from './services/plugins/plugin';
@@ -38,7 +38,7 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
 
     #docsPath: string = '/docs/api'
 
-    #docsOptions: DocsOptions = {}
+    #docsOptions: DocsUIOptions = {}
 
     #serverStarted = false
 
@@ -172,8 +172,8 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
             }
         }
 
-        if (docs?.options) {
-            this.#docsOptions = docs.options
+        if (docs?.ui) {
+            this.#docsOptions = docs.ui
         }
 
         if (extend) {
