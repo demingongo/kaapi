@@ -34,7 +34,7 @@ export function createLogger(options?: winston.LoggerOptions): ILogger {
     const wlogger = winston.createLogger(options);
 
     return Object.assign(
-        wrap(wlogger.debug),
+        wrap(wlogger.info),
         {
             silly: wrap(wlogger.silly),
             debug: wrap(wlogger.debug),
