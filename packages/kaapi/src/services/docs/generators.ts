@@ -77,7 +77,10 @@ function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(serverRoutes: KaapiS
                         [method.toLowerCase()]: true
                     },
                     path: path,
-                    auth: sRoute.auth || false,
+                    auth: sRoute.auth || (
+                        sRoute.options && typeof sRoute.options === 'object' &&
+                        sRoute.options.auth && typeof sRoute.options.auth === 'object' && !!sRoute.options.auth.mode
+                    ) || false,
                     //responses: sRoute.responses
                 };
 

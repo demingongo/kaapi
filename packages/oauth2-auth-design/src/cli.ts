@@ -120,7 +120,6 @@ export const ${this.#values.name} = new OpenIDAuthDesign(
         options: {
             async validate(req, token, h) {
                 if (token) {
-                    console.log('token=', token)
                     //#region @TODO: validation
                     if (token != 'generated_access_token') {
                         return {}

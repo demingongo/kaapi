@@ -71,7 +71,6 @@ app.route<{
 }>({
     method: 'POST',
     path: '/profile/update',
-    auth: true,
     options: {
         description: 'Update user profile with resume upload',
         tags: ['Profile'],
