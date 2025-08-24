@@ -22,7 +22,7 @@ The kaapi project is a flexible, extensible backend framework with messaging and
 
 ## Documentation
 
-wip...
+[Wiki](https://github.com/demingongo/kaapi/wiki)
 
 ## Examples
 

@@ -47,9 +47,9 @@ export interface KaapiTools {
  *   extend: [plugin]
  * })
  * // or
- * app.extend(plugin)
+ * await app.extend(plugin)
  * // or
- * app.extend([plugin1, plugin2])
+ * await app.extend([plugin1, plugin2])
  * ```
  */
 export interface KaapiPlugin {
