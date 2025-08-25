@@ -32,7 +32,8 @@ export interface OAuth2AuthorizationCodeArg {
     tokenRoute: IOAuth2ACTokenRoute<any>;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     refreshTokenRoute?: IOAuth2RefreshTokenRoute<any>;
-    options?: OAuth2AuthOptions;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    options?: OAuth2AuthOptions<any>;
     strategyName?: string;
     jwksStore?: JWKSStore;
 }

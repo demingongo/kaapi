@@ -1,8 +1,13 @@
 import { SecuritySchemeObject } from '@novice1/api-doc-generator/lib/generators/openapi/definitions';
 import { ChallengeAlgorithm, GrantType, OAuth2Util } from '@novice1/api-doc-generator';
-import { OAuth2AuthorizationCode, OAuth2AuthorizationCodeArg } from '../authentication-code';
+import { OAuth2AuthorizationCode, OAuth2AuthorizationCodeArg } from './authorization-code';
 import { KaapiTools, Lifecycle, ReqRef, Request, ReqRefDefaults, ResponseToolkit } from '@kaapi/kaapi';
-import { JWKS } from '../../utils/jwks-store';
+import { JWKS, JWKSStore } from '../utils/jwks-store';
+import { DefaultOAuth2ACAuthorizationRoute, OAuth2ACAuthorizationRoute } from './auth-code/authorization-route';
+import { DefaultOAuth2ACTokenRoute, OAuth2ACTokenRoute } from './auth-code/token-route';
+import { ClientAuthMethod, ClientSecretBasic, ClientSecretPost, NoneAuthMethod, TokenEndpointAuthMethod } from '../utils/client-auth-methods';
+import { TokenType } from '../utils/token-types';
+import { OAuth2AuthOptions, OAuth2RefreshTokenHandler, OAuth2RefreshTokenRoute } from './common';
 
 //#region OpenIDAuthUtil
 
@@ -48,6 +53,13 @@ export interface IOpenIDJWKSRoute<
 export class OpenIDJWKSRoute<
     Refs extends ReqRef = ReqRefDefaults
 > implements IOpenIDJWKSRoute<Refs> {
+
+    static buildDefault<
+        GetRefs extends ReqRef = ReqRefDefaults
+    >() {
+        return new DefaultOpenIDJWKSRoute<GetRefs>()
+    }
+
     protected _path: string;
     protected _handler: OpenIDJWKSHandler<Refs> | undefined
 
@@ -65,6 +77,14 @@ export class OpenIDJWKSRoute<
     ) {
         this._path = path;
         this._handler = handler;
+    }
+}
+
+export class DefaultOpenIDJWKSRoute<
+    Refs extends ReqRef = ReqRefDefaults
+> extends OpenIDJWKSRoute<Refs> {
+    constructor() {
+        super('/oauth2/keys')
     }
 }
 
@@ -297,3 +317,170 @@ export class OpenIDAuthDesign extends OAuth2AuthorizationCode {
 }
 
 //#endregion OpenIDAuthDesign
+
+//#region Builder
+
+export interface OpenIDAuthDesignBuilderArg extends OpenIDAuthDesignArg {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    authorizationRoute: DefaultOAuth2ACAuthorizationRoute<any, any>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    tokenRoute: DefaultOAuth2ACTokenRoute<any>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    jwksRoute: DefaultOpenIDJWKSRoute<any>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    tokenType?: TokenType<any>
+}
+
+export class OpenIDAuthDesignBuilder {
+
+    #params: OpenIDAuthDesignBuilderArg
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    #tokenType?: TokenType<any>
+    #tokenTTL?: number
+    #description?: string
+    #scopes?: Record<string, string>
+    #clientAuthMethods: Record<TokenEndpointAuthMethod, ClientAuthMethod | undefined> = {
+        client_secret_basic: undefined,
+        client_secret_post: undefined,
+        client_secret_jwt: undefined,
+        private_key_jwt: undefined,
+        none: undefined
+    }
+    #pkce: boolean = true
+
+    constructor(params: OpenIDAuthDesignBuilderArg) {
+        this.#params = params
+    }
+
+    static create(params?: Partial<OpenIDAuthDesignBuilderArg>): OpenIDAuthDesignBuilder {
+        const paramsComplete: OpenIDAuthDesignBuilderArg = {
+            authorizationRoute: params && params.authorizationRoute || OAuth2ACAuthorizationRoute.buildDefault(),
+            tokenRoute: params && params.tokenRoute || OAuth2ACTokenRoute.buildDefault(),
+            jwksRoute: params && params.jwksRoute || OpenIDJWKSRoute.buildDefault(),
+            ...(params || {})
+        };
+        return new OpenIDAuthDesignBuilder(paramsComplete)
+    }
+
+    build(): OpenIDAuthDesign {
+        const result = new OpenIDAuthDesign(this.#params)
+
+        result.setTokenTTL(this.#tokenTTL)
+
+        if (typeof this.#description !== 'undefined') {
+            result.setDescription(this.#description)
+        }
+        if (typeof this.#scopes !== 'undefined') {
+            result.setScopes(this.#scopes)
+        }
+        if (typeof this.#tokenType !== 'undefined') {
+            result.setTokenType(this.#tokenType)
+        }
+        for (const method of Object.values(this.#clientAuthMethods)) {
+            if (method) {
+                result.addClientAuthenticationMethod(method)
+            }
+        }
+        if (!this.#pkce) {
+            result.withoutPkce()
+        } else {
+            result.withPkce()
+        }
+        return result
+    }
+
+    setTokenTTL(ttlSeconds?: number): this {
+        this.#tokenTTL = ttlSeconds
+        return this
+    }
+
+    setDescription(description: string): this {
+        this.#description = description;
+        return this;
+    }
+
+    setScopes(scopes: Record<string, string>): this {
+        this.#scopes = scopes;
+        return this;
+    }
+
+    setTokenType<Refs extends ReqRef = ReqRefDefaults>(value: TokenType<Refs>): this {
+        this.#tokenType = value
+        return this
+    }
+
+    addClientAuthenticationMethod(value: 'client_secret_basic' | 'client_secret_post' | 'none' | ClientAuthMethod): this {
+        if (value == 'client_secret_basic') {
+            this.#clientAuthMethods.client_secret_basic = new ClientSecretBasic()
+        } else if (value == 'client_secret_post') {
+            this.#clientAuthMethods.client_secret_post = new ClientSecretPost()
+        } else if (value == 'none') {
+            this.#clientAuthMethods.none = new NoneAuthMethod()
+        } else {
+            this.#clientAuthMethods[value.method] = value
+        }
+        return this
+    }
+
+    withPkce(): this {
+        this.#pkce = false
+        return this
+    }
+
+    withoutPkce(): this {
+        this.#pkce = false
+        return this
+    }
+
+    additionalConfiguration(openidConfiguration: Record<string, unknown>): this {
+        this.#params.openidConfiguration = openidConfiguration
+        return this
+    }
+
+    strategyName(name: string): this {
+        this.#params.strategyName = name
+        return this
+    }
+
+    setJwksStore(store: JWKSStore): this {
+        this.#params.jwksStore = store
+        return this
+    }
+
+    validate<Refs extends ReqRef = ReqRefDefaults>(handler: OAuth2AuthOptions<Refs>['validate']): this {
+        this.#params.options = { validate: handler }
+        return this
+    }
+
+    authorizationRoute<
+        GetRefs extends ReqRef = ReqRefDefaults,
+        PostRefs extends ReqRef = ReqRefDefaults,
+    >(): DefaultOAuth2ACAuthorizationRoute<GetRefs, PostRefs> {
+        return this.#params.authorizationRoute
+    }
+
+    jwksRoute<
+        Refs extends ReqRef = ReqRefDefaults
+    >(): DefaultOpenIDJWKSRoute<Refs> {
+        return this.#params.jwksRoute
+    }
+
+    tokenRoute<
+        Refs extends ReqRef = ReqRefDefaults
+    >(): DefaultOAuth2ACTokenRoute<Refs> {
+        return this.#params.tokenRoute
+    }
+
+    refreshTokenRoute<
+        Refs extends ReqRef = ReqRefDefaults
+    >(
+        path: string,
+        handler: OAuth2RefreshTokenHandler<Refs>
+    ): this {
+        this.#params.refreshTokenRoute = new OAuth2RefreshTokenRoute(path, handler)
+        return this
+    }
+}
+
+//#endregion Builder
