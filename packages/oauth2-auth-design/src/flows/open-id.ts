@@ -7,7 +7,7 @@ import { DefaultOAuth2ACAuthorizationRoute, OAuth2ACAuthorizationRoute } from '.
 import { DefaultOAuth2ACTokenRoute, OAuth2ACTokenRoute } from './auth-code/token-route';
 import { ClientAuthMethod, ClientSecretBasic, ClientSecretPost, NoneAuthMethod, TokenEndpointAuthMethod } from '../utils/client-auth-methods';
 import { TokenType } from '../utils/token-types';
-import { OAuth2AuthOptions, OAuth2RefreshTokenHandler, OAuth2RefreshTokenRoute } from './common';
+import { OAuth2AuthOptions, OAuth2RefreshTokenHandler, OAuth2RefreshTokenRoute, PathValue } from './common';
 
 //#region OpenIDAuthUtil
 
@@ -85,6 +85,17 @@ export class DefaultOpenIDJWKSRoute<
 > extends OpenIDJWKSRoute<Refs> {
     constructor() {
         super('/oauth2/keys')
+    }
+
+    setPath(path: PathValue): this {
+        if (path)
+            this._path = path
+        return this
+    }
+
+    validate(handler: OpenIDJWKSHandler<Refs>): this {
+        this._handler = handler
+        return this
     }
 }
 
@@ -453,31 +464,27 @@ export class OpenIDAuthDesignBuilder {
         return this
     }
 
-    authorizationRoute<
-        GetRefs extends ReqRef = ReqRefDefaults,
-        PostRefs extends ReqRef = ReqRefDefaults,
-    >(): DefaultOAuth2ACAuthorizationRoute<GetRefs, PostRefs> {
-        return this.#params.authorizationRoute
+    authorizationRoute<GetRefs extends ReqRef = ReqRefDefaults, PostRefs extends ReqRef = ReqRefDefaults>
+        (handler: (route: DefaultOAuth2ACAuthorizationRoute<GetRefs, PostRefs>) => void): this {
+        handler(this.#params.authorizationRoute)
+        return this
     }
 
-    jwksRoute<
-        Refs extends ReqRef = ReqRefDefaults
-    >(): DefaultOpenIDJWKSRoute<Refs> {
-        return this.#params.jwksRoute
+    jwksRoute<Refs extends ReqRef = ReqRefDefaults>(handler: (route: DefaultOpenIDJWKSRoute<Refs>) => void): this {
+        handler(this.#params.jwksRoute)
+        return this
     }
 
-    tokenRoute<
-        Refs extends ReqRef = ReqRefDefaults
-    >(): DefaultOAuth2ACTokenRoute<Refs> {
-        return this.#params.tokenRoute
+    tokenRoute<Refs extends ReqRef = ReqRefDefaults>(handler: (route: DefaultOAuth2ACTokenRoute<Refs>) => void): this {
+        handler(this.#params.tokenRoute)
+        return this
     }
 
-    refreshTokenRoute<
-        Refs extends ReqRef = ReqRefDefaults
-    >(
-        path: string,
-        handler: OAuth2RefreshTokenHandler<Refs>
-    ): this {
+    refreshTokenRoute<Refs extends ReqRef = ReqRefDefaults>
+        (
+            path: string,
+            handler: OAuth2RefreshTokenHandler<Refs>
+        ): this {
         this.#params.refreshTokenRoute = new OAuth2RefreshTokenRoute(path, handler)
         return this
     }
