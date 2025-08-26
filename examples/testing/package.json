@@ -9,6 +9,7 @@
     "dev": "nodemon",
     "lint": "eslint .",
     "start": "node dist/index.js",
+    "testmocha": "mocha --require ts-node/register test/**/*.ts",
     "test": "kaukau --require ts-node/register --config kaukau.config.mjs"
   },
   "keywords": [],
