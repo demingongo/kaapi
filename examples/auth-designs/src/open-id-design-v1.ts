@@ -17,7 +17,6 @@ const tokenType = new BearerToken()
 //    .setTTL(300)
 //    .validateTokenRequest(() => ({ isValid: true })) // for testing without validating dpop
 
-
 export const openIDDesignV1 = OpenIDAuthDesignBuilder
     .create()
     .setTokenType(tokenType)

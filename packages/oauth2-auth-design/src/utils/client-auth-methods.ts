@@ -164,7 +164,7 @@ export class ClientSecretJwt implements ClientAuthMethod {
         this.#handler = async () => null
     }
 
-    addAlgo(algo: ClientSecretJwtAlgorithms): this {
+    addAlgorithm(algo: ClientSecretJwtAlgorithms): this {
         if (!this.#algorithms.includes(algo)) {
             this.#algorithms.push(algo)
             this.#algorithms.sort()
@@ -258,7 +258,7 @@ export class PrivateKeyJwt implements ClientAuthMethod {
         this.#handler = async () => null
     }
 
-    addAlgo(algo: PrivateKeyJwtAlgorithms): this {
+    addAlgorithm(algo: PrivateKeyJwtAlgorithms): this {
         if (!this.#algorithms.includes(algo)) {
             this.#algorithms.push(algo)
             this.#algorithms.sort()
