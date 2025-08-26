@@ -1,7 +1,7 @@
 import {
     OAuth2TokenResponse,
-    //OAuth2AuthorizationCode,
     BearerToken,
+    //DPoPToken,
     OpenIDAuthDesignBuilder,
     ClientSecretBasic,
     ClientSecretPost,
@@ -9,11 +9,14 @@ import {
     //ClientSecretPost,
     //ClientSecretBasic,
     //ClientSecretJwt,
-    //PrivateKeyJwt, 
-    //DPoPToken 
+    //PrivateKeyJwt
 } from '@kaapi/oauth2-auth-design';
 
 const tokenType = new BearerToken()
+//const tokenType = new DPoPToken()
+//    .setTTL(300)
+//    .validateTokenRequest(() => ({ isValid: true })) // for testing without validating dpop
+
 
 export const openIDDesignV1 = OpenIDAuthDesignBuilder
     .create()

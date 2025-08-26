@@ -166,8 +166,11 @@ export class DPoPToken<
         return this
     }
 
-    setTTL(value: number): this {
-        this.#ttl = value
+    /**
+     * time to live in seconds
+     */
+    setTTL(seconds: number): this {
+        this.#ttl = seconds
         return this
     }
 

@@ -1,0 +1,24 @@
+<!-- public/index.html -->
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Socket.IO with Hapi</title>
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <h1>Socket.IO Client</h1>
+  <script>
+    const socket = io('http://localhost:3000/app');
+
+    socket.on('connect', () => {
+      console.log('Connected to server');
+
+      socket.emit('message', 'Hello from client!');
+    });
+
+    socket.on('reply', (data) => {
+      console.log('Server says:', data);
+    });
+  </script>
+</body>
+</html>

@@ -1,11 +1,10 @@
-import { JwtPayload, verify } from 'jsonwebtoken'
 import jose from 'node-jose'
+import { JWTPayload, jwtVerify } from 'jose'
 import jwktopem from 'jwk-to-pem'
 import { JWKSStore } from './jwks-store'
 
-export { JwtPayload } from 'jsonwebtoken'
 
-export interface OAuth2JwtPayload extends JwtPayload {
+export interface OAuth2JwtPayload extends JWTPayload {
     /**
      * Identifier of the Identity Provider (IdP), usually a URL
      */
@@ -117,7 +116,7 @@ export class JWKSGenerator {
         await this._saveKeyStore(keyStore)
     }
 
-    async sign(payload: JwtPayload) {
+    async sign(payload: JWTPayload) {
         const keyStore = await this._generateIfEmpty()
         const key = keyStore.all({ use: 'sig' })
             .pop()
@@ -156,6 +155,10 @@ export class JWKSGenerator {
         const [header] = token.split('.')
         const kid = JSON.parse(Buffer.from(header, 'base64url').toString())?.kid
         const publicKey = await this.getPublicKeyAsPem(kid)
-        return verify(token, publicKey)
+        const { payload } = await jwtVerify(
+            token,
+            new TextEncoder().encode(publicKey)
+        )
+        return payload
     }
 }

@@ -3,8 +3,8 @@ import { defineConfig } from 'kaukau/config'
 export default defineConfig({
   enableLogs: true,
   exitOnFail: true,
-  files: 'test',
-  ext: '.test.mjs',
+  files: 'test/',
+  ext: '.test.ts',
   options: {
     bail: false,
     fullTrace: true,

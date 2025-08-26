@@ -7,7 +7,7 @@ import {
     GroupAuthDesign
 } from '@kaapi/kaapi';
 //import { authenticationCodeDesign } from '../oauth2Plugins';
-import { openIDDesign2 } from '../openId2';
+import { openIDDesignV1 } from '../open-id-design-v1';
 
 export const basicAuthDesign = new BasicAuthDesign({
     //strategyName: 'API Key',
@@ -71,6 +71,6 @@ export const customAuthDesign = new GroupAuthDesign([
     basicAuthDesign,
     apiKeyAuthDesign,
     bearerAuthDesign,
-    openIDDesign2
+    openIDDesignV1
     //authenticationCodeDesign
 ])
