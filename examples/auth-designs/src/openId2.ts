@@ -6,7 +6,7 @@ import {
     OAuth2RefreshTokenRoute,
     OAuth2ACTokenRoute,
     OpenIDAuthDesign,
-    OpenIDJWKSRoute,
+    JWKSRoute,
     OAuth2TokenResponse,
     //OAuth2AuthorizationCode,
     BearerToken,
@@ -26,7 +26,7 @@ export const openIDDesign2 = new OpenIDAuthDesign(
             ...tokenType.configuration
         },
         jwksStore: undefined,
-        jwksRoute: new OpenIDJWKSRoute('/openid/jwks'),
+        jwksRoute: new JWKSRoute('/openid/jwks'),
         /*
         userInfoRoute: new OpenIDUserInfoRoute('/openid/session', async () => {
             return {

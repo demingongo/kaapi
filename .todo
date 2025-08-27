@@ -12,6 +12,10 @@
     - should also support "client_secret_jwt" and "private_key_jwt" and token_endpoint_auth_signing_alg_values_supported @done
     - use Client Authentication Methods (client_secret_jwt, ...) in client credentials flow @done
     - package json exports: "." and "cli" @done
+    - auth code + client creds (no OpenID):
+        - createJWTAccessToken
+        - createIDToken
+        - jwksRoute (because yes, without OpenID, it can be used to validaten JWT access token)
     - make usage more simple (default classes with default routes, then all methods in the same class)
     - cli create templates
 

@@ -9,11 +9,12 @@ import {
     ResponseToolkit
 } from '@kaapi/kaapi'
 import { Boom } from '@hapi/boom'
-import { JWKSStore } from '../utils/jwks-store';
+import { JWKSStore, JWKS } from '../utils/jwks-store';
 import { getInMemoryJWKSStore } from '../utils/in-memory-jwks-store';
 import { JWKSGenerator, OAuth2JwtPayload } from '../utils/jwks-generator';
 import { BearerToken, TokenType } from '../utils/token-types';
 import { ClientAuthMethod, ClientSecretBasic, ClientSecretPost, NoneAuthMethod, sortTokenEndpointAuthMethods, TokenEndpointAuthMethod } from '../utils/client-auth-methods';
+import { JWTPayload } from 'jose';
 
 //#region Types
 
@@ -56,6 +57,7 @@ export interface OAuth2RefreshTokenParams extends Partial<OpenIDHelpers> {
     clientId: string
     clientSecret?: string
     scope?: string
+    createJWTAccessToken?: (payload: JWTPayload) => Promise<string>
 }
 
 export type OAuth2RefreshTokenHandler<
@@ -368,3 +370,73 @@ export abstract class OAuth2WithJWKSAuthDesign extends OAuth2AuthDesign {
 }
 
 //#endregion OAuth2AuthDesign
+
+//#region JWKSRoute
+
+export interface JWKSParams {
+    jwks: JWKS
+}
+
+export type JWKSHandler<
+    Refs extends ReqRef = ReqRefDefaults,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    R extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<Refs>
+> = (params: JWKSParams, request: Request<Refs>, h: ResponseToolkit<Refs>) => R
+
+export interface IJWKSRoute<
+    Refs extends ReqRef = ReqRefDefaults
+> {
+    path: string,
+    handler?: JWKSHandler<Refs>
+}
+
+export class JWKSRoute<
+    Refs extends ReqRef = ReqRefDefaults
+> implements IJWKSRoute<Refs> {
+
+    static buildDefault<
+        GetRefs extends ReqRef = ReqRefDefaults
+    >() {
+        return new DefaultJWKSRoute<GetRefs>()
+    }
+
+    protected _path: string;
+    protected _handler: JWKSHandler<Refs> | undefined
+
+    get path() {
+        return this._path
+    }
+
+    get handler() {
+        return this._handler
+    }
+
+    constructor(
+        path: string,
+        handler?: JWKSHandler<Refs>
+    ) {
+        this._path = path;
+        this._handler = handler;
+    }
+}
+
+export class DefaultJWKSRoute<
+    Refs extends ReqRef = ReqRefDefaults
+> extends JWKSRoute<Refs> {
+    constructor() {
+        super('/oauth2/keys')
+    }
+
+    setPath(path: PathValue): this {
+        if (path)
+            this._path = path
+        return this
+    }
+
+    validate(handler: JWKSHandler<Refs>): this {
+        this._handler = handler
+        return this
+    }
+}
+
+//#endregion JWKSRoute

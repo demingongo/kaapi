@@ -1,6 +1,7 @@
 export * from './flows/common'
 export * from './flows/auth-code/authorization-route'
 export * from './flows/auth-code/token-route'
+export * from './flows/client-creds/token-route'
 export * from './flows/open-id'
 export * from './flows/authorization-code'
 export * from './flows/client-credentials'

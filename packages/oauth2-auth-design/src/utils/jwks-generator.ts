@@ -42,6 +42,21 @@ export async function createIDToken(
     })
 }
 
+export async function createJWTAccessToken(
+    generator: JWKSGenerator,
+    payload: JWTPayload
+): Promise<string> {
+    
+    const ttlSeconds = generator.ttl
+    const now = Math.floor(Date.now() / 1000)
+                                           
+    return await generator.sign({
+        ...( payload ),
+        exp: typeof ttlSeconds === 'number' ? now + ttlSeconds : payload?.exp,
+        iat: now
+    })
+}
+
 /**
  * JWKSGenerator class
  */

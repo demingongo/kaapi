@@ -7,7 +7,7 @@ import { DefaultOAuth2ACAuthorizationRoute, OAuth2ACAuthorizationRoute } from '.
 import { DefaultOAuth2ACTokenRoute, OAuth2ACTokenRoute } from './auth-code/token-route';
 import { ClientAuthMethod, ClientSecretBasic, ClientSecretPost, NoneAuthMethod, TokenEndpointAuthMethod } from '../utils/client-auth-methods';
 import { TokenType } from '../utils/token-types';
-import { OAuth2AuthOptions, OAuth2RefreshTokenHandler, OAuth2RefreshTokenRoute, PathValue } from './common';
+import { DefaultJWKSRoute, IJWKSRoute, JWKSRoute, OAuth2AuthOptions, OAuth2RefreshTokenHandler, OAuth2RefreshTokenRoute } from './common';
 
 //#region OpenIDAuthUtil
 
@@ -30,76 +30,6 @@ export class OpenIDAuthUtil extends OAuth2Util {
 }
 
 //#endregion OpenIDAuthUtil
-
-//#region OpenIDJWKSRoute
-
-export interface OpenIDJWKSParams {
-    jwks: JWKS
-}
-
-export type OpenIDJWKSHandler<
-    Refs extends ReqRef = ReqRefDefaults,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    R extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<Refs>
-> = (params: OpenIDJWKSParams, request: Request<Refs>, h: ResponseToolkit<Refs>) => R
-
-export interface IOpenIDJWKSRoute<
-    Refs extends ReqRef = ReqRefDefaults
-> {
-    path: string,
-    handler?: OpenIDJWKSHandler<Refs>
-}
-
-export class OpenIDJWKSRoute<
-    Refs extends ReqRef = ReqRefDefaults
-> implements IOpenIDJWKSRoute<Refs> {
-
-    static buildDefault<
-        GetRefs extends ReqRef = ReqRefDefaults
-    >() {
-        return new DefaultOpenIDJWKSRoute<GetRefs>()
-    }
-
-    protected _path: string;
-    protected _handler: OpenIDJWKSHandler<Refs> | undefined
-
-    get path() {
-        return this._path
-    }
-
-    get handler() {
-        return this._handler
-    }
-
-    constructor(
-        path: string,
-        handler?: OpenIDJWKSHandler<Refs>
-    ) {
-        this._path = path;
-        this._handler = handler;
-    }
-}
-
-export class DefaultOpenIDJWKSRoute<
-    Refs extends ReqRef = ReqRefDefaults
-> extends OpenIDJWKSRoute<Refs> {
-    constructor() {
-        super('/oauth2/keys')
-    }
-
-    setPath(path: PathValue): this {
-        if (path)
-            this._path = path
-        return this
-    }
-
-    validate(handler: OpenIDJWKSHandler<Refs>): this {
-        this._handler = handler
-        return this
-    }
-}
-
-//#endregion OpenIDJWKSRoute
 
 //#region OpenIDUserInfoRoute
 
@@ -146,7 +76,7 @@ export class OpenIDUserInfoRoute<
 export interface OpenIDAuthDesignArg extends OAuth2AuthorizationCodeArg {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    jwksRoute: IOpenIDJWKSRoute<any>;
+    jwksRoute: IJWKSRoute<any>;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     userInfoRoute?: IOpenIDUserInfoRoute<any>
 
@@ -159,7 +89,7 @@ export interface OpenIDAuthDesignArg extends OAuth2AuthorizationCodeArg {
 export class OpenIDAuthDesign extends OAuth2AuthorizationCode {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    protected jwksRoute: IOpenIDJWKSRoute<any>;
+    protected jwksRoute: IJWKSRoute<any>;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     protected userInfoRoute?: IOpenIDUserInfoRoute<any>;
 
@@ -337,7 +267,7 @@ export interface OpenIDAuthDesignBuilderArg extends OpenIDAuthDesignArg {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     tokenRoute: DefaultOAuth2ACTokenRoute<any>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    jwksRoute: DefaultOpenIDJWKSRoute<any>
+    jwksRoute: DefaultJWKSRoute<any>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     tokenType?: TokenType<any>
 }
@@ -368,7 +298,7 @@ export class OpenIDAuthDesignBuilder {
         const paramsComplete: OpenIDAuthDesignBuilderArg = {
             authorizationRoute: params && params.authorizationRoute || OAuth2ACAuthorizationRoute.buildDefault(),
             tokenRoute: params && params.tokenRoute || OAuth2ACTokenRoute.buildDefault(),
-            jwksRoute: params && params.jwksRoute || OpenIDJWKSRoute.buildDefault(),
+            jwksRoute: params && params.jwksRoute || JWKSRoute.buildDefault(),
             ...(params || {})
         };
         return new OpenIDAuthDesignBuilder(paramsComplete)
@@ -470,7 +400,7 @@ export class OpenIDAuthDesignBuilder {
         return this
     }
 
-    jwksRoute<Refs extends ReqRef = ReqRefDefaults>(handler: (route: DefaultOpenIDJWKSRoute<Refs>) => void): this {
+    jwksRoute<Refs extends ReqRef = ReqRefDefaults>(handler: (route: DefaultJWKSRoute<Refs>) => void): this {
         handler(this.#params.jwksRoute)
         return this
     }

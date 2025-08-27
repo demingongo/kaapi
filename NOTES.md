@@ -1098,3 +1098,23 @@ If you support DPoP **and** client auth via JWTs:
 
 ---
 
+|             | OAuth2                            | OpenID Connect                     |
+| ----------- | --------------------------------- | ---------------------------------- |
+| Purpose     | Authorization (access control)    | Authentication + Authorization     |
+| Token Types | Access Token                      | Access Token + ID Token            |
+| Discovery   | Manual or custom config           | Standard discovery endpoint        |
+| JWKS        | Optional                          | Mandatory for verifying ID tokens  |
+| Used For    | API access (e.g., M2M, user auth) | Login systems, identity-based auth |
+
+---
+
+| Claim   | Required | Description                                                |
+| ------- | -------- | ---------------------------------------------------------- |
+| `iss`   | ✅        | Authorization server identifier                            |
+| `aud`   | ✅        | API(s) the token is meant for                              |
+| `sub`   | ✅        | Subject — usually the client ID in client credentials flow |
+| `exp`   | ✅        | Expiration timestamp                                       |
+| `iat`   | ✅        | Issued-at timestamp                                        |
+| `scope` | ✅        | Scopes granted to the token                                |
+
+---

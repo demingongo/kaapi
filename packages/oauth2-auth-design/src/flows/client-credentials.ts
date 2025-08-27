@@ -1,86 +1,90 @@
 import {
     KaapiTools,
-    Lifecycle,
     ReqRef,
     ReqRefDefaults,
     Request,
-    ResponseToolkit,
     RouteOptions
 } from '@kaapi/kaapi'
 import { GrantType, OAuth2Util } from '@novice1/api-doc-generator'
 import Boom from '@hapi/boom'
 import Hoek from '@hapi/hoek'
 import {
+    DefaultJWKSRoute,
+    IJWKSRoute,
     IOAuth2RefreshTokenRoute,
+    JWKSRoute,
     OAuth2AuthDesign,
     OAuth2AuthOptions,
     OAuth2Error,
+    OAuth2RefreshTokenHandler,
     OAuth2RefreshTokenParams,
     OAuth2RefreshTokenRoute
 } from './common'
-import { ClientAuthMethod } from '../utils/client-auth-methods'
+import { ClientAuthMethod, ClientSecretBasic, ClientSecretPost, TokenEndpointAuthMethod } from '../utils/client-auth-methods'
+import { DefaultOAuth2ClientCredentialsTokenRoute, IOAuth2ClientCredentialsTokenRoute, OAuth2ClientCredentialsTokenParams, OAuth2ClientCredentialsTokenRoute } from './client-creds/token-route'
+import { TokenType } from '../utils/token-types'
+import { JWKS, JWKSStore } from '../utils/jwks-store'
+import { createIDToken, createJWTAccessToken, JWKSGenerator } from '../utils/jwks-generator'
+import { getInMemoryJWKSStore } from '../utils/in-memory-jwks-store'
 
-//#region TokenRoute
+//#region OAuth2ClientCredentials
 
-export interface OAuth2ClientCredsTokenParams {
-    grantType: string
-    clientId: string
-    clientSecret: string
-    scope?: string
-}
-
-export type OAuth2ClientCredsTokenHandler<
-    Refs extends ReqRef = ReqRefDefaults,
+export interface OAuth2ClientCredentialsArg {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    R extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<Refs>
-> = (params: OAuth2ClientCredsTokenParams, request: Request<Refs>, h: ResponseToolkit<Refs>) => R
-
-export interface IOAuth2ClientCredsTokenRoute<
-    Refs extends ReqRef = ReqRefDefaults
-> {
-    path: string,
-    handler: OAuth2ClientCredsTokenHandler<Refs>
-}
-
-//#endregion TokenRoute
-
-//#region OAuth2ClientCreds
-
-export interface OAuth2ClientCredsArg {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    tokenRoute: IOAuth2ClientCredsTokenRoute<any>;
+    tokenRoute: IOAuth2ClientCredentialsTokenRoute<any>;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     refreshTokenRoute?: OAuth2RefreshTokenRoute<any>;
-    options?: OAuth2AuthOptions;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    jwksRoute?: IJWKSRoute<any>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    options?: OAuth2AuthOptions<any>;
     strategyName?: string;
+    jwksStore?: JWKSStore;
 }
 
-export class OAuth2ClientCreds extends OAuth2AuthDesign {
+export class OAuth2ClientCredentials extends OAuth2AuthDesign {
 
     protected strategyName: string
     protected description?: string
     protected scopes?: Record<string, string>
     protected options: OAuth2AuthOptions
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    protected tokenRoute: IOAuth2ClientCredsTokenRoute<any>
+    protected tokenRoute: IOAuth2ClientCredentialsTokenRoute<any>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     protected refreshTokenRoute?: IOAuth2RefreshTokenRoute<any>
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    protected jwksRoute?: IJWKSRoute<any>;
+    protected jwksStore?: JWKSStore
+    protected tokenTTL?: number
 
     constructor(
         {
             tokenRoute,
             refreshTokenRoute,
             options,
-            strategyName
-        }: OAuth2ClientCredsArg
+            strategyName,
+            jwksStore
+        }: OAuth2ClientCredentialsArg
     ) {
         super()
+
+        this.jwksStore = jwksStore
 
         this.tokenRoute = tokenRoute
         this.refreshTokenRoute = refreshTokenRoute
 
         this.strategyName = strategyName || 'oauth2-client-credentials'
         this.options = options ? { ...options } : {}
+    }
+
+    setTokenTTL(ttlSeconds?: number): this {
+        this.tokenTTL = ttlSeconds
+        return this
+    }
+
+    getTokenTTL(): number | undefined {
+        return this.tokenTTL
     }
 
     /**
@@ -220,6 +224,9 @@ export class OAuth2ClientCreds extends OAuth2AuthDesign {
 
         const supported = this.getTokenEndpointAuthMethods()
         const authMethodsInstances = this.clientAuthMethods
+        const jwksGenerator = (this.jwksRoute || this.jwksStore) ? new JWKSGenerator(this.jwksStore || getInMemoryJWKSStore(), this.tokenTTL) : undefined
+
+        const hasOpenIDScope = () => typeof this.getScopes()?.['openid'] != 'undefined'
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const routesOptions: RouteOptions<any> = {
@@ -232,7 +239,7 @@ export class OAuth2ClientCreds extends OAuth2AuthDesign {
 
         t
             .route<{
-                Payload: { code_verifier?: unknown, code?: unknown, grant_type?: unknown, redirect_uri?: unknown, refresh_token?: unknown, scope?: unknown }
+                Payload: { grant_type?: unknown, redirect_uri?: unknown, refresh_token?: unknown, scope?: unknown }
             }>({
                 options: routesOptions,
                 path: this.tokenRoute.path,
@@ -294,13 +301,31 @@ export class OAuth2ClientCreds extends OAuth2AuthDesign {
                         } else {
                             return h.response({ error: 'invalid_request', error_description: 'Request was missing the \'client_secret\' parameter.' }).code(400)
                         }
-                        const params: OAuth2ClientCredsTokenParams = {
+                        const scope = req.payload.scope && typeof req.payload.scope === 'string' ? req.payload.scope : undefined
+                        const params: OAuth2ClientCredentialsTokenParams = {
                             clientId: clientId,
                             clientSecret: clientSecret,
-                            grantType: req.payload.grant_type
+                            grantType: req.payload.grant_type,
+                            ttl: jwksGenerator?.ttl || this.tokenTTL,
+                            createJWTAccessToken: jwksGenerator ? (async (payload) => {
+                                return await createJWTAccessToken(jwksGenerator, {
+                                    aud: t.postman?.getHost()[0] || '',
+                                    iss: t.postman?.getHost()[0] || '',
+                                    sub: clientId,
+                                    scope,
+                                    ...payload
+                                })
+                            }) : undefined,
+                            createIDToken: jwksGenerator && hasOpenIDScope() ? (async (payload) => {
+                                return await createIDToken(jwksGenerator, {
+                                    aud: clientId,
+                                    iss: t.postman?.getHost()[0] || '',
+                                    ...payload
+                                })
+                            }) : undefined
                         }
-                        if (req.payload.scope && typeof req.payload.scope === 'string') {
-                            params.scope = req.payload.scope
+                        if (scope) {
+                            params.scope = scope
                         }
 
                         return this.tokenRoute.handler(params, req, h)
@@ -313,18 +338,36 @@ export class OAuth2ClientCreds extends OAuth2AuthDesign {
                             clientId &&
                             hasRefreshToken
                         ) {
+                            const scope = req.payload.scope && typeof req.payload.scope === 'string' ? req.payload.scope : undefined
                             const params: OAuth2RefreshTokenParams = {
                                 clientId,
                                 grantType: req.payload.grant_type,
-                                refreshToken: `${req.payload.refresh_token}`
+                                refreshToken: `${req.payload.refresh_token}`,
+                                ttl: jwksGenerator?.ttl || this.tokenTTL,
+                                createJWTAccessToken: jwksGenerator ? (async (payload) => {
+                                    return await createJWTAccessToken(jwksGenerator, {
+                                        aud: t.postman?.getHost()[0] || '',
+                                        iss: t.postman?.getHost()[0] || '',
+                                        sub: clientId,
+                                        scope,
+                                        ...payload
+                                    })
+                                }) : undefined,
+                                createIDToken: jwksGenerator && hasOpenIDScope() ? (async (payload) => {
+                                    return await createIDToken(jwksGenerator, {
+                                        aud: clientId,
+                                        iss: t.postman?.getHost()[0] || '',
+                                        ...payload
+                                    })
+                                }) : undefined
                             }
 
                             if (clientSecret) {
                                 params.clientSecret = clientSecret
                             }
 
-                            if (req.payload.scope && typeof req.payload.scope === 'string') {
-                                params.scope = req.payload.scope
+                            if (scope) {
+                                params.scope = scope
                             }
 
                             return this.refreshTokenRoute.handler(params, req, h)
@@ -402,15 +445,33 @@ export class OAuth2ClientCreds extends OAuth2AuthDesign {
                         hasRefreshToken &&
                         isRefreshTokenGrantType
                     ) {
+                        const scope = req.payload.scope && typeof req.payload.scope === 'string' ? req.payload.scope : undefined
                         const params: OAuth2RefreshTokenParams = {
                             clientId,
                             clientSecret,
                             grantType: `${req.payload.grant_type}`,
-                            refreshToken: `${req.payload.refresh_token}`
+                            refreshToken: `${req.payload.refresh_token}`,
+                            ttl: jwksGenerator?.ttl || this.tokenTTL,
+                            createJWTAccessToken: jwksGenerator ? (async (payload) => {
+                                return await createJWTAccessToken(jwksGenerator, {
+                                    aud: t.postman?.getHost()[0] || '',
+                                    iss: t.postman?.getHost()[0] || '',
+                                    sub: clientId,
+                                    scope,
+                                    ...payload
+                                })
+                            }) : undefined,
+                            createIDToken: jwksGenerator && hasOpenIDScope() ? (async (payload) => {
+                                return await createIDToken(jwksGenerator, {
+                                    aud: clientId,
+                                    iss: t.postman?.getHost()[0] || '',
+                                    ...payload
+                                })
+                            }) : undefined
                         }
 
-                        if (req.payload.scope && typeof req.payload.scope === 'string') {
-                            params.scope = req.payload.scope
+                        if (scope) {
+                            params.scope = scope
                         }
 
                         return this.refreshTokenRoute?.handler(params, req, h)
@@ -432,8 +493,166 @@ export class OAuth2ClientCreds extends OAuth2AuthDesign {
                 }
             })
         }
+
+        // jwks
+        if (this.jwksRoute && jwksGenerator) {
+            t.route({
+                path: this.jwksRoute.path,
+                method: 'GET',
+                options: {
+                    plugins: {
+                        kaapi: {
+                            docs: false
+                        }
+                    }
+                },
+                handler: async (req, h) => {
+
+                    const jwks = await jwksGenerator.generateIfEmpty() as JWKS
+
+                    if (this.jwksRoute?.handler) {
+                        return this.jwksRoute.handler({
+                            jwks
+                        }, req, h)
+                    }
+
+                    return jwks
+                }
+            })
+        }
     }
 
 }
 
-//#endregion OAuth2ClientCreds
+//#endregion OAuth2ClientCredentials
+
+//#region Builder
+
+export interface OAuth2ClientCredentialsBuilderArg extends OAuth2ClientCredentialsArg {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    tokenRoute: DefaultOAuth2ClientCredentialsTokenRoute<any>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    jwksRoute?: DefaultJWKSRoute<any>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    tokenType?: TokenType<any>
+}
+
+export class OAuth2ClientCredentialsBuilder {
+
+    #params: OAuth2ClientCredentialsBuilderArg
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    #tokenType?: TokenType<any>
+    #tokenTTL?: number
+    #description?: string
+    #scopes?: Record<string, string>
+    #clientAuthMethods: Record<TokenEndpointAuthMethod, ClientAuthMethod | undefined> = {
+        client_secret_basic: undefined,
+        client_secret_post: undefined,
+        client_secret_jwt: undefined,
+        private_key_jwt: undefined,
+        none: undefined
+    }
+
+    constructor(params: OAuth2ClientCredentialsBuilderArg) {
+        this.#params = params
+    }
+
+    static create(params?: Partial<OAuth2ClientCredentialsBuilderArg>): OAuth2ClientCredentialsBuilder {
+        const paramsComplete: OAuth2ClientCredentialsBuilderArg = {
+            tokenRoute: params && params.tokenRoute || OAuth2ClientCredentialsTokenRoute.buildDefault(),
+            ...(params || {})
+        };
+        return new OAuth2ClientCredentialsBuilder(paramsComplete)
+    }
+
+    build(): OAuth2ClientCredentials {
+        const result = new OAuth2ClientCredentials(this.#params)
+
+        result.setTokenTTL(this.#tokenTTL)
+
+        if (typeof this.#description !== 'undefined') {
+            result.setDescription(this.#description)
+        }
+        if (typeof this.#scopes !== 'undefined') {
+            result.setScopes(this.#scopes)
+        }
+        if (typeof this.#tokenType !== 'undefined') {
+            result.setTokenType(this.#tokenType)
+        }
+        for (const method of Object.values(this.#clientAuthMethods)) {
+            if (method) {
+                result.addClientAuthenticationMethod(method)
+            }
+        }
+        return result
+    }
+
+    setTokenTTL(ttlSeconds?: number): this {
+        this.#tokenTTL = ttlSeconds
+        return this
+    }
+
+    setDescription(description: string): this {
+        this.#description = description;
+        return this;
+    }
+
+    setScopes(scopes: Record<string, string>): this {
+        this.#scopes = scopes;
+        return this;
+    }
+
+    setTokenType<Refs extends ReqRef = ReqRefDefaults>(value: TokenType<Refs>): this {
+        this.#tokenType = value
+        return this
+    }
+
+    addClientAuthenticationMethod(value: 'client_secret_basic' | 'client_secret_post' | ClientAuthMethod): this {
+        if (value == 'client_secret_basic') {
+            this.#clientAuthMethods.client_secret_basic = new ClientSecretBasic()
+        } else if (value == 'client_secret_post') {
+            this.#clientAuthMethods.client_secret_post = new ClientSecretPost()
+        } else {
+            this.#clientAuthMethods[value.method] = value
+        }
+        return this
+    }
+
+    strategyName(name: string): this {
+        this.#params.strategyName = name
+        return this
+    }
+
+    setJwksStore(store: JWKSStore): this {
+        this.#params.jwksStore = store
+        return this
+    }
+
+    validate<Refs extends ReqRef = ReqRefDefaults>(handler: OAuth2AuthOptions<Refs>['validate']): this {
+        this.#params.options = { validate: handler }
+        return this
+    }
+
+    jwksRoute<Refs extends ReqRef = ReqRefDefaults>(handler: (route: DefaultJWKSRoute<Refs>) => void): this {
+        this.#params.jwksRoute = this.#params.jwksRoute || JWKSRoute.buildDefault();
+        handler(this.#params.jwksRoute)
+        return this
+    }
+
+    tokenRoute<Refs extends ReqRef = ReqRefDefaults>(handler: (route: DefaultOAuth2ClientCredentialsTokenRoute<Refs>) => void): this {
+        handler(this.#params.tokenRoute)
+        return this
+    }
+
+    refreshTokenRoute<Refs extends ReqRef = ReqRefDefaults>
+        (
+            path: string,
+            handler: OAuth2RefreshTokenHandler<Refs>
+        ): this {
+        this.#params.refreshTokenRoute = new OAuth2RefreshTokenRoute(path, handler)
+        return this
+    }
+}
+
+//#endregion Builder
