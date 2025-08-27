@@ -96,8 +96,8 @@ runExample().catch((err) => {
 
 ```ts
 {
-  clientId: string;           // Kafka client ID
   brokers: string[];          // Kafka broker addresses
+  clientId?: string;          // Kafka client ID
   logger?: ILogger;           // Optional logger
   address?: string;           // Optional unique service address
   name?: string;              // Optional name for tracking
