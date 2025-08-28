@@ -24,8 +24,9 @@ import { ClientAuthMethod, ClientSecretBasic, ClientSecretPost, TokenEndpointAut
 import { DefaultOAuth2ClientCredentialsTokenRoute, IOAuth2ClientCredentialsTokenRoute, OAuth2ClientCredentialsTokenParams, OAuth2ClientCredentialsTokenRoute } from './client-creds/token-route'
 import { TokenType } from '../utils/token-types'
 import { JWKS, JWKSStore } from '../utils/jwks-store'
-import { createIDToken, createJWTAccessToken, JWKSGenerator } from '../utils/jwks-generator'
+import { createIdToken, createJwtAccessToken, JWKSGenerator } from '../utils/jwks-generator'
 import { getInMemoryJWKSStore } from '../utils/in-memory-jwks-store'
+import { JWTPayload } from 'jose'
 
 //#region OAuth2ClientCredentials
 
@@ -55,8 +56,9 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     protected jwksRoute?: IJWKSRoute<any>;
-    protected jwksStore?: JWKSStore
-    protected tokenTTL?: number
+    protected jwksStore?: JWKSStore;
+    protected jwksGenerator?: JWKSGenerator | undefined;
+    protected tokenTTL?: number;
 
     constructor(
         {
@@ -64,7 +66,8 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign {
             refreshTokenRoute,
             options,
             strategyName,
-            jwksStore
+            jwksStore,
+            jwksRoute
         }: OAuth2ClientCredentialsArg
     ) {
         super()
@@ -73,6 +76,7 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign {
 
         this.tokenRoute = tokenRoute
         this.refreshTokenRoute = refreshTokenRoute
+        this.jwksRoute = jwksRoute
 
         this.strategyName = strategyName || 'oauth2-client-credentials'
         this.options = options ? { ...options } : {}
@@ -159,6 +163,7 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign {
     integrateStrategy(t: KaapiTools) {
         const tokenTypePrefix = this.tokenType
         const tokenTypeInstance = this._tokenType
+        const getJwksGenerator = () => this.jwksGenerator
         t.scheme(this.strategyName, (_server, options) => {
 
             return {
@@ -172,6 +177,7 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign {
 
                     const tokenType = authSplit[0]
                     let token = authSplit[1]
+                    let jwtAccessToken: JWTPayload | undefined;
 
                     if (tokenType.toLowerCase() !== tokenTypePrefix.toLowerCase()) {
                         token = ''
@@ -182,9 +188,20 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign {
                         return Boom.unauthorized(null, tokenTypePrefix)
                     }
 
+                    const jwksGenerator = getJwksGenerator()
+
+                    if (jwksGenerator && settings.verifyJwtAccessToken) {
+                        try {
+                            jwtAccessToken = await jwksGenerator.verify(token)
+                        } catch(err) {
+                            t.log.error(err)
+                            return Boom.unauthorized(null, tokenTypePrefix)
+                        }
+                    }
+
                     if (settings.validate) {
                         try {
-                            const result = await settings.validate?.(request, token, h)
+                            const result = await settings.validate?.(request, { token, jwtAccessToken }, h)
 
                             if (result && 'isAuth' in result) {
                                 return result
@@ -225,6 +242,9 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign {
         const supported = this.getTokenEndpointAuthMethods()
         const authMethodsInstances = this.clientAuthMethods
         const jwksGenerator = (this.jwksRoute || this.jwksStore) ? new JWKSGenerator(this.jwksStore || getInMemoryJWKSStore(), this.tokenTTL) : undefined
+
+
+        this.jwksGenerator = jwksGenerator
 
         const hasOpenIDScope = () => typeof this.getScopes()?.['openid'] != 'undefined'
 
@@ -307,8 +327,8 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign {
                             clientSecret: clientSecret,
                             grantType: req.payload.grant_type,
                             ttl: jwksGenerator?.ttl || this.tokenTTL,
-                            createJWTAccessToken: jwksGenerator ? (async (payload) => {
-                                return await createJWTAccessToken(jwksGenerator, {
+                            createJwtAccessToken: jwksGenerator ? (async (payload) => {
+                                return await createJwtAccessToken(jwksGenerator, {
                                     aud: t.postman?.getHost()[0] || '',
                                     iss: t.postman?.getHost()[0] || '',
                                     sub: clientId,
@@ -316,8 +336,8 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign {
                                     ...payload
                                 })
                             }) : undefined,
-                            createIDToken: jwksGenerator && hasOpenIDScope() ? (async (payload) => {
-                                return await createIDToken(jwksGenerator, {
+                            createIdToken: jwksGenerator && hasOpenIDScope() ? (async (payload) => {
+                                return await createIdToken(jwksGenerator, {
                                     aud: clientId,
                                     iss: t.postman?.getHost()[0] || '',
                                     ...payload
@@ -344,8 +364,8 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign {
                                 grantType: req.payload.grant_type,
                                 refreshToken: `${req.payload.refresh_token}`,
                                 ttl: jwksGenerator?.ttl || this.tokenTTL,
-                                createJWTAccessToken: jwksGenerator ? (async (payload) => {
-                                    return await createJWTAccessToken(jwksGenerator, {
+                                createJwtAccessToken: jwksGenerator ? (async (payload) => {
+                                    return await createJwtAccessToken(jwksGenerator, {
                                         aud: t.postman?.getHost()[0] || '',
                                         iss: t.postman?.getHost()[0] || '',
                                         sub: clientId,
@@ -353,8 +373,8 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign {
                                         ...payload
                                     })
                                 }) : undefined,
-                                createIDToken: jwksGenerator && hasOpenIDScope() ? (async (payload) => {
-                                    return await createIDToken(jwksGenerator, {
+                                createIdToken: jwksGenerator && hasOpenIDScope() ? (async (payload) => {
+                                    return await createIdToken(jwksGenerator, {
                                         aud: clientId,
                                         iss: t.postman?.getHost()[0] || '',
                                         ...payload
@@ -452,8 +472,8 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign {
                             grantType: `${req.payload.grant_type}`,
                             refreshToken: `${req.payload.refresh_token}`,
                             ttl: jwksGenerator?.ttl || this.tokenTTL,
-                            createJWTAccessToken: jwksGenerator ? (async (payload) => {
-                                return await createJWTAccessToken(jwksGenerator, {
+                            createJwtAccessToken: jwksGenerator ? (async (payload) => {
+                                return await createJwtAccessToken(jwksGenerator, {
                                     aud: t.postman?.getHost()[0] || '',
                                     iss: t.postman?.getHost()[0] || '',
                                     sub: clientId,
@@ -461,8 +481,8 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign {
                                     ...payload
                                 })
                             }) : undefined,
-                            createIDToken: jwksGenerator && hasOpenIDScope() ? (async (payload) => {
-                                return await createIDToken(jwksGenerator, {
+                            createIdToken: jwksGenerator && hasOpenIDScope() ? (async (payload) => {
+                                return await createIdToken(jwksGenerator, {
                                     aud: clientId,
                                     iss: t.postman?.getHost()[0] || '',
                                     ...payload
@@ -630,7 +650,12 @@ export class OAuth2ClientCredentialsBuilder {
     }
 
     validate<Refs extends ReqRef = ReqRefDefaults>(handler: OAuth2AuthOptions<Refs>['validate']): this {
-        this.#params.options = { validate: handler }
+        this.#params.options = { ...(this.#params.options || {}), validate: handler }
+        return this
+    }
+
+    verifyJwtAccessToken<Refs extends ReqRef = ReqRefDefaults>(active: OAuth2AuthOptions<Refs>['verifyJwtAccessToken']): this {
+        this.#params.options = { ...(this.#params.options || {}), verifyJwtAccessToken: active }
         return this
     }
 

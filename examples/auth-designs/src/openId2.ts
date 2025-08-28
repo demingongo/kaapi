@@ -56,7 +56,7 @@ export const openIDDesign2 = new OpenIDAuthDesign(
             }),
         tokenRoute: OAuth2ACTokenRoute.buildDefault()
             .setPath('/oauth2/ac/token')
-            .generateToken(async ({ clientId, clientSecret, code, codeVerifier, redirectUri, ttl, createIDToken }, _req) => {
+            .generateToken(async ({ clientId, clientSecret, code, codeVerifier, redirectUri, ttl, createIdToken }, _req) => {
 
                 console.log('code', code)
                 console.log('codeVerifier', codeVerifier)
@@ -78,7 +78,7 @@ export const openIDDesign2 = new OpenIDAuthDesign(
                         .setRefreshToken(refreshToken)
                         .setScope(scope)
                         .setIDToken(
-                            await createIDToken?.({
+                            await createIdToken?.({
                                 sub: '248289761001',
                                 name: 'Jane Doe',
                                 given_name: 'Jane',
@@ -115,7 +115,7 @@ export const openIDDesign2 = new OpenIDAuthDesign(
             }) as OAuth2RefreshTokenHandler,
         ),
         options: {
-            async validate(req, token, h) {
+            async validate(req, {token}, h) {
                 console.log( 'validate => req.app.oauth2.proofThumbprint:', req.app.oauth2?.dpopThumbprint)
                 if (token) {
                     console.log('token=', token)

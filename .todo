@@ -13,9 +13,11 @@
     - use Client Authentication Methods (client_secret_jwt, ...) in client credentials flow @done
     - package json exports: "." and "cli" @done
     - auth code + client creds (no OpenID):
-        - createJWTAccessToken
-        - createIDToken
+        - createJwtAccessToken
+        - createIdToken
         - jwksRoute (because yes, without OpenID, it can be used to validaten JWT access token)
+        - verifyJwtAccessToken
+        - REALLY UPDATE AUTH CODE ONCE CLIENT CREDENTIALS WORKS
     - make usage more simple (default classes with default routes, then all methods in the same class)
     - cli create templates
 

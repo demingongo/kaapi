@@ -156,7 +156,7 @@ export const authenticationCodeDesign = new OAuth2AuthorizationCode(
             }) as OAuth2RefreshTokenHandler,
         ),
         options: {
-            validate: async (_req, token, h) => {
+            validate: async (_req, {token}, h) => {
                 if (token) {
                     //#region @TODO: validation
                     if (token != 'generated_access_token') {

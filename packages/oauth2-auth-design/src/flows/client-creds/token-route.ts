@@ -23,7 +23,7 @@ export interface OAuth2ClientCredentialsTokenParams extends Partial<OpenIDHelper
     clientSecret: string
     scope?: string
     readonly ttl?: number
-    createJWTAccessToken?: (payload: JWTPayload) => Promise<string>
+    createJwtAccessToken?: (payload: JWTPayload) => Promise<string>
 }
 
 export type OAuth2ClientCredentialsTokenHandler<

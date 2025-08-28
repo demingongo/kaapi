@@ -28,7 +28,7 @@ export const openIDDesignV1 = OpenIDAuthDesignBuilder
         // to announce the use of dpop in openid-configuration
         ...tokenType.configuration
     })
-    .validate(async (req, token) => {
+    .validate(async (req, { token }) => {
         console.log('validate => req.app.oauth2.proofThumbprint:', req.app.oauth2?.dpopThumbprint)
         console.log('token=', token)
         //#region @TODO: validation
@@ -66,7 +66,7 @@ export const openIDDesignV1 = OpenIDAuthDesignBuilder
             return null
         }))
     .tokenRoute(route => route.setPath('/oauth2/v1/token')
-        .generateToken(async ({ clientId, clientSecret, code, codeVerifier, redirectUri, ttl, createIDToken }, _req) => {
+        .generateToken(async ({ clientId, clientSecret, code, codeVerifier, redirectUri, ttl, createIdToken }, _req) => {
 
             console.log('code', code)
             console.log('codeVerifier', codeVerifier)
@@ -88,7 +88,7 @@ export const openIDDesignV1 = OpenIDAuthDesignBuilder
                     .setRefreshToken(refreshToken)
                     .setScope(scope)
                     .setIDToken(
-                        await createIDToken?.({
+                        await createIdToken?.({
                             sub: '248289761001',
                             name: 'Jane Doe',
                             given_name: 'Jane',

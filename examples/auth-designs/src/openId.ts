@@ -125,7 +125,7 @@ export const openIDDesign = new OpenIDAuthDesign(
         ),
         tokenRoute: new OAuth2ACTokenRoute(
             '/oauth2/ac/token',
-            (async ({ clientId, clientSecret, code, codeVerifier, redirectUri, createIDToken }, _req, h) => {
+            (async ({ clientId, clientSecret, code, codeVerifier, redirectUri, createIdToken }, _req, h) => {
 
                 console.log('code', code)
                 console.log('codeVerifier', codeVerifier)
@@ -147,7 +147,7 @@ export const openIDDesign = new OpenIDAuthDesign(
                             .setRefreshToken(refreshToken)
                             .setScope(scope)
                             .setIDToken(
-                                await createIDToken?.({
+                                await createIdToken?.({
                                     sub: '248289761001',
                                     name: 'Jane Doe',
                                     given_name: 'Jane',
@@ -183,7 +183,7 @@ export const openIDDesign = new OpenIDAuthDesign(
             }) as OAuth2RefreshTokenHandler,
         ),
         options: {
-            validate: async (_req, token, h) => {
+            validate: async (_req, {token}, h) => {
                 if (token) {
                     //#region @TODO: validation
                     if (token != 'generated_access_token') {

@@ -14,7 +14,7 @@ import {
     OAuth2Error,
     OAuth2RefreshTokenParams
 } from './common'
-import { createIDToken } from '../utils/jwks-generator'
+import { createIdToken } from '../utils/jwks-generator'
 import { JWKSStore } from '../utils/jwks-store'
 import {
     IOAuth2ACAuthorizationRoute,
@@ -189,7 +189,7 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
 
                     if (settings.validate) {
                         try {
-                            const result = await settings.validate?.(request, token, h)
+                            const result = await settings.validate?.(request, { token }, h)
 
                             if (result && 'isAuth' in result) {
                                 return result
@@ -341,8 +341,8 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
                             code: req.payload.code,
 
                             ttl: this.jwksGenerator.ttl,
-                            createIDToken: hasOpenIDScope() ? (async (payload) => {
-                                return await createIDToken(this.jwksGenerator, {
+                            createIdToken: hasOpenIDScope() ? (async (payload) => {
+                                return await createIdToken(this.jwksGenerator, {
                                     aud: clientId,
                                     iss: t.postman?.getHost()[0] || '',
                                     ...payload
@@ -380,8 +380,8 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
                                 refreshToken: `${req.payload.refresh_token}`,
 
                                 ttl: this.jwksGenerator.ttl,
-                                createIDToken: hasOpenIDScope() ? (async (payload) => {
-                                    return await createIDToken(this.jwksGenerator, {
+                                createIdToken: hasOpenIDScope() ? (async (payload) => {
+                                    return await createIdToken(this.jwksGenerator, {
                                         aud: clientId,
                                         iss: t.postman?.getHost()[0] || '',
                                         ...payload
@@ -476,8 +476,8 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
                             refreshToken: `${req.payload.refresh_token}`,
 
                             ttl: this.jwksGenerator.ttl,
-                            createIDToken: hasOpenIDScope() ? (async (payload) => {
-                                return await createIDToken(this.jwksGenerator, {
+                            createIdToken: hasOpenIDScope() ? (async (payload) => {
+                                return await createIdToken(this.jwksGenerator, {
                                     aud: clientId,
                                     iss: t.postman?.getHost()[0] || '',
                                     ...payload

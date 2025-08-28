@@ -27,7 +27,7 @@ export interface OAuth2JwtPayload extends JWTPayload {
     auth_time?: number
 }
 
-export async function createIDToken(
+export async function createIdToken(
     generator: JWKSGenerator,
     payload: OAuth2JwtPayload
 ): Promise<string> {
@@ -42,7 +42,7 @@ export async function createIDToken(
     })
 }
 
-export async function createJWTAccessToken(
+export async function createJwtAccessToken(
     generator: JWKSGenerator,
     payload: JWTPayload
 ): Promise<string> {
@@ -52,7 +52,7 @@ export async function createJWTAccessToken(
                                            
     return await generator.sign({
         ...( payload ),
-        exp: typeof ttlSeconds === 'number' ? now + ttlSeconds : payload?.exp,
+        exp: payload?.exp || (typeof ttlSeconds === 'number' ? now + ttlSeconds : payload?.exp),
         iat: now
     })
 }
@@ -169,10 +169,10 @@ export class JWKSGenerator {
     async verify(token: string) {
         const [header] = token.split('.')
         const kid = JSON.parse(Buffer.from(header, 'base64url').toString())?.kid
-        const publicKey = await this.getPublicKeyAsPem(kid)
+        //const publicKey = await this.getPublicKeyAsPem(kid)
         const { payload } = await jwtVerify(
             token,
-            new TextEncoder().encode(publicKey)
+            await this.getPublicKey(kid)
         )
         return payload
     }

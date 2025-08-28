@@ -72,7 +72,7 @@ export const ${this.#values.name} = new OpenIDAuthDesign(
             }),
         tokenRoute: OAuth2ACTokenRoute.buildDefault()
             .setPath('/oauth2/token')
-            .generateToken(async ({ clientId, clientSecret, code, codeVerifier, redirectUri, ttl, createIDToken }, _req) => {
+            .generateToken(async ({ clientId, clientSecret, code, codeVerifier, redirectUri, ttl, createIdToken }, _req) => {
 
                 if (!clientSecret && !codeVerifier) {
                     return { error: 'invalid_request', error_description: 'Token Request was missing the \\'client_secret\\' parameter.' }
@@ -87,7 +87,7 @@ export const ${this.#values.name} = new OpenIDAuthDesign(
                         .setRefreshToken(refreshToken)
                         .setScope(scope)
                         .setIDToken(
-                            await createIDToken?.({
+                            await createIdToken?.({
                                 sub: '248289761001',
                                 name: 'Jane Doe',
                                 given_name: 'Jane',
@@ -118,7 +118,7 @@ export const ${this.#values.name} = new OpenIDAuthDesign(
             }) as OAuth2RefreshTokenHandler,
         ),
         options: {
-            async validate(req, token, h) {
+            async validate(req, { token }, h) {
                 if (token) {
                     //#region @TODO: validation
                     if (token != 'generated_access_token') {

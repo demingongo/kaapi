@@ -34,7 +34,8 @@ export type OAuth2ErrorBody = {
 export type OAuth2AuthOptions<
     Refs extends ReqRef = ReqRefDefaults
 > = {
-    validate?(request: Request<Refs>, token: string, h: ResponseToolkit<Refs>): Promise<{
+    verifyJwtAccessToken?: boolean;
+    validate?(request: Request<Refs>, tokens: { token: string, jwtAccessToken?: JWTPayload }, h: ResponseToolkit<Refs>): Promise<{
         isValid?: boolean;
         artifacts?: unknown;
         credentials?: AuthCredentials;
@@ -44,7 +45,7 @@ export type OAuth2AuthOptions<
 
 export interface OpenIDHelpers {
     readonly ttl?: number
-    createIDToken: (payload: WithRequired<Partial<OAuth2JwtPayload>, 'sub'>) => Promise<string>
+    createIdToken: (payload: WithRequired<Partial<OAuth2JwtPayload>, 'sub'>) => Promise<string>
 }
 
 //#endregion Types
@@ -57,7 +58,7 @@ export interface OAuth2RefreshTokenParams extends Partial<OpenIDHelpers> {
     clientId: string
     clientSecret?: string
     scope?: string
-    createJWTAccessToken?: (payload: JWTPayload) => Promise<string>
+    createJwtAccessToken?: (payload: JWTPayload) => Promise<string>
 }
 
 export type OAuth2RefreshTokenHandler<
