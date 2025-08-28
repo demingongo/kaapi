@@ -23,12 +23,13 @@ export const clientCredentialsDesignV1 = OAuth2ClientCredentialsBuilder
     .setTokenTTL(36000)
     .addClientAuthenticationMethod(new ClientSecretPost())
     .addClientAuthenticationMethod(new ClientSecretBasic())
-    .setJwksStore(getInMemoryJWKSStore()) // activates JWT access token
+    .setJwksStore(getInMemoryJWKSStore()) // store for JWKS
+    .jwksRoute(route => route.setPath('/oauth2/m2m/keys')) // activates jwks uri
     .useAccessTokenJwks(true) // activates JWT access token verification with JWKS
-    .validate(async (_, { token, jwtAccessToken }) => {
-        console.log('jwtAccessToken=', jwtAccessToken)
+    .validate(async (_, { token, jwtAccessTokenPayload }) => {
+        console.log('jwtAccessTokenPayload=', jwtAccessTokenPayload)
         //#region @TODO: validation
-        if (jwtAccessToken?.machine != '248289761001') {
+        if (jwtAccessTokenPayload?.machine != '248289761001') {
             return { isValid: false }
         }
 
@@ -46,7 +47,6 @@ export const clientCredentialsDesignV1 = OAuth2ClientCredentialsBuilder
             }
         }
     })
-    .jwksRoute(route => route.setPath('/oauth2/m2m/keys')) // activates jwks uri
     .tokenRoute(route => route.setPath('/oauth2/m2m/token')
         .generateToken(async ({ clientId, clientSecret, ttl, scope, createJwtAccessToken }, _req) => {
 

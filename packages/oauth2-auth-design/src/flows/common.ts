@@ -34,8 +34,24 @@ export type OAuth2ErrorBody = {
 export type OAuth2AuthOptions<
     Refs extends ReqRef = ReqRefDefaults
 > = {
+    /**
+     * Auto-verifies the access token JWT using the configured JWKS before running user validation.
+     */
     useAccessTokenJwks?: boolean;
-    validate?(request: Request<Refs>, tokens: { token: string, jwtAccessToken?: JWTPayload }, h: ResponseToolkit<Refs>): Promise<{
+    /**
+     * 
+     * User validations
+     */
+    validate?(request: Request<Refs>, tokens: {
+        /**
+         * The access token to validate and/or decode
+         */
+        token: string
+        /**
+         * Only defined if useAccessTokenJwks is true. Otherwise, validate and decode the token manually
+         */
+        jwtAccessTokenPayload?: JWTPayload
+    }, h: ResponseToolkit<Refs>): Promise<{
         isValid?: boolean;
         artifacts?: unknown;
         credentials?: AuthCredentials;

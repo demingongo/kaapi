@@ -137,6 +137,14 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign {
         return this.description;
     }
 
+    private _getJwksGenerator() {
+        if(this.jwksGenerator) return this.jwksGenerator;
+        if (this.jwksRoute || this.jwksStore || this.options.useAccessTokenJwks){
+            this.jwksGenerator = new JWKSGenerator(this.jwksStore || getInMemoryJWKSStore(), this.tokenTTL)
+        }
+        return this.jwksGenerator
+    }
+
     /**
      * Returns the schema used for the documentation
      */
@@ -161,9 +169,10 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign {
      * Where authentication schemes and strategies are registered.
      */
     integrateStrategy(t: KaapiTools) {
-        const tokenTypePrefix = this.tokenType
-        const tokenTypeInstance = this._tokenType
-        const getJwksGenerator = () => this.jwksGenerator
+        const tokenTypePrefix = this.tokenType;
+        const tokenTypeInstance = this._tokenType;
+        const getJwksGenerator = () => this._getJwksGenerator();
+
         t.scheme(this.strategyName, (_server, options) => {
 
             return {
@@ -177,7 +186,7 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign {
 
                     const tokenType = authSplit[0]
                     let token = authSplit[1]
-                    let jwtAccessToken: JWTPayload | undefined;
+                    let jwtAccessTokenPayload: JWTPayload | undefined;
 
                     if (tokenType.toLowerCase() !== tokenTypePrefix.toLowerCase()) {
                         token = ''
@@ -192,7 +201,7 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign {
 
                     if (jwksGenerator && settings.useAccessTokenJwks) {
                         try {
-                            jwtAccessToken = await jwksGenerator.verify(token)
+                            jwtAccessTokenPayload = await jwksGenerator.verify(token)
                         } catch(err) {
                             t.log.error(err)
                             return Boom.unauthorized(null, tokenTypePrefix)
@@ -201,7 +210,7 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign {
 
                     if (settings.validate) {
                         try {
-                            const result = await settings.validate?.(request, { token, jwtAccessToken }, h)
+                            const result = await settings.validate?.(request, { token, jwtAccessTokenPayload }, h)
 
                             if (result && 'isAuth' in result) {
                                 return result
@@ -239,14 +248,11 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign {
 
     integrateHook(t: KaapiTools) {
 
-        const supported = this.getTokenEndpointAuthMethods()
-        const authMethodsInstances = this.clientAuthMethods
-        const jwksGenerator = (this.jwksRoute || this.jwksStore) ? new JWKSGenerator(this.jwksStore || getInMemoryJWKSStore(), this.tokenTTL) : undefined
+        const supported = this.getTokenEndpointAuthMethods();
+        const authMethodsInstances = this.clientAuthMethods;
+        const jwksGenerator = this._getJwksGenerator();
 
-
-        this.jwksGenerator = jwksGenerator
-
-        const hasOpenIDScope = () => typeof this.getScopes()?.['openid'] != 'undefined'
+        const hasOpenIDScope = () => typeof this.getScopes()?.['openid'] != 'undefined';
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const routesOptions: RouteOptions<any> = {
@@ -654,7 +660,10 @@ export class OAuth2ClientCredentialsBuilder {
         return this
     }
 
-    useAccessTokenJwks<Refs extends ReqRef = ReqRefDefaults>(active: OAuth2AuthOptions<Refs>['useAccessTokenJwks']): this {
+    /**
+     * Auto-verifies the access token JWT using the configured JWKS before running user validation.
+     */
+    useAccessTokenJwks(active: boolean): this {
         this.#params.options = { ...(this.#params.options || {}), useAccessTokenJwks: active }
         return this
     }
