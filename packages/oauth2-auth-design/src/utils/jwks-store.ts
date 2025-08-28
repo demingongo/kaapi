@@ -11,4 +11,5 @@ export interface JWKS {
 export interface JWKSStore {
     get(): Promise<JWKS | undefined>
     set(jwks: JWKS, ttlSeconds?: number): Promise<void>
+    needsMoreEntries(): Promise<boolean> 
 }

@@ -209,7 +209,7 @@ export class OpenIDAuthDesign extends OAuth2AuthorizationCode {
             },
             handler: async (req, h) => {
 
-                const jwks = await this.jwksGenerator.generateIfEmpty() as JWKS
+                const jwks = await this.jwksGenerator.generateIfNeeded() as JWKS
 
                 if (this.jwksRoute.handler) {
                     return this.jwksRoute.handler({

@@ -103,18 +103,22 @@ export class JWKSGenerator {
         }
     }
 
-    private async _generateIfEmpty(): Promise<jose.JWK.KeyStore> {
+    private async _needsMoreEntries(): Promise<boolean> {
+        return await this.#store.needsMoreEntries()
+    }
+
+    private async _generateIfNeeded(): Promise<jose.JWK.KeyStore> {
         const keyStore = await this._retrieveKeyStore()
         const arr = keyStore.all({ use: 'sig' })
-        if (!arr.length) {
+        if (!arr.length || await this._needsMoreEntries()) {
             await keyStore.generate('RSA', 2048, { alg: 'RS256', use: 'sig' })
             await this._saveKeyStore(keyStore)
         }
         return keyStore
     }
 
-    async generateIfEmpty(): Promise<object> {
-        const keyStore = await this._generateIfEmpty()
+    async generateIfNeeded(): Promise<object> {
+        const keyStore = await this._generateIfNeeded()
         const json = keyStore.toJSON()
         if (json && 'keys' in json && Array.isArray(json.keys)) {
             json.keys.reverse()
@@ -132,7 +136,7 @@ export class JWKSGenerator {
     }
 
     async sign(payload: JWTPayload) {
-        const keyStore = await this._generateIfEmpty()
+        const keyStore = await this._generateIfNeeded()
         const key = keyStore.all({ use: 'sig' })
             .pop()
 

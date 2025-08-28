@@ -23,7 +23,7 @@ export const clientCredentialsDesignV1 = OAuth2ClientCredentialsBuilder
     .setTokenTTL(36000)
     .addClientAuthenticationMethod(new ClientSecretPost())
     .addClientAuthenticationMethod(new ClientSecretBasic())
-    .setJwksStore(getInMemoryJWKSStore()) // store for JWKS
+    .setJwksStore(getInMemoryJWKSStore(36000 / 2)) // store for JWKS
     .jwksRoute(route => route.setPath('/oauth2/m2m/keys')) // activates jwks uri
     .useAccessTokenJwks(true) // activates JWT access token verification with JWKS
     .validate(async (_, { token, jwtAccessTokenPayload }) => {

@@ -534,7 +534,7 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign {
                 },
                 handler: async (req, h) => {
 
-                    const jwks = await jwksGenerator.generateIfEmpty() as JWKS
+                    const jwks = await jwksGenerator.generateIfNeeded() as JWKS
 
                     if (this.jwksRoute?.handler) {
                         return this.jwksRoute.handler({
