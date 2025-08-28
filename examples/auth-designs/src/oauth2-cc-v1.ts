@@ -24,7 +24,7 @@ export const clientCredentialsDesignV1 = OAuth2ClientCredentialsBuilder
     .addClientAuthenticationMethod(new ClientSecretPost())
     .addClientAuthenticationMethod(new ClientSecretBasic())
     .setJwksStore(getInMemoryJWKSStore()) // activates JWT access token
-    .verifyJwtAccessToken(true) // activates JWT access token verification
+    .useAccessTokenJwks(true) // activates JWT access token verification with JWKS
     .validate(async (_, { token, jwtAccessToken }) => {
         console.log('jwtAccessToken=', jwtAccessToken)
         //#region @TODO: validation

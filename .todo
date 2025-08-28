@@ -16,7 +16,7 @@
         - createJwtAccessToken
         - createIdToken
         - jwksRoute (because yes, without OpenID, it can be used to validaten JWT access token)
-        - verifyJwtAccessToken
+        - useAccessTokenJwks
         - REALLY UPDATE AUTH CODE ONCE CLIENT CREDENTIALS WORKS
     - make usage more simple (default classes with default routes, then all methods in the same class)
     - cli create templates

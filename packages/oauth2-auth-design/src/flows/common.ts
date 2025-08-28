@@ -34,7 +34,7 @@ export type OAuth2ErrorBody = {
 export type OAuth2AuthOptions<
     Refs extends ReqRef = ReqRefDefaults
 > = {
-    verifyJwtAccessToken?: boolean;
+    useAccessTokenJwks?: boolean;
     validate?(request: Request<Refs>, tokens: { token: string, jwtAccessToken?: JWTPayload }, h: ResponseToolkit<Refs>): Promise<{
         isValid?: boolean;
         artifacts?: unknown;

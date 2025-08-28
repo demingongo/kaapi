@@ -190,7 +190,7 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign {
 
                     const jwksGenerator = getJwksGenerator()
 
-                    if (jwksGenerator && settings.verifyJwtAccessToken) {
+                    if (jwksGenerator && settings.useAccessTokenJwks) {
                         try {
                             jwtAccessToken = await jwksGenerator.verify(token)
                         } catch(err) {
@@ -654,8 +654,8 @@ export class OAuth2ClientCredentialsBuilder {
         return this
     }
 
-    verifyJwtAccessToken<Refs extends ReqRef = ReqRefDefaults>(active: OAuth2AuthOptions<Refs>['verifyJwtAccessToken']): this {
-        this.#params.options = { ...(this.#params.options || {}), verifyJwtAccessToken: active }
+    useAccessTokenJwks<Refs extends ReqRef = ReqRefDefaults>(active: OAuth2AuthOptions<Refs>['useAccessTokenJwks']): this {
+        this.#params.options = { ...(this.#params.options || {}), useAccessTokenJwks: active }
         return this
     }
 

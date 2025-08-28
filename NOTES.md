@@ -1118,3 +1118,320 @@ If you support DPoP **and** client auth via JWTs:
 | `scope` | ✅        | Scopes granted to the token                                |
 
 ---
+
+## 🔐 What is OAuth2 Device Flow?
+
+The **Device Authorization Grant** is designed for **devices without browsers or limited input capabilities**, like:
+
+* Smart TVs
+* IoT devices
+* Consoles
+* CLI tools
+
+It allows a user to **authorize a device** using another device that **has a browser** (e.g., a phone or computer).
+
+---
+
+## 📷 Real-World Analogy
+
+You're logging into YouTube on a smart TV. You see a code like:
+
+> Visit `youtube.com/activate` and enter this code: `ABCD-1234`
+
+You use your **phone**, go to the link, enter the code, and approve access. The TV now logs you in — this is the Device Flow.
+
+---
+
+## 🧭 Flow Steps
+
+1. **Device requests a code** from the authorization server.
+2. Server returns:
+
+   * `device_code` (used by device to poll for the token)
+   * `user_code` (shown to the user)
+   * `verification_uri` (where the user goes)
+3. Device shows the user:
+
+   * Visit `verification_uri`
+   * Enter `user_code`
+4. User visits URI on another device, enters code, and logs in.
+5. Device **polls the token endpoint** to check if the user completed authorization.
+6. When approved, the server returns an **access token**.
+
+---
+
+## 📄 Example Response from Step 2
+
+```json
+{
+  "device_code": "abc123",
+  "user_code": "XY12-Z9",
+  "verification_uri": "https://login.example.com/device",
+  "expires_in": 900,
+  "interval": 5
+}
+```
+
+---
+
+## 🧪 Full JavaScript Example (Node.js)
+
+We'll simulate using `fetch` (or use `axios` if you prefer) with a public OAuth2 provider like **Auth0**, **Microsoft**, or a mock server.
+
+### ⚠️ Prerequisites
+
+* `node-fetch` (or native `fetch` in Node 18+)
+
+```bash
+npm install node-fetch
+```
+
+---
+
+### ✅ Code: Device Flow with Fetch
+
+```js
+import fetch from 'node-fetch'
+
+// Replace with your actual OAuth2 endpoints and client ID
+const clientId = 'YOUR_CLIENT_ID'
+const deviceCodeUrl = 'https://YOUR_DOMAIN/oauth/device/code'
+const tokenUrl = 'https://YOUR_DOMAIN/oauth/token'
+
+async function startDeviceFlow() {
+  // Step 1: Request device and user codes
+  const deviceRes = await fetch(deviceCodeUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: clientId,
+      scope: 'openid profile email'
+    })
+  })
+
+  const deviceData = await deviceRes.json()
+
+  console.log('\n=== Device Flow Started ===')
+  console.log(`🔗 Visit: ${deviceData.verification_uri}`)
+  console.log(`🧾 Enter the code: ${deviceData.user_code}\n`)
+
+  // Step 2: Poll token endpoint until authorized
+  let interval = deviceData.interval || 5
+  let tokenResponse
+
+  while (true) {
+    await new Promise(res => setTimeout(res, interval * 1000))
+
+    const tokenRes = await fetch(tokenUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
+        device_code: deviceData.device_code,
+        client_id: clientId
+      })
+    })
+
+    const tokenData = await tokenRes.json()
+
+    if (tokenRes.status === 200) {
+      tokenResponse = tokenData
+      break
+    }
+
+    if (tokenData.error === 'authorization_pending') {
+      console.log('⏳ Waiting for user authorization...')
+      continue
+    }
+
+    if (tokenData.error === 'slow_down') {
+      interval += 5
+      console.log('🐢 Slowing down polling interval...')
+      continue
+    }
+
+    // Error case (expired, denied, etc.)
+    console.error('❌ Error:', tokenData.error)
+    return
+  }
+
+  console.log('\n✅ Access Token Received:')
+  console.log(tokenResponse.access_token)
+}
+
+startDeviceFlow().catch(console.error)
+```
+
+---
+
+## 🔁 Polling Behavior
+
+| Error                   | Meaning                                 |
+| ----------------------- | --------------------------------------- |
+| `authorization_pending` | User hasn't completed authorization yet |
+| `slow_down`             | Polling too quickly, slow down          |
+| `access_denied`         | User denied the request                 |
+| `expired_token`         | Device code expired                     |
+
+---
+
+## ✅ Benefits
+
+* Works without a browser on the device
+* Secure: user authenticates on another trusted device
+* Supports MFA, SSO, etc., via the main auth flow
+
+---
+
+## 🧱 When to Use
+
+* Smart TVs, embedded systems
+* Developer CLI tools
+* Background services needing user authorization
+
+---
+
+## 🔐 What is the JWT Bearer Token Flow?
+
+The **JWT Bearer Token Flow** is a **server-to-server** authentication method in OAuth 2.0 where a client application authenticates by **asserting its identity** using a signed **JWT** (JSON Web Token), instead of using a client secret or a user password.
+
+This is typically used in:
+
+* Machine-to-machine (M2M) communication
+* Backend integrations
+* Service accounts (e.g., Google, Salesforce, Okta)
+
+---
+
+## ✅ Use Case Example
+
+Your backend service needs to access another API (e.g., Google API or Salesforce) and authenticates itself by sending a signed JWT, instead of a username/password.
+
+---
+
+## 🧭 Flow Overview
+
+1. The client (your service) **creates a JWT** signed with its **private key**.
+2. It **sends that JWT** to the **token endpoint** using a `grant_type` of:
+
+   ```
+   urn:ietf:params:oauth:grant-type:jwt-bearer
+   ```
+3. The authorization server **verifies the signature and claims**.
+4. If valid, it returns an **access token**.
+
+---
+
+## 📄 JWT Contents
+
+Your JWT (assertion) typically includes:
+
+```json
+{
+  "iss": "client_id or service account email",
+  "sub": "subject (same as iss or delegated user)",
+  "aud": "https://authorization-server.com/token",
+  "exp": UNIX timestamp (e.g., now + 5 min),
+  "iat": UNIX timestamp (issued at)
+}
+```
+
+The JWT is then signed using **RS256** or similar.
+
+---
+
+## 🧪 JavaScript Example (Node.js)
+
+Let’s use [`jose`](https://github.com/panva/jose) to generate the signed JWT, and `fetch` to send it.
+
+---
+
+### 🧰 Prerequisites
+
+```bash
+npm install jose node-fetch
+```
+
+---
+
+### ✅ Code: JWT Bearer Token Flow
+
+```js
+import { SignJWT } from 'jose'
+import fetch from 'node-fetch'
+import fs from 'fs/promises'
+
+async function getAccessToken() {
+  // Load private key (PEM format)
+  const privateKeyPem = await fs.readFile('./private_key.pem', 'utf8')
+
+  // Import private key into jose format
+  const alg = 'RS256'
+  const privateKey = await jose.importPKCS8(privateKeyPem, alg)
+
+  // Set up JWT claims
+  const now = Math.floor(Date.now() / 1000)
+
+  const jwt = await new SignJWT({
+    iss: 'your-client-id@example.com',
+    sub: 'your-client-id@example.com',
+    aud: 'https://auth.example.com/oauth/token',
+    iat: now,
+    exp: now + 300 // 5 minutes
+  })
+    .setProtectedHeader({ alg })
+    .sign(privateKey)
+
+  // Send the JWT to the token endpoint
+  const res = await fetch('https://auth.example.com/oauth/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: new URLSearchParams({
+      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      assertion: jwt
+    })
+  })
+
+  if (!res.ok) {
+    const error = await res.json()
+    throw new Error(`Token request failed: ${JSON.stringify(error)}`)
+  }
+
+  const data = await res.json()
+  console.log('✅ Access Token:', data.access_token)
+  return data.access_token
+}
+
+getAccessToken().catch(console.error)
+```
+
+---
+
+## 📌 Summary
+
+| Element      | Purpose                                       |
+| ------------ | --------------------------------------------- |
+| `assertion`  | The signed JWT you create                     |
+| `grant_type` | `urn:ietf:params:oauth:grant-type:jwt-bearer` |
+| `aud`        | Must match the token endpoint URL             |
+| `iss`/`sub`  | Usually your client/service account ID        |
+
+---
+
+## ✅ When to Use
+
+* Secure M2M authentication without secrets
+* Delegated or service account access
+* Partner API access
+
+---
+
+## 🔐 Security Tips
+
+* JWT must be short-lived (`exp` \~5 min)
+* Use **private key rotation** if possible
+* Always validate `aud`, `exp`, `iat` on the server side
+
+---
