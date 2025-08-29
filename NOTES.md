@@ -1528,5 +1528,338 @@ If you're issuing **JWTs** and resource servers have access to your **JWKS URI**
 * It lets resource servers ask your provider about token validity and metadata.
 * It's a good idea to expose it, especially if you use opaque tokens or need centralized token status checking.
 
-Let me know if you want help implementing an introspection endpoint — I can give you a minimal compliant version.
 
+---
+
+Great question — and one that **many developers implementing providers ask** once they realize how much OpenID Connect (OIDC) overlaps with OAuth 2.0.
+
+---
+
+## ✅ Quick Answer:
+
+In the **Client Credentials flow**, **OIDC adds very little** beyond standard OAuth 2.0 — **and in many cases, it doesn't make much sense to use OIDC at all** unless you're explicitly using features like:
+
+1. ✅ The **OpenID Provider Metadata (discovery document)** (`.well-known/openid-configuration`)
+2. ✅ The **JWKS endpoint** for key discovery
+3. ✅ **ID tokens issued to machine clients** (not common, but possible)
+
+---
+
+## 🧩 Side-by-side Comparison
+
+| Feature                                    | OAuth 2.0 (Client Credentials) | OpenID Connect (Client Credentials)            |
+| ------------------------------------------ | ------------------------------ | ---------------------------------------------- |
+| Token endpoint                             | ✅ Yes                          | ✅ Yes                                          |
+| Access token issuance                      | ✅ Yes                          | ✅ Yes                                          |
+| **ID token issuance**                      | 🚫 No                          | ✅ Optional (but rare in this flow)             |
+| User identity involved                     | 🚫 No (no user context)        | 🚫 No (still no user context)                  |
+| Discovery document (`.well-known`)         | 🚫 No standard                 | ✅ Yes                                          |
+| JWKS endpoint (for provider's public keys) | 🚫 Optional                    | ✅ Yes                                          |
+| Scopes used                                | Custom scopes                  | Typically includes `openid` if ID token needed |
+| Token introspection                        | ✅ Yes                          | ✅ Yes                                          |
+
+---
+
+## 🔍 So What Does OIDC *Actually* Add Here?
+
+### 1. **Discovery Document**
+
+* Located at:
+
+  ```
+  https://your-auth-server.com/.well-known/openid-configuration
+  ```
+* Contains endpoints like:
+
+  * `token_endpoint`
+  * `jwks_uri`
+  * `issuer`
+  * `introspection_endpoint`
+  * `userinfo_endpoint` (usually irrelevant in client credentials)
+* Useful for clients to auto-configure themselves.
+
+### 2. **JWKS URI**
+
+* Public key endpoint for verifying signed tokens (access or ID tokens).
+* Found in the discovery document under `jwks_uri`.
+
+### 3. **ID Token (Optional)**
+
+* Technically allowed in OIDC Client Credentials flow, though rare.
+* **No user is authenticated**, so the ID token typically just reflects the client identity (`sub = client_id`).
+* This is *not* widely adopted because:
+
+  * ID tokens are meant to convey user identity.
+  * Client Credentials flow is for **machine-to-machine** auth, with no user.
+
+Some providers (e.g., Azure AD or Auth0) may support this, but it's not common practice.
+
+---
+
+## 🚫 Common Misunderstanding
+
+> "If I use OIDC, I should get an ID token."
+
+Not necessarily. **In Client Credentials flow, you don’t usually get an ID token** — unless your provider explicitly supports that.
+
+---
+
+## ✅ When Would You Use OIDC Client Credentials?
+
+You’d choose OIDC over pure OAuth 2.0 **if you need**:
+
+* A standard discovery mechanism (for automation)
+* A JWKS endpoint for public keys
+* An ID token for some machine identity use case (rare)
+* To conform to a standard that requires OIDC
+
+Otherwise, **OAuth 2.0 Client Credentials is sufficient and simpler**.
+
+---
+
+## 🧠 TL;DR
+
+| If you're building an OAuth2 provider:                                           |
+| -------------------------------------------------------------------------------- |
+| - You don’t need to return ID tokens in Client Credentials.                      |
+| - But if you support OIDC discovery and JWKS, you’re technically OIDC compliant. |
+| - Most of the added value of OIDC here is around metadata, not tokens.           |
+
+---
+
+✅ **Yes, you would use the same issuer** (e.g. `https://auth.example.com`) to support multiple flows — **auth code for users**, **client credentials for machines**, and **device flow for constrained devices** — all under the same OpenID Provider.
+
+Then, in your **`.well-known/openid-configuration`**, you declare support for each flow **by including the relevant endpoints and metadata**. The clients decide **which flow to use** based on the `grant_type` they send to the token endpoint — not by choosing a different issuer.
+
+---
+
+## 🧩 Example: Full Discovery Document Supporting Multiple Flows
+
+Here’s what a compliant and complete `/.well-known/openid-configuration` might look like:
+
+```json
+{
+  "issuer": "https://auth.example.com",
+  "authorization_endpoint": "https://auth.example.com/authorize",
+  "token_endpoint": "https://auth.example.com/token",
+  "device_authorization_endpoint": "https://auth.example.com/device_authorization",
+  "jwks_uri": "https://auth.example.com/.well-known/jwks.json",
+  "introspection_endpoint": "https://auth.example.com/introspect",
+  "revocation_endpoint": "https://auth.example.com/revoke",
+  "userinfo_endpoint": "https://auth.example.com/userinfo",
+
+  "scopes_supported": [
+    "openid",
+    "profile",
+    "email",
+    "offline_access",
+    "read",
+    "write"
+  ],
+  "response_types_supported": [
+    "code",
+    "token",
+    "id_token",
+    "code token",
+    "code id_token"
+  ],
+  "grant_types_supported": [
+    "authorization_code",
+    "client_credentials",
+    "refresh_token",
+    "urn:ietf:params:oauth:grant-type:device_code"
+  ],
+  "token_endpoint_auth_methods_supported": [
+    "client_secret_basic",
+    "client_secret_post",
+    "private_key_jwt"
+  ],
+  "id_token_signing_alg_values_supported": [
+    "RS256"
+  ],
+  "subject_types_supported": ["public"],
+  "code_challenge_methods_supported": ["S256"]
+}
+```
+
+---
+
+## 🧠 What Each Flow Needs
+
+### 🔐 **Authorization Code Flow (for Users)**
+
+* Needs:
+
+  * `authorization_endpoint`
+  * `token_endpoint`
+  * `response_types_supported` including `"code"`
+  * `grant_types_supported` including `"authorization_code"`
+  * `code_challenge_methods_supported` for PKCE (if public clients)
+* Client uses:
+
+  * `response_type=code`
+  * `grant_type=authorization_code`
+
+---
+
+### 🖥 **Client Credentials Flow (for Machines)**
+
+* Needs:
+
+  * `token_endpoint`
+  * `grant_types_supported` including `"client_credentials"`
+* No need for `authorization_endpoint`, since there's no user interaction.
+
+---
+
+### 📺 **Device Code Flow (for Devices)**
+
+* Needs:
+
+  * `device_authorization_endpoint`
+  * `token_endpoint`
+  * `grant_types_supported` including `"urn:ietf:params:oauth:grant-type:device_code"`
+* Client first hits the `device_authorization_endpoint`, then polls the `token_endpoint`.
+
+---
+
+## 🏗️ So, You Should:
+
+* Expose **one issuer**: `https://auth.example.com`
+* Support all grant types under that issuer.
+* Publish a **discovery document** with the correct fields:
+
+  * `authorization_endpoint` → needed for flows with user interaction (auth code)
+  * `device_authorization_endpoint` → for device code flow
+  * `token_endpoint` → common to all flows
+  * `grant_types_supported` → list all supported flows
+* Clients will:
+
+  * Use the **same discovery URI** to configure themselves.
+  * Pick the **grant type** appropriate for their use case.
+
+---
+
+## ⚠️ Pro Tips
+
+* Don't omit `grant_types_supported` — some clients (especially libraries like `openid-client`, `AppAuth`, etc.) use it to determine capabilities.
+* If you're using **DPoP** or **JWT assertion flows**, you can also include:
+
+  ```json
+  "dpop_signing_alg_values_supported": ["ES256"],
+  "grant_types_supported": [
+    ...,
+    "urn:ietf:params:oauth:grant-type:jwt-bearer"
+  ]
+  ```
+
+---
+
+### ✅ TL;DR
+
+| Flow               | Needs to be declared in config?                                                                             | How? |
+| ------------------ | ----------------------------------------------------------------------------------------------------------- | ---- |
+| Auth Code          | ✅ `authorization_endpoint`, `grant_types_supported` = `authorization_code`                                  |      |
+| Client Credentials | ✅ `grant_types_supported` = `client_credentials`                                                            |      |
+| Device Code        | ✅ `device_authorization_endpoint`, `grant_types_supported` = `urn:ietf:params:oauth:grant-type:device_code` |      |
+
+---
+
+Got it — that actually makes a lot of sense. You're working with a **newer framework** that:
+
+* ✅ **Intends to support multiple flows under the same issuer**
+* 🚫 But **hasn’t implemented it yet**
+* 🛠️ And probably runs each flow in isolation right now (one per endpoint/issuer)
+
+You're right — **implementing it properly is complicated**, especially in a new codebase. Here’s why:
+
+---
+
+## 🧩 Why It’s Hard to Implement (for a Framework)
+
+1. ### **Shared Issuer Context**
+
+   * A single issuer needs to handle:
+
+     * Different `grant_type` handlers
+     * Common `token_endpoint`
+     * Proper client registration checks across all flows
+   * That means building an **abstract grant-type routing engine**.
+
+2. ### **Unified Discovery Document**
+
+   * The server must generate a `.well-known/openid-configuration` that:
+
+     * Reflects all flows supported
+     * Has accurate endpoint metadata
+     * Dynamically changes as features are added (optional but nice)
+
+3. ### **Token Issuance Must Be Flexible**
+
+   * Access/ID tokens must reflect:
+
+     * Different `sub` claims (user, client, device, etc.)
+     * Different lifetimes
+     * Optional vs required ID tokens (for OpenID flows)
+
+4. ### **Security Model Must Adapt**
+
+   * PKCE, client secrets, private\_key\_jwt, DPoP — all must be selectively enforced based on the flow and client type
+
+5. ### **Cross-flow Testing Is Tedious**
+
+   * Each flow has its own quirks and edge cases
+   * Supporting refresh tokens and revocation consistently across flows is another big chunk
+
+---
+
+## ✅ What You Can Do *Right Now*
+
+### 🚧 If You’re Building the Framework (or Contributing)
+
+Start small:
+
+1. Build a unified `token_endpoint` that:
+
+   * Accepts `grant_type` as input
+   * Internally dispatches to the appropriate handler
+
+2. Return a unified discovery doc with:
+
+   ```json
+   {
+     "grant_types_supported": ["authorization_code", "client_credentials", "urn:ietf:params:oauth:grant-type:device_code"],
+     "device_authorization_endpoint": "...",
+     ...
+   }
+   ```
+
+3. Add handlers incrementally:
+
+   * Authorization Code → already works
+   * Add Client Credentials → easier than others
+   * Device Code → a bit trickier due to polling and user interaction
+
+I can help you architect this in layers if you like — happy to sketch out a flow registry or pluggable grant handler model.
+
+---
+
+### 🧪 If You’re Using the Framework
+
+* Stick to one flow per issuer **for now**
+* Wait for native support for unified issuers, or contribute if you can
+* Avoid exposing these limitations to your clients (e.g. via gateway or unified metadata service)
+
+---
+
+## ✅ TL;DR
+
+\| What’s the situation? | The framework you’re using doesn’t yet support multiple flows under a single issuer, but intends to. |
+\| Why is it hard?        | It requires unified endpoint routing, token handling, and dynamic discovery support. |
+\| What can you do?       | Work around it now, or help implement a dispatch system for multiple flows under one issuer. |
+
+---
+
+If you ever want help designing that internal handler/router system — or want to see how Spring Security or Node-based providers do it — just ask. I’ve helped people build grant dispatchers from scratch and can help you too.
+
+---

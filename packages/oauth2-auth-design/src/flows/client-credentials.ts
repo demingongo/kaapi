@@ -572,14 +572,13 @@ export interface OAuth2ClientCredentialsBuilderArg extends OAuth2ClientCredentia
 
 export class OAuth2ClientCredentialsBuilder {
 
-    #params: OAuth2ClientCredentialsBuilderArg
-
+    protected params: OAuth2ClientCredentialsBuilderArg
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    #tokenType?: TokenType<any>
-    #tokenTTL?: number
-    #description?: string
-    #scopes?: Record<string, string>
-    #clientAuthMethods: Record<TokenEndpointAuthMethod, ClientAuthMethod | undefined> = {
+    protected tokenType?: TokenType<any>
+    protected tokenTTL?: number
+    protected description?: string
+    protected scopes?: Record<string, string>
+    protected clientAuthMethods: Record<TokenEndpointAuthMethod, ClientAuthMethod | undefined> = {
         client_secret_basic: undefined,
         client_secret_post: undefined,
         client_secret_jwt: undefined,
@@ -588,7 +587,7 @@ export class OAuth2ClientCredentialsBuilder {
     }
 
     constructor(params: OAuth2ClientCredentialsBuilderArg) {
-        this.#params = params
+        this.params = params
     }
 
     static create(params?: Partial<OAuth2ClientCredentialsBuilderArg>): OAuth2ClientCredentialsBuilder {
@@ -600,20 +599,21 @@ export class OAuth2ClientCredentialsBuilder {
     }
 
     build(): OAuth2ClientCredentials {
-        const result = new OAuth2ClientCredentials(this.#params)
+        const result = new OAuth2ClientCredentials(this.params)
 
-        result.setTokenTTL(this.#tokenTTL)
+        result.setTokenTTL(this.tokenTTL)
 
-        if (typeof this.#description !== 'undefined') {
-            result.setDescription(this.#description)
+        if (typeof this.description !== 'undefined') {
+            result.setDescription(this.description)
         }
-        if (typeof this.#scopes !== 'undefined') {
-            result.setScopes(this.#scopes)
+        if (typeof this.scopes !== 'undefined') {
+            console.log('scopes', this.scopes)
+            result.setScopes(this.scopes)
         }
-        if (typeof this.#tokenType !== 'undefined') {
-            result.setTokenType(this.#tokenType)
+        if (typeof this.tokenType !== 'undefined') {
+            result.setTokenType(this.tokenType)
         }
-        for (const method of Object.values(this.#clientAuthMethods)) {
+        for (const method of Object.values(this.clientAuthMethods)) {
             if (method) {
                 result.addClientAuthenticationMethod(method)
             }
@@ -622,48 +622,48 @@ export class OAuth2ClientCredentialsBuilder {
     }
 
     setTokenTTL(ttlSeconds?: number): this {
-        this.#tokenTTL = ttlSeconds
+        this.tokenTTL = ttlSeconds
         return this
     }
 
     setDescription(description: string): this {
-        this.#description = description;
+        this.description = description;
         return this;
     }
 
     setScopes(scopes: Record<string, string>): this {
-        this.#scopes = scopes;
+        this.scopes = scopes;
         return this;
     }
 
     setTokenType<Refs extends ReqRef = ReqRefDefaults>(value: TokenType<Refs>): this {
-        this.#tokenType = value
+        this.tokenType = value
         return this
     }
 
     addClientAuthenticationMethod(value: 'client_secret_basic' | 'client_secret_post' | ClientAuthMethod): this {
         if (value == 'client_secret_basic') {
-            this.#clientAuthMethods.client_secret_basic = new ClientSecretBasic()
+            this.clientAuthMethods.client_secret_basic = new ClientSecretBasic()
         } else if (value == 'client_secret_post') {
-            this.#clientAuthMethods.client_secret_post = new ClientSecretPost()
+            this.clientAuthMethods.client_secret_post = new ClientSecretPost()
         } else {
-            this.#clientAuthMethods[value.method] = value
+            this.clientAuthMethods[value.method] = value
         }
         return this
     }
 
     strategyName(name: string): this {
-        this.#params.strategyName = name
+        this.params.strategyName = name
         return this
     }
 
     setJwksStore(store: JWKSStore): this {
-        this.#params.jwksStore = store
+        this.params.jwksStore = store
         return this
     }
 
     validate<Refs extends ReqRef = ReqRefDefaults>(handler: OAuth2AuthOptions<Refs>['validate']): this {
-        this.#params.options = { ...(this.#params.options || {}), validate: handler }
+        this.params.options = { ...(this.params.options || {}), validate: handler }
         return this
     }
 
@@ -671,18 +671,18 @@ export class OAuth2ClientCredentialsBuilder {
      * Auto-verifies the access token JWT using the configured JWKS before running user validation.
      */
     useAccessTokenJwks(active: boolean): this {
-        this.#params.options = { ...(this.#params.options || {}), useAccessTokenJwks: active }
+        this.params.options = { ...(this.params.options || {}), useAccessTokenJwks: active }
         return this
     }
 
     jwksRoute<Refs extends ReqRef = ReqRefDefaults>(handler: (route: DefaultJWKSRoute<Refs>) => void): this {
-        this.#params.jwksRoute = this.#params.jwksRoute || JWKSRoute.buildDefault();
-        handler(this.#params.jwksRoute)
+        this.params.jwksRoute = this.params.jwksRoute || JWKSRoute.buildDefault();
+        handler(this.params.jwksRoute)
         return this
     }
 
     tokenRoute<Refs extends ReqRef = ReqRefDefaults>(handler: (route: DefaultOAuth2ClientCredentialsTokenRoute<Refs>) => void): this {
-        handler(this.#params.tokenRoute)
+        handler(this.params.tokenRoute)
         return this
     }
 
@@ -691,9 +691,38 @@ export class OAuth2ClientCredentialsBuilder {
             path: string,
             handler: OAuth2RefreshTokenHandler<Refs>
         ): this {
-        this.#params.refreshTokenRoute = new OAuth2RefreshTokenRoute(path, handler)
+        this.params.refreshTokenRoute = new OAuth2RefreshTokenRoute(path, handler)
         return this
     }
 }
 
 //#endregion Builder
+
+//#region OIDC builder
+
+export class OIDCClientCredentialsBuilder extends OAuth2ClientCredentialsBuilder {
+
+    static create(params?: Partial<OAuth2ClientCredentialsBuilderArg>): OIDCClientCredentialsBuilder {
+        const paramsComplete: OAuth2ClientCredentialsBuilderArg = {
+            tokenRoute: params && params.tokenRoute || OAuth2ClientCredentialsTokenRoute.buildDefault(),
+            ...(params || {})
+        };
+        return new OIDCClientCredentialsBuilder(paramsComplete)
+    }
+
+    build(): OAuth2ClientCredentials {
+
+        if (!this.params.jwksRoute) {
+            this.params.jwksRoute = JWKSRoute.buildDefault()
+        }
+
+        this.setScopes({
+            openid: 'enable OpenID Connect',
+            ...(this.scopes || {})
+        });
+
+        return super.build();
+    }
+}
+
+//#endregion OIDC builder

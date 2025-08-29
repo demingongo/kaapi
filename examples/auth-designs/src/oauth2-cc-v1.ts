@@ -6,7 +6,8 @@ import {
     ClientSecretPost,
     getInMemoryJWKSStore,
     //getInMemoryCacheSet,
-    OAuth2ClientCredentialsBuilder,
+    //OAuth2ClientCredentialsBuilder,
+    OIDCClientCredentialsBuilder,
     //ClientSecretPost,
     //ClientSecretBasic,
     //ClientSecretJwt,
@@ -20,7 +21,7 @@ const tokenType = new BearerToken()
 //    .validateTokenRequest(() => ({ isValid: true })) // for testing without validating dpop
 
 
-export const clientCredentialsDesignV1 = OAuth2ClientCredentialsBuilder
+export const clientCredentialsDesignV1 = OIDCClientCredentialsBuilder
     .create()
     .setTokenType(tokenType)
     .setTokenTTL(36000)
