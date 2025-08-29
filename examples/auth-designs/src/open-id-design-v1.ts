@@ -29,12 +29,13 @@ export const openIDDesignV1 = OpenIDAuthDesignBuilder
         ...tokenType.configuration
     })
     .validate(async (req, { token }) => {
-        console.log('validate => req.app.oauth2.proofThumbprint:', req.app.oauth2?.dpopThumbprint)
-        console.log('token=', token)
         //#region @TODO: validation
         if (token != 'generated_access_token') {
             return { isValid: false }
         }
+
+        console.log('validate => req.app.oauth2.proofThumbprint:', req.app.oauth2?.dpopThumbprint)
+        console.log('token=', token)
 
         //#endregion @TODO: validation
 

@@ -22,7 +22,7 @@ import {
 } from './common'
 import { ClientAuthMethod, ClientSecretBasic, ClientSecretPost, TokenEndpointAuthMethod } from '../utils/client-auth-methods'
 import { DefaultOAuth2ClientCredentialsTokenRoute, IOAuth2ClientCredentialsTokenRoute, OAuth2ClientCredentialsTokenParams, OAuth2ClientCredentialsTokenRoute } from './client-creds/token-route'
-import { TokenType } from '../utils/token-types'
+import { TokenType, TokenTypeValidationResponse } from '../utils/token-types'
 import { JWKS, JWKSStore } from '../utils/jwks-store'
 import { createIdToken, createJwtAccessToken, JWKSGenerator } from '../utils/jwks-generator'
 import { getInMemoryJWKSStore } from '../utils/in-memory-jwks-store'
@@ -138,8 +138,8 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign {
     }
 
     private _getJwksGenerator() {
-        if(this.jwksGenerator) return this.jwksGenerator;
-        if (this.jwksRoute || this.jwksStore || this.options.useAccessTokenJwks){
+        if (this.jwksGenerator) return this.jwksGenerator;
+        if (this.jwksRoute || this.jwksStore || this.options.useAccessTokenJwks) {
             this.jwksGenerator = new JWKSGenerator(this.jwksStore || getInMemoryJWKSStore(), this.tokenTTL)
         }
         return this.jwksGenerator
@@ -202,7 +202,7 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign {
                     if (jwksGenerator && settings.useAccessTokenJwks) {
                         try {
                             jwtAccessTokenPayload = await jwksGenerator.verify(token)
-                        } catch(err) {
+                        } catch (err) {
                             t.log.error(err)
                             return Boom.unauthorized(null, tokenTypePrefix)
                         }
@@ -253,6 +253,8 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign {
         const jwksGenerator = this._getJwksGenerator();
 
         const hasOpenIDScope = () => typeof this.getScopes()?.['openid'] != 'undefined';
+
+        const tokenTypeInstance = this._tokenType;
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const routesOptions: RouteOptions<any> = {
@@ -352,6 +354,11 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign {
                         }
                         if (scope) {
                             params.scope = scope
+                        }
+
+                        const ttR: TokenTypeValidationResponse = tokenTypeInstance.isValidTokenRequest ? (await tokenTypeInstance.isValidTokenRequest(req)) : { isValid: true }
+                        if (!ttR.isValid) {
+                            return h.response({ error: 'invalid_request', error_description: ttR.message || '' }).code(400)
                         }
 
                         return this.tokenRoute.handler(params, req, h)

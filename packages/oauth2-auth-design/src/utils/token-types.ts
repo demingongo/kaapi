@@ -115,50 +115,50 @@ export class DPoPToken<
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private async _handleDefault(req: Request<any>, ttl: number): Promise<TokenTypeValidationResponse> {
         const dpopHeader = req.raw.req.headers.dpop;
-            if (!dpopHeader || typeof dpopHeader != 'string') return { message: 'Missing Demonstration of Proof-of-Possession' }
+        if (!dpopHeader || typeof dpopHeader != 'string') return { message: 'Missing Demonstration of Proof-of-Possession' }
 
-            try {
-                const { payload, protectedHeader } = await jwtVerify(dpopHeader, async (header) => {
-                    if (!header.jwk) throw new Error('Missing JWK');
-                    return importJWK(header.jwk, header.alg);
-                }, { algorithms: ['ES256'] });
+        try {
+            const { payload, protectedHeader } = await jwtVerify(dpopHeader, async (header) => {
+                if (!header.jwk) throw new Error('Missing JWK');
+                return importJWK(header.jwk, header.alg);
+            }, { algorithms: ['ES256'] });
 
-                if (payload.htm !== req.method.toUpperCase()) throw new Error('HTM mismatch');
+            if (payload.htm !== req.method.toUpperCase()) throw new Error('HTM mismatch');
 
-                const forwardedProto = req.headers['x-forwarded-proto'];
-                const protocol = forwardedProto ? forwardedProto : req.server.info.protocol;
-                const fullUrl = protocol
-                    + '://'
-                    + req.info.host
-                    + req.path;
-                if (payload.htu !== fullUrl) throw new Error('HTU mismatch');
+            const forwardedProto = req.headers['x-forwarded-proto'];
+            const protocol = forwardedProto ? forwardedProto : req.server.info.protocol;
+            const fullUrl = protocol
+                + '://'
+                + req.info.host
+                + req.path;
+            if (payload.htu !== fullUrl) throw new Error('HTU mismatch');
 
-                const now = Math.floor(Date.now() / 1000);
+            const now = Math.floor(Date.now() / 1000);
 
-                if (!payload.iat) throw new Error('Missing IAT');
-                if (Math.abs(now - payload.iat) > ttl) throw new Error('Proof expired');
+            if (!payload.iat) throw new Error('Missing IAT');
+            if (Math.abs(now - payload.iat) > ttl) throw new Error('Proof expired');
 
-                if (!payload.jti) throw new Error('Missing JTI');
-                
-                if (await this.#cache.has(payload.jti)) throw new Error('Replay detected');
-                await this.#cache.add(payload.jti, ttl);
+            if (!payload.jti) throw new Error('Missing JTI');
 
-                req.app.oauth2 = req.app.oauth2 || {}
-                req.app.oauth2.dpopPayload = payload;
+            if (await this.#cache.has(payload.jti)) throw new Error('Replay detected');
+            await this.#cache.add(payload.jti, ttl);
 
-                // Optional: bind proof to access token
-                if (protectedHeader.jwk) {
-                    // const tokenThumbprint = ... extract from token cnf.jkt
-                    const dpopThumbprint = await calculateJwkThumbprint(protectedHeader.jwk, 'sha256');
-                    req.app.oauth2.dpopThumbprint = dpopThumbprint
-                    // if (tokenThumbprint !== proofThumbprint) throw new Error('Token binding mismatch');
-                }
+            req.app.oauth2 = req.app.oauth2 || {}
+            req.app.oauth2.dpopPayload = payload;
 
-                return { isValid: true }
-            } catch (err) {
-                console.error('Invalid DPoP proof:', err)
-                return { message: `${err}` }
+            // Optional: bind proof to access token
+            if (protectedHeader.jwk) {
+                // const tokenThumbprint = ... extract from token cnf.jkt
+                const dpopThumbprint = await calculateJwkThumbprint(protectedHeader.jwk, 'sha256');
+                req.app.oauth2.dpopThumbprint = dpopThumbprint
+                // if (tokenThumbprint !== proofThumbprint) throw new Error('Token binding mismatch');
             }
+
+            return { isValid: true }
+        } catch (err) {
+            console.error('Invalid DPoP proof:', err)
+            return { message: `${err}` }
+        }
     }
 
     setCacheSet(value: StringCacheSet): this {

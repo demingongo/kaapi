@@ -9,6 +9,13 @@ interface JWKCacheEntry {
     }
 }
 
+export interface InMemoryJWKSStoreOptions {
+    /**
+     * The minimum remaining time (in seconds) on the most recent entry before the store considers adding more entries.
+     */
+    timeThreshold?: number
+}
+
 /**
  * InMemoryJWKSStore class
  */
@@ -21,8 +28,8 @@ export class InMemoryJWKSStore implements JWKSStore {
      * 
      * @param timeThreshold The minimum remaining time (in seconds) on the most recent entry before the store considers adding more entries.
      */
-    constructor(timeThreshold?: number) {
-        this.timeThreshold = timeThreshold
+    constructor(options?: InMemoryJWKSStoreOptions) {
+        this.timeThreshold = options?.timeThreshold
     }
 
     async get(): Promise<JWKS | undefined> {
@@ -92,11 +99,7 @@ export function getInMemoryJWKSStore(timeThreshold?: number): InMemoryJWKSStore 
     return inMemoryJWKSStore
 }
 */
-/**
- * 
- * @param timeThreshold The minimum remaining time (in seconds) on the most recent entry before the store considers adding more entries.
- * @returns 
- */
-export function getInMemoryJWKSStore(timeThreshold?: number): InMemoryJWKSStore {
-    return new InMemoryJWKSStore(timeThreshold)
+
+export function getInMemoryJWKSStore(options?: InMemoryJWKSStoreOptions): InMemoryJWKSStore {
+    return new InMemoryJWKSStore(options)
 }

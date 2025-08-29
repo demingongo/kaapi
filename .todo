@@ -14,9 +14,20 @@
     - package json exports: "." and "cli" @done
     - auth code + client creds (no OpenID):
         - createJwtAccessToken
+            - client credentials @done
+            - auth code
         - createIdToken
+            - client credentials @done
+            - auth code
         - jwksRoute (because yes, without OpenID, it can be used to validaten JWT access token)
+            - client credentials @done
+            - auth code
         - useAccessTokenJwks
+            - client credentials @done
+            - auth code
+        - openID connect
+            - client credentials
+            - auth code
         - REALLY UPDATE AUTH CODE ONCE CLIENT CREDENTIALS WORKS
     - make usage more simple (default classes with default routes, then all methods in the same class)
     - cli create templates

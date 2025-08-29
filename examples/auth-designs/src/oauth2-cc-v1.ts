@@ -5,6 +5,7 @@ import {
     ClientSecretBasic,
     ClientSecretPost,
     getInMemoryJWKSStore,
+    //getInMemoryCacheSet,
     OAuth2ClientCredentialsBuilder,
     //ClientSecretPost,
     //ClientSecretBasic,
@@ -14,8 +15,10 @@ import {
 
 const tokenType = new BearerToken()
 //const tokenType = new DPoPToken()
-//    .setTTL(300)
+//    .setTTL(300) // default 300s
+//    .setCacheSet(getInMemoryCacheSet()) // cache DPoP tokens
 //    .validateTokenRequest(() => ({ isValid: true })) // for testing without validating dpop
+
 
 export const clientCredentialsDesignV1 = OAuth2ClientCredentialsBuilder
     .create()
@@ -23,7 +26,7 @@ export const clientCredentialsDesignV1 = OAuth2ClientCredentialsBuilder
     .setTokenTTL(36000)
     .addClientAuthenticationMethod(new ClientSecretPost())
     .addClientAuthenticationMethod(new ClientSecretBasic())
-    .setJwksStore(getInMemoryJWKSStore(36000 / 2)) // store for JWKS
+    .setJwksStore(getInMemoryJWKSStore({ timeThreshold: 36000 / 2 })) // store for JWKS
     .jwksRoute(route => route.setPath('/oauth2/m2m/keys')) // activates jwks uri
     .useAccessTokenJwks(true) // activates JWT access token verification with JWKS
     .validate(async (_, { token, jwtAccessTokenPayload }) => {
@@ -70,6 +73,7 @@ export const clientCredentialsDesignV1 = OAuth2ClientCredentialsBuilder
                     const refreshToken = await createJwtAccessToken({
                         machine: '248289761001',
                         name: 'Jane Doe',
+                        refresh: true,
                         exp: ttl * 2
                     })
                     return new OAuth2TokenResponse({ access_token: accessToken })

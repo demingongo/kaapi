@@ -30,3 +30,7 @@ export class InMemoryTmpCache<T extends string | number = string | number> imple
 }
 
 export type StringCacheSet = CacheSet<string>
+
+export function getInMemoryCacheSet<T extends string | number = string | number>(): InMemoryTmpCache<T> {
+    return new InMemoryTmpCache<T>()
+}
