@@ -1435,3 +1435,98 @@ getAccessToken().catch(console.error)
 * Always validate `aud`, `exp`, `iat` on the server side
 
 ---
+
+
+Great follow-up — the `introspection_endpoint` is part of OAuth 2.0, not OpenID Connect per se — **but it's often included in the OpenID Connect discovery document** for convenience and consistency.
+
+---
+
+## 🔍 What Is the `introspection_endpoint`?
+
+Defined in [**RFC 7662** – OAuth 2.0 Token Introspection](https://datatracker.ietf.org/doc/html/rfc7662), the `introspection_endpoint` allows **resource servers** (or other parties) to **ask the authorization server** whether a token is:
+
+* valid
+* active (not expired/revoked)
+* associated with a client or user
+* what scopes it has
+* and more
+
+### Example Request:
+
+```http
+POST /introspect HTTP/1.1
+Authorization: Basic base64(client_id:client_secret)
+Content-Type: application/x-www-form-urlencoded
+
+token=ACCESS_TOKEN
+```
+
+### Example Response:
+
+```json
+{
+  "active": true,
+  "scope": "read write",
+  "client_id": "my-client",
+  "token_type": "Bearer",
+  "exp": 1695000000,
+  "iat": 1694996400,
+  "sub": "some-subject",
+  "aud": "my-api"
+}
+```
+
+---
+
+## 🧩 Role in OpenID Connect
+
+In **OIDC**, the `introspection_endpoint` is:
+
+* **Optional** in the spec.
+* Commonly included in the `.well-known/openid-configuration` discovery document under the `introspection_endpoint` key.
+* Useful even if you're **only issuing access tokens**, and especially helpful for **opaque tokens** (where the resource server can't introspect locally).
+
+---
+
+## 📌 When to Use the Introspection Endpoint
+
+You should implement and/or expose the `introspection_endpoint` **if any of the following are true**:
+
+1. You're issuing **opaque access tokens** (not JWTs).
+2. Your resource servers **cannot or should not** validate JWTs on their own (e.g., no public key access).
+3. You want a **central place to validate/revoke tokens**.
+
+If you're issuing **JWTs** and resource servers have access to your **JWKS URI**, introspection may be unnecessary (but still useful for revocation, depending on your architecture).
+
+---
+
+## ✅ Discovery Document Example (OIDC)
+
+```json
+{
+  "issuer": "https://your-provider.com",
+  "token_endpoint": "https://your-provider.com/token",
+  "jwks_uri": "https://your-provider.com/.well-known/jwks.json",
+  "introspection_endpoint": "https://your-provider.com/introspect",
+  ...
+}
+```
+
+---
+
+## 🔐 Security Considerations
+
+* Require **client authentication** on the introspection endpoint (e.g., client credentials).
+* Only allow **authorized resource servers** to introspect tokens — never public access.
+* Don't leak information about tokens to unauthorized parties.
+
+---
+
+### TL;DR
+
+* `introspection_endpoint` is from **OAuth 2.0**, not OIDC, but often listed in OIDC discovery documents.
+* It lets resource servers ask your provider about token validity and metadata.
+* It's a good idea to expose it, especially if you use opaque tokens or need centralized token status checking.
+
+Let me know if you want help implementing an introspection endpoint — I can give you a minimal compliant version.
+
