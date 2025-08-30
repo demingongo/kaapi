@@ -292,12 +292,10 @@ export abstract class OAuth2AuthDesign extends AuthDesign {
         let error: OAuth2Error | undefined;
         let errorDescription: string | undefined;
 
-        console.log('authMethodsInstances', authMethodsInstances)
-
         for (const am of checkOrder) {
             const amInstance = authMethodsInstances[am]
             if (amInstance) {
-                console.log('Check', amInstance.method, '...')
+                //console.log('Check', amInstance.method, '...')
                 const v = await amInstance.extractParams(req as unknown as Request<ReqRefDefaults>)
                 if (v.hasAuthMethod) {
                     //console.log(amInstance.method, 'IS BEING USED')
