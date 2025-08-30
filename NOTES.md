@@ -1765,8 +1765,6 @@ Here’s what a compliant and complete `/.well-known/openid-configuration` might
 
 ---
 
-Got it — that actually makes a lot of sense. You're working with a **newer framework** that:
-
 * ✅ **Intends to support multiple flows under the same issuer**
 * 🚫 But **hasn’t implemented it yet**
 * 🛠️ And probably runs each flow in isolation right now (one per endpoint/issuer)

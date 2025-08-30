@@ -52,7 +52,7 @@ export const clientCredentialsDesignV1 = OIDCClientCredentialsBuilder
         }
     })
     .tokenRoute(route => route.setPath('/oauth2/m2m/token')
-        .generateToken(async ({ clientId, clientSecret, ttl, scope, createJwtAccessToken }, _req) => {
+        .generateToken(async ({ clientId, clientSecret, ttl, scope, createJwtAccessToken, createIdToken }, _req) => {
 
             console.log('clientId', clientId)
             console.log('clientSecret', clientSecret)
@@ -80,8 +80,13 @@ export const clientCredentialsDesignV1 = OIDCClientCredentialsBuilder
                     return new OAuth2TokenResponse({ access_token: accessToken })
                         .setExpiresIn(ttl)
                         .setRefreshToken(refreshToken)
-                        .setScope(scope)
+                        .setScope(scope?.split(' '))
                         .setTokenType(tokenType)
+                        .setIDToken(
+                            (scope?.split(' ').includes('openid') || undefined) && await createIdToken?.({
+                                sub: clientId
+                            })
+                        )
                 }
                 //#endregion @TODO: validation + token
             } catch (err) {

@@ -107,7 +107,7 @@ export abstract class AuthDesign implements KaapiPlugin {
     /**
      * The name of the strategy, for info purpose
      */
-    abstract getStrategyName(): string
+    abstract getStrategyName(): string | string[]
 }
 
 /**
@@ -154,6 +154,12 @@ export class GroupAuthDesign extends AuthDesign {
     }
 
     getStrategies(): string[] {
-        return this.designs.map(d => d.getStrategyName()).filter(n => n)
+        return this.designs.map(d => {
+            const str = d.getStrategyName()
+            if (!Array.isArray(str)) {
+                return [str]
+            }
+            return str
+        }).flat().filter(n => n)
     }
 }

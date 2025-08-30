@@ -1,8 +1,10 @@
 import {
     KaapiTools,
+    Lifecycle,
     ReqRef,
     ReqRefDefaults,
     Request,
+    ResponseToolkit,
     RouteOptions
 } from '@kaapi/kaapi'
 import { GrantType, OAuth2Util } from '@novice1/api-doc-generator'
@@ -14,6 +16,7 @@ import {
     IOAuth2RefreshTokenRoute,
     JWKSRoute,
     OAuth2AuthDesign,
+    OAuth2AuthDesignBuilder,
     OAuth2AuthOptions,
     OAuth2Error,
     OAuth2RefreshTokenHandler,
@@ -137,13 +140,319 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign {
         return this.description;
     }
 
-    private _getJwksGenerator() {
+    protected getJwksGenerator() {
         if (this.jwksGenerator) return this.jwksGenerator;
         if (this.jwksRoute || this.jwksStore || this.options.useAccessTokenJwks) {
             this.jwksGenerator = new JWKSGenerator(this.jwksStore || getInMemoryJWKSStore(), this.tokenTTL)
         }
         return this.jwksGenerator
     }
+
+
+    async handleToken<Refs extends ReqRef = ReqRefDefaults>(
+        t: KaapiTools,
+        request: Request<Refs>,
+        h: ResponseToolkit<Refs>
+    ) {
+
+        const supported = this.getTokenEndpointAuthMethods();
+        const authMethodsInstances = this.clientAuthMethods;
+        const jwksGenerator = this.getJwksGenerator();
+
+        const hasOpenIDScope = () => typeof this.getScopes()?.['openid'] != 'undefined';
+
+        const tokenTypeInstance = this._tokenType;
+
+        const sr: {
+            handle: Lifecycle.Method<{
+                Payload: {
+                    grant_type?: unknown;
+                    redirect_uri?: unknown;
+                    refresh_token?: unknown;
+                    scope?: unknown;
+                };
+            }, Lifecycle.ReturnValue<{
+                Payload: {
+                    grant_type?: unknown;
+                    redirect_uri?: unknown;
+                    refresh_token?: unknown;
+                    scope?: unknown;
+                };
+            }>>
+        } = {
+            handle: async (req, h) => {
+                // Grant validation
+                const supportedGrants = ['client_credentials']
+                if (this.tokenRoute.path == this.refreshTokenRoute?.path) {
+                    supportedGrants.push('refresh_token')
+                }
+                if (!(typeof req.payload.grant_type === 'string' && supportedGrants.includes(req.payload.grant_type))) {
+                    return h.response({ error: 'unsupported_grant_type', error_description: `Request does not support the 'grant_type' '${req.payload.grant_type}'.` }).code(400)
+                }
+
+                // Client authentication is present?
+                const {
+                    clientId,
+                    clientSecret,
+                    error,
+                    errorDescription
+                } = await this._extractClientParams(req as unknown as Request<ReqRefDefaults>, authMethodsInstances, supported);
+
+                if (error) {
+                    return h.response({ error: error, error_description: errorDescription || undefined }).code(400)
+                }
+
+                if (!clientId || !clientSecret) {
+                    return h
+                        .response({
+                            error: 'invalid_request',
+                            error_description: `Supported token endpoint authentication methods: ${supported.join(', ')}`
+                        }).code(400)
+                }
+
+                // validating body
+                if (
+                    req.payload.grant_type === 'client_credentials'
+                ) {
+                    let clientId: string,
+                        clientSecret: string,
+                        tmpClientId: string | undefined,
+                        tmpClientSecret: string | undefined;
+
+                    const authHeaderValue = req.raw.req.headers.authorization
+                    if (authHeaderValue) {
+                        // remove 'Basic ' and convert the base64 to string
+                        const value = Buffer.from(authHeaderValue.substring(5), 'base64').toString();
+                        // split client_id and client_secret from string
+                        [tmpClientId, tmpClientSecret] = value.split(':')
+                    }
+
+                    if (tmpClientId) {
+                        clientId = tmpClientId
+                    } else {
+                        return h.response({ error: 'invalid_request', error_description: 'Request was missing the \'client_id\' parameter.' }).code(400)
+                    }
+                    if (tmpClientSecret) {
+                        clientSecret = tmpClientSecret
+                    } else {
+                        return h.response({ error: 'invalid_request', error_description: 'Request was missing the \'client_secret\' parameter.' }).code(400)
+                    }
+                    const scope = req.payload.scope && typeof req.payload.scope === 'string' ? req.payload.scope : undefined
+                    const params: OAuth2ClientCredentialsTokenParams = {
+                        clientId: clientId,
+                        clientSecret: clientSecret,
+                        grantType: req.payload.grant_type,
+                        ttl: jwksGenerator?.ttl || this.tokenTTL,
+                        createJwtAccessToken: jwksGenerator ? (async (payload) => {
+                            return await createJwtAccessToken(jwksGenerator, {
+                                aud: t.postman?.getHost()[0] || '',
+                                iss: t.postman?.getHost()[0] || '',
+                                sub: clientId,
+                                scope,
+                                ...payload
+                            })
+                        }) : undefined,
+                        createIdToken: jwksGenerator && hasOpenIDScope() ? (async (payload) => {
+                            return await createIdToken(jwksGenerator, {
+                                aud: clientId,
+                                iss: t.postman?.getHost()[0] || '',
+                                ...payload
+                            })
+                        }) : undefined
+                    }
+                    if (scope) {
+                        params.scope = scope
+                    }
+
+                    const ttR: TokenTypeValidationResponse = tokenTypeInstance.isValidTokenRequest ? (await tokenTypeInstance.isValidTokenRequest(req)) : { isValid: true }
+                    if (!ttR.isValid) {
+                        return h.response({ error: 'invalid_request', error_description: ttR.message || '' }).code(400)
+                    }
+
+                    return this.tokenRoute.handler(params, req, h)
+                } else if (
+                    this.tokenRoute.path == this.refreshTokenRoute?.path &&
+                    req.payload.grant_type === 'refresh_token'
+                ) {
+                    const hasRefreshToken = req.payload.refresh_token && typeof req.payload.refresh_token === 'string'
+                    if (
+                        clientId &&
+                        hasRefreshToken
+                    ) {
+                        const scope = req.payload.scope && typeof req.payload.scope === 'string' ? req.payload.scope : undefined
+                        const params: OAuth2RefreshTokenParams = {
+                            clientId,
+                            grantType: req.payload.grant_type,
+                            refreshToken: `${req.payload.refresh_token}`,
+                            ttl: jwksGenerator?.ttl || this.tokenTTL,
+                            createJwtAccessToken: jwksGenerator ? (async (payload) => {
+                                return await createJwtAccessToken(jwksGenerator, {
+                                    aud: t.postman?.getHost()[0] || '',
+                                    iss: t.postman?.getHost()[0] || '',
+                                    sub: clientId,
+                                    scope,
+                                    ...payload
+                                })
+                            }) : undefined,
+                            createIdToken: jwksGenerator && hasOpenIDScope() ? (async (payload) => {
+                                return await createIdToken(jwksGenerator, {
+                                    aud: clientId,
+                                    iss: t.postman?.getHost()[0] || '',
+                                    ...payload
+                                })
+                            }) : undefined
+                        }
+
+                        if (clientSecret) {
+                            params.clientSecret = clientSecret
+                        }
+
+                        if (scope) {
+                            params.scope = scope
+                        }
+
+                        return this.refreshTokenRoute.handler(params, req, h)
+                    } else {
+                        let error: OAuth2Error = 'unauthorized_client';
+                        let errorDescription = ''
+                        if (!clientId) {
+                            error = 'invalid_request'
+                            errorDescription = 'Request was missing the \'client_id\' parameter.'
+                        } else if (!clientSecret) {
+                            error = 'invalid_request'
+                            errorDescription = 'Request was missing the \'client_secret\' parameter.'
+                        } else if (!(req.payload.refresh_token && typeof req.payload.refresh_token === 'string')) {
+                            error = 'invalid_request'
+                            errorDescription = 'Request was missing the \'refresh_token\' parameter.'
+                        }
+
+                        return h.response({ error, error_description: errorDescription }).code(400)
+                    }
+                } else {
+                    let error: OAuth2Error = 'unauthorized_client';
+                    let errorDescription = ''
+                    if (!clientId) {
+                        error = 'invalid_request'
+                        errorDescription = 'Request was missing the \'client_id\' parameter.'
+                    } else if (!clientSecret) {
+                        error = 'invalid_request'
+                        errorDescription = 'Request was missing the \'client_secret\' parameter.'
+                    }
+                    return h.response({ error, error_description: errorDescription }).code(400)
+                }
+
+            }
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return sr.handle(request as Request<any>, h as ResponseToolkit<any>)
+    }
+
+    async handleRefreshToken<Refs extends ReqRef = ReqRefDefaults>(
+        t: KaapiTools,
+        request: Request<Refs>,
+        h: ResponseToolkit<Refs>
+    ) {
+
+        const supported = this.getTokenEndpointAuthMethods();
+        const authMethodsInstances = this.clientAuthMethods;
+        const jwksGenerator = this.getJwksGenerator();
+
+        const hasOpenIDScope = () => typeof this.getScopes()?.['openid'] != 'undefined';
+
+        const sr: {
+            handle: Lifecycle.Method<{
+                Payload: { grant_type?: unknown, refresh_token?: unknown, scope?: unknown }
+            }, Lifecycle.ReturnValue<{
+                Payload: { grant_type?: unknown, refresh_token?: unknown, scope?: unknown }
+            }>>
+        } = {
+            handle: async (req, h) => {
+                // Grant validation
+                const supportedGrants = ['refresh_token']
+                if (!(typeof req.payload.grant_type === 'string' && supportedGrants.includes(req.payload.grant_type))) {
+                    return h.response({ error: 'unsupported_grant_type', error_description: `Request does not support the 'grant_type' '${req.payload.grant_type}'.` }).code(400)
+                }
+
+                // Client authentication is present?
+                const {
+                    clientId,
+                    clientSecret,
+                    error,
+                    errorDescription
+                } = await this._extractClientParams(req as unknown as Request<ReqRefDefaults>, authMethodsInstances, supported);
+
+                if (error) {
+                    return h.response({ error: error, error_description: errorDescription || undefined }).code(400)
+                }
+
+                if (!clientId || !clientSecret) {
+                    return h
+                        .response({
+                            error: 'invalid_request',
+                            error_description: `Supported token endpoint authentication methods: ${supported.join(', ')}`
+                        }).code(400)
+                }
+                // validating body
+                const hasRefreshToken = req.payload.refresh_token && typeof req.payload.refresh_token === 'string'
+                const isRefreshTokenGrantType = req.payload.grant_type === 'refresh_token'
+                if (
+                    clientId &&
+                    hasRefreshToken &&
+                    isRefreshTokenGrantType
+                ) {
+                    const scope = req.payload.scope && typeof req.payload.scope === 'string' ? req.payload.scope : undefined
+                    const params: OAuth2RefreshTokenParams = {
+                        clientId,
+                        clientSecret,
+                        grantType: `${req.payload.grant_type}`,
+                        refreshToken: `${req.payload.refresh_token}`,
+                        ttl: jwksGenerator?.ttl || this.tokenTTL,
+                        createJwtAccessToken: jwksGenerator ? (async (payload) => {
+                            return await createJwtAccessToken(jwksGenerator, {
+                                aud: t.postman?.getHost()[0] || '',
+                                iss: t.postman?.getHost()[0] || '',
+                                sub: clientId,
+                                scope,
+                                ...payload
+                            })
+                        }) : undefined,
+                        createIdToken: jwksGenerator && hasOpenIDScope() ? (async (payload) => {
+                            return await createIdToken(jwksGenerator, {
+                                aud: clientId,
+                                iss: t.postman?.getHost()[0] || '',
+                                ...payload
+                            })
+                        }) : undefined
+                    }
+
+                    if (scope) {
+                        params.scope = scope
+                    }
+
+                    return this.refreshTokenRoute?.handler(params, req, h)
+                } else {
+                    let error: OAuth2Error = 'unauthorized_client';
+                    let errorDescription = ''
+                    if (!clientId) {
+                        error = 'invalid_request'
+                        errorDescription = 'Request was missing the \'client_id\' parameter.'
+                    } else if (!clientSecret) {
+                        error = 'invalid_request'
+                        errorDescription = 'Request was missing the \'client_secret\' parameter.'
+                    } else if (!(req.payload.refresh_token && typeof req.payload.refresh_token === 'string')) {
+                        error = 'invalid_request'
+                        errorDescription = 'Request was missing the \'refresh_token\' parameter.'
+                    }
+                    return h.response({ error, error_description: errorDescription }).code(400)
+                }
+            }
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return sr.handle(request as Request<any>, h as ResponseToolkit<any>)
+    }
+
 
     /**
      * Returns the schema used for the documentation
@@ -171,7 +480,7 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign {
     integrateStrategy(t: KaapiTools) {
         const tokenTypePrefix = this.tokenType;
         const tokenTypeInstance = this._tokenType;
-        const getJwksGenerator = () => this._getJwksGenerator();
+        const getJwksGenerator = () => this.getJwksGenerator();
 
         t.scheme(this.strategyName, (_server, options) => {
 
@@ -248,13 +557,9 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign {
 
     integrateHook(t: KaapiTools) {
 
-        const supported = this.getTokenEndpointAuthMethods();
-        const authMethodsInstances = this.clientAuthMethods;
-        const jwksGenerator = this._getJwksGenerator();
+        const jwksGenerator = this.getJwksGenerator();
 
-        const hasOpenIDScope = () => typeof this.getScopes()?.['openid'] != 'undefined';
-
-        const tokenTypeInstance = this._tokenType;
+        //const tokenTypeInstance = this._tokenType;
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const routesOptions: RouteOptions<any> = {
@@ -265,174 +570,14 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign {
             }
         }
 
+        // token
         t
-            .route<{
-                Payload: { grant_type?: unknown, redirect_uri?: unknown, refresh_token?: unknown, scope?: unknown }
-            }>({
+            .route({
                 options: routesOptions,
                 path: this.tokenRoute.path,
                 method: 'POST',
                 handler: async (req, h) => {
-                    // Grant validation
-                    const supportedGrants = ['client_credentials']
-                    if (this.tokenRoute.path == this.refreshTokenRoute?.path) {
-                        supportedGrants.push('refresh_token')
-                    }
-                    if (!(typeof req.payload.grant_type === 'string' && supportedGrants.includes(req.payload.grant_type))) {
-                        return h.response({ error: 'unsupported_grant_type', error_description: `Request does not support the 'grant_type' '${req.payload.grant_type}'.` }).code(400)
-                    }
-
-                    // Client authentication is present?
-                    const {
-                        clientId,
-                        clientSecret,
-                        error,
-                        errorDescription
-                    } = await this._extractClientParams(req as unknown as Request<ReqRefDefaults>, authMethodsInstances, supported);
-
-                    if (error) {
-                        return h.response({ error: error, error_description: errorDescription || undefined }).code(400)
-                    }
-
-                    if (!clientId || !clientSecret) {
-                        return h
-                            .response({
-                                error: 'invalid_request',
-                                error_description: `Supported token endpoint authentication methods: ${supported.join(', ')}`
-                            }).code(400)
-                    }
-
-                    // validating body
-                    if (
-                        req.payload.grant_type === 'client_credentials'
-                    ) {
-                        let clientId: string,
-                            clientSecret: string,
-                            tmpClientId: string | undefined,
-                            tmpClientSecret: string | undefined;
-
-                        const authHeaderValue = req.raw.req.headers.authorization
-                        if (authHeaderValue) {
-                            // remove 'Basic ' and convert the base64 to string
-                            const value = Buffer.from(authHeaderValue.substring(5), 'base64').toString();
-                            // split client_id and client_secret from string
-                            [tmpClientId, tmpClientSecret] = value.split(':')
-                        }
-
-                        if (tmpClientId) {
-                            clientId = tmpClientId
-                        } else {
-                            return h.response({ error: 'invalid_request', error_description: 'Request was missing the \'client_id\' parameter.' }).code(400)
-                        }
-                        if (tmpClientSecret) {
-                            clientSecret = tmpClientSecret
-                        } else {
-                            return h.response({ error: 'invalid_request', error_description: 'Request was missing the \'client_secret\' parameter.' }).code(400)
-                        }
-                        const scope = req.payload.scope && typeof req.payload.scope === 'string' ? req.payload.scope : undefined
-                        const params: OAuth2ClientCredentialsTokenParams = {
-                            clientId: clientId,
-                            clientSecret: clientSecret,
-                            grantType: req.payload.grant_type,
-                            ttl: jwksGenerator?.ttl || this.tokenTTL,
-                            createJwtAccessToken: jwksGenerator ? (async (payload) => {
-                                return await createJwtAccessToken(jwksGenerator, {
-                                    aud: t.postman?.getHost()[0] || '',
-                                    iss: t.postman?.getHost()[0] || '',
-                                    sub: clientId,
-                                    scope,
-                                    ...payload
-                                })
-                            }) : undefined,
-                            createIdToken: jwksGenerator && hasOpenIDScope() ? (async (payload) => {
-                                return await createIdToken(jwksGenerator, {
-                                    aud: clientId,
-                                    iss: t.postman?.getHost()[0] || '',
-                                    ...payload
-                                })
-                            }) : undefined
-                        }
-                        if (scope) {
-                            params.scope = scope
-                        }
-
-                        const ttR: TokenTypeValidationResponse = tokenTypeInstance.isValidTokenRequest ? (await tokenTypeInstance.isValidTokenRequest(req)) : { isValid: true }
-                        if (!ttR.isValid) {
-                            return h.response({ error: 'invalid_request', error_description: ttR.message || '' }).code(400)
-                        }
-
-                        return this.tokenRoute.handler(params, req, h)
-                    } else if (
-                        this.tokenRoute.path == this.refreshTokenRoute?.path &&
-                        req.payload.grant_type === 'refresh_token'
-                    ) {
-                        const hasRefreshToken = req.payload.refresh_token && typeof req.payload.refresh_token === 'string'
-                        if (
-                            clientId &&
-                            hasRefreshToken
-                        ) {
-                            const scope = req.payload.scope && typeof req.payload.scope === 'string' ? req.payload.scope : undefined
-                            const params: OAuth2RefreshTokenParams = {
-                                clientId,
-                                grantType: req.payload.grant_type,
-                                refreshToken: `${req.payload.refresh_token}`,
-                                ttl: jwksGenerator?.ttl || this.tokenTTL,
-                                createJwtAccessToken: jwksGenerator ? (async (payload) => {
-                                    return await createJwtAccessToken(jwksGenerator, {
-                                        aud: t.postman?.getHost()[0] || '',
-                                        iss: t.postman?.getHost()[0] || '',
-                                        sub: clientId,
-                                        scope,
-                                        ...payload
-                                    })
-                                }) : undefined,
-                                createIdToken: jwksGenerator && hasOpenIDScope() ? (async (payload) => {
-                                    return await createIdToken(jwksGenerator, {
-                                        aud: clientId,
-                                        iss: t.postman?.getHost()[0] || '',
-                                        ...payload
-                                    })
-                                }) : undefined
-                            }
-
-                            if (clientSecret) {
-                                params.clientSecret = clientSecret
-                            }
-
-                            if (scope) {
-                                params.scope = scope
-                            }
-
-                            return this.refreshTokenRoute.handler(params, req, h)
-                        } else {
-                            let error: OAuth2Error = 'unauthorized_client';
-                            let errorDescription = ''
-                            if (!clientId) {
-                                error = 'invalid_request'
-                                errorDescription = 'Request was missing the \'client_id\' parameter.'
-                            } else if (!clientSecret) {
-                                error = 'invalid_request'
-                                errorDescription = 'Request was missing the \'client_secret\' parameter.'
-                            } else if (!(req.payload.refresh_token && typeof req.payload.refresh_token === 'string')) {
-                                error = 'invalid_request'
-                                errorDescription = 'Request was missing the \'refresh_token\' parameter.'
-                            }
-
-                            return h.response({ error, error_description: errorDescription }).code(400)
-                        }
-                    } else {
-                        let error: OAuth2Error = 'unauthorized_client';
-                        let errorDescription = ''
-                        if (!clientId) {
-                            error = 'invalid_request'
-                            errorDescription = 'Request was missing the \'client_id\' parameter.'
-                        } else if (!clientSecret) {
-                            error = 'invalid_request'
-                            errorDescription = 'Request was missing the \'client_secret\' parameter.'
-                        }
-                        return h.response({ error, error_description: errorDescription }).code(400)
-                    }
-
+                    return await this.handleToken(t, req, h)
                 }
             })
 
@@ -445,84 +590,7 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign {
                 path: this.refreshTokenRoute.path,
                 method: 'POST',
                 handler: async (req, h) => {
-                    // Grant validation
-                    const supportedGrants = ['refresh_token']
-                    if (!(typeof req.payload.grant_type === 'string' && supportedGrants.includes(req.payload.grant_type))) {
-                        return h.response({ error: 'unsupported_grant_type', error_description: `Request does not support the 'grant_type' '${req.payload.grant_type}'.` }).code(400)
-                    }
-
-                    // Client authentication is present?
-                    const {
-                        clientId,
-                        clientSecret,
-                        error,
-                        errorDescription
-                    } = await this._extractClientParams(req as unknown as Request<ReqRefDefaults>, authMethodsInstances, supported);
-
-                    if (error) {
-                        return h.response({ error: error, error_description: errorDescription || undefined }).code(400)
-                    }
-
-                    if (!clientId || !clientSecret) {
-                        return h
-                            .response({
-                                error: 'invalid_request',
-                                error_description: `Supported token endpoint authentication methods: ${supported.join(', ')}`
-                            }).code(400)
-                    }
-                    // validating body
-                    const hasRefreshToken = req.payload.refresh_token && typeof req.payload.refresh_token === 'string'
-                    const isRefreshTokenGrantType = req.payload.grant_type === 'refresh_token'
-                    if (
-                        clientId &&
-                        hasRefreshToken &&
-                        isRefreshTokenGrantType
-                    ) {
-                        const scope = req.payload.scope && typeof req.payload.scope === 'string' ? req.payload.scope : undefined
-                        const params: OAuth2RefreshTokenParams = {
-                            clientId,
-                            clientSecret,
-                            grantType: `${req.payload.grant_type}`,
-                            refreshToken: `${req.payload.refresh_token}`,
-                            ttl: jwksGenerator?.ttl || this.tokenTTL,
-                            createJwtAccessToken: jwksGenerator ? (async (payload) => {
-                                return await createJwtAccessToken(jwksGenerator, {
-                                    aud: t.postman?.getHost()[0] || '',
-                                    iss: t.postman?.getHost()[0] || '',
-                                    sub: clientId,
-                                    scope,
-                                    ...payload
-                                })
-                            }) : undefined,
-                            createIdToken: jwksGenerator && hasOpenIDScope() ? (async (payload) => {
-                                return await createIdToken(jwksGenerator, {
-                                    aud: clientId,
-                                    iss: t.postman?.getHost()[0] || '',
-                                    ...payload
-                                })
-                            }) : undefined
-                        }
-
-                        if (scope) {
-                            params.scope = scope
-                        }
-
-                        return this.refreshTokenRoute?.handler(params, req, h)
-                    } else {
-                        let error: OAuth2Error = 'unauthorized_client';
-                        let errorDescription = ''
-                        if (!clientId) {
-                            error = 'invalid_request'
-                            errorDescription = 'Request was missing the \'client_id\' parameter.'
-                        } else if (!clientSecret) {
-                            error = 'invalid_request'
-                            errorDescription = 'Request was missing the \'client_secret\' parameter.'
-                        } else if (!(req.payload.refresh_token && typeof req.payload.refresh_token === 'string')) {
-                            error = 'invalid_request'
-                            errorDescription = 'Request was missing the \'refresh_token\' parameter.'
-                        }
-                        return h.response({ error, error_description: errorDescription }).code(400)
-                    }
+                    return await this.handleRefreshToken(t, req, h)
                 }
             })
         }
@@ -557,6 +625,97 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign {
 
 }
 
+export type OIDCClientCredentialsArg = OAuth2ClientCredentialsArg & {
+    /**
+     * Override the configuration served at the discovery endpoint
+     */
+    openidConfiguration?: Record<string, unknown>
+}
+
+export class OIDCClientCredentials extends OAuth2ClientCredentials {
+    protected openidConfiguration: Record<string, unknown> = {}
+
+    constructor(params: OIDCClientCredentialsArg) {
+        super(params);
+
+        if (params.openidConfiguration)
+            this.openidConfiguration = params.openidConfiguration
+    }
+
+    getDiscoveryConfiguration(t: KaapiTools) {
+        const supported = this.getTokenEndpointAuthMethods();
+        const host = t.postman?.getHost()[0] || '';
+        const scopes = this.getScopes() || {};
+
+        const wellKnownOpenIDConfig: Record<string, string | string[] | undefined> = {
+            issuer: host,
+            token_endpoint: `${host}${this.tokenRoute.path}`,
+            jwks_uri: this.jwksRoute?.path ? `${host}${this.jwksRoute.path}` : undefined,
+            claims_supported: [
+                'aud',
+                'exp',
+                'iat',
+                'iss',
+                'sub'
+            ],
+            grant_types_supported: [
+                'client_credentials'
+            ],
+            response_types_supported: [
+                'token'
+            ],
+            scopes_supported: Object.keys(scopes),
+            subject_types_supported: [
+                'public'
+            ],
+            id_token_signing_alg_values_supported: [
+                'RS256'
+            ],
+            token_endpoint_auth_methods_supported: supported
+        }
+
+        if (this.clientAuthMethods.client_secret_jwt?.algorithms?.length) {
+            wellKnownOpenIDConfig.token_endpoint_auth_signing_alg_values_supported = wellKnownOpenIDConfig.token_endpoint_auth_signing_alg_values_supported || []
+            wellKnownOpenIDConfig.token_endpoint_auth_signing_alg_values_supported = [
+                ...wellKnownOpenIDConfig.token_endpoint_auth_signing_alg_values_supported,
+                ...this.clientAuthMethods.client_secret_jwt.algorithms
+            ]
+        }
+        if (this.clientAuthMethods.private_key_jwt?.algorithms?.length) {
+            wellKnownOpenIDConfig.token_endpoint_auth_signing_alg_values_supported = wellKnownOpenIDConfig.token_endpoint_auth_signing_alg_values_supported || []
+            wellKnownOpenIDConfig.token_endpoint_auth_signing_alg_values_supported = [
+                ...wellKnownOpenIDConfig.token_endpoint_auth_signing_alg_values_supported,
+                ...this.clientAuthMethods.private_key_jwt.algorithms
+            ]
+        }
+
+        return { ...wellKnownOpenIDConfig, ...this.openidConfiguration }
+    }
+
+
+    integrateHook(t: KaapiTools): void {
+        super.integrateHook(t);
+
+        const discoveryConfiguration = this.getDiscoveryConfiguration(t);
+
+        t.route({
+            path: '/.well-known/openid-configuration',
+            method: 'GET',
+            options: {
+                plugins: {
+                    kaapi: {
+                        docs: false
+                    }
+                }
+            },
+            handler: () => {
+                return discoveryConfiguration
+            }
+        })
+    }
+    
+}
+
 //#endregion OAuth2ClientCredentials
 
 //#region Builder
@@ -570,7 +729,7 @@ export interface OAuth2ClientCredentialsBuilderArg extends OAuth2ClientCredentia
     tokenType?: TokenType<any>
 }
 
-export class OAuth2ClientCredentialsBuilder {
+export class OAuth2ClientCredentialsBuilder implements OAuth2AuthDesignBuilder {
 
     protected params: OAuth2ClientCredentialsBuilderArg
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -607,7 +766,6 @@ export class OAuth2ClientCredentialsBuilder {
             result.setDescription(this.description)
         }
         if (typeof this.scopes !== 'undefined') {
-            console.log('scopes', this.scopes)
             result.setScopes(this.scopes)
         }
         if (typeof this.tokenType !== 'undefined') {
@@ -700,28 +858,60 @@ export class OAuth2ClientCredentialsBuilder {
 
 //#region OIDC builder
 
+export type OIDCClientCredentialsBuilderArg = OAuth2ClientCredentialsBuilderArg & {
+    /**
+     * Override the configuration served at the discovery endpoint
+     */
+    openidConfiguration?: Record<string, unknown>
+}
+
 export class OIDCClientCredentialsBuilder extends OAuth2ClientCredentialsBuilder {
 
-    static create(params?: Partial<OAuth2ClientCredentialsBuilderArg>): OIDCClientCredentialsBuilder {
-        const paramsComplete: OAuth2ClientCredentialsBuilderArg = {
+    protected openidConfiguration: Record<string, unknown> = {}
+
+    constructor(params: OIDCClientCredentialsBuilderArg) {
+        super(params);
+    }
+
+    static create(params?: Partial<OIDCClientCredentialsBuilderArg>): OIDCClientCredentialsBuilder {
+        const paramsComplete: OIDCClientCredentialsBuilderArg = {
             tokenRoute: params && params.tokenRoute || OAuth2ClientCredentialsTokenRoute.buildDefault(),
             ...(params || {})
         };
         return new OIDCClientCredentialsBuilder(paramsComplete)
     }
 
-    build(): OAuth2ClientCredentials {
+    additionalConfiguration(openidConfiguration: Record<string, unknown>): this {
+        this.openidConfiguration = openidConfiguration
+        return this
+    }
+
+    build(): OIDCClientCredentials {
 
         if (!this.params.jwksRoute) {
             this.params.jwksRoute = JWKSRoute.buildDefault()
         }
 
-        this.setScopes({
+        const result = new OIDCClientCredentials({ ...this.params, openidConfiguration: this.openidConfiguration })
+
+        result.setTokenTTL(this.tokenTTL)
+
+        if (typeof this.description !== 'undefined') {
+            result.setDescription(this.description)
+        }
+        result.setScopes({
             openid: 'enable OpenID Connect',
             ...(this.scopes || {})
         });
-
-        return super.build();
+        if (typeof this.tokenType !== 'undefined') {
+            result.setTokenType(this.tokenType)
+        }
+        for (const method of Object.values(this.clientAuthMethods)) {
+            if (method) {
+                result.addClientAuthenticationMethod(method)
+            }
+        }
+        return result;
     }
 }
 

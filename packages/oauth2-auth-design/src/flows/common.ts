@@ -457,3 +457,12 @@ export class DefaultJWKSRoute<
 }
 
 //#endregion JWKSRoute
+
+//#region OAuth2AuthDesignBuilder
+
+export interface OAuth2AuthDesignBuilder {
+    setJwksStore(store: JWKSStore): this;
+    build(): AuthDesign
+}
+
+//#endregion OAuth2AuthDesignBuilder
