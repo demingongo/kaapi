@@ -113,6 +113,7 @@ export class OIDCMultipleFlows extends AuthDesign {
     integrateHook(t: KaapiTools): void | Promise<void> {
 
         const jwksGenerator = this.getJwksGenerator();
+        const host = t.postman?.getHost()[0] || ''
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const routesOptions: RouteOptions<any> = {
@@ -186,17 +187,34 @@ export class OIDCMultipleFlows extends AuthDesign {
                 }
             },
             handler: () => {
-                let wellKnownOpenIDConfig: { grant_types_supported: string[];[key: string]: unknown } = {
-                    grant_types_supported: []
+                let wellKnownOpenIDConfig: {
+                    grant_types_supported: string[];
+                    token_endpoint_auth_methods_supported: string[];
+                    [key: string]: unknown
+                } = {
+                    issuer: `${host}`,
+                    token_endpoint: `${host}${this.tokenEndpoint}`,
+                    jwks_uri: this.jwksRoute ? `${host}${this.jwksRoute.path}` : undefined,
+                    grant_types_supported: [],
+                    token_endpoint_auth_methods_supported: []
                 }
 
                 for (const flow of this.flows) {
                     if (flow instanceof OIDCClientCredentials) {
-                        const { grant_types_supported, ...more } = flow.getDiscoveryConfiguration(t);
+                        const {
+                            grant_types_supported,
+                            token_endpoint_auth_methods_supported,
+                            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                            token_endpoint: _unused_token_endpoint,
+                            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                            jwks_uri: _unused_jwks_uri,
+                            ...more
+                        } = flow.getDiscoveryConfiguration(t);
+
                         wellKnownOpenIDConfig = {
                             ...wellKnownOpenIDConfig,
                             ...more
-                        }
+                        };
 
                         if (Array.isArray(grant_types_supported)) {
                             if (Array.isArray(wellKnownOpenIDConfig.grant_types_supported)) {
@@ -204,6 +222,15 @@ export class OIDCMultipleFlows extends AuthDesign {
                                 wellKnownOpenIDConfig.grant_types_supported = [...new Set([
                                     ...wellKnownOpenIDConfig.grant_types_supported,
                                     ...grant_types_supported
+                                ])]
+                            }
+                        }
+                        if (Array.isArray(token_endpoint_auth_methods_supported)) {
+                            if (Array.isArray(wellKnownOpenIDConfig.token_endpoint_auth_methods_supported)) {
+                                // merge and ensure unique values (Set)
+                                wellKnownOpenIDConfig.token_endpoint_auth_methods_supported = [...new Set([
+                                    ...wellKnownOpenIDConfig.token_endpoint_auth_methods_supported,
+                                    ...token_endpoint_auth_methods_supported
                                 ])]
                             }
                         }
@@ -276,6 +303,11 @@ export class OIDCMultipleFlowsBuilder implements OAuth2AuthDesignBuilder {
     refreshTokenEndpoint(path: string): this {
         this.params.refreshTokenEndpoint = path
         return this
+    }
+
+    add(builder: OAuth2AuthDesignBuilder): this {
+        this.builders.push(builder)
+        return this;
     }
 
     build(): OIDCMultipleFlows {

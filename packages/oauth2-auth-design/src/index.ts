@@ -5,6 +5,7 @@ export * from './flows/client-creds/token-route'
 export * from './flows/open-id'
 export * from './flows/authorization-code'
 export * from './flows/client-credentials'
+export * from './flows/oidc-multiple-flows'
 
 export * from './utils/cache-set'
 export * from './utils/client-auth-methods'
