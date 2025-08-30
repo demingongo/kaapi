@@ -12,6 +12,7 @@ import {
     OpenIDHelpers,
     PathValue
 } from '../common'
+import { JWTPayload } from 'jose'
 
 //#region TokenRoute
 
@@ -23,6 +24,7 @@ export interface OAuth2ACTokenParams extends Partial<OpenIDHelpers> {
     codeVerifier?: string
     redirectUri?: string
     readonly ttl?: number
+    createJwtAccessToken?: (payload: JWTPayload) => Promise<string>
 }
 
 export type OAuth2ACTokenHandler<
