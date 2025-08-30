@@ -15,6 +15,8 @@ import { JWKSGenerator, OAuth2JwtPayload } from '../utils/jwks-generator';
 import { BearerToken, TokenType } from '../utils/token-types';
 import { ClientAuthMethod, ClientSecretBasic, ClientSecretPost, NoneAuthMethod, sortTokenEndpointAuthMethods, TokenEndpointAuthMethod } from '../utils/client-auth-methods';
 import { JWTPayload } from 'jose';
+import { OAuth2Util } from '@novice1/api-doc-generator';
+import { SecuritySchemeObject } from '@novice1/api-doc-generator/lib/generators/openapi/definitions';
 
 //#region Types
 
@@ -466,3 +468,19 @@ export interface OAuth2AuthDesignBuilder {
 }
 
 //#endregion OAuth2AuthDesignBuilder
+
+//#region  
+
+export class OIDCAuthUtil extends OAuth2Util {
+    toOpenAPI(): Record<string, SecuritySchemeObject> {
+        const host = this.getHost()
+        return {
+            [this.securitySchemeName]: {
+                type: 'openIdConnect',
+                openIdConnectUrl: `${host || ''}/.well-known/openid-configuration`
+            }
+        }
+    }
+}
+
+//#endregion

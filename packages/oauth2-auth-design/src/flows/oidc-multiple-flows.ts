@@ -9,27 +9,14 @@ import {
     DefaultJWKSRoute,
     IJWKSRoute,
     JWKSRoute,
-    OAuth2AuthDesignBuilder
+    OAuth2AuthDesignBuilder,
+    OIDCAuthUtil
 } from './common'
 import { JWKS, JWKSStore } from '../utils/jwks-store'
 import { OAuth2ClientCredentials, OIDCClientCredentials } from './client-credentials'
 import { BaseAuthUtil } from '@novice1/api-doc-generator/lib/utils/auth/baseAuthUtils'
-import { OAuth2Util } from '@novice1/api-doc-generator'
-import { SecuritySchemeObject } from '@novice1/api-doc-generator/lib/generators/openapi/definitions'
 import { JWKSGenerator } from '../utils/jwks-generator'
 import { getInMemoryJWKSStore } from '../utils/in-memory-jwks-store'
-
-export class OIDCMultipleFlowsAuthUtil extends OAuth2Util {
-    toOpenAPI(): Record<string, SecuritySchemeObject> {
-        const host = this.getHost()
-        return {
-            [this.securitySchemeName]: {
-                type: 'openIdConnect',
-                openIdConnectUrl: `${host || ''}/.well-known/openid-configuration`
-            }
-        }
-    }
-}
 
 //#region OIDCMultipleFlows
 
@@ -101,7 +88,7 @@ export class OIDCMultipleFlows extends AuthDesign {
     }
 
     docs(): BaseAuthUtil | undefined {
-        return new OIDCMultipleFlowsAuthUtil(this.securitySchemeName)
+        return new OIDCAuthUtil(this.securitySchemeName)
     }
 
     integrateStrategy(t: KaapiTools): void {
