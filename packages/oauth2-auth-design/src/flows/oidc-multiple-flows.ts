@@ -10,10 +10,11 @@ import {
     IJWKSRoute,
     JWKSRoute,
     OAuth2AuthDesignBuilder,
+    OAuth2SingleAuthFlow,
+    OAuth2SingleAuthFlowBuilder,
     OIDCAuthUtil
 } from './common'
 import { JWKS, JWKSStore } from '../utils/jwks-store'
-import { OAuth2ClientCredentials, OIDCClientCredentials } from './client-credentials'
 import { BaseAuthUtil } from '@novice1/api-doc-generator/lib/utils/auth/baseAuthUtils'
 import { JWKSGenerator } from '../utils/jwks-generator'
 import { getInMemoryJWKSStore } from '../utils/in-memory-jwks-store'
@@ -27,12 +28,12 @@ export interface OIDCMultipleFlowsArg {
     refreshTokenEndpoint?: string
     openidConfiguration?: Record<string, unknown>
     tokenEndpoint: string
-    flows: AuthDesign[]
+    flows: (AuthDesign & OAuth2SingleAuthFlow)[]
 }
 
 export class OIDCMultipleFlows extends AuthDesign {
 
-    protected flows: AuthDesign[];
+    protected flows: (AuthDesign & OAuth2SingleAuthFlow)[];
     protected securitySchemeName = 'OIDC Multiple Flows';
     protected openidConfiguration: Record<string, unknown>;
 
@@ -118,13 +119,17 @@ export class OIDCMultipleFlows extends AuthDesign {
                 path: this.tokenEndpoint,
                 method: 'POST',
                 handler: async (req, h) => {
-                    const grantType = req.payload.grant_type
+                    const grantType = req.payload.grant_type;
 
-                    if (grantType === 'client_credentials') {
-                        for (const flow of this.flows) {
-                            if (flow instanceof OAuth2ClientCredentials) {
-                                return await flow.handleToken(t, req, h)
+                    if (grantType && typeof grantType === 'string') {
+                        if (grantType != 'refresh_token') {
+                            for (const flow of this.flows) {
+                                if (grantType === flow.grantType) {
+                                    return await flow.handleToken(t, req, h)
+                                }
                             }
+                        } else {
+                            // @TODO: refresh token
                         }
                     }
 
@@ -187,7 +192,7 @@ export class OIDCMultipleFlows extends AuthDesign {
                 }
 
                 for (const flow of this.flows) {
-                    if (flow instanceof OIDCClientCredentials) {
+                    if (typeof flow.getDiscoveryConfiguration === 'function') {
                         const {
                             grant_types_supported,
                             token_endpoint_auth_methods_supported,
@@ -246,7 +251,7 @@ export class OIDCMultipleFlowsBuilder implements OAuth2AuthDesignBuilder {
     protected params: OIDCMultipleFlowsBuilderArg
     protected tokenTTL?: number
 
-    protected builders: OAuth2AuthDesignBuilder[] = []
+    protected builders: OAuth2SingleAuthFlowBuilder[] = []
 
     constructor(params: OIDCMultipleFlowsBuilderArg) {
         this.params = params
@@ -292,7 +297,7 @@ export class OIDCMultipleFlowsBuilder implements OAuth2AuthDesignBuilder {
         return this
     }
 
-    add(builder: OAuth2AuthDesignBuilder): this {
+    add(builder: OAuth2SingleAuthFlowBuilder): this {
         this.builders.push(builder)
         return this;
     }

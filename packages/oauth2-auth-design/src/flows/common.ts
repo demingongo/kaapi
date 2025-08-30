@@ -2,6 +2,7 @@ import {
     Auth,
     AuthCredentials,
     AuthDesign,
+    KaapiTools,
     Lifecycle,
     ReqRef,
     ReqRefDefaults,
@@ -269,13 +270,16 @@ export abstract class OAuth2AuthDesign extends AuthDesign {
         return result
     }
 
+    //
+    protected strategyName: string
+    protected description?: string
+    protected scopes?: Record<string, string>
+    protected tokenTTL?: number;
+
     constructor() {
         super()
         this._tokenType = new BearerToken()
-        /*{
-            prefix: 'Bearer',
-            isValid: () => ({ isValid: true })
-        }*/
+        this.strategyName = 'oauth2-auth-design'
     }
 
     protected async _extractClientParams(
@@ -288,10 +292,12 @@ export abstract class OAuth2AuthDesign extends AuthDesign {
         let error: OAuth2Error | undefined;
         let errorDescription: string | undefined;
 
+        console.log('authMethodsInstances', authMethodsInstances)
+
         for (const am of checkOrder) {
             const amInstance = authMethodsInstances[am]
             if (amInstance) {
-                //console.log('Check', amInstance.method, '...')
+                console.log('Check', amInstance.method, '...')
                 const v = await amInstance.extractParams(req as unknown as Request<ReqRefDefaults>)
                 if (v.hasAuthMethod) {
                     //console.log(amInstance.method, 'IS BEING USED')
@@ -362,6 +368,45 @@ export abstract class OAuth2AuthDesign extends AuthDesign {
             this._clientAuthMethods[value.method] = value
         }
         return this
+    }
+
+    //
+
+    setTokenTTL(ttlSeconds?: number): this {
+        this.tokenTTL = ttlSeconds
+        return this
+    }
+
+    getTokenTTL(): number | undefined {
+        return this.tokenTTL
+    }
+
+    setDescription(description: string): this {
+        this.description = description;
+        return this;
+    }
+
+    /**
+     * 
+     * @param scopes The scopes of the access request.
+     * A map between the scope name and a short description for it. The map MAY be empty.
+     * @returns 
+     */
+    setScopes(scopes: Record<string, string>): this {
+        this.scopes = scopes;
+        return this;
+    }
+
+    getScopes(): Record<string, string> | undefined {
+        return this.scopes
+    }
+
+    getStrategyName(): string {
+        return this.strategyName;
+    }
+
+    getDescription(): string | undefined {
+        return this.description;
     }
 }
 
@@ -469,7 +514,7 @@ export interface OAuth2AuthDesignBuilder {
 
 //#endregion OAuth2AuthDesignBuilder
 
-//#region  
+//#region OIDCAuthUtil
 
 export class OIDCAuthUtil extends OAuth2Util {
     toOpenAPI(): Record<string, SecuritySchemeObject> {
@@ -483,4 +528,40 @@ export class OIDCAuthUtil extends OAuth2Util {
     }
 }
 
-//#endregion
+//#endregion OIDCAuthUtil
+
+//#region OAuth2SingleAuthFlow
+
+export interface OAuth2SingleAuthFlow {
+
+    readonly grantType: string;
+
+    handleToken<Refs extends Partial<Record<keyof ReqRefDefaults, unknown>> = ReqRefDefaults>(t: KaapiTools, request: Request<Refs>, h: ResponseToolkit<Refs>): Promise<Lifecycle.ReturnValueTypes<{
+        Payload: {
+            grant_type?: unknown;
+            refresh_token?: unknown;
+            scope?: unknown;
+        };
+    }>>;
+
+    handleRefreshToken<Refs extends Partial<Record<keyof ReqRefDefaults, unknown>> = ReqRefDefaults>(t: KaapiTools, request: Request<Refs>, h: ResponseToolkit<Refs>): Promise<Lifecycle.ReturnValueTypes<{
+        Payload: {
+            grant_type?: unknown;
+            refresh_token?: unknown;
+            scope?: unknown;
+        };
+    }>>;
+
+    getDiscoveryConfiguration?(t: KaapiTools): Record<string, unknown>;
+}
+
+//#endregion OAuth2SingleAuthFlow
+
+//#region OAuth2SingleAuthFlowBuilder
+
+export interface OAuth2SingleAuthFlowBuilder extends OAuth2AuthDesignBuilder {
+    setJwksStore(store: JWKSStore): this;
+    build(): AuthDesign & OAuth2SingleAuthFlow
+}
+
+//#endregion OAuth2SingleAuthFlowBuilder

@@ -21,7 +21,8 @@ import {
     OAuth2Error,
     OAuth2RefreshTokenHandler,
     OAuth2RefreshTokenParams,
-    OAuth2RefreshTokenRoute
+    OAuth2RefreshTokenRoute,
+    OAuth2SingleAuthFlow
 } from './common'
 import { ClientAuthMethod, ClientSecretBasic, ClientSecretPost, TokenEndpointAuthMethod } from '../utils/client-auth-methods'
 import { DefaultOAuth2ClientCredentialsTokenRoute, IOAuth2ClientCredentialsTokenRoute, OAuth2ClientCredentialsTokenParams, OAuth2ClientCredentialsTokenRoute } from './client-creds/token-route'
@@ -46,11 +47,7 @@ export interface OAuth2ClientCredentialsArg {
     jwksStore?: JWKSStore;
 }
 
-export class OAuth2ClientCredentials extends OAuth2AuthDesign {
-
-    protected strategyName: string
-    protected description?: string
-    protected scopes?: Record<string, string>
+export class OAuth2ClientCredentials extends OAuth2AuthDesign implements OAuth2SingleAuthFlow {
     protected options: OAuth2AuthOptions
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     protected tokenRoute: IOAuth2ClientCredentialsTokenRoute<any>
@@ -61,7 +58,10 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign {
     protected jwksRoute?: IJWKSRoute<any>;
     protected jwksStore?: JWKSStore;
     protected jwksGenerator?: JWKSGenerator | undefined;
-    protected tokenTTL?: number;
+
+    get grantType(): GrantType.clientCredentials {
+        return GrantType.clientCredentials
+    }
 
     constructor(
         {
@@ -85,15 +85,6 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign {
         this.options = options ? { ...options } : {}
     }
 
-    setTokenTTL(ttlSeconds?: number): this {
-        this.tokenTTL = ttlSeconds
-        return this
-    }
-
-    getTokenTTL(): number | undefined {
-        return this.tokenTTL
-    }
-
     /**
      * NOT IMPLEMENTEND FOR CLIENT CREDENTIALS FLOW
      */
@@ -112,34 +103,6 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign {
         return super.addClientAuthenticationMethod(value)
     }
 
-    setDescription(description: string): this {
-        this.description = description;
-        return this;
-    }
-
-    /**
-     * 
-     * @param scopes The scopes of the access request.
-     * A map between the scope name and a short description for it. The map MAY be empty.
-     * @returns 
-     */
-    setScopes(scopes: Record<string, string>): this {
-        this.scopes = scopes;
-        return this;
-    }
-
-    getScopes(): Record<string, string> | undefined {
-        return this.scopes
-    }
-
-    getStrategyName(): string {
-        return this.strategyName;
-    }
-
-    getDescription(): string | undefined {
-        return this.description;
-    }
-
     protected getJwksGenerator() {
         if (this.jwksGenerator) return this.jwksGenerator;
         if (this.jwksRoute || this.jwksStore || this.options.useAccessTokenJwks) {
@@ -147,7 +110,6 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign {
         }
         return this.jwksGenerator
     }
-
 
     async handleToken<Refs extends ReqRef = ReqRefDefaults>(
         t: KaapiTools,
@@ -453,7 +415,6 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign {
         return sr.handle(request as Request<any>, h as ResponseToolkit<any>)
     }
 
-
     /**
      * Returns the schema used for the documentation
      */
@@ -632,7 +593,7 @@ export type OIDCClientCredentialsArg = OAuth2ClientCredentialsArg & {
     openidConfiguration?: Record<string, unknown>
 }
 
-export class OIDCClientCredentials extends OAuth2ClientCredentials {
+export class OIDCClientCredentials extends OAuth2ClientCredentials implements OAuth2SingleAuthFlow {
     protected openidConfiguration: Record<string, unknown> = {}
 
     constructor(params: OIDCClientCredentialsArg) {
@@ -713,7 +674,7 @@ export class OIDCClientCredentials extends OAuth2ClientCredentials {
             }
         })
     }
-    
+
 }
 
 //#endregion OAuth2ClientCredentials

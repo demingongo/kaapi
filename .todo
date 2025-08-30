@@ -27,7 +27,7 @@
             - auth code
         - openID connect
             - client credentials
-                - docs()
+                - docs() @done
                 - Discovery Endpoint (/.well-known/openid-configuration)
             - auth code
         - REALLY UPDATE AUTH CODE ONCE CLIENT CREDENTIALS WORKS

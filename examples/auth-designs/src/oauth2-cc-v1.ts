@@ -2,15 +2,13 @@ import {
     OAuth2TokenResponse,
     BearerToken,
     //DPoPToken,
-    ClientSecretBasic,
-    ClientSecretPost,
     getInMemoryJWKSStore,
     //getInMemoryCacheSet,
     //OAuth2ClientCredentialsBuilder,
     OIDCClientCredentialsBuilder,
     OIDCMultipleFlowsBuilder,
-    //ClientSecretPost,
-    //ClientSecretBasic,
+    ClientSecretPost,
+    ClientSecretBasic,
     //ClientSecretJwt,
     //PrivateKeyJwt
 } from '@kaapi/oauth2-auth-design';
@@ -21,13 +19,12 @@ const tokenType = new BearerToken()
 //    .setCacheSet(getInMemoryCacheSet()) // cache DPoP tokens
 //    .validateTokenRequest(() => ({ isValid: true })) // for testing without validating dpop
 
-
 export const clientCredentialsDesignV1 = OIDCMultipleFlowsBuilder
     .create()
     .tokenEndpoint('/oauth2/m2mcc/token')
     .setTokenTTL(36000)
     .setJwksStore(getInMemoryJWKSStore({ timeThreshold: 36000 / 2 })) // store for JWKS
-    .jwksRoute(route => route.setPath('/oauth2/m2m/keys')) // activates jwks uri
+    .jwksRoute(route => route.setPath('/oauth2/m2mcc/keys')) // activates jwks uri
     .add(
         OIDCClientCredentialsBuilder
             .create()

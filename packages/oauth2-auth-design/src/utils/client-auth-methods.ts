@@ -63,10 +63,11 @@ export class ClientSecretBasic implements ClientAuthMethod {
         if (authType.toLowerCase() == 'basic') {
             res.hasAuthMethod = true
             const decoded = Buffer.from(base64Credentials, 'base64').toString('utf-8').split(':');
-            if (!decoded[0] || !decoded[1]) {
-                //
-            } else {
+
+            if(decoded[0]) {
                 res.clientId = decoded[0];
+            }
+            if(decoded[1]) {
                 res.clientSecret = decoded[1];
             }
         }
