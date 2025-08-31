@@ -1,6 +1,6 @@
 import { SecuritySchemeObject } from '@novice1/api-doc-generator/lib/generators/openapi/definitions';
 import { ChallengeAlgorithm, GrantType, OAuth2Util } from '@novice1/api-doc-generator';
-import { OAuth2AuthorizationCode, OAuth2AuthorizationCodeArg } from './authorization-code';
+import { OAuth2AuthorizationCode, OAuth2AuthorizationCodeArg } from './authorization-code-bis';
 import { KaapiTools, Lifecycle, ReqRef, Request, ReqRefDefaults, ResponseToolkit } from '@kaapi/kaapi';
 import { JWKS, JWKSStore } from '../utils/jwks-store';
 import { DefaultOAuth2ACAuthorizationRoute, OAuth2ACAuthorizationRoute } from './auth-code/authorization-route';
@@ -209,7 +209,7 @@ export class OpenIDAuthDesign extends OAuth2AuthorizationCode {
             },
             handler: async (req, h) => {
 
-                const jwks = await this.jwksGenerator.generateIfNeeded() as JWKS
+                const jwks = await this.jwksGenerator?.generateIfNeeded() as JWKS
 
                 if (this.jwksRoute.handler) {
                     return this.jwksRoute.handler({

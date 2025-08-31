@@ -239,11 +239,13 @@ export class OIDCMultipleFlows extends AuthDesign {
             },
             handler: () => {
                 let wellKnownOpenIDConfig: {
+                    authorization_endpoint?: string;
                     grant_types_supported: string[];
                     token_endpoint_auth_methods_supported: string[];
                     [key: string]: unknown
                 } = {
                     issuer: `${host}`,
+                    authorization_endpoint: undefined,
                     token_endpoint: `${host}${this.tokenEndpoint}`,
                     jwks_uri: this.jwksRoute ? `${host}${this.jwksRoute.path}` : undefined,
                     grant_types_supported: [],
@@ -329,6 +331,9 @@ export class OIDCMultipleFlowsBuilder implements OAuth2AuthDesignBuilder {
         return this
     }
 
+    /**
+     * Max TTL for a token all flows included
+     */
     setTokenTTL(ttlSeconds?: number): this {
         this.tokenTTL = ttlSeconds
         return this

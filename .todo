@@ -30,6 +30,7 @@
                 - docs() @done
                 - Discovery Endpoint (/.well-known/openid-configuration)
             - auth code
+            - merge discovery config properly (in case of arrays)
         - REALLY UPDATE AUTH CODE ONCE CLIENT CREDENTIALS WORKS
         - Supporting Multiple Flows (see NOTES: Intends to support multiple flows) (probably will have to expose route handlers and switch depending on the grant type)
     - make usage more simple (default classes with default routes, then all methods in the same class)

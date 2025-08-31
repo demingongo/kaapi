@@ -3,7 +3,7 @@ export * from './flows/auth-code/authorization-route'
 export * from './flows/auth-code/token-route'
 export * from './flows/client-creds/token-route'
 export * from './flows/open-id'
-export * from './flows/authorization-code'
+export * from './flows/authorization-code-bis'
 export * from './flows/client-credentials'
 export * from './flows/oidc-multiple-flows'
 

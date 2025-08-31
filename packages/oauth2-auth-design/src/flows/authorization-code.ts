@@ -1,3 +1,4 @@
+/*
 import {
     KaapiTools,
     ReqRefDefaults,
@@ -104,12 +105,7 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
         return this;
     }
 
-    /**
-     * 
-     * @param scopes The scopes of the access request.
-     * A map between the scope name and a short description for it. The map MAY be empty.
-     * @returns 
-     */
+
     setScopes(scopes: Record<string, string>): this {
         this.scopes = scopes;
         return this;
@@ -127,9 +123,6 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
         return this.description;
     }
 
-    /**
-     * Returns the schema used for the documentation
-     */
     docs() {
         const docs = new OAuth2Util(this.strategyName)
             .setGrantType(this.isWithPkce() ? GrantType.authorizationCodeWithPkce : GrantType.authorizationCode)
@@ -158,9 +151,6 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
         return docs
     }
 
-    /**
-     * Where authentication schemes and strategies are registered.
-     */
     integrateStrategy(t: KaapiTools) {
         const tokenTypePrefix = this.tokenType
         const tokenTypeInstance = this._tokenType
@@ -514,3 +504,4 @@ export class OAuth2AuthorizationCode extends OAuth2WithJWKSAuthDesign {
 }
 
 //#endregion OAuth2AuthorizationCode
+*/
