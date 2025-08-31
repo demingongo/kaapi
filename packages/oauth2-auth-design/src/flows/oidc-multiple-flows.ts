@@ -158,7 +158,7 @@ export class OIDCMultipleFlows extends AuthDesign {
                                         }
                                     }
                                 }
-                                return h.response({ error: 'invalid_token' }).code(400)
+                                return h.response({ error: 'invalid_token', error_description: 'Token was not validated by any handler.' }).code(400)
                             }
                         }
                     }
@@ -184,7 +184,8 @@ export class OIDCMultipleFlows extends AuthDesign {
                                     if (arr.length - 1 == i && result === h.continue) {
                                         return h
                                             .response({
-                                                error: 'invalid_token'
+                                                error: 'invalid_token',
+                                                error_description: 'Token was not validated by any handler.'
                                             }).code(400)
                                     }
 

@@ -1871,3 +1871,13 @@ If you ever want help designing that internal handler/router system — or want 
 | Client Credentials | ❌ No                  | Machine-to-machine            |
 | Implicit           | ❌ No (deprecated)     | Old SPA flow, now discouraged |
 
+---
+
+| Parameter       | Required   | Description                                                                                                                        |
+| --------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `grant_type`    | ✅ Yes      | Must be `"refresh_token"`                                                                                                          |
+| `refresh_token` | ✅ Yes      | The refresh token previously issued to the client                                                                                  |
+| `client_id`     | ✅\*        | Required for public clients (e.g., mobile apps), optional for confidential clients depending on how they're authenticated          |
+| `client_secret` | ✅\*        | Required for confidential clients when using client credentials                                                                    |
+| `scope`         | ❌ Optional | Only include if you want to request a subset of the originally granted scopes. If omitted, the scope of the refresh token is used. |
+

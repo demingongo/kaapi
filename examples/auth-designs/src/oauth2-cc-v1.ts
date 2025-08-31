@@ -22,6 +22,7 @@ const tokenType = new BearerToken()
 export const clientCredentialsDesignV1 = OIDCMultipleFlowsBuilder
     .create()
     .tokenEndpoint('/oauth2/m2mcc/token')
+    .refreshTokenEndpoint('/oauth2/m2mcc/token')
     .setTokenTTL(36000)
     .setJwksStore(getInMemoryJWKSStore({ timeThreshold: 36000 / 2 })) // store for JWKS
     .jwksRoute(route => route.setPath('/oauth2/m2mcc/keys')) // activates jwks uri
@@ -76,12 +77,12 @@ export const clientCredentialsDesignV1 = OIDCMultipleFlowsBuilder
                                 machine: '248289761001',
                                 name: 'Jane Doe',
                             })
-                            const refreshToken = await createJwtAccessToken({
+                            const refreshToken = 'generated_refresh_token'/*await createJwtAccessToken({
                                 machine: '248289761001',
                                 name: 'Jane Doe',
                                 refresh: true,
                                 exp: ttl * 2
-                            })
+                            })*/
                             return new OAuth2TokenResponse({ access_token: accessToken })
                                 .setExpiresIn(ttl)
                                 .setRefreshToken(refreshToken)
@@ -101,7 +102,7 @@ export const clientCredentialsDesignV1 = OIDCMultipleFlowsBuilder
                     return null
                 }))
             .refreshTokenRoute(route => route.validate(
-                async ({ clientId, clientSecret, refreshToken, scope, ttl }, _req, h) => {
+                async ({ clientId, clientSecret, refreshToken, scope, ttl, createJwtAccessToken, createIdToken }, _req, h) => {
 
                     console.log('clientId', clientId)
                     console.log('clientSecret', clientSecret)
@@ -110,6 +111,22 @@ export const clientCredentialsDesignV1 = OIDCMultipleFlowsBuilder
                     console.log('ttl', ttl)
 
                     //#region @TODO: validation + refresh token
+                    if (refreshToken === 'generated_refresh_token' && createJwtAccessToken) {
+                        const accessToken = await createJwtAccessToken({
+                            machine: '248289761001',
+                            name: 'Jane Doe',
+                        })
+                        return new OAuth2TokenResponse({ access_token: accessToken })
+                            .setExpiresIn(ttl)
+                            .setRefreshToken(refreshToken)
+                            .setScope(scope?.split(' '))
+                            .setTokenType(tokenType)
+                            .setIDToken(
+                                (scope?.split(' ').includes('openid') || undefined) && await createIdToken?.({
+                                    sub: clientId
+                                })
+                            )
+                    }
 
                     //#endregion @TODO: validation + refresh token
 

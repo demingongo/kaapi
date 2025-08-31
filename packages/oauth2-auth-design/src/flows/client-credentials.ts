@@ -549,7 +549,7 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign implements OAuth2S
                         const result = await this.handleRefreshToken(t, req, h)
 
                         if (result === h.continue) {
-                            return h.response({ error: 'invalid_token' }).code(400)
+                            return h.response({ error: 'invalid_token', error_description: 'Token was not validated by any handler.' }).code(400)
                         }
 
                         return result
@@ -570,7 +570,7 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign implements OAuth2S
                     const result = await this.handleRefreshToken(t, req, h)
 
                     if (result === h.continue) {
-                        return h.response({ error: 'invalid_token' }).code(400)
+                        return h.response({ error: 'invalid_token', error_description: 'Token was not validated by any handler.' }).code(400)
                     }
 
                     return result
