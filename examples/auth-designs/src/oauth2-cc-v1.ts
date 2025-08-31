@@ -100,8 +100,8 @@ export const clientCredentialsDesignV1 = OIDCMultipleFlowsBuilder
 
                     return null
                 }))
-            .refreshTokenRoute('/oauth2/m2m/token',
-                (async ({ clientId, clientSecret, refreshToken, scope, ttl }, _req, h) => {
+            .refreshTokenRoute(route => route.validate(
+                async ({ clientId, clientSecret, refreshToken, scope, ttl }, _req, h) => {
 
                     console.log('clientId', clientId)
                     console.log('clientSecret', clientSecret)
@@ -113,7 +113,8 @@ export const clientCredentialsDesignV1 = OIDCMultipleFlowsBuilder
 
                     //#endregion @TODO: validation + refresh token
 
-                    return h.response({ error: 'invalid_token' }).code(400)
+                    // invalid so continue
+                    return h.continue
                 }))
             .setDescription('This API uses OAuth 2 with the authentication code grant flow. [More info](https://oauth.net/2/grant-types/authorization-code/)')
             .setScopes({

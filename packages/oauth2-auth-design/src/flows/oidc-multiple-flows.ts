@@ -1,6 +1,7 @@
 import {
     AuthDesign,
     KaapiTools,
+    Lifecycle,
     ReqRef,
     ReqRefDefaults,
     RouteOptions,
@@ -19,6 +20,8 @@ import { BaseAuthUtil } from '@novice1/api-doc-generator/lib/utils/auth/baseAuth
 import { JWKSGenerator } from '../utils/jwks-generator'
 import { getInMemoryJWKSStore } from '../utils/in-memory-jwks-store'
 
+export type SingleCodeFlow = AuthDesign & OAuth2SingleAuthFlow
+
 //#region OIDCMultipleFlows
 
 export interface OIDCMultipleFlowsArg {
@@ -28,12 +31,12 @@ export interface OIDCMultipleFlowsArg {
     refreshTokenEndpoint?: string
     openidConfiguration?: Record<string, unknown>
     tokenEndpoint: string
-    flows: (AuthDesign & OAuth2SingleAuthFlow)[]
+    flows: SingleCodeFlow[]
 }
 
 export class OIDCMultipleFlows extends AuthDesign {
 
-    protected flows: (AuthDesign & OAuth2SingleAuthFlow)[];
+    protected flows: SingleCodeFlow[];
     protected securitySchemeName = 'OIDC Multiple Flows';
     protected openidConfiguration: Record<string, unknown>;
 
@@ -55,7 +58,7 @@ export class OIDCMultipleFlows extends AuthDesign {
         openidConfiguration
     }: OIDCMultipleFlowsArg) {
         super();
-        this.flows = flows
+        this.flows = [...flows]
         this.refreshTokenEndpoint = refreshTokenEndpoint
         this.tokenEndpoint = tokenEndpoint
         this.jwksRoute = jwksRoute
@@ -112,6 +115,20 @@ export class OIDCMultipleFlows extends AuthDesign {
             }
         }
 
+        const refreshTokenHandlerFlows: SingleCodeFlow[] = []
+
+        for (const flow of this.flows) {
+            if (typeof flow.handleRefreshToken === 'function') {
+                refreshTokenHandlerFlows.push(flow)
+            }
+        }
+
+        for (const flow of this.flows) {
+            if (typeof flow.registerAuthorizationEndpoint === 'function') {
+                flow.registerAuthorizationEndpoint(t)
+            }
+        }
+
         // token
         t
             .route<{ Payload: { grant_type?: unknown; } }>({
@@ -129,7 +146,20 @@ export class OIDCMultipleFlows extends AuthDesign {
                                 }
                             }
                         } else {
-                            // @TODO: refresh token
+                            if (this.refreshTokenEndpoint === this.tokenEndpoint && refreshTokenHandlerFlows.length) {
+                                // iterate to find the right method
+                                for (const flow of refreshTokenHandlerFlows) {
+                                    if (typeof flow.handleRefreshToken === 'function') {
+                                        const result = await flow.handleRefreshToken(t, req, h);
+                                        if (result === h.continue) {
+                                            continue
+                                        } else {
+                                            return result
+                                        }
+                                    }
+                                }
+                                return h.response({ error: 'invalid_token' }).code(400)
+                            }
                         }
                     }
 
@@ -137,8 +167,36 @@ export class OIDCMultipleFlows extends AuthDesign {
                 }
             });
 
+        if (this.refreshTokenEndpoint && this.refreshTokenEndpoint != this.tokenEndpoint) {
 
-        // @TODO: refresh token
+            if (refreshTokenHandlerFlows.length) {
+                t
+                    .route<{ Payload: { grant_type?: unknown; } }>({
+                        options: routesOptions,
+                        path: this.refreshTokenEndpoint,
+                        method: 'POST',
+                        // iterate to find the right method
+                        handler: refreshTokenHandlerFlows.map((f, i, arr) => {
+                            return (
+                                async (req, h) => {
+                                    const result = f.handleRefreshToken ? await f.handleRefreshToken(t, req, h) : h.continue;
+
+                                    if (arr.length - 1 == i && result === h.continue) {
+                                        return h
+                                            .response({
+                                                error: 'invalid_token'
+                                            }).code(400)
+                                    }
+
+                                    return result
+                                }
+                            ) as Lifecycle.Method
+                        })
+                    });
+            }
+
+
+        }
 
         // jwks
         if (this.jwksRoute && jwksGenerator) {

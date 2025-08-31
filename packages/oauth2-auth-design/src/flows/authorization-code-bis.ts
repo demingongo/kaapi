@@ -116,7 +116,7 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
         return this.jwksGenerator
     }
 
-    async handleAuthorization<Refs extends ReqRef = ReqRefDefaults>(
+    protected async handleAuthorization<Refs extends ReqRef = ReqRefDefaults>(
         _t: KaapiTools,
         request: Request<Refs>,
         h: ResponseToolkit<Refs>
@@ -171,6 +171,24 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return sr.handle(request as Request<any>, h as ResponseToolkit<any>)
+    }
+
+    registerAuthorizationEndpoint(t: KaapiTools): void {
+        t
+            .route({
+                options: {
+                    plugins: {
+                        kaapi: {
+                            docs: false
+                        }
+                    }
+                },
+                path: this.authorizationRoute.path,
+                method: ['GET', 'POST'],
+                handler: async (req, h) => {
+                    return await this.handleAuthorization(t, req, h)
+                }
+            });
     }
 
     async handleToken<Refs extends ReqRef = ReqRefDefaults>(
@@ -541,15 +559,7 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
         };
 
         // authorization
-        t
-            .route({
-                options: routesOptions,
-                path: this.authorizationRoute.path,
-                method: ['GET', 'POST'],
-                handler: async (req, h) => {
-                    return await this.handleAuthorization(t, req, h)
-                }
-            })
+        this.registerAuthorizationEndpoint(t)
 
         // token
         t

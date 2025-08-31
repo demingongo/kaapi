@@ -99,6 +99,12 @@ export class OAuth2RefreshTokenRoute<
     protected _path: string;
     protected _handler: OAuth2RefreshTokenHandler<Refs>
 
+    static buildDefault<
+        Refs extends ReqRef = ReqRefDefaults
+    >() {
+        return new DefaultOAuth2RefreshTokenRoute<Refs>()
+    }
+
     get path() {
         return this._path
     }
@@ -113,6 +119,25 @@ export class OAuth2RefreshTokenRoute<
     ) {
         this._path = path;
         this._handler = handler;
+    }
+}
+
+export class DefaultOAuth2RefreshTokenRoute<
+    Refs extends ReqRef = ReqRefDefaults
+> extends OAuth2RefreshTokenRoute<Refs> {
+    constructor() {
+        super('/oauth2/token', (_p, _r, h) => h.continue )
+    }
+
+    setPath(path: PathValue): this {
+        if (path)
+            this._path = path
+        return this
+    }
+
+    validate(handler: OAuth2RefreshTokenHandler<Refs>): this {
+        this._handler = handler
+        return this
     }
 }
 
@@ -542,7 +567,7 @@ export interface OAuth2SingleAuthFlow {
         };
     }>>;
 
-    handleRefreshToken<Refs extends Partial<Record<keyof ReqRefDefaults, unknown>> = ReqRefDefaults>(t: KaapiTools, request: Request<Refs>, h: ResponseToolkit<Refs>): Promise<Lifecycle.ReturnValueTypes<{
+    handleRefreshToken?<Refs extends Partial<Record<keyof ReqRefDefaults, unknown>> = ReqRefDefaults>(t: KaapiTools, request: Request<Refs>, h: ResponseToolkit<Refs>): Promise<Lifecycle.ReturnValueTypes<{
         Payload: {
             grant_type?: unknown;
             refresh_token?: unknown;
@@ -551,6 +576,8 @@ export interface OAuth2SingleAuthFlow {
     }>>;
 
     getDiscoveryConfiguration?(t: KaapiTools): Record<string, unknown>;
+
+    registerAuthorizationEndpoint?(t: KaapiTools): void;
 }
 
 //#endregion OAuth2SingleAuthFlow

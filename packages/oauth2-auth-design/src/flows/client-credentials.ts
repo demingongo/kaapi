@@ -12,6 +12,7 @@ import Boom from '@hapi/boom'
 import Hoek from '@hapi/hoek'
 import {
     DefaultJWKSRoute,
+    DefaultOAuth2RefreshTokenRoute,
     IJWKSRoute,
     IOAuth2RefreshTokenRoute,
     JWKSRoute,
@@ -19,7 +20,6 @@ import {
     OAuth2AuthDesignBuilder,
     OAuth2AuthOptions,
     OAuth2Error,
-    OAuth2RefreshTokenHandler,
     OAuth2RefreshTokenParams,
     OAuth2RefreshTokenRoute,
     OAuth2SingleAuthFlow
@@ -316,6 +316,8 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign implements OAuth2S
         h: ResponseToolkit<Refs>
     ) {
 
+        if (!this.refreshTokenRoute?.handler) return h.continue
+
         const supported = this.getTokenEndpointAuthMethods();
         const authMethodsInstances = this.clientAuthMethods;
         const jwksGenerator = this.getJwksGenerator();
@@ -538,7 +540,21 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign implements OAuth2S
                 path: this.tokenRoute.path,
                 method: 'POST',
                 handler: async (req, h) => {
-                    return await this.handleToken(t, req, h)
+                    if (req.payload.grant_type === this.grantType) {
+                        return await this.handleToken(t, req, h)
+                    } else if (
+                        req.payload.grant_type === 'refresh_token' &&
+                        this.refreshTokenRoute?.path == this.tokenRoute.path
+                    ) {
+                        const result = await this.handleRefreshToken(t, req, h)
+
+                        if (result === h.continue) {
+                            return h.response({ error: 'invalid_token' }).code(400)
+                        }
+
+                        return result
+                    }
+                    return h.response({ error: 'unsupported_grant_type', error_description: `Request does not support the 'grant_type' '${req.payload.grant_type}'.` }).code(400)
                 }
             })
 
@@ -551,7 +567,13 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign implements OAuth2S
                 path: this.refreshTokenRoute.path,
                 method: 'POST',
                 handler: async (req, h) => {
-                    return await this.handleRefreshToken(t, req, h)
+                    const result = await this.handleRefreshToken(t, req, h)
+
+                    if (result === h.continue) {
+                        return h.response({ error: 'invalid_token' }).code(400)
+                    }
+
+                    return result
                 }
             })
         }
@@ -685,6 +707,8 @@ export interface OAuth2ClientCredentialsBuilderArg extends OAuth2ClientCredentia
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     tokenRoute: DefaultOAuth2ClientCredentialsTokenRoute<any>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    refreshTokenRoute?: DefaultOAuth2RefreshTokenRoute<any>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     jwksRoute?: DefaultJWKSRoute<any>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     tokenType?: TokenType<any>
@@ -805,12 +829,9 @@ export class OAuth2ClientCredentialsBuilder implements OAuth2AuthDesignBuilder {
         return this
     }
 
-    refreshTokenRoute<Refs extends ReqRef = ReqRefDefaults>
-        (
-            path: string,
-            handler: OAuth2RefreshTokenHandler<Refs>
-        ): this {
-        this.params.refreshTokenRoute = new OAuth2RefreshTokenRoute(path, handler)
+    refreshTokenRoute<Refs extends ReqRef = ReqRefDefaults>(handler: (route: DefaultOAuth2RefreshTokenRoute<Refs>) => void): this {
+        this.params.refreshTokenRoute = this.params.refreshTokenRoute || OAuth2RefreshTokenRoute.buildDefault();
+        handler(this.params.refreshTokenRoute)
         return this
     }
 }

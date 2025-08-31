@@ -1861,3 +1861,13 @@ I can help you architect this in layers if you like — happy to sketch out a fl
 If you ever want help designing that internal handler/router system — or want to see how Spring Security or Node-based providers do it — just ask. I’ve helped people build grant dispatchers from scratch and can help you too.
 
 ---
+
+| Flow               | Refresh Token Support | Typical Use Case              |
+| ------------------ | --------------------- | ----------------------------- |
+| Authorization Code | ✅ Yes                 | Web/mobile apps               |
+| Device Flow        | ✅ Yes                 | TVs, game consoles, CLI tools |
+| ROPC (Password)    | ✅ Yes (legacy)        | Legacy enterprise apps        |
+| JWT Bearer         | ⚠️ Sometimes          | Server-to-server/federation   |
+| Client Credentials | ❌ No                  | Machine-to-machine            |
+| Implicit           | ❌ No (deprecated)     | Old SPA flow, now discouraged |
+
