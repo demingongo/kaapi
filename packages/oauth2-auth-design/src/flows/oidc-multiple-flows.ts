@@ -244,6 +244,7 @@ export class OIDCMultipleFlows extends AuthDesign {
                 } = {
                     issuer: `${host}`,
                     authorization_endpoint: undefined,
+                    device_authorization_endpoint: undefined,
                     token_endpoint: `${host}${this.tokenEndpoint}`,
                     jwks_uri: this.jwksRoute ? `${host}${this.jwksRoute.path}` : undefined,
                     grant_types_supported: [],
