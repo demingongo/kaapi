@@ -96,7 +96,7 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
         this.tokenRoute = tokenRoute
         this.refreshTokenRoute = refreshTokenRoute
 
-        this.strategyName = strategyName || 'oauth2-authorization-code'
+        this.strategyName = strategyName || 'oauth2-device-authorization'
         this.options = options ? { ...options } : {}
     }
 
@@ -138,9 +138,7 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
             handle: async (req, h) => {
                 // validating query
                 if (
-                    req.query.client_id && typeof req.query.client_id === 'string' &&
-                    req.query.response_type === 'code' &&
-                    req.query.redirect_uri && typeof req.query.redirect_uri === 'string'
+                    req.query.client_id && typeof req.query.client_id === 'string'
                 ) {
                     const params: OAuth2DeviceAuthorizationParams = {
                         clientId: req.query.client_id
@@ -154,10 +152,6 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
                     let errorDescription = ''
                     if (!(req.query.client_id && typeof req.query.client_id === 'string')) {
                         errorDescription = 'Request was missing the \'client_id\' parameter.'
-                    } else if (!(req.query.response_type === 'code')) {
-                        errorDescription = `Request does not support the 'response_type' '${req.query.response_type}'.`
-                    } else if (!(req.query.redirect_uri && typeof req.query.redirect_uri === 'string')) {
-                        errorDescription = 'Request was missing the \'redirect_uri\' parameter.'
                     }
 
                     return h.response({ error: 'invalid_request', error_description: errorDescription }).code(400)
