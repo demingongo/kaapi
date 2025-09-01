@@ -126,7 +126,7 @@ export class DefaultOAuth2RefreshTokenRoute<
     Refs extends ReqRef = ReqRefDefaults
 > extends OAuth2RefreshTokenRoute<Refs> {
     constructor() {
-        super('/oauth2/token', (_p, _r, h) => h.continue )
+        super('/oauth2/token', (_p, _r, h) => h.continue)
     }
 
     setPath(path: PathValue): this {
@@ -590,3 +590,12 @@ export interface OAuth2SingleAuthFlowBuilder extends OAuth2AuthDesignBuilder {
 }
 
 //#endregion OAuth2SingleAuthFlowBuilder
+
+//#region TokenGenerator
+
+export type TokenGenerator<P extends object = object, Refs extends ReqRef = ReqRefDefaults, Err extends { error: string } = OAuth2ErrorBody> = (
+    params: P,
+    req: Request<Refs>
+) => Promise<OAuth2TokenResponseBody | IOAuth2TokenResponse | Err | null> | OAuth2TokenResponseBody | IOAuth2TokenResponse | Err | null
+
+//#endregion TokenGenerator

@@ -195,8 +195,6 @@ export class OIDCMultipleFlows extends AuthDesign {
                         })
                     });
             }
-
-
         }
 
         // jwks
@@ -254,7 +252,13 @@ export class OIDCMultipleFlows extends AuthDesign {
 
                 for (const flow of this.flows) {
                     if (typeof flow.getDiscoveryConfiguration === 'function') {
-                        const more = flow.getDiscoveryConfiguration(t);
+                         const {
+                            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                            token_endpoint: _unused_token_endpoint,
+                            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                            jwks_uri: _unused_jwks_uri,
+                            ...more
+                        } = flow.getDiscoveryConfiguration(t);
 
                         // merge properties
                         wellKnownOpenIDConfig = {

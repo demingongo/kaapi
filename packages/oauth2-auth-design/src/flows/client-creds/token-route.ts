@@ -10,7 +10,8 @@ import {
     OAuth2TokenResponseBody,
     OAuth2ErrorBody,
     PathValue,
-    OpenIDHelpers
+    OpenIDHelpers,
+    TokenGenerator
 } from '../common'
 import { JWTPayload } from 'jose'
 
@@ -76,10 +77,7 @@ export class OAuth2ClientCredentialsTokenRoute<
 /**
  * Return null for invalid request
  */
-export type ClientCredentialsTokenGenerator<Refs extends ReqRef = ReqRefDefaults> = (
-    params: OAuth2ClientCredentialsTokenParams,
-    req: Request<Refs>
-) => Promise<OAuth2TokenResponseBody | IOAuth2TokenResponse | OAuth2ErrorBody | null> | OAuth2TokenResponseBody | IOAuth2TokenResponse | OAuth2ErrorBody |  null
+export type ClientCredentialsTokenGenerator<Refs extends ReqRef = ReqRefDefaults> = TokenGenerator<OAuth2ClientCredentialsTokenParams, Refs>;
 
 export class DefaultOAuth2ClientCredentialsTokenRoute<
     Refs extends ReqRef = ReqRefDefaults
