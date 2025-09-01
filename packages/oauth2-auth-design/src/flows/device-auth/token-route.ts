@@ -31,11 +31,9 @@ export type OAuth2DeviceCodeTokenErrorBody = {
 
 export interface OAuth2DeviceAuthTokenParams extends Partial<OpenIDHelpers> {
     grantType: string
-    code: string
+    deviceCode: string
     clientId: string
     clientSecret?: string
-    codeVerifier?: string
-    redirectUri?: string
     readonly ttl?: number
     createJwtAccessToken?: (payload: JWTPayload) => Promise<string>
 }

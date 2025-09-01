@@ -202,7 +202,7 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
 
         const sr: {
             handle: Lifecycle.Method<{
-                Payload: { code_verifier?: unknown, code?: unknown, grant_type?: unknown, redirect_uri?: unknown, refresh_token?: unknown, scope?: unknown }
+                Payload: { device_code?: unknown, grant_type?: unknown, scope?: unknown, refresh_token?: unknown }
             }>
         } = {
             handle: async (req, h) => {
@@ -237,14 +237,14 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
 
                 if (
                     clientId &&
-                    req.payload.code && typeof req.payload.code === 'string' &&
+                    req.payload.device_code && typeof req.payload.device_code === 'string' &&
                     req.payload.grant_type === 'urn:ietf:params:oauth:grant-type:device_code'
                 ) {
 
                     const params: OAuth2DeviceAuthTokenParams = {
                         clientId,
                         grantType: req.payload.grant_type,
-                        code: req.payload.code,
+                        deviceCode: req.payload.device_code,
 
                         ttl: jwksGenerator?.ttl || this.tokenTTL,
                         createJwtAccessToken: jwksGenerator ? (async (payload) => {
@@ -265,12 +265,6 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
                     }
                     if (clientSecret) {
                         params.clientSecret = clientSecret
-                    }
-                    if (req.payload.code_verifier && typeof req.payload.code_verifier === 'string') {
-                        params.codeVerifier = req.payload.code_verifier
-                    }
-                    if (req.payload.redirect_uri && typeof req.payload.redirect_uri === 'string') {
-                        params.redirectUri = req.payload.redirect_uri
                     }
 
                     const ttR: TokenTypeValidationResponse = tokenTypeInstance.isValidTokenRequest ? (await tokenTypeInstance.isValidTokenRequest(req)) : { isValid: true }
@@ -338,9 +332,9 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
                     if (!clientId) {
                         error = 'invalid_request'
                         errorDescription = 'Request was missing the \'client_id\' parameter.'
-                    } else if (!(req.payload.code && typeof req.payload.code === 'string')) {
+                    } else if (!(req.payload.device_code && typeof req.payload.device_code === 'string')) {
                         error = 'invalid_request'
-                        errorDescription = 'Request was missing the \'code\' parameter.'
+                        errorDescription = 'Request was missing the \'device_code\' parameter.'
                     }
                     return h.response({ error, error_description: errorDescription }).code(400)
                 }
