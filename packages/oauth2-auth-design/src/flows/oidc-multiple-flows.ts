@@ -254,39 +254,22 @@ export class OIDCMultipleFlows extends AuthDesign {
 
                 for (const flow of this.flows) {
                     if (typeof flow.getDiscoveryConfiguration === 'function') {
-                        const {
-                            grant_types_supported,
-                            token_endpoint_auth_methods_supported,
-                            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                            token_endpoint: _unused_token_endpoint,
-                            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                            jwks_uri: _unused_jwks_uri,
-                            ...more
-                        } = flow.getDiscoveryConfiguration(t);
+                        const more = flow.getDiscoveryConfiguration(t);
 
+                        // merge properties
                         wellKnownOpenIDConfig = {
                             ...wellKnownOpenIDConfig,
-                            ...more
+                            ...Object.fromEntries(
+                                Object.entries(more).map(([key, val]) => [
+                                    key,
+                                    // merge arrays and ensure unique values (Set)
+                                    Array.isArray(wellKnownOpenIDConfig[key]) && Array.isArray(val) ? [...new Set([
+                                        ...wellKnownOpenIDConfig[key],
+                                        ...val
+                                    ])] : val
+                                ])
+                            )
                         };
-
-                        if (Array.isArray(grant_types_supported)) {
-                            if (Array.isArray(wellKnownOpenIDConfig.grant_types_supported)) {
-                                // merge and ensure unique values (Set)
-                                wellKnownOpenIDConfig.grant_types_supported = [...new Set([
-                                    ...wellKnownOpenIDConfig.grant_types_supported,
-                                    ...grant_types_supported
-                                ])]
-                            }
-                        }
-                        if (Array.isArray(token_endpoint_auth_methods_supported)) {
-                            if (Array.isArray(wellKnownOpenIDConfig.token_endpoint_auth_methods_supported)) {
-                                // merge and ensure unique values (Set)
-                                wellKnownOpenIDConfig.token_endpoint_auth_methods_supported = [...new Set([
-                                    ...wellKnownOpenIDConfig.token_endpoint_auth_methods_supported,
-                                    ...token_endpoint_auth_methods_supported
-                                ])]
-                            }
-                        }
                     }
                 }
 
