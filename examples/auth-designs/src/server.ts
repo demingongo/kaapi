@@ -43,6 +43,13 @@ app.base().auth.default({
 })
 app.log('default strategy:', app.base().auth.settings.default)
 
+app.base().ext('onPreHandler', (request, h) => {
+    app.log.warn('onPreHandler -', request.method.toUpperCase(), request.path, request.payload)
+
+
+    return h.continue;
+});
+
 /**
  * Export a promise for readiness
  */

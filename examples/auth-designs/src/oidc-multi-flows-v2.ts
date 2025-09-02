@@ -136,7 +136,7 @@ export const OIDCMultiFlowsDesignV2 = OIDCMultipleFlowsBuilder
                     // invalid so continue
                     return h.continue
                 }))
-            .setDescription('This API uses OAuth 2 with the client credentials grant flow. [More info](https://oauth.net/2/grant-types/authorization-code/)')
+            .setDescription('This API uses OAuth 2 with the client credentials grant flow. [More info](https://www.oauth.com/oauth2-servers/access-tokens/client-credentials/)')
             .setScopes({
                 'read:data': 'Allows the client to retrieve or query data from the service.',
                 'write:data': 'Allows the client to create or update data in the service.',
@@ -273,7 +273,7 @@ export const OIDCMultiFlowsDesignV2 = OIDCMultipleFlowsBuilder
                     // invalid so continue
                     return h.continue
                 }))
-            .setDescription('This API uses OAuth 2 with the authentication code grant flow. [More info](https://oauth.net/2/grant-types/authorization-code/)')
+            .setDescription('This API uses OAuth 2 with the authorization code grant flow. [More info](https://oauth.net/2/grant-types/authorization-code/)')
             .setScopes({
                 openid: 'Required for OpenID Connect; enables ID token issuance.',
                 profile: 'Access to basic profile information such as name and picture.',
@@ -411,7 +411,7 @@ export const OIDCMultiFlowsDesignV2 = OIDCMultipleFlowsBuilder
                     // invalid so continue
                     return h.continue
                 }))
-            .setDescription('This API uses OAuth 2 with the authentication code grant flow. [More info](https://oauth.net/2/grant-types/authorization-code/)')
+            .setDescription('This API uses OAuth 2 with the device authorization grant flow. [More info](https://www.oauth.com/oauth2-servers/device-flow/)')
             .setScopes({
                 openid: 'Required for OpenID Connect; enables ID token issuance.',
                 profile: 'Access to basic profile information such as name and picture.',

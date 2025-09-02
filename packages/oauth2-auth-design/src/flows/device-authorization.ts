@@ -133,24 +133,24 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
         h: ResponseToolkit<Refs>
     ) {
         const sr: {
-            handle: Lifecycle.Method<ReqRefDefaults>
+            handle: Lifecycle.Method<{ Payload: { client_id?: unknown, scope?: unknown } }>
         } = {
             handle: async (req, h) => {
-                // validating query
+                // validating payload
                 if (
-                    req.query.client_id && typeof req.query.client_id === 'string'
+                    req.payload.client_id && typeof req.payload.client_id === 'string'
                 ) {
                     const params: OAuth2DeviceAuthorizationParams = {
-                        clientId: req.query.client_id
+                        clientId: req.payload.client_id
                     }
-                    if (req.query.scope && typeof req.query.scope === 'string') {
-                        params.scope = req.query.scope
+                    if (req.payload.scope && typeof req.payload.scope === 'string') {
+                        params.scope = req.payload.scope
                     }
 
                     return this.authorizationRoute.handler(params, req, h)
                 } else {
                     let errorDescription = ''
-                    if (!(req.query.client_id && typeof req.query.client_id === 'string')) {
+                    if (!(req.payload.client_id && typeof req.payload.client_id === 'string')) {
                         errorDescription = 'Request was missing the \'client_id\' parameter.'
                     }
 
