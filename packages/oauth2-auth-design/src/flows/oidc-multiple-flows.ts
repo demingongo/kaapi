@@ -1,7 +1,6 @@
 import {
     AuthDesign,
     KaapiTools,
-    Lifecycle,
     ReqRef,
     ReqRefDefaults,
     RouteOptions,
@@ -28,7 +27,6 @@ export interface OIDCMultipleFlowsArg {
     jwksStore?: JWKSStore
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     jwksRoute?: DefaultJWKSRoute<any>
-    refreshTokenEndpoint?: string
     openidConfiguration?: Record<string, unknown>
     tokenEndpoint: string
     flows: SingleCodeFlow[]
@@ -41,7 +39,6 @@ export class OIDCMultipleFlows extends AuthDesign {
     protected openidConfiguration: Record<string, unknown>;
 
     protected tokenEndpoint: string;
-    protected refreshTokenEndpoint?: string;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     protected jwksRoute?: IJWKSRoute<any>;
@@ -51,7 +48,6 @@ export class OIDCMultipleFlows extends AuthDesign {
 
     constructor({
         flows,
-        refreshTokenEndpoint,
         tokenEndpoint,
         jwksRoute,
         jwksStore,
@@ -59,7 +55,6 @@ export class OIDCMultipleFlows extends AuthDesign {
     }: OIDCMultipleFlowsArg) {
         super();
         this.flows = [...flows]
-        this.refreshTokenEndpoint = refreshTokenEndpoint
         this.tokenEndpoint = tokenEndpoint
         this.jwksRoute = jwksRoute
         this.jwksStore = jwksStore
@@ -146,7 +141,7 @@ export class OIDCMultipleFlows extends AuthDesign {
                                 }
                             }
                         } else {
-                            if (this.refreshTokenEndpoint === this.tokenEndpoint && refreshTokenHandlerFlows.length) {
+                            if (refreshTokenHandlerFlows.length) {
                                 // iterate to find the right method
                                 for (const flow of refreshTokenHandlerFlows) {
                                     if (typeof flow.handleRefreshToken === 'function') {
@@ -166,36 +161,6 @@ export class OIDCMultipleFlows extends AuthDesign {
                     return h.response({ error: 'unsupported_grant_type', error_description: `Request does not support the 'grant_type' '${req.payload.grant_type}'.` }).code(400)
                 }
             });
-
-        if (this.refreshTokenEndpoint && this.refreshTokenEndpoint != this.tokenEndpoint) {
-
-            if (refreshTokenHandlerFlows.length) {
-                t
-                    .route<{ Payload: { grant_type?: unknown; } }>({
-                        options: routesOptions,
-                        path: this.refreshTokenEndpoint,
-                        method: 'POST',
-                        // iterate to find the right method
-                        handler: refreshTokenHandlerFlows.map((f, i, arr) => {
-                            return (
-                                async (req, h) => {
-                                    const result = f.handleRefreshToken ? await f.handleRefreshToken(t, req, h) : h.continue;
-
-                                    if (arr.length - 1 == i && result === h.continue) {
-                                        return h
-                                            .response({
-                                                error: 'invalid_token',
-                                                error_description: 'Token was not validated by any handler.'
-                                            }).code(400)
-                                    }
-
-                                    return result
-                                }
-                            ) as Lifecycle.Method
-                        })
-                    });
-            }
-        }
 
         // jwks
         if (this.jwksRoute && jwksGenerator) {
@@ -341,11 +306,6 @@ export class OIDCMultipleFlowsBuilder implements OAuth2AuthDesignBuilder {
     tokenEndpoint(path: string): this {
         if (path)
             this.params.tokenEndpoint = path
-        return this
-    }
-
-    refreshTokenEndpoint(path: string): this {
-        this.params.refreshTokenEndpoint = path
         return this
     }
 

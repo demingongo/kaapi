@@ -25,7 +25,6 @@ const tokenType = new BearerToken()
 export const OIDCMultiFlowsDesignV2 = OIDCMultipleFlowsBuilder
     .create()
     .tokenEndpoint('/oauth2/v2/token')
-    .refreshTokenEndpoint('/oauth2/v2/token')
     .setTokenTTL(36000)
     .setJwksStore(getInMemoryJWKSStore({ timeThreshold: 36000 / 2 })) // store for JWKS
     .jwksRoute(route => route.setPath('/oauth2/v2/keys')) // activates jwks uri
@@ -104,38 +103,6 @@ export const OIDCMultiFlowsDesignV2 = OIDCMultipleFlowsBuilder
 
                         return null
                     }))
-            .refreshTokenRoute(route => route.validate(
-                async ({ clientId, clientSecret, refreshToken, scope, ttl, createJwtAccessToken, createIdToken }, _req, h) => {
-
-                    console.log('clientId', clientId)
-                    console.log('clientSecret', clientSecret)
-                    console.log('refreshToken', refreshToken)
-                    console.log('scope', scope)
-                    console.log('ttl', ttl)
-
-                    //#region @TODO: validation + refresh token
-                    if (refreshToken === 'generated_refresh_token' && createJwtAccessToken) {
-                        const accessToken = await createJwtAccessToken({
-                            machine: '248289761001',
-                            name: 'Jane Doe',
-                        })
-                        return new OAuth2TokenResponse({ access_token: accessToken })
-                            .setExpiresIn(ttl)
-                            .setRefreshToken(refreshToken)
-                            .setScope(scope?.split(' '))
-                            .setTokenType(tokenType)
-                            .setIDToken(
-                                (scope?.split(' ').includes('openid') || undefined) && await createIdToken?.({
-                                    sub: clientId
-                                })
-                            )
-                    }
-
-                    //#endregion @TODO: validation + refresh token
-
-                    // invalid so continue
-                    return h.continue
-                }))
             .setDescription('This API uses OAuth 2 with the client credentials grant flow. [More info](https://www.oauth.com/oauth2-servers/access-tokens/client-credentials/)')
             .setScopes({
                 'read:data': 'Allows the client to retrieve or query data from the service.',

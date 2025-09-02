@@ -234,7 +234,6 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
                     req.payload.device_code && typeof req.payload.device_code === 'string' &&
                     req.payload.grant_type === 'urn:ietf:params:oauth:grant-type:device_code'
                 ) {
-
                     const params: OAuth2DeviceAuthTokenParams = {
                         clientId,
                         grantType: req.payload.grant_type,
@@ -267,59 +266,6 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
                     }
 
                     return this.tokenRoute.handler(params, req, h)
-                } else if (
-                    this.tokenRoute.path == this.refreshTokenRoute?.path &&
-                    req.payload.grant_type === 'refresh_token'
-                ) {
-                    const hasRefreshToken = req.payload.refresh_token && typeof req.payload.refresh_token === 'string'
-                    if (
-                        clientId &&
-                        hasRefreshToken
-                    ) {
-                        const params: OAuth2RefreshTokenParams = {
-                            clientId,
-                            grantType: req.payload.grant_type,
-                            refreshToken: `${req.payload.refresh_token}`,
-                            ttl: jwksGenerator?.ttl || this.tokenTTL,
-                            createJwtAccessToken: jwksGenerator ? (async (payload) => {
-                                return await createJwtAccessToken(jwksGenerator, {
-                                    aud: t.postman?.getHost()[0] || '',
-                                    iss: t.postman?.getHost()[0] || '',
-                                    sub: clientId,
-                                    ...payload
-                                })
-                            }) : undefined,
-                            createIdToken: jwksGenerator && hasOpenIDScope() ? (async (payload) => {
-                                return await createIdToken(jwksGenerator, {
-                                    aud: clientId,
-                                    iss: t.postman?.getHost()[0] || '',
-                                    ...payload
-                                })
-                            }) : undefined
-                        }
-
-                        if (clientSecret) {
-                            params.clientSecret = clientSecret
-                        }
-
-                        if (req.payload.scope && typeof req.payload.scope === 'string') {
-                            params.scope = req.payload.scope
-                        }
-
-                        return this.refreshTokenRoute.handler(params, req, h)
-                    } else {
-                        let error: OAuth2Error = 'unauthorized_client';
-                        let errorDescription = ''
-                        if (!clientId) {
-                            error = 'invalid_request'
-                            errorDescription = 'Request was missing the \'client_id\' parameter.'
-                        } else if (!(req.payload.refresh_token && typeof req.payload.refresh_token === 'string')) {
-                            error = 'invalid_request'
-                            errorDescription = 'Request was missing the \'refresh_token\' parameter.'
-                        }
-
-                        return h.response({ error, error_description: errorDescription }).code(400)
-                    }
                 } else {
                     let error: OAuth2Error = 'unauthorized_client';
                     let errorDescription = ''

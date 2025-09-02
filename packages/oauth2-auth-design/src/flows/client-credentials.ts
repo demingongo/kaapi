@@ -12,16 +12,12 @@ import Boom from '@hapi/boom'
 import Hoek from '@hapi/hoek'
 import {
     DefaultJWKSRoute,
-    DefaultOAuth2RefreshTokenRoute,
     IJWKSRoute,
-    IOAuth2RefreshTokenRoute,
     JWKSRoute,
     OAuth2AuthDesign,
     OAuth2AuthDesignBuilder,
     OAuth2AuthOptions,
     OAuth2Error,
-    OAuth2RefreshTokenParams,
-    OAuth2RefreshTokenRoute,
     OAuth2SingleAuthFlow
 } from './common'
 import { ClientAuthMethod, ClientSecretBasic, ClientSecretPost, TokenEndpointAuthMethod } from '../utils/client-auth-methods'
@@ -38,8 +34,6 @@ export interface OAuth2ClientCredentialsArg {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     tokenRoute: IOAuth2ClientCredentialsTokenRoute<any>;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    refreshTokenRoute?: OAuth2RefreshTokenRoute<any>;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     jwksRoute?: IJWKSRoute<any>;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     options?: OAuth2AuthOptions<any>;
@@ -51,8 +45,6 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign implements OAuth2S
     protected options: OAuth2AuthOptions
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     protected tokenRoute: IOAuth2ClientCredentialsTokenRoute<any>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    protected refreshTokenRoute?: IOAuth2RefreshTokenRoute<any>
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     protected jwksRoute?: IJWKSRoute<any>;
@@ -66,7 +58,6 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign implements OAuth2S
     constructor(
         {
             tokenRoute,
-            refreshTokenRoute,
             options,
             strategyName,
             jwksStore,
@@ -78,7 +69,6 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign implements OAuth2S
         this.jwksStore = jwksStore
 
         this.tokenRoute = tokenRoute
-        this.refreshTokenRoute = refreshTokenRoute
         this.jwksRoute = jwksRoute
 
         this.strategyName = strategyName || 'oauth2-client-credentials'
@@ -130,14 +120,12 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign implements OAuth2S
                 Payload: {
                     grant_type?: unknown;
                     redirect_uri?: unknown;
-                    refresh_token?: unknown;
                     scope?: unknown;
                 };
             }, Lifecycle.ReturnValue<{
                 Payload: {
                     grant_type?: unknown;
                     redirect_uri?: unknown;
-                    refresh_token?: unknown;
                     scope?: unknown;
                 };
             }>>
@@ -145,9 +133,6 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign implements OAuth2S
             handle: async (req, h) => {
                 // Grant validation
                 const supportedGrants = ['client_credentials']
-                if (this.tokenRoute.path == this.refreshTokenRoute?.path) {
-                    supportedGrants.push('refresh_token')
-                }
                 if (!(typeof req.payload.grant_type === 'string' && supportedGrants.includes(req.payload.grant_type))) {
                     return h.response({ error: 'unsupported_grant_type', error_description: `Request does not support the 'grant_type' '${req.payload.grant_type}'.` }).code(400)
                 }
@@ -232,64 +217,6 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign implements OAuth2S
                     }
 
                     return this.tokenRoute.handler(params, req, h)
-                } else if (
-                    this.tokenRoute.path == this.refreshTokenRoute?.path &&
-                    req.payload.grant_type === 'refresh_token'
-                ) {
-                    const hasRefreshToken = req.payload.refresh_token && typeof req.payload.refresh_token === 'string'
-                    if (
-                        clientId &&
-                        hasRefreshToken
-                    ) {
-                        const scope = req.payload.scope && typeof req.payload.scope === 'string' ? req.payload.scope : undefined
-                        const params: OAuth2RefreshTokenParams = {
-                            clientId,
-                            grantType: req.payload.grant_type,
-                            refreshToken: `${req.payload.refresh_token}`,
-                            ttl: jwksGenerator?.ttl || this.tokenTTL,
-                            createJwtAccessToken: jwksGenerator ? (async (payload) => {
-                                return await createJwtAccessToken(jwksGenerator, {
-                                    aud: t.postman?.getHost()[0] || '',
-                                    iss: t.postman?.getHost()[0] || '',
-                                    sub: clientId,
-                                    scope,
-                                    ...payload
-                                })
-                            }) : undefined,
-                            createIdToken: jwksGenerator && hasOpenIDScope() ? (async (payload) => {
-                                return await createIdToken(jwksGenerator, {
-                                    aud: clientId,
-                                    iss: t.postman?.getHost()[0] || '',
-                                    ...payload
-                                })
-                            }) : undefined
-                        }
-
-                        if (clientSecret) {
-                            params.clientSecret = clientSecret
-                        }
-
-                        if (scope) {
-                            params.scope = scope
-                        }
-
-                        return this.refreshTokenRoute.handler(params, req, h)
-                    } else {
-                        let error: OAuth2Error = 'unauthorized_client';
-                        let errorDescription = ''
-                        if (!clientId) {
-                            error = 'invalid_request'
-                            errorDescription = 'Request was missing the \'client_id\' parameter.'
-                        } else if (!clientSecret) {
-                            error = 'invalid_request'
-                            errorDescription = 'Request was missing the \'client_secret\' parameter.'
-                        } else if (!(req.payload.refresh_token && typeof req.payload.refresh_token === 'string')) {
-                            error = 'invalid_request'
-                            errorDescription = 'Request was missing the \'refresh_token\' parameter.'
-                        }
-
-                        return h.response({ error, error_description: errorDescription }).code(400)
-                    }
                 } else {
                     let error: OAuth2Error = 'unauthorized_client';
                     let errorDescription = ''
@@ -303,113 +230,6 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign implements OAuth2S
                     return h.response({ error, error_description: errorDescription }).code(400)
                 }
 
-            }
-        }
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return sr.handle(request as Request<any>, h as ResponseToolkit<any>)
-    }
-
-    async handleRefreshToken<Refs extends ReqRef = ReqRefDefaults>(
-        t: KaapiTools,
-        request: Request<Refs>,
-        h: ResponseToolkit<Refs>
-    ) {
-
-        if (!this.refreshTokenRoute?.handler) return h.continue
-
-        const supported = this.getTokenEndpointAuthMethods();
-        const authMethodsInstances = this.clientAuthMethods;
-        const jwksGenerator = this.getJwksGenerator();
-
-        const hasOpenIDScope = () => typeof this.getScopes()?.['openid'] != 'undefined';
-
-        const sr: {
-            handle: Lifecycle.Method<{
-                Payload: { grant_type?: unknown, refresh_token?: unknown, scope?: unknown }
-            }, Lifecycle.ReturnValue<{
-                Payload: { grant_type?: unknown, refresh_token?: unknown, scope?: unknown }
-            }>>
-        } = {
-            handle: async (req, h) => {
-                // Grant validation
-                const supportedGrants = ['refresh_token']
-                if (!(typeof req.payload.grant_type === 'string' && supportedGrants.includes(req.payload.grant_type))) {
-                    return h.response({ error: 'unsupported_grant_type', error_description: `Request does not support the 'grant_type' '${req.payload.grant_type}'.` }).code(400)
-                }
-
-                // Client authentication is present?
-                const {
-                    clientId,
-                    clientSecret,
-                    error,
-                    errorDescription
-                } = await this._extractClientParams(req as unknown as Request<ReqRefDefaults>, authMethodsInstances, supported);
-
-                if (error) {
-                    return h.response({ error: error, error_description: errorDescription || undefined }).code(400)
-                }
-
-                if (!clientId || !clientSecret) {
-                    return h
-                        .response({
-                            error: 'invalid_request',
-                            error_description: `Supported token endpoint authentication methods: ${supported.join(', ')}`
-                        }).code(400)
-                }
-                // validating body
-                const hasRefreshToken = req.payload.refresh_token && typeof req.payload.refresh_token === 'string'
-                const isRefreshTokenGrantType = req.payload.grant_type === 'refresh_token'
-                if (
-                    clientId &&
-                    hasRefreshToken &&
-                    isRefreshTokenGrantType
-                ) {
-                    const scope = req.payload.scope && typeof req.payload.scope === 'string' ? req.payload.scope : undefined
-                    const params: OAuth2RefreshTokenParams = {
-                        clientId,
-                        clientSecret,
-                        grantType: `${req.payload.grant_type}`,
-                        refreshToken: `${req.payload.refresh_token}`,
-                        ttl: jwksGenerator?.ttl || this.tokenTTL,
-                        createJwtAccessToken: jwksGenerator ? (async (payload) => {
-                            return await createJwtAccessToken(jwksGenerator, {
-                                aud: t.postman?.getHost()[0] || '',
-                                iss: t.postman?.getHost()[0] || '',
-                                sub: clientId,
-                                scope,
-                                ...payload
-                            })
-                        }) : undefined,
-                        createIdToken: jwksGenerator && hasOpenIDScope() ? (async (payload) => {
-                            return await createIdToken(jwksGenerator, {
-                                aud: clientId,
-                                iss: t.postman?.getHost()[0] || '',
-                                ...payload
-                            })
-                        }) : undefined
-                    }
-
-                    if (scope) {
-                        params.scope = scope
-                    }
-
-                    return this.refreshTokenRoute?.handler(params, req, h)
-                } else {
-                    let error: OAuth2Error = 'unauthorized_client';
-                    let errorDescription = ''
-                    if (!clientId) {
-                        error = 'invalid_request'
-                        errorDescription = 'Request was missing the \'client_id\' parameter.'
-                    } else if (!clientSecret) {
-                        error = 'invalid_request'
-                        errorDescription = 'Request was missing the \'client_secret\' parameter.'
-                    } else if (!(req.payload.refresh_token && typeof req.payload.refresh_token === 'string')) {
-                        error = 'invalid_request'
-                        errorDescription = 'Request was missing the \'refresh_token\' parameter.'
-                    }
-                    return h.response({ error, error_description: errorDescription }).code(400)
-                }
             }
         }
 
@@ -425,10 +245,6 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign implements OAuth2S
             .setGrantType(GrantType.clientCredentials)
             .setScopes(this.getScopes() || {})
             .setAccessTokenUrl(this.tokenRoute.path || '');
-
-        if (this.refreshTokenRoute?.path) {
-            docs.setRefreshUrl(this.refreshTokenRoute.path)
-        }
 
         if (this.description) {
             docs.setDescription(this.description)
@@ -542,41 +358,10 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign implements OAuth2S
                 handler: async (req, h) => {
                     if (req.payload.grant_type === this.grantType) {
                         return await this.handleToken(t, req, h)
-                    } else if (
-                        req.payload.grant_type === 'refresh_token' &&
-                        this.refreshTokenRoute?.path == this.tokenRoute.path
-                    ) {
-                        const result = await this.handleRefreshToken(t, req, h)
-
-                        if (result === h.continue) {
-                            return h.response({ error: 'invalid_token', error_description: 'Token was not validated by any handler.' }).code(400)
-                        }
-
-                        return result
                     }
                     return h.response({ error: 'unsupported_grant_type', error_description: `Request does not support the 'grant_type' '${req.payload.grant_type}'.` }).code(400)
                 }
             })
-
-        // refreshToken
-        if (this.refreshTokenRoute?.path && this.refreshTokenRoute.path != this.tokenRoute.path) {
-            t.route<{
-                Payload: { grant_type?: unknown, refresh_token?: unknown, scope?: unknown }
-            }>({
-                options: routesOptions,
-                path: this.refreshTokenRoute.path,
-                method: 'POST',
-                handler: async (req, h) => {
-                    const result = await this.handleRefreshToken(t, req, h)
-
-                    if (result === h.continue) {
-                        return h.response({ error: 'invalid_token', error_description: 'Token was not validated by any handler.' }).code(400)
-                    }
-
-                    return result
-                }
-            })
-        }
 
         // jwks
         if (this.jwksRoute && jwksGenerator) {
@@ -707,8 +492,6 @@ export interface OAuth2ClientCredentialsBuilderArg extends OAuth2ClientCredentia
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     tokenRoute: DefaultOAuth2ClientCredentialsTokenRoute<any>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    refreshTokenRoute?: DefaultOAuth2RefreshTokenRoute<any>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     jwksRoute?: DefaultJWKSRoute<any>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     tokenType?: TokenType<any>
@@ -826,12 +609,6 @@ export class OAuth2ClientCredentialsBuilder implements OAuth2AuthDesignBuilder {
 
     tokenRoute<Refs extends ReqRef = ReqRefDefaults>(handler: (route: DefaultOAuth2ClientCredentialsTokenRoute<Refs>) => void): this {
         handler(this.params.tokenRoute)
-        return this
-    }
-
-    refreshTokenRoute<Refs extends ReqRef = ReqRefDefaults>(handler: (route: DefaultOAuth2RefreshTokenRoute<Refs>) => void): this {
-        this.params.refreshTokenRoute = this.params.refreshTokenRoute || OAuth2RefreshTokenRoute.buildDefault();
-        handler(this.params.refreshTokenRoute)
         return this
     }
 }
