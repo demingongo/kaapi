@@ -1,17 +1,19 @@
 import {
-    BearerToken,
+    //BearerToken,
     ClientSecretBasic,
     ClientSecretPost,
+    DPoPToken,
+    getInMemoryCacheSet,
     NoneAuthMethod,
     OAuth2TokenResponse,
     OIDCAuthorizationCodeBuilder
 } from '@kaapi/oauth2-auth-design'
 
-const tokenType = new BearerToken()
-//const tokenType = new DPoPToken()
-//    .setTTL(300) // default 300s
-//    .setCacheSet(getInMemoryCacheSet()) // cache DPoP tokens
-//    .validateTokenRequest(() => ({ isValid: true })) // for testing without validating dpop
+//const tokenType = new BearerToken()
+const tokenType = new DPoPToken()
+    .setTTL(300) // default 300s
+    .setCacheSet(getInMemoryCacheSet()) // cache DPoP tokens
+    .validateTokenRequest(() => ({ isValid: true })) // for testing without validating dpop
 
 export default OIDCAuthorizationCodeBuilder
     .create()
@@ -43,7 +45,7 @@ export default OIDCAuthorizationCodeBuilder
         }
     })
     .authorizationRoute<object, { Payload: { email: string, password: string } }>(route =>
-        route.setPath('/oauth2/v2/authorization')
+        route.setPath('/oauth2/v2/authorize')
             .setClientId('testabc')
             .setEmailField('email')
             .setPasswordField('password')
@@ -70,7 +72,7 @@ export default OIDCAuthorizationCodeBuilder
 
                 console.log('scope', scope)
 
-                if (!clientSecret) {
+                if (!clientSecret && !codeVerifier) {
                     return { error: 'invalid_request', error_description: 'Token Request was missing the \'client_secret\' parameter.' }
                 }
                 if (!ttl) {
