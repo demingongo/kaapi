@@ -13,6 +13,7 @@
     - use Client Authentication Methods (client_secret_jwt, ...) in client credentials flow @done
     - package json exports: "." and "cli" @done
     - auth code + client creds (no OpenID):
+        - utils: function to validate codeVerifier vs saved codeChallenge
         - createJwtAccessToken
             - client credentials @done
             - auth code
