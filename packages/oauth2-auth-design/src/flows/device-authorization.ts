@@ -397,11 +397,11 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
         const supported = this.getTokenEndpointAuthMethods()
 
         if (supported.includes('client_secret_post')) {
-            docs.setChallengeAlgorithm(ClientAuthentication.body)
+            docs.setClientAuthentication(ClientAuthentication.body)
         } else if (
             supported.includes('client_secret_basic')
         ) {
-            docs.setChallengeAlgorithm(ClientAuthentication.header)
+            docs.setClientAuthentication(ClientAuthentication.header)
         }
 
         if (this.refreshTokenRoute?.path) {
