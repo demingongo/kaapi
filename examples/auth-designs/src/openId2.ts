@@ -5,7 +5,7 @@ import {
     OAuth2RefreshTokenHandler,
     OAuth2RefreshTokenRoute,
     OAuth2ACTokenRoute,
-    OpenIDAuthDesign,
+    OIDCAuthorizationCode,
     JWKSRoute,
     OAuth2TokenResponse,
     //OAuth2AuthorizationCode,
@@ -19,7 +19,7 @@ import {
 
 const tokenType = new BearerToken()
 
-export const openIDDesign2 = new OpenIDAuthDesign(
+export const openIDDesign2 = new OIDCAuthorizationCode(
     {
         openidConfiguration: {
             // to announce the use of dpop in openid-configuration

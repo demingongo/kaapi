@@ -7,9 +7,9 @@ import {
     OAuth2RefreshTokenRoute,
     OAuth2ACTokenHandler,
     OAuth2ACTokenRoute,
-    OpenIDAuthDesign,
     JWKSRoute,
-    OAuth2TokenResponse
+    OAuth2TokenResponse,
+    OIDCAuthorizationCode
 } from '@kaapi/oauth2-auth-design';
 
 function buildSignInHTML(options: { title: string, error?: string }) {
@@ -48,7 +48,7 @@ function buildSignInHTML(options: { title: string, error?: string }) {
 </html>`
 }
 
-export const openIDDesign = new OpenIDAuthDesign(
+export const openIDDesign = new OIDCAuthorizationCode(
     {
         jwksRoute: new JWKSRoute('/openid/jwks'),
         /*

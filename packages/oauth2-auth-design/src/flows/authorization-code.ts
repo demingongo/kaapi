@@ -49,6 +49,8 @@ export interface OAuth2AuthorizationCodeArg {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     refreshTokenRoute?: IOAuth2RefreshTokenRoute<any>;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    jwksRoute?: IJWKSRoute<any>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     options?: OAuth2AuthOptions<any>;
     strategyName?: string;
     jwksStore?: JWKSStore;
@@ -82,8 +84,8 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
             refreshTokenRoute,
             options,
             strategyName,
-
-            jwksStore
+            jwksStore,
+            jwksRoute
         }: OAuth2AuthorizationCodeArg
     ) {
         super();
@@ -93,6 +95,7 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
         this.authorizationRoute = authorizationRoute
         this.tokenRoute = tokenRoute
         this.refreshTokenRoute = refreshTokenRoute
+        this.jwksRoute = jwksRoute
 
         this.strategyName = strategyName || 'oauth2-authorization-code'
         this.options = options ? { ...options } : {}

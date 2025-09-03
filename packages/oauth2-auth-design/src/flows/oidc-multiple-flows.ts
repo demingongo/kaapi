@@ -21,9 +21,9 @@ import { getInMemoryJWKSStore } from '../utils/in-memory-jwks-store'
 
 export type SingleCodeFlow = AuthDesign & OAuth2SingleAuthFlow
 
-//#region OIDCMultipleFlows
+//#region MultipleFlows
 
-export interface OIDCMultipleFlowsArg {
+export interface MultipleFlowsArg {
     jwksStore?: JWKSStore
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     jwksRoute?: DefaultJWKSRoute<any>
@@ -32,7 +32,7 @@ export interface OIDCMultipleFlowsArg {
     flows: SingleCodeFlow[]
 }
 
-export class OIDCMultipleFlows extends AuthDesign {
+export class MultipleFlows extends AuthDesign {
 
     protected flows: SingleCodeFlow[];
     protected securitySchemeName = 'OIDC Multiple Flows';
@@ -52,7 +52,7 @@ export class OIDCMultipleFlows extends AuthDesign {
         jwksRoute,
         jwksStore,
         openidConfiguration
-    }: OIDCMultipleFlowsArg) {
+    }: MultipleFlowsArg) {
         super();
         this.flows = [...flows]
         this.tokenEndpoint = tokenEndpoint
@@ -253,30 +253,30 @@ export class OIDCMultipleFlows extends AuthDesign {
     }
 }
 
-//#endregion OIDCMultipleFlows
+//#endregion MultipleFlows
 
 //#region Builder
 
-export type OIDCMultipleFlowsBuilderArg = Omit<OIDCMultipleFlowsArg, 'flows'>
+export type MultipleFlowsBuilderArg = Omit<MultipleFlowsArg, 'flows'>
 
 
-export class OIDCMultipleFlowsBuilder implements OAuth2AuthDesignBuilder {
+export class MultipleFlowsBuilder implements OAuth2AuthDesignBuilder {
 
-    protected params: OIDCMultipleFlowsBuilderArg
+    protected params: MultipleFlowsBuilderArg
     protected tokenTTL?: number
 
     protected builders: OAuth2SingleAuthFlowBuilder[] = []
 
-    constructor(params: OIDCMultipleFlowsBuilderArg) {
+    constructor(params: MultipleFlowsBuilderArg) {
         this.params = params
     }
 
-    static create(params?: Partial<OIDCMultipleFlowsBuilderArg>) {
-        const paramsComplete: OIDCMultipleFlowsBuilderArg = {
+    static create(params?: Partial<MultipleFlowsBuilderArg>) {
+        const paramsComplete: MultipleFlowsBuilderArg = {
             tokenEndpoint: params && params.tokenEndpoint || '/oauth2/token',
             ...(params || {})
         };
-        return new OIDCMultipleFlowsBuilder(paramsComplete)
+        return new MultipleFlowsBuilder(paramsComplete)
     }
 
     additionalConfiguration(openidConfiguration: Record<string, unknown>): this {
@@ -314,8 +314,8 @@ export class OIDCMultipleFlowsBuilder implements OAuth2AuthDesignBuilder {
         return this;
     }
 
-    build(): OIDCMultipleFlows {
-        const result = new OIDCMultipleFlows({
+    build(): MultipleFlows {
+        const result = new MultipleFlows({
             ...this.params,
             flows: this.builders.map(b => {
                 b.setJwksStore(this.params.jwksStore || getInMemoryJWKSStore())

@@ -6,7 +6,7 @@ import {
     //getInMemoryCacheSet,
     //OAuth2ClientCredentialsBuilder,
     OIDCClientCredentialsBuilder,
-    OIDCMultipleFlowsBuilder,
+    MultipleFlowsBuilder,
     ClientSecretPost,
     ClientSecretBasic,
     OIDCAuthorizationCodeBuilder,
@@ -22,7 +22,7 @@ const tokenType = new BearerToken()
 //    .setCacheSet(getInMemoryCacheSet()) // cache DPoP tokens
 //    .validateTokenRequest(() => ({ isValid: true })) // for testing without validating dpop
 
-export const OIDCMultiFlowsDesignV2 = OIDCMultipleFlowsBuilder
+export const OIDCMultiFlowsDesignV2 = MultipleFlowsBuilder
     .create()
     .tokenEndpoint('/oauth2/v2/token')
     .setTokenTTL(36000)

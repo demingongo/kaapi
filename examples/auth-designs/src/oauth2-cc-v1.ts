@@ -6,7 +6,7 @@ import {
     //getInMemoryCacheSet,
     //OAuth2ClientCredentialsBuilder,
     OIDCClientCredentialsBuilder,
-    OIDCMultipleFlowsBuilder,
+    MultipleFlowsBuilder,
     ClientSecretPost,
     ClientSecretBasic,
     //ClientSecretJwt,
@@ -19,8 +19,7 @@ const tokenType = new BearerToken()
 //    .setCacheSet(getInMemoryCacheSet()) // cache DPoP tokens
 //    .validateTokenRequest(() => ({ isValid: true })) // for testing without validating dpop
 
-export const clientCredentialsDesignV1 = OIDCMultipleFlowsBuilder
-    .create()
+export const clientCredentialsDesignV1 = MultipleFlowsBuilder.create()
     .tokenEndpoint('/oauth2/m2mcc/token')
     .setTokenTTL(36000)
     .setJwksStore(getInMemoryJWKSStore({ timeThreshold: 36000 / 2 })) // store for JWKS

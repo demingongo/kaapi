@@ -51,6 +51,8 @@ export interface OAuth2DeviceAuthorizationArg {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     refreshTokenRoute?: IOAuth2RefreshTokenRoute<any>;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    jwksRoute?: IJWKSRoute<any>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     options?: OAuth2AuthOptions<any>;
     strategyName?: string;
     jwksStore?: JWKSStore;
@@ -84,8 +86,8 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
             refreshTokenRoute,
             options,
             strategyName,
-
-            jwksStore
+            jwksStore,
+            jwksRoute
         }: OAuth2DeviceAuthorizationArg
     ) {
         super();
@@ -95,6 +97,7 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
         this.authorizationRoute = authorizationRoute
         this.tokenRoute = tokenRoute
         this.refreshTokenRoute = refreshTokenRoute
+        this.jwksRoute = jwksRoute
 
         this.strategyName = strategyName || 'oauth2-device-authorization'
         this.options = options ? { ...options } : {}

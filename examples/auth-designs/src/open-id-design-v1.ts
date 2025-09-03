@@ -2,7 +2,7 @@ import {
     OAuth2TokenResponse,
     BearerToken,
     //DPoPToken,
-    OpenIDAuthDesignBuilder,
+    OIDCAuthorizationCodeBuilder,
     ClientSecretBasic,
     ClientSecretPost,
     getInMemoryJWKSStore,
@@ -17,7 +17,7 @@ const tokenType = new BearerToken()
 //    .setTTL(300)
 //    .validateTokenRequest(() => ({ isValid: true })) // for testing without validating dpop
 
-export const openIDDesignV1 = OpenIDAuthDesignBuilder
+export const openIDDesignV1 = OIDCAuthorizationCodeBuilder
     .create()
     .setTokenType(tokenType)
     .setTokenTTL(36000)
@@ -108,8 +108,8 @@ export const openIDDesignV1 = OpenIDAuthDesignBuilder
 
             return null
         }))
-    .refreshTokenRoute('/oauth2/ac/token',
-        (async ({ clientId, clientSecret, refreshToken, scope, ttl }, _req, h) => {
+    .refreshTokenRoute(route => route.setPath('/oauth2/v1/token')
+        .validate(async ({ clientId, clientSecret, refreshToken, scope, ttl }, _req, h) => {
 
             console.log('clientId', clientId)
             console.log('clientSecret', clientSecret)
