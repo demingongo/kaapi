@@ -1,18 +1,19 @@
 import {
     Lifecycle,
     ReqRef,
-    ReqRefDefaults,
-    Request,
-    ResponseToolkit
+    ReqRefDefaults
 } from '@kaapi/kaapi'
 import {
+    DefaultOAuth2TokenRoute,
     IOAuth2TokenResponse,
+    IOAuth2TokenRoute,
+    OAuth2TokenHandler,
+    OAuth2TokenParams,
     OAuth2TokenResponseBody,
-    OpenIDHelpers,
+    OAuth2TokenRoute,
     PathValue,
     TokenGenerator
 } from '../common'
-import { JWTPayload } from 'jose'
 
 //#region Types
 
@@ -29,55 +30,33 @@ export type OAuth2DeviceCodeTokenErrorBody = {
 
 //#region TokenRoute
 
-export interface OAuth2DeviceAuthTokenParams extends Partial<OpenIDHelpers> {
-    grantType: string
+export interface OAuth2DeviceAuthTokenParams extends OAuth2TokenParams {
     deviceCode: string
     clientId: string
     clientSecret?: string
-    readonly ttl?: number
-    createJwtAccessToken?: (payload: JWTPayload) => Promise<string>
 }
 
 export type OAuth2DeviceAuthTokenHandler<
     Refs extends ReqRef = ReqRefDefaults,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     R extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<Refs>
-> = (params: OAuth2DeviceAuthTokenParams, request: Request<Refs>, h: ResponseToolkit<Refs>) => R
+> = OAuth2TokenHandler<OAuth2DeviceAuthTokenParams, Refs, R>
 
-export interface IOAuth2DeviceAuthTokenRoute<
+export type IOAuth2DeviceAuthTokenRoute<
     Refs extends ReqRef = ReqRefDefaults
-> {
-    path: string,
-    handler: OAuth2DeviceAuthTokenHandler<Refs>
-}
+> = IOAuth2TokenRoute<OAuth2DeviceAuthTokenParams, Refs>
 
 export class OAuth2DeviceAuthTokenRoute<
     Refs extends ReqRef = ReqRefDefaults
+> extends OAuth2TokenRoute<
+    OAuth2DeviceAuthTokenParams,
+    Refs
 > implements IOAuth2DeviceAuthTokenRoute<Refs> {
 
     static buildDefault<
         Refs extends ReqRef = ReqRefDefaults
     >() {
         return new DefaultOAuth2DeviceAuthTokenRoute<Refs>()
-    }
-
-    protected _path: string;
-    protected _handler: OAuth2DeviceAuthTokenHandler<Refs>
-
-    get path() {
-        return this._path
-    }
-
-    get handler() {
-        return this._handler
-    }
-
-    constructor(
-        path: string,
-        handler: OAuth2DeviceAuthTokenHandler<Refs>
-    ) {
-        this._path = path;
-        this._handler = handler;
     }
 }
 
@@ -92,7 +71,10 @@ export type DeviceAuthTokenGenerator<Refs extends ReqRef = ReqRefDefaults> = Tok
 
 export class DefaultOAuth2DeviceAuthTokenRoute<
     Refs extends ReqRef = ReqRefDefaults
-> extends OAuth2DeviceAuthTokenRoute<Refs> {
+> extends OAuth2DeviceAuthTokenRoute<Refs>
+    implements DefaultOAuth2TokenRoute<
+        OAuth2DeviceAuthTokenParams, Refs, OAuth2DeviceCodeTokenErrorBody
+    > {
 
     #generateToken: DeviceAuthTokenGenerator<Refs>
 

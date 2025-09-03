@@ -10,14 +10,22 @@ import {
     ResponseToolkit
 } from '@kaapi/kaapi'
 import { Boom } from '@hapi/boom'
+import { JWTPayload } from 'jose';
+import { OAuth2Util } from '@novice1/api-doc-generator';
+import { SecuritySchemeObject } from '@novice1/api-doc-generator/lib/generators/openapi/definitions';
+
 import { JWKSStore, JWKS } from '../utils/jwks-store';
 import { getInMemoryJWKSStore } from '../utils/in-memory-jwks-store';
 import { JWKSGenerator, OAuth2JwtPayload } from '../utils/jwks-generator';
 import { BearerToken, TokenType } from '../utils/token-types';
-import { ClientAuthMethod, ClientSecretBasic, ClientSecretPost, NoneAuthMethod, sortTokenEndpointAuthMethods, TokenEndpointAuthMethod } from '../utils/client-auth-methods';
-import { JWTPayload } from 'jose';
-import { OAuth2Util } from '@novice1/api-doc-generator';
-import { SecuritySchemeObject } from '@novice1/api-doc-generator/lib/generators/openapi/definitions';
+import {
+    ClientAuthMethod,
+    ClientSecretBasic,
+    ClientSecretPost,
+    NoneAuthMethod,
+    sortTokenEndpointAuthMethods,
+    TokenEndpointAuthMethod
+} from '../utils/client-auth-methods';
 
 //#region Types
 
@@ -68,6 +76,77 @@ export interface OpenIDHelpers {
 }
 
 //#endregion Types
+
+//#region TokenGenerator
+
+export type TokenGenerator<P extends object = object, Refs extends ReqRef = ReqRefDefaults, Err extends { error: string } = OAuth2ErrorBody> = (
+    params: P,
+    req: Request<Refs>
+) => Promise<OAuth2TokenResponseBody | IOAuth2TokenResponse | Err | null> | OAuth2TokenResponseBody | IOAuth2TokenResponse | Err | null
+
+//#endregion TokenGenerator
+
+//#region TokenRoute
+
+export interface OAuth2TokenParams extends Partial<OpenIDHelpers> {
+    grantType: string
+    readonly ttl?: number
+    createJwtAccessToken?: (payload: JWTPayload) => Promise<string>
+}
+
+export type OAuth2TokenHandler<
+    P extends OAuth2TokenParams = OAuth2TokenParams,
+    Refs extends ReqRef = ReqRefDefaults,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    R extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<Refs>
+> = (params: P, request: Request<Refs>, h: ResponseToolkit<Refs>) => R
+
+export interface IOAuth2TokenRoute<
+    P extends OAuth2TokenParams = OAuth2TokenParams,
+    Refs extends ReqRef = ReqRefDefaults
+> {
+    path: string,
+    handler: OAuth2TokenHandler<P, Refs>,
+}
+
+export abstract class OAuth2TokenRoute<
+    P extends OAuth2TokenParams = OAuth2TokenParams,
+    Refs extends ReqRef = ReqRefDefaults
+> implements IOAuth2TokenRoute<P, Refs> {
+
+    protected _path: string;
+    protected _handler: OAuth2TokenHandler<P, Refs>
+
+    get path() {
+        return this._path
+    }
+
+    get handler() {
+        return this._handler
+    }
+
+    constructor(
+        path: string,
+        handler: OAuth2TokenHandler<P, Refs>
+    ) {
+        this._path = path;
+        this._handler = handler;
+    }
+}
+
+export interface DefaultOAuth2TokenRoute<
+    P extends OAuth2TokenParams = OAuth2TokenParams,
+    Refs extends ReqRef = ReqRefDefaults,
+    Err extends { error: string } = OAuth2ErrorBody
+> extends OAuth2TokenRoute<P, Refs> {
+    setPath(path: PathValue): this;
+
+    validate(handler: OAuth2TokenHandler<P, Refs>): this;
+
+    generateToken(handler: TokenGenerator<P, Refs, Err>): this;
+}
+
+//#endregion TokenRoute
 
 //#region RefreshTokenRoute
 
@@ -590,12 +669,3 @@ export interface OAuth2SingleAuthFlowBuilder extends OAuth2AuthDesignBuilder {
 }
 
 //#endregion OAuth2SingleAuthFlowBuilder
-
-//#region TokenGenerator
-
-export type TokenGenerator<P extends object = object, Refs extends ReqRef = ReqRefDefaults, Err extends { error: string } = OAuth2ErrorBody> = (
-    params: P,
-    req: Request<Refs>
-) => Promise<OAuth2TokenResponseBody | IOAuth2TokenResponse | Err | null> | OAuth2TokenResponseBody | IOAuth2TokenResponse | Err | null
-
-//#endregion TokenGenerator

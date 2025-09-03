@@ -1,73 +1,52 @@
 import {
     Lifecycle,
     ReqRef,
-    ReqRefDefaults,
-    Request,
-    ResponseToolkit
+    ReqRefDefaults
 } from '@kaapi/kaapi'
 import {
     IOAuth2TokenResponse,
     OAuth2TokenResponseBody,
     OAuth2ErrorBody,
-    OpenIDHelpers,
     PathValue,
-    TokenGenerator
+    TokenGenerator,
+    OAuth2TokenParams,
+    OAuth2TokenHandler,
+    IOAuth2TokenRoute,
+    OAuth2TokenRoute,
+    DefaultOAuth2TokenRoute
 } from '../common'
-import { JWTPayload } from 'jose'
 
 //#region TokenRoute
 
-export interface OAuth2ACTokenParams extends Partial<OpenIDHelpers> {
-    grantType: string
+export interface OAuth2ACTokenParams extends OAuth2TokenParams {
     code: string
     clientId: string
     clientSecret?: string
     codeVerifier?: string
     redirectUri?: string
-    readonly ttl?: number
-    createJwtAccessToken?: (payload: JWTPayload) => Promise<string>
 }
 
 export type OAuth2ACTokenHandler<
     Refs extends ReqRef = ReqRefDefaults,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     R extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<Refs>
-> = (params: OAuth2ACTokenParams, request: Request<Refs>, h: ResponseToolkit<Refs>) => R
+> = OAuth2TokenHandler<OAuth2ACTokenParams, Refs, R>
 
-export interface IOAuth2ACTokenRoute<
+export type IOAuth2ACTokenRoute<
     Refs extends ReqRef = ReqRefDefaults
-> {
-    path: string,
-    handler: OAuth2ACTokenHandler<Refs>
-}
+> = IOAuth2TokenRoute<OAuth2ACTokenParams, Refs>
 
 export class OAuth2ACTokenRoute<
     Refs extends ReqRef = ReqRefDefaults
+> extends OAuth2TokenRoute<
+    OAuth2ACTokenParams,
+    Refs
 > implements IOAuth2ACTokenRoute<Refs> {
 
     static buildDefault<
         Refs extends ReqRef = ReqRefDefaults
     >() {
         return new DefaultOAuth2ACTokenRoute<Refs>()
-    }
-
-    protected _path: string;
-    protected _handler: OAuth2ACTokenHandler<Refs>
-
-    get path() {
-        return this._path
-    }
-
-    get handler() {
-        return this._handler
-    }
-
-    constructor(
-        path: string,
-        handler: OAuth2ACTokenHandler<Refs>
-    ) {
-        this._path = path;
-        this._handler = handler;
     }
 }
 
@@ -82,7 +61,10 @@ export type AuthCodeTokenGenerator<Refs extends ReqRef = ReqRefDefaults> = Token
 
 export class DefaultOAuth2ACTokenRoute<
     Refs extends ReqRef = ReqRefDefaults
-> extends OAuth2ACTokenRoute<Refs> {
+> extends OAuth2ACTokenRoute<Refs>
+    implements DefaultOAuth2TokenRoute<
+        OAuth2ACTokenParams, Refs
+    > {
 
     #generateToken: AuthCodeTokenGenerator<Refs>
 

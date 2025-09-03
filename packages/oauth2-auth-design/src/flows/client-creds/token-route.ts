@@ -1,72 +1,50 @@
 import {
     Lifecycle,
     ReqRef,
-    ReqRefDefaults,
-    Request,
-    ResponseToolkit
+    ReqRefDefaults
 } from '@kaapi/kaapi'
 import {
     IOAuth2TokenResponse,
     OAuth2TokenResponseBody,
     OAuth2ErrorBody,
     PathValue,
-    OpenIDHelpers,
-    TokenGenerator
+    TokenGenerator,
+    OAuth2TokenParams,
+    OAuth2TokenHandler,
+    OAuth2TokenRoute,
+    IOAuth2TokenRoute,
+    DefaultOAuth2TokenRoute
 } from '../common'
-import { JWTPayload } from 'jose'
 
 
 //#region TokenRoute
 
-export interface OAuth2ClientCredentialsTokenParams extends Partial<OpenIDHelpers> {
-    grantType: string
+export interface OAuth2ClientCredentialsTokenParams extends OAuth2TokenParams {
     clientId: string
     clientSecret: string
     scope?: string
-    readonly ttl?: number
-    createJwtAccessToken?: (payload: JWTPayload) => Promise<string>
 }
 
 export type OAuth2ClientCredentialsTokenHandler<
     Refs extends ReqRef = ReqRefDefaults,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     R extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<Refs>
-> = (params: OAuth2ClientCredentialsTokenParams, request: Request<Refs>, h: ResponseToolkit<Refs>) => R
+> = OAuth2TokenHandler<OAuth2ClientCredentialsTokenParams, Refs, R>
 
-export interface IOAuth2ClientCredentialsTokenRoute<
+export type IOAuth2ClientCredentialsTokenRoute<
     Refs extends ReqRef = ReqRefDefaults
-> {
-    path: string,
-    handler: OAuth2ClientCredentialsTokenHandler<Refs>
-}
+> = IOAuth2TokenRoute<OAuth2ClientCredentialsTokenParams, Refs>
 
 export class OAuth2ClientCredentialsTokenRoute<
     Refs extends ReqRef = ReqRefDefaults
+> extends OAuth2TokenRoute<
+    OAuth2ClientCredentialsTokenParams,
+    Refs
 > implements IOAuth2ClientCredentialsTokenRoute<Refs> {
-
     static buildDefault<
         Refs extends ReqRef = ReqRefDefaults
     >() {
         return new DefaultOAuth2ClientCredentialsTokenRoute<Refs>()
-    }
-
-    protected _path: string;
-    protected _handler: OAuth2ClientCredentialsTokenHandler<Refs>
-
-    get path() {
-        return this._path
-    }
-
-    get handler() {
-        return this._handler
-    }
-
-    constructor(
-        path: string,
-        handler: OAuth2ClientCredentialsTokenHandler<Refs>
-    ) {
-        this._path = path;
-        this._handler = handler;
     }
 }
 
@@ -81,14 +59,17 @@ export type ClientCredentialsTokenGenerator<Refs extends ReqRef = ReqRefDefaults
 
 export class DefaultOAuth2ClientCredentialsTokenRoute<
     Refs extends ReqRef = ReqRefDefaults
-> extends OAuth2ClientCredentialsTokenRoute<Refs> {
+> extends OAuth2ClientCredentialsTokenRoute<Refs>
+    implements DefaultOAuth2TokenRoute<
+        OAuth2ClientCredentialsTokenParams, Refs
+    > {
 
     #generateToken: ClientCredentialsTokenGenerator<Refs>
 
     constructor() {
         super('/oauth2/token', async (props, req, h) => {
             if (!props.clientSecret) {
-                return h.response({ error: 'invalid_request', error_description: 'Token request was missing \'client_secret\' or \'code_verifier\'.' }).code(400)
+                return h.response({ error: 'invalid_request', error_description: 'Token request was missing \'client_secret\'.' }).code(400)
             }
 
             let r: OAuth2TokenResponseBody | IOAuth2TokenResponse | OAuth2ErrorBody | null = null
