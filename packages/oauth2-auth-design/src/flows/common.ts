@@ -150,62 +150,63 @@ export interface DefaultOAuth2TokenRoute<
 
 //#region RefreshTokenRoute
 
-export interface OAuth2RefreshTokenParams extends Partial<OpenIDHelpers> {
-    grantType: string
+export interface OAuth2RefreshTokenParams extends OAuth2TokenParams {
     refreshToken: string
     clientId: string
     clientSecret?: string
     scope?: string
-    createJwtAccessToken?: (payload: JWTPayload) => Promise<string>
 }
 
 export type OAuth2RefreshTokenHandler<
     Refs extends ReqRef = ReqRefDefaults,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     R extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<Refs>
-> = (params: OAuth2RefreshTokenParams, request: Request<Refs>, h: ResponseToolkit<Refs>) => R
+> = OAuth2TokenHandler<OAuth2RefreshTokenParams, Refs, R>
 
-export interface IOAuth2RefreshTokenRoute<
+export type IOAuth2RefreshTokenRoute<
     Refs extends ReqRef = ReqRefDefaults
-> {
-    path: string,
-    handler: OAuth2RefreshTokenHandler<Refs>
-}
+> = IOAuth2TokenRoute<OAuth2RefreshTokenParams, Refs>
 
 export class OAuth2RefreshTokenRoute<
     Refs extends ReqRef = ReqRefDefaults
+> extends OAuth2TokenRoute<
+    OAuth2RefreshTokenParams,
+    Refs
 > implements IOAuth2RefreshTokenRoute<Refs> {
-    protected _path: string;
-    protected _handler: OAuth2RefreshTokenHandler<Refs>
-
     static buildDefault<
-        Refs extends ReqRef = ReqRefDefaults
+        Refs extends ReqRef = ReqRefDefaults,
+        Err extends { error: string } = OAuth2ErrorBody
     >() {
-        return new DefaultOAuth2RefreshTokenRoute<Refs>()
-    }
-
-    get path() {
-        return this._path
-    }
-
-    get handler() {
-        return this._handler
-    }
-
-    constructor(
-        path: string,
-        handler: OAuth2RefreshTokenHandler<Refs>
-    ) {
-        this._path = path;
-        this._handler = handler;
+        return new DefaultOAuth2RefreshTokenRoute<Refs, Err>()
     }
 }
 
 export class DefaultOAuth2RefreshTokenRoute<
-    Refs extends ReqRef = ReqRefDefaults
-> extends OAuth2RefreshTokenRoute<Refs> {
+    Refs extends ReqRef = ReqRefDefaults,
+    Err extends { error: string } = OAuth2ErrorBody
+> extends OAuth2RefreshTokenRoute<Refs>
+    implements DefaultOAuth2TokenRoute<
+        OAuth2RefreshTokenParams, Refs, Err
+    > {
+
+    #generateToken: TokenGenerator<OAuth2RefreshTokenParams, Refs, Err>
+
     constructor() {
-        super('/oauth2/token', (_p, _r, h) => h.continue)
+        super('/oauth2/token', async (props, req, h) => {
+            const r = await this.#generateToken(props, req)
+
+            if (!r) return h.continue
+
+            if ('error' in r) return h.response(r).code(400)
+
+            return h.response(r).code(200)
+        })
+        this.#generateToken = () => null;
+    }
+
+    generateToken(handler: TokenGenerator<OAuth2RefreshTokenParams, Refs, Err>): this {
+        this.#generateToken = handler;
+        return this;
     }
 
     setPath(path: PathValue): this {

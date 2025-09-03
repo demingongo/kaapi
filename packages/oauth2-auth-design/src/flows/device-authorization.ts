@@ -32,7 +32,7 @@ import {
     OAuth2DeviceAuthorizationParams,
     OAuth2DeviceAuthorizationRoute
 } from './device-auth/authorization-route'
-import { DefaultOAuth2DeviceAuthTokenRoute, IOAuth2DeviceAuthTokenRoute, OAuth2DeviceAuthTokenParams, OAuth2DeviceAuthTokenRoute } from './device-auth/token-route'
+import { DefaultOAuth2DeviceAuthTokenRoute, IOAuth2DeviceAuthTokenRoute, OAuth2DeviceAuthTokenParams, OAuth2DeviceAuthTokenRoute, OAuth2DeviceCodeTokenErrorBody } from './device-auth/token-route'
 import { TokenType, TokenTypeValidationResponse } from '../utils/token-types'
 import { BaseAuthUtil } from '@novice1/api-doc-generator/lib/utils/auth/baseAuthUtils'
 import { getInMemoryJWKSStore } from '../utils/in-memory-jwks-store'
@@ -686,7 +686,7 @@ export interface OAuth2DeviceAuthorizationBuilderArg extends OAuth2DeviceAuthori
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     tokenRoute: DefaultOAuth2DeviceAuthTokenRoute<any>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    refreshTokenRoute?: DefaultOAuth2RefreshTokenRoute<any>
+    refreshTokenRoute?: DefaultOAuth2RefreshTokenRoute<any, any>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     jwksRoute?: DefaultJWKSRoute<any>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -818,7 +818,8 @@ export class OAuth2DeviceAuthorizationBuilder implements OAuth2AuthDesignBuilder
         return this
     }
 
-    refreshTokenRoute<Refs extends ReqRef = ReqRefDefaults>(handler: (route: DefaultOAuth2RefreshTokenRoute<Refs>) => void): this {
+    refreshTokenRoute<Refs extends ReqRef = ReqRefDefaults, Err extends OAuth2DeviceCodeTokenErrorBody = OAuth2DeviceCodeTokenErrorBody>
+        (handler: (route: DefaultOAuth2RefreshTokenRoute<Refs, Err>) => void): this {
         this.params.refreshTokenRoute = this.params.refreshTokenRoute || OAuth2RefreshTokenRoute.buildDefault();
         handler(this.params.refreshTokenRoute)
         return this

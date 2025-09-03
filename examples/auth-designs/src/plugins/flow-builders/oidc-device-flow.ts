@@ -66,7 +66,7 @@ export default OIDCDeviceAuthorizationBuilder
                 console.log('scope', scope)
 
                 if (clientId != 'testabc') {
-                    return { error: 'access_denied', error_description: 'Token Request was missing the \'client_secret\' parameter.' }
+                    return { error: 'access_denied', error_description: 'Token Request was missing the \'clientId\' parameter.' }
                 }
                 if (!ttl) {
                     return { error: 'access_denied', error_description: 'Missing ttl' }
@@ -129,7 +129,45 @@ export default OIDCDeviceAuthorizationBuilder
 
             // invalid so continue
             return h.continue
-        }))
+        }).generateToken(async ({ clientId, clientSecret, scope, ttl, createJwtAccessToken, createIdToken }, _req) => {
+
+                console.log('clientId', clientId)
+                console.log('clientSecret', clientSecret)
+                console.log('ttl', ttl)
+                console.log('scope', scope)
+
+                if (clientId != 'testabc') {
+                    return { error: 'access_denied', error_description: 'Token Request was missing the \'clientId\' parameter.' }
+                }
+                if (!ttl) {
+                    return { error: 'access_denied', error_description: 'Missing ttl' }
+                }
+                try {
+                    //#region @TODO: validation + token
+                    if (createJwtAccessToken) {
+                        const accessToken = await createJwtAccessToken({
+                            sub: '248289761001',
+                            name: 'Jane Doe',
+                        })
+                        const refreshToken = 'generated_refresh_token_from_dc'
+                        return new OAuth2TokenResponse({ access_token: accessToken })
+                            .setExpiresIn(ttl)
+                            .setRefreshToken((scope?.split(' ').includes('offline_access') || undefined) && refreshToken)
+                            .setScope(scope?.split(' '))
+                            .setTokenType(tokenType)
+                            .setIDToken(
+                                (scope?.split(' ').includes('openid') || undefined) && await createIdToken?.({
+                                    sub: clientId
+                                })
+                            )
+                    }
+                    //#endregion @TODO: validation + token
+                } catch (err) {
+                    console.error(err)
+                }
+
+                return null
+            }))
     .setDescription('This API uses OAuth 2 with the device authorization grant flow. [More info](https://www.oauth.com/oauth2-servers/device-flow/)')
     .setScopes({
         openid: 'Required for OpenID Connect; enables ID token issuance.',
