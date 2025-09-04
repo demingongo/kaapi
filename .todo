@@ -7,7 +7,7 @@
         - apikey (take it from the examples/auth-designs/src/plugins/bearerDesign.ts) @done
 
 - @kaapi/oauth2-auth-design
-    - check out token type DPoP (Demonstration of Proof-of-Possession)
+    - check out token type DPoP (Demonstration of Proof-of-Possession) @done
     - client_secret_basic as it is considered more secure than client_secret_post which is usually used for debug @done
     - should also support "client_secret_jwt" and "private_key_jwt" and token_endpoint_auth_signing_alg_values_supported @done
     - use Client Authentication Methods (client_secret_jwt, ...) in client credentials flow @done
@@ -35,7 +35,7 @@
         - REALLY UPDATE AUTH CODE ONCE CLIENT CREDENTIALS WORKS @done
         - Supporting Multiple Flows (see NOTES: Intends to support multiple flows) (probably will have to expose route handlers and switch depending on the grant type) @done
     - make usage more simple (default classes with default routes, then all methods in the same class) @done
-    - make usage more simple (get token type (string) in params for token and refresh token)
+    - make usage more simple (get token type (string) in params for token and refresh token) @done
     - cli create templates
 
 
