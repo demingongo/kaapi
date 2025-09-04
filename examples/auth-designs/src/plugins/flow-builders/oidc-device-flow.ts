@@ -116,7 +116,7 @@ export default OIDCDeviceAuthorizationBuilder
                 sub: '248289761001',
                 name: 'Jane Doe',
             })
-            const newRefreshToken = (!scope || scope && scope?.split(' ').includes('offline_access') || undefined) && 'generated_refresh_token_from_dc'
+            const newRefreshToken = (!scope || (scope && scope?.split(' ').includes('offline_access')) || undefined) && 'generated_refresh_token_from_dc'
             return new OAuth2TokenResponse({ access_token: accessToken })
                 .setExpiresIn(ttl)
                 .setRefreshToken(newRefreshToken)

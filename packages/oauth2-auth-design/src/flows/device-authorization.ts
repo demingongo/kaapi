@@ -41,6 +41,10 @@ import { JWTPayload } from 'jose'
 
 const GRANT_TYPE = 'urn:ietf:params:oauth:grant-type:device_code'
 
+
+export type DefaultOAuth2DeviceAuthRefreshTokenRoute<Refs extends ReqRef = ReqRefDefaults> = DefaultOAuth2RefreshTokenRoute<Refs, OAuth2DeviceCodeTokenErrorBody>;
+
+
 //#region OAuth2DeviceAuthorization
 
 export interface OAuth2DeviceAuthorizationArg {
@@ -686,7 +690,7 @@ export interface OAuth2DeviceAuthorizationBuilderArg extends OAuth2DeviceAuthori
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     tokenRoute: DefaultOAuth2DeviceAuthTokenRoute<any>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    refreshTokenRoute?: DefaultOAuth2RefreshTokenRoute<any, any>
+    refreshTokenRoute?: DefaultOAuth2DeviceAuthRefreshTokenRoute<any>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     jwksRoute?: DefaultJWKSRoute<any>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -818,8 +822,8 @@ export class OAuth2DeviceAuthorizationBuilder implements OAuth2AuthDesignBuilder
         return this
     }
 
-    refreshTokenRoute<Refs extends ReqRef = ReqRefDefaults, Err extends OAuth2DeviceCodeTokenErrorBody = OAuth2DeviceCodeTokenErrorBody>
-        (handler: (route: DefaultOAuth2RefreshTokenRoute<Refs, Err>) => void): this {
+    refreshTokenRoute<Refs extends ReqRef = ReqRefDefaults>
+        (handler: (route: DefaultOAuth2DeviceAuthRefreshTokenRoute<Refs>) => void): this {
         this.params.refreshTokenRoute = this.params.refreshTokenRoute || OAuth2RefreshTokenRoute.buildDefault();
         handler(this.params.refreshTokenRoute)
         return this

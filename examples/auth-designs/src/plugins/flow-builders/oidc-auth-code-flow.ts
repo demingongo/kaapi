@@ -104,22 +104,25 @@ export default OIDCAuthorizationCodeBuilder
 
                 return null
             }))
-    .refreshTokenRoute(route => route.validate(
-        async ({ clientId, clientSecret, refreshToken, scope, ttl, createJwtAccessToken, createIdToken }, _req, h) => {
+    .refreshTokenRoute(route => route.generateToken(async ({ clientId, clientSecret, refreshToken, scope, ttl, createJwtAccessToken, createIdToken }, _req) => {
 
-            console.log('clientId', clientId)
-            console.log('clientSecret', clientSecret)
-            console.log('refreshToken', refreshToken)
-            console.log('scope', scope)
-            console.log('ttl', ttl)
+        console.log('clientId', clientId)
+        console.log('clientSecret', clientSecret)
+        console.log('refreshToken', refreshToken)
+        console.log('scope', scope)
+        console.log('ttl', ttl)
 
-            //#region @TODO: validation + refresh token
+        if (!ttl) {
+            return { error: 'invalid_request', error_description: 'Missing ttl' }
+        }
+        try {
+            //#region @TODO: validation + token
             if (refreshToken === 'generated_refresh_token_from_ac' && createJwtAccessToken) {
                 const accessToken = await createJwtAccessToken({
                     sub: '248289761001',
                     name: 'Jane Doe',
                 })
-                const newRefreshToken = (!scope || scope && scope?.split(' ').includes('offline_access') || undefined) && 'generated_refresh_token_from_ac'
+                const newRefreshToken = (!scope || (scope && scope?.split(' ').includes('offline_access')) || undefined) && 'generated_refresh_token_from_ac'
                 return new OAuth2TokenResponse({ access_token: accessToken })
                     .setExpiresIn(ttl)
                     .setRefreshToken(newRefreshToken)
@@ -131,12 +134,13 @@ export default OIDCAuthorizationCodeBuilder
                         })
                     )
             }
+            //#endregion @TODO: validation + token
+        } catch (err) {
+            console.error(err)
+        }
 
-            //#endregion @TODO: validation + refresh token
-
-            // invalid so continue
-            return h.continue
-        }))
+        return null
+    }))
     .setDescription('This API uses OAuth 2 with the authorization code grant flow. [More info](https://oauth.net/2/grant-types/authorization-code/)')
     .setScopes({
         openid: 'Required for OpenID Connect; enables ID token issuance.',
