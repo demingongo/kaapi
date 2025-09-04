@@ -11,41 +11,55 @@ export class InMemoryCollection<Data extends InMemoryData = InMemoryData> {
         return this.#documents[id]
     }
 
+    async findByCredentials(id: string, secret: string) {
+        return this.#documents[id]?.secret === secret ? this.#documents[id] : undefined
+    }
+
     async insertOne(data: Data) {
         this.#documents[data.id] = data
     }
 }
 
-const users = new InMemoryCollection<InMemoryData & {
+export type User = InMemoryData & {
     name: string
     given_name?: string
     email?: string
-}>();
+}
 
-users.insertOne({
+export type Client = InMemoryData & {
+    name: string
+    secret?: string
+    details?: User
+}
+
+const users = new InMemoryCollection<User>();
+
+const user1: User = {
     id: 'machine-123',
     name: 'ingestor-prod-01'
-})
-users.insertOne({
+}
+
+const user2: User = {
     id: '248289761001',
     name: 'Jane Doe',
     given_name: 'Jane',
     email: 'janed@example.com'
-})
+}
 
-const clients = new InMemoryCollection<InMemoryData & {
-    name: string
-    secret?: string    
-}>();
+users.insertOne(user1)
+users.insertOne(user2)
+
+const clients = new InMemoryCollection<Client>();
 
 clients.insertOne({
     id: 'svc-data-ingestor',
     name: 'Data Ingestor Service',
-    secret: ''
+    secret: '123',
+    user: user1
 })
 clients.insertOne({
-    id: 'testabc',
-    name: 'Jane Doe'
+    id: 'public-app',
+    name: 'Jane Doe',
 })
 clients.insertOne({
     id: 'device-app',

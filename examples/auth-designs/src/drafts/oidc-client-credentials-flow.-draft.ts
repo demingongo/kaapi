@@ -2,35 +2,42 @@ import {
     BearerToken,
     ClientSecretBasic,
     ClientSecretPost,
+    getInMemoryJWKSStore,
     OAuth2TokenResponse,
     OIDCClientCredentialsBuilder
 } from '@kaapi/oauth2-auth-design'
 
+import db from './database'
+
 export default OIDCClientCredentialsBuilder
     .create()
-    .setTokenType(new BearerToken())
-    .setTokenTTL(36000)
-    .addClientAuthenticationMethod(new ClientSecretPost())
-    .addClientAuthenticationMethod(new ClientSecretBasic())
-    .useAccessTokenJwks(true) // activates JWT access token verification with JWKS
-    .validate(async (_, { token, jwtAccessTokenPayload }) => {
-        
-        //#region @TODO: validation
-        
-        if (jwtAccessTokenPayload?.machine != 'machine-123') {
+    .setTokenType(new BearerToken())                                // optional, default BearerToken
+    .setTokenTTL(3600)                                              // 1h
+    .addClientAuthenticationMethod(new ClientSecretBasic())         // client authentication methods
+    .addClientAuthenticationMethod(new ClientSecretPost())          // client authentication methods
+    .useAccessTokenJwks(true)                                       // activates JWT access token verification with JWKS
+    .jwksRoute(route => route.setPath('/.well-known/jwks.json'))    // optional, default '/oauth2/keys'
+    .setJwksStore(getInMemoryJWKSStore())                           // store for jwks, in-memory for dev
+    .validate(async (_, { jwtAccessTokenPayload }) => {             // auth scheme
+
+        // db query
+        const user = jwtAccessTokenPayload?.type === 'machine' &&
+            jwtAccessTokenPayload?.machine
+            ? await db.users.findById(`${jwtAccessTokenPayload.machine}`)
+            : undefined;
+
+        // not found
+        if (!user) {
             return { isValid: false }
         }
 
-        //#endregion @TODO: validation
-
-        // authorized to go further
+        // authorized
         return {
-            isValid: !!token,
+            isValid: true,
             credentials: {
                 user: {
-                    machine: 'machine-123',
-                    name: 'Jane Doe',
-                    given_name: 'Jane',
+                    machine: user.id,
+                    name: user.name,
                     type: 'machine'
                 }
             }
@@ -38,53 +45,51 @@ export default OIDCClientCredentialsBuilder
     })
     .tokenRoute(route =>
         route
-            .setPath('/oauth2/token')
+            .setPath('/oauth2/token') // optional, default '/oauth2/token'
             .generateToken(async ({ clientId, clientSecret, ttl, scope, tokenType, createJwtAccessToken, createIdToken }, _req) => {
 
-                console.log('clientId', clientId)
-                console.log('clientSecret', clientSecret)
-                console.log('ttl', ttl)
-
+                // no secret
                 if (!clientSecret) {
                     return { error: 'invalid_request', error_description: 'Token Request was missing the \'client_secret\' parameter.' }
                 }
+
+                // no token ttl
                 if (!ttl) {
                     return { error: 'invalid_request', error_description: 'Missing ttl' }
                 }
-                if ( clientId != 'svc-data-ingestion' ) {
+
+                // db query + secret validation
+                const client = await db.clients.findByCredentials(clientId, clientSecret)
+
+                // client not found
+                if (!client) {
                     return { error: 'invalid_client' }
                 }
-                try {
 
-                    //#region @TODO: validation + token
-                    
+                try {
                     if (createJwtAccessToken) {
                         const accessToken = await createJwtAccessToken({
-                            machine: 'machine-123',
-                            name: 'ingestor-prod-01',
+                            machine: client.details?.id,
+                            name: client.details?.name,
+                            type: 'machine'
                         })
-                        const refreshToken = 'generated_refresh_token'
                         return new OAuth2TokenResponse({ access_token: accessToken })
                             .setExpiresIn(ttl)
-                            .setRefreshToken(refreshToken)
                             .setScope(scope?.split(' '))
                             .setTokenType(tokenType)
                             .setIDToken(
                                 (scope?.split(' ').includes('openid') || undefined) && await createIdToken?.({
                                     sub: clientId
                                 })
-                            )
+                            ) // add id_token if scope has 'openid'
                     }
-                   
-                    //#endregion @TODO: validation + token
-               
                 } catch (err) {
                     console.error(err)
                 }
 
                 return null
             }))
-    .setDescription('This API uses OAuth 2 with the client credentials grant flow. [More info](https://www.oauth.com/oauth2-servers/access-tokens/client-credentials/)')
+    .setDescription('Client credentials grant flow. [More info](https://www.oauth.com/oauth2-servers/access-tokens/client-credentials/)')
     .setScopes({
         'read:data': 'Allows the client to retrieve or query data from the service.',
         'write:data': 'Allows the client to create or update data in the service.',
