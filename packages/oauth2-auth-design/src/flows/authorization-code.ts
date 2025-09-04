@@ -261,6 +261,7 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
                     const params: OAuth2ACTokenParams = {
                         clientId,
                         grantType: req.payload.grant_type,
+                        tokenType: tokenTypeInstance.prefix,
                         code: req.payload.code,
                         verifyCodeVerifier,
 
@@ -324,6 +325,7 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
         const supported = this.getTokenEndpointAuthMethods();
         const authMethodsInstances = this.clientAuthMethods;
         const jwksGenerator = this.getJwksGenerator();
+        const tokenTypePrefix = this.tokenType;
 
         const hasOpenIDScope = () => typeof this.getScopes()?.['openid'] != 'undefined';
 
@@ -371,6 +373,7 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
                         clientId,
                         clientSecret,
                         grantType: `${req.payload.grant_type}`,
+                        tokenType: tokenTypePrefix,
                         refreshToken: `${req.payload.refresh_token}`,
                         ttl: jwksGenerator?.ttl || this.tokenTTL,
                         createJwtAccessToken: jwksGenerator ? (async (payload) => {

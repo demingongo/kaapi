@@ -12,29 +12,30 @@
     - should also support "client_secret_jwt" and "private_key_jwt" and token_endpoint_auth_signing_alg_values_supported @done
     - use Client Authentication Methods (client_secret_jwt, ...) in client credentials flow @done
     - package json exports: "." and "cli" @done
-    - auth code + client creds (no OpenID):
-        - utils: function to validate codeVerifier vs saved codeChallenge
-        - createJwtAccessToken
+    - auth code + client creds (no OpenID): @done
+        - utils: function to validate codeVerifier vs saved codeChallenge @done
+        - createJwtAccessToken @done
             - client credentials @done
-            - auth code
-        - createIdToken
+            - auth code @done
+        - createIdToken @done
             - client credentials @done
-            - auth code
-        - jwksRoute (because yes, without OpenID, it can be used to validaten JWT access token)
+            - auth code @done
+        - jwksRoute (because yes, without OpenID, it can be used to validaten JWT access token) @done
             - client credentials @done
-            - auth code
-        - useAccessTokenJwks
+            - auth code @done
+        - useAccessTokenJwks @done
             - client credentials @done
-            - auth code
-        - openID connect
-            - client credentials
+            - auth code @done
+        - openID connect @done
+            - client credentials @done
                 - docs() @done
                 - Discovery Endpoint (/.well-known/openid-configuration) @done
-            - auth code
+            - auth code @done
             - merge discovery config properly (in case of arrays) @done
-        - REALLY UPDATE AUTH CODE ONCE CLIENT CREDENTIALS WORKS
-        - Supporting Multiple Flows (see NOTES: Intends to support multiple flows) (probably will have to expose route handlers and switch depending on the grant type)
-    - make usage more simple (default classes with default routes, then all methods in the same class)
+        - REALLY UPDATE AUTH CODE ONCE CLIENT CREDENTIALS WORKS @done
+        - Supporting Multiple Flows (see NOTES: Intends to support multiple flows) (probably will have to expose route handlers and switch depending on the grant type) @done
+    - make usage more simple (default classes with default routes, then all methods in the same class) @done
+    - make usage more simple (get token type (string) in params for token and refresh token)
     - cli create templates
 
 

@@ -38,7 +38,7 @@ export default OIDCClientCredentialsBuilder
     })
     .tokenRoute(route =>
         route//.setPath('/oauth2/m2m/token')
-            .generateToken(async ({ clientId, clientSecret, ttl, scope, createJwtAccessToken, createIdToken }, _req) => {
+            .generateToken(async ({ clientId, clientSecret, ttl, scope, tokenType, createJwtAccessToken, createIdToken }, _req) => {
 
                 console.log('clientId', clientId)
                 console.log('clientSecret', clientSecret)

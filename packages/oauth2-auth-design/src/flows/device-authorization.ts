@@ -244,6 +244,7 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
                     const params: OAuth2DeviceAuthTokenParams = {
                         clientId,
                         grantType: req.payload.grant_type,
+                        tokenType: tokenTypeInstance.prefix,
                         deviceCode: req.payload.device_code,
 
                         ttl: jwksGenerator?.ttl || this.tokenTTL,
@@ -300,6 +301,7 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
         const supported = this.getTokenEndpointAuthMethods();
         const authMethodsInstances = this.clientAuthMethods;
         const jwksGenerator = this.getJwksGenerator();
+        const tokenTypePrefix = this.tokenType;
 
         const hasOpenIDScope = () => typeof this.getScopes()?.['openid'] != 'undefined';
 
@@ -347,6 +349,7 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
                         clientId,
                         clientSecret,
                         grantType: `${req.payload.grant_type}`,
+                        tokenType: tokenTypePrefix,
                         refreshToken: `${req.payload.refresh_token}`,
                         ttl: jwksGenerator?.ttl || this.tokenTTL,
                         createJwtAccessToken: jwksGenerator ? (async (payload) => {

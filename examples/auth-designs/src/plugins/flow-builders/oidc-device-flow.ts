@@ -53,7 +53,7 @@ export default OIDCDeviceAuthorizationBuilder
                 return null
             }))
     .tokenRoute(route =>
-        route.generateToken(async ({ clientId, deviceCode, clientSecret, ttl, createJwtAccessToken, createIdToken }, _req) => {
+        route.generateToken(async ({ clientId, deviceCode, clientSecret, ttl, tokenType, createJwtAccessToken, createIdToken }, _req) => {
 
             console.log('clientId', clientId)
             console.log('clientSecret', clientSecret)
@@ -97,7 +97,7 @@ export default OIDCDeviceAuthorizationBuilder
 
             return null
         }))
-    .refreshTokenRoute(route => route.generateToken(async ({ clientId, refreshToken, scope, ttl, createJwtAccessToken, createIdToken }, _req) => {
+    .refreshTokenRoute(route => route.generateToken(async ({ clientId, refreshToken, scope, ttl, tokenType, createJwtAccessToken, createIdToken }, _req) => {
 
         console.log('clientId', clientId)
         console.log('refreshToken', refreshToken)

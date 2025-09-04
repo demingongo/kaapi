@@ -189,6 +189,7 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign implements OAuth2S
                         clientId: clientId,
                         clientSecret: clientSecret,
                         grantType: req.payload.grant_type,
+                        tokenType: tokenTypeInstance.prefix,
                         ttl: jwksGenerator?.ttl || this.tokenTTL,
                         createJwtAccessToken: jwksGenerator ? (async (payload) => {
                             return await createJwtAccessToken(jwksGenerator, {

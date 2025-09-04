@@ -90,6 +90,7 @@ export type TokenGenerator<P extends object = object, Refs extends ReqRef = ReqR
 
 export interface OAuth2TokenParams extends Partial<OpenIDHelpers> {
     grantType: string
+    tokenType: string
     readonly ttl?: number
     createJwtAccessToken?: (payload: JWTPayload) => Promise<string>
 }

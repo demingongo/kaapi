@@ -59,7 +59,7 @@ export default OIDCAuthorizationCodeBuilder
             }))
     .tokenRoute(route =>
         route//.setPath('/oauth2/m2m/token')
-            .generateToken(async ({ clientId, clientSecret, ttl, createJwtAccessToken, createIdToken, code, codeVerifier /*, verifyCodeVerifier*/ }, _req) => {
+            .generateToken(async ({ clientId, clientSecret, ttl, tokenType, createJwtAccessToken, createIdToken, code, codeVerifier /*, verifyCodeVerifier*/ }, _req) => {
 
                 console.log('clientId', clientId)
                 console.log('clientSecret', clientSecret)
@@ -111,7 +111,7 @@ export default OIDCAuthorizationCodeBuilder
 
                 return null
             }))
-    .refreshTokenRoute(route => route.generateToken(async ({ clientId, clientSecret, refreshToken, scope, ttl, createJwtAccessToken, createIdToken }, _req) => {
+    .refreshTokenRoute(route => route.generateToken(async ({ clientId, clientSecret, refreshToken, scope, ttl, tokenType, createJwtAccessToken, createIdToken }, _req) => {
 
         console.log('clientId', clientId)
         console.log('clientSecret', clientSecret)
