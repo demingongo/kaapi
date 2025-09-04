@@ -59,7 +59,7 @@ export default OIDCAuthorizationCodeBuilder
             }))
     .tokenRoute(route =>
         route//.setPath('/oauth2/m2m/token')
-            .generateToken(async ({ clientId, clientSecret, ttl, createJwtAccessToken, createIdToken, code, codeVerifier }, _req) => {
+            .generateToken(async ({ clientId, clientSecret, ttl, createJwtAccessToken, createIdToken, code, codeVerifier /*, verifyCodeVerifier*/ }, _req) => {
 
                 console.log('clientId', clientId)
                 console.log('clientSecret', clientSecret)
@@ -78,6 +78,13 @@ export default OIDCAuthorizationCodeBuilder
                 if (!ttl) {
                     return { error: 'invalid_request', error_description: 'Missing ttl' }
                 }
+
+                //if (codeVerifier) {
+                //    verifyCodeVerifier(
+                //        codeVerifier, codeChallenge
+                //    )
+                //}
+
                 try {
                     //#region @TODO: validation + token
                     if (createJwtAccessToken) {

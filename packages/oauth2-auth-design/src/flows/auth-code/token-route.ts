@@ -15,6 +15,7 @@ import {
     OAuth2TokenRoute,
     DefaultOAuth2TokenRoute
 } from '../common'
+import { verifyCodeVerifier } from '../../utils/verifyCodeVerifier'
 
 //#region TokenRoute
 
@@ -24,6 +25,7 @@ export interface OAuth2ACTokenParams extends OAuth2TokenParams {
     clientSecret?: string
     codeVerifier?: string
     redirectUri?: string
+    verifyCodeVerifier: typeof verifyCodeVerifier
 }
 
 export type OAuth2ACTokenHandler<

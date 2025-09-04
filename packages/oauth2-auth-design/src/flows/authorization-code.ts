@@ -38,6 +38,7 @@ import { BaseAuthUtil } from '@novice1/api-doc-generator/lib/utils/auth/baseAuth
 import { getInMemoryJWKSStore } from '../utils/in-memory-jwks-store'
 import { ClientAuthMethod, ClientSecretBasic, ClientSecretPost, NoneAuthMethod, TokenEndpointAuthMethod } from '../utils/client-auth-methods'
 import { JWTPayload } from 'jose'
+import { verifyCodeVerifier } from '../utils/verifyCodeVerifier'
 
 //#region OAuth2AuthorizationCode
 
@@ -261,6 +262,7 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
                         clientId,
                         grantType: req.payload.grant_type,
                         code: req.payload.code,
+                        verifyCodeVerifier,
 
                         ttl: jwksGenerator?.ttl || this.tokenTTL,
                         createJwtAccessToken: jwksGenerator ? (async (payload) => {
