@@ -8,7 +8,13 @@ export interface JWKSStore {
     getPublicKeys(): Promise<string[] | undefined> | string[] | undefined
 }
 
-export class JWKGenerator {
+/**
+ * - Generates JWK key pairs
+ * - Signs JWTs
+ * - Verifies JWTs
+ * - Exposes public keys (for JWKS endpoint)
+ */
+export class JWTAuthority {
 
     #store: JWKSStore;
     /**

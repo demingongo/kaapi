@@ -9,6 +9,7 @@
 - @kaapi/oauth2-auth-design
     - jwks keys rotation freq and token ttl are independents, make it so. AND THE STORE shouldn't have to handle that.
     - REVIEW TOKEN SIGNING because something might be wrong
+        - what is wrong is that the private part is in the saved keys. Private part should be saved separately.
     - check out token type DPoP (Demonstration of Proof-of-Possession) @done
     - client_secret_basic as it is considered more secure than client_secret_post which is usually used for debug @done
     - should also support "client_secret_jwt" and "private_key_jwt" and token_endpoint_auth_signing_alg_values_supported @done

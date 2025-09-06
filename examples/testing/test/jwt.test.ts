@@ -1,7 +1,7 @@
 // jwt.test.ts
 
 import { createCipheriv, createDecipheriv, randomBytes } from 'crypto'
-import { JWKGenerator, JWKSStore } from '../src/jwk-generator'
+import { JWTAuthority, JWKSStore } from '../src/jwt-authority'
 
 const KEY_PASSWORD = Buffer.from('secret_env_password', 'hex')
 const CIPHER_KEY = process.env.CIPHER_KEY ? Buffer.from(process.env.CIPHER_KEY, 'hex') : randomBytes(32)
@@ -43,7 +43,7 @@ describe('JWK Generator', () => {
 
     it('should generate', async () => {
         const store = new Store()
-        const gen = new JWKGenerator(store)
+        const gen = new JWTAuthority(store)
         await gen.generateKeyPair()
 
         await gen.generateKeyPair()
