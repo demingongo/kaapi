@@ -486,6 +486,9 @@ importers:
       '@typescript-eslint/parser':
         specifier: ^8.40.0
         version: 8.40.0(eslint@9.34.0)(typescript@5.9.2)
+      chai:
+        specifier: ^5.3.3
+        version: 5.3.3
       eslint:
         specifier: ^9.34.0
         version: 9.34.0

@@ -9,8 +9,9 @@
     "dev": "nodemon",
     "lint": "eslint .",
     "start": "node dist/index.js",
+    "test": "kaukau -r ts-node/register -f src --ext .spec.ts",
     "testmocha": "mocha --require ts-node/register test/**/*.ts",
-    "test": "kaukau --require ts-node/register --config kaukau.config.mjs"
+    "test:e2e": "kaukau --require ts-node/register --config kaukau.config.mjs"
   },
   "keywords": [],
   "author": "",
@@ -28,6 +29,7 @@
     "@types/node-jose": "^1.1.13",
     "@typescript-eslint/eslint-plugin": "^8.40.0",
     "@typescript-eslint/parser": "^8.40.0",
+    "chai": "^5.3.3",
     "eslint": "^9.34.0",
     "globals": "^16.3.0",
     "kaukau": "^4.1.6",

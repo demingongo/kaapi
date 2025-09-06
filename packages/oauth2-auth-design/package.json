@@ -17,6 +17,7 @@
   "scripts": {
     "lint": "eslint .",
     "build": "tsc && node ./scripts/buildDT.mjs",
+    "test:spec": "kaukau -r ts-node/register -f src --ext .spec.ts",
     "test": "kaukau --require ts-node/register --config kaukau.config.mjs"
   },
   "author": "demingongo",

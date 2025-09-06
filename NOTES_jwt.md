@@ -329,5 +329,3 @@ requestToken();
 | Security Level          | Lower (shared secret)            | Higher (private/public key pair)             |
 
 ---
-
-

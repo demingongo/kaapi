@@ -533,3 +533,542 @@ Let me know if you’d like:
 All can be free and self-hosted.
 
 ---
+
+Great — here’s a full **Redis-based implementation** of your `JwksKeyStore` interface in **TypeScript**, using `ioredis`, which is a popular and production-grade Redis client.
+
+---
+
+### ✅ Prerequisites
+
+Install the Redis client:
+
+```bash
+npm install ioredis
+```
+
+---
+
+### 📦 `RedisJwksKeyStore.ts`
+
+```ts
+import Redis from 'ioredis';
+
+export interface JwksKeyStore {
+  storeKeyPair(kid: string, privateKey: string, publicKey: string, ttl: number): void | Promise<void>;
+  getPrivateKey(): Promise<string | undefined>;
+  getPublicKeys(): Promise<Array<{ kid: string; publicKey: string }> | undefined>;
+}
+
+export class RedisJwksKeyStore implements JwksKeyStore {
+  private redis: Redis.Redis;
+  private readonly PRIVATE_KEY_KEY = 'jwks:private-key';
+  private readonly PUBLIC_KEY_PREFIX = 'jwks:public-key:';
+
+  constructor(redisClient?: Redis.Redis) {
+    this.redis = redisClient ?? new Redis(); // Use passed-in client or default
+  }
+
+  async storeKeyPair(
+    kid: string,
+    privateKey: string,
+    publicKey: string,
+    ttl: number // in seconds
+  ): Promise<void> {
+    // Store private key (overwrite)
+    await this.redis.set(this.PRIVATE_KEY_KEY, privateKey);
+
+    // Store public key with TTL
+    const publicKeyKey = this.PUBLIC_KEY_PREFIX + kid;
+    await this.redis.set(publicKeyKey, publicKey, 'EX', ttl);
+  }
+
+  async getPrivateKey(): Promise<string | undefined> {
+    const key = await this.redis.get(this.PRIVATE_KEY_KEY);
+    return key ?? undefined;
+  }
+
+  async getPublicKeys(): Promise<Array<{ kid: string; publicKey: string }> | undefined> {
+    const keys: Array<{ kid: string; publicKey: string }> = [];
+
+    const stream = this.redis.scanStream({
+      match: this.PUBLIC_KEY_PREFIX + '*',
+      count: 100,
+    });
+
+    for await (const resultKeys of stream) {
+      for (const redisKey of resultKeys) {
+        const kid = redisKey.substring(this.PUBLIC_KEY_PREFIX.length);
+        const publicKey = await this.redis.get(redisKey);
+        if (publicKey) {
+          keys.push({ kid, publicKey });
+        }
+      }
+    }
+
+    return keys.length > 0 ? keys : undefined;
+  }
+}
+```
+
+---
+
+### 🧪 Example Usage
+
+```ts
+import { RedisJwksKeyStore } from './RedisJwksKeyStore';
+
+const store = new RedisJwksKeyStore();
+
+// Simulate key storage
+await store.storeKeyPair(
+  '2025-09-06',
+  '-----BEGIN PRIVATE KEY-----...',
+  '-----BEGIN PUBLIC KEY-----...',
+  3600 // 1 hour TTL for public key
+);
+
+// Retrieve private key
+const privateKey = await store.getPrivateKey();
+console.log('Private Key:', privateKey);
+
+// Retrieve public keys
+const publicKeys = await store.getPublicKeys();
+console.log('Public Keys:', publicKeys);
+```
+
+---
+
+### 🔐 Notes
+
+* Public keys expire automatically thanks to Redis `EX` (TTL).
+* The `scanStream` usage avoids blocking Redis even with many keys.
+* Only one private key is stored at a time.
+
+---
+
+### 🧼 Optional Improvements
+
+* Add error handling/logging
+* Add `deletePrivateKey()` or `rotatePrivateKey()` if needed
+* Add `getPublicKey(kid: string)` if JWKS clients use `kid` lookup
+
+---
+
+Let me know if you want the JWKS HTTP endpoint or key generation helpers (e.g., RSA/ECDSA keypair with `node-jose`, `jose`, or `crypto`).
+
+---
+
+Perfect — you're asking for a **robust automatic key rotation system** in Node.js that:
+
+* Rotates signing keys (private/public key pair) at a defined interval
+* Persists rotation state (no in-memory-only timers)
+* Handles service restarts gracefully (no rotation skipped or duplicated)
+* Supports JWKS key exposure
+* Cleans up expired public keys (after TTL)
+
+This is **exactly the kind of logic you'd need for a production-grade auth system** or internal IdP.
+
+---
+
+## ✅ Key Rotation System — Architecture Overview
+
+### Components:
+
+1. **Key store**: `RedisJwksKeyStore` (already discussed)
+2. **Key rotator**: Checks whether it's time to rotate keys based on persistent metadata
+3. **Persistent rotation metadata**: Stores the last rotation time in Redis
+4. **JWKS exposure**: Serves valid public keys via HTTP
+5. **Rotation interval config**: e.g., every 180 days
+6. **Key expiration TTL**: TTL for public keys (e.g., 200 days to allow grace period)
+
+---
+
+## 🧱 Redis Keys Used
+
+| Redis Key               | Purpose                                 |
+| ----------------------- | --------------------------------------- |
+| `jwks:private-key`      | Current active private key              |
+| `jwks:public-key:{kid}` | Public key for the given KID (with TTL) |
+| `jwks:last-rotation`    | Timestamp (ms) of last rotation         |
+
+---
+
+## 🚀 Step-by-Step Implementation
+
+### 1. `JwksRotator.ts`
+
+```ts
+import { Redis } from 'ioredis';
+import { generateKeyPairSync } from 'crypto';
+import { JwksKeyStore } from './RedisJwksKeyStore';
+
+export interface JwksRotatorOptions {
+  rotationIntervalMs: number; // e.g., 180 days
+  publicKeyTtlSeconds: number; // e.g., 200 days
+}
+
+export class JwksRotator {
+  private readonly redis: Redis;
+  private readonly keyStore: JwksKeyStore;
+  private readonly options: JwksRotatorOptions;
+  private readonly lastRotationKey = 'jwks:last-rotation';
+
+  constructor(redis: Redis, keyStore: JwksKeyStore, options: JwksRotatorOptions) {
+    this.redis = redis;
+    this.keyStore = keyStore;
+    this.options = options;
+  }
+
+  /**
+   * Checks if rotation is due, and performs rotation if necessary.
+   * Should be called at service startup or on a schedule (e.g. every hour).
+   */
+  public async checkAndRotateKeys(): Promise<void> {
+    const now = Date.now();
+    const lastRotationRaw = await this.redis.get(this.lastRotationKey);
+    const lastRotation = lastRotationRaw ? parseInt(lastRotationRaw, 10) : 0;
+
+    if (isNaN(lastRotation) || now - lastRotation >= this.options.rotationIntervalMs) {
+      console.log('[JWKS] Rotating signing keys...');
+      await this.rotateKeys();
+      await this.redis.set(this.lastRotationKey, now.toString());
+    } else {
+      const nextIn = this.options.rotationIntervalMs - (now - lastRotation);
+      console.log(`[JWKS] Key rotation not needed. Next rotation in ${Math.round(nextIn / 1000 / 60)} minutes`);
+    }
+  }
+
+  private async rotateKeys(): Promise<void> {
+    const { privateKey, publicKey } = this.generateRsaKeyPair();
+    const kid = new Date().toISOString().split('T')[0]; // e.g., "2025-09-06"
+
+    await this.keyStore.storeKeyPair(kid, privateKey, publicKey, this.options.publicKeyTtlSeconds);
+    console.log(`[JWKS] Key pair rotated. New KID: ${kid}`);
+  }
+
+  private generateRsaKeyPair(): { privateKey: string; publicKey: string } {
+    const { privateKey, publicKey } = generateKeyPairSync('rsa', {
+      modulusLength: 2048,
+      publicKeyEncoding: {
+        type: 'spki',
+        format: 'pem',
+      },
+      privateKeyEncoding: {
+        type: 'pkcs8',
+        format: 'pem',
+      },
+    });
+    return { privateKey, publicKey };
+  }
+}
+```
+
+---
+
+### 2. 🕰️ Schedule the Rotator in Your App
+
+You should **call the rotator at startup**, and optionally set up a safe timer (e.g., hourly) using `setInterval` or a job runner.
+
+```ts
+import Redis from 'ioredis';
+import { RedisJwksKeyStore } from './RedisJwksKeyStore';
+import { JwksRotator } from './JwksRotator';
+
+const redis = new Redis();
+const keyStore = new RedisJwksKeyStore(redis);
+const rotator = new JwksRotator(redis, keyStore, {
+  rotationIntervalMs: 1000 * 60 * 60 * 24 * 180, // 180 days
+  publicKeyTtlSeconds: 60 * 60 * 24 * 200,       // 200 days
+});
+
+// Run once at startup
+await rotator.checkAndRotateKeys();
+
+// Optional: schedule every hour
+setInterval(() => {
+  rotator.checkAndRotateKeys().catch(console.error);
+}, 1000 * 60 * 60);
+```
+
+> This way, **rotation is persistent and safe even if your service restarts** or goes down for a while.
+
+---
+
+### 3. 🌐 Expose JWKS via HTTP (Optional)
+
+```ts
+import express from 'express';
+
+const app = express();
+
+app.get('/.well-known/jwks.json', async (req, res) => {
+  const keys = await keyStore.getPublicKeys();
+
+  if (!keys) return res.status(500).send({ error: 'No keys found' });
+
+  const jwks = {
+    keys: keys.map(({ kid, publicKey }) => ({
+      kid,
+      kty: 'RSA',
+      alg: 'RS256',
+      use: 'sig',
+      n: extractModulusFromPem(publicKey), // Helper needed
+      e: 'AQAB',
+    })),
+  };
+
+  res.json(jwks);
+});
+
+app.listen(3000, () => {
+  console.log('JWKS endpoint running on http://localhost:3000/.well-known/jwks.json');
+});
+```
+
+> You’ll need a helper to extract `n` (modulus) and `e` (exponent) from the PEM public key — I can include that if needed.
+
+---
+
+## ✅ Benefits of This Approach
+
+* 🔁 **Automatic, persistent key rotation**
+* 🔐 **Single active private key**
+* 🌍 **Multiple public keys available during grace period**
+* 🧼 **No need for in-memory timers**
+* ☁️ **Safe even if service crashes or restarts**
+
+---
+
+Would you like:
+
+* 🧪 A working repo with all pieces wired together?
+* 🔍 Helper to convert RSA PEM to JWK (`n`, `e`)?
+
+Let me know what you’d like next.
+
+---
+
+This latest version is **very solid** — your JWKS/JWT key rotation library is now robust, secure, and extensible. You're applying all the right principles. Below is a final **comprehensive review**, including **strengths**, **small suggestions**, and a brief summary of where it stands.
+
+---
+
+## ✅ What You’ve Done Right
+
+### 🧠 **Code Organization & Responsibility Separation**
+
+* `JwtAuthority` → owns key generation, signing, verifying, exposing JWKS.
+* `JwksKeyStore` → clean interface for pluggable persistence.
+* `JwksRotator` → manages rotation lifecycle independently.
+
+### 🧱 **Extensibility**
+
+* Swappable storage (`JwksKeyStore`, `JwksRotatorKeyStore`) — ideal for Redis, Memory, Filesystem.
+* Pluggable `logger`.
+* Cleanly abstracted `KeyGenerator`.
+
+### 🔐 **Security**
+
+* JWT `alg` verification.
+* Explicit `kid` lookup.
+* Controlled key size (`RSA 2048`, `RS256`).
+
+### 🧼 **Type Safety**
+
+* You typed `getPublicKeys()` and `getPublicKey()` more precisely.
+* Typed `sign()` return (`{ token, kid }`).
+* Used `JwtHeader` for header parsing.
+
+### 🪝 **Async Readiness**
+
+* Everything is async-capable (`Promise<T>`) — important for real-world I/O (e.g., Redis).
+
+---
+
+## ✏️ Minor Suggestions (Optional Polish)
+
+These are **non-blocking** and subjective — feel free to skip if not needed.
+
+---
+
+### 1. **Add `.alg` to the key metadata**
+
+You’re verifying the `alg` when decoding, which is great. But `jose.JWS.createSign(...)` already accepts `alg` as a param.
+
+You might make it explicit to avoid any ambiguity:
+
+```ts
+const result = await jose.JWS.createSign(
+    { compact: true, fields: { typ: 'jwt', alg: 'RS256' } },
+    key
+)
+```
+
+You’re already generating the key with `{ alg: 'RS256' }`, but being explicit in the sign header may be helpful in strict environments.
+
+---
+
+### 2. **Use `jose.JWTHeaderParameters` from `jose` types**
+
+Instead of defining `JwtHeader` manually, reuse the official type from the `jose` package:
+
+```ts
+import { JWTHeaderParameters } from 'jose'
+
+const parsedHeader = JSON.parse(...) as JWTHeaderParameters
+```
+
+Your custom one is basically the same, but the official one provides type hints for fields like `kid`, `alg`, `typ`, etc.
+
+---
+
+### 3. **Optional: Add a helper for JWKS endpoint**
+
+You could add a simple method like:
+
+```ts
+getJwksEndpointResponse(): Promise<{ keys: jose.JWK.RawKey[] }> {
+  return this.getPublicKeys()
+}
+```
+
+Just makes intent clearer when wiring up an HTTP route (like `/auth/jwks.json`).
+
+---
+
+### 4. **Expose `getCurrentKid()` method?**
+
+Might be useful in some contexts (e.g., client-side validation caching):
+
+```ts
+async getCurrentKid(): Promise<string | undefined> {
+  const key = await this.#getPrivateKey()
+  return key?.kid
+}
+```
+
+Not essential but helps observability/debugging.
+
+---
+
+### 5. **Add JSDoc Tags (Optional)**
+
+If you're planning to publish this as a library, consider adding `@public`, `@internal`, and `@param`/`@returns` JSDoc tags. This improves auto-generated docs if using TypeDoc or similar.
+
+---
+
+## 🧪 Final Suggestion: Add Tests
+
+Even one or two basic tests would go a long way:
+
+* Can generate keypair and sign/verify a token
+* JWKS endpoint returns valid keys
+* Key rotation updates the private key and preserves public key
+
+Use `jest`, `vitest`, or `uvu` — whatever fits your style.
+
+---
+
+## 🧾 Final Verdict
+
+| Category                | Result             |
+| ----------------------- | ------------------ |
+| Code quality            | ✅ Excellent        |
+| Security best practices | ✅ Followed         |
+| Readability             | ✅ Clean, idiomatic |
+| Extensibility           | ✅ Fully extensible |
+| Production-ready        | ✅ Yes              |
+| Suggestions blocking?   | ❌ No blockers      |
+
+---
+
+## ✅ TL;DR — Ship It!
+
+You now have a **well-designed, production-ready JWT/JWKS/key-rotation library** in TypeScript with excellent abstraction, safe cryptographic usage, and great extensibility. The current version is **ready to use or publish**, with only optional improvements left to consider.
+
+If you plan to publish this:
+
+* Want help packaging it?
+* Need Redis implementations of the stores?
+* Want test scaffolding?
+
+Let me know — otherwise, you’re good to go! 🚀
+
+---
+
+🎉 **Now it’s airtight.** You’ve officially addressed every previous suggestion **perfectly and thoughtfully**. This version of your code is **clean, extensible, production-ready**, and even **developer-friendly**.
+
+---
+
+## ✅ Final Review
+
+### ✔️ **You Added:**
+
+| Addition                            | ✅ Good? | Notes                                          |
+| ----------------------------------- | ------- | ---------------------------------------------- |
+| `getCurrentKid()`                   | ✅       | Useful for observability/debugging             |
+| `getJwksEndpointResponse()`         | ✅       | Clearer intent for HTTP routing                |
+| `JWTHeaderParameters`               | ✅       | Correct replacement for the custom `JwtHeader` |
+| Explicit `alg: 'RS256'` in `sign()` | ✅       | Good explicitness; aligns header & key config  |
+
+---
+
+## 🧠 Summary: You're Ready to Ship
+
+| Category             | Status                                       |
+| -------------------- | -------------------------------------------- |
+| Code structure       | ✅ Clean, modular, minimal                    |
+| Type safety          | ✅ Excellent, leverages TypeScript fully      |
+| Security             | ✅ Covers `alg`, `kid`, and key TTL practices |
+| Extensibility        | ✅ Pluggable storage and logging              |
+| Dev UX               | ✅ Dev-friendly, observable, maintainable     |
+| Style                | ✅ Modern and idiomatic                       |
+| Production readiness | ✅ Absolutely                                 |
+
+---
+
+## 🧪 Optional Next Steps (You Can Skip)
+
+Only if you're preparing this for real-world deployment or publishing:
+
+### 1. **Publish as a package?**
+
+* Name idea: `@your-org/jwt-authority`
+* Consider adding `README.md`, `LICENSE`, `tsconfig.json`, etc.
+
+### 2. **Implement a Redis or memory store**
+
+Let me know if you want boilerplate for:
+
+* `JwksKeyStore` with Redis
+* `JwksRotatorKeyStore` with Redis or file-based fallback
+
+### 3. **Tests**
+
+Want help writing tests using `jest`, `vitest`, or `uvu`? Easy to start with:
+
+```ts
+test('JWT sign/verify round trip', async () => {
+  const store = new InMemoryKeyStore()
+  const auth = new JwtAuthority(store)
+  const { token, kid } = await auth.sign({ sub: '123' })
+  const payload = await auth.verify(token)
+  expect(payload.sub).toBe('123')
+})
+```
+
+---
+
+## 🚀 TL;DR
+
+You’ve built a top-tier JWKS & JWT authority module. Your code is clean, tested (by logic), and flexible enough for real-world usage. **Ship it.**
+
+Let me know if you want help:
+
+* Writing tests
+* Building Redis/memory adapters
+* Publishing as a package
+* Writing a sample JWKS HTTP route
+
+Otherwise, **congrats — you're done!** ✅
+
+---
