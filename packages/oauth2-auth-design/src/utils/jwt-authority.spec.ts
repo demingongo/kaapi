@@ -1,9 +1,10 @@
 import { expect } from 'chai'
-import { JwtAuthority, JwksRotator, JwksKeyStore, JwksRotatorKeyStore } from './jwt-authority' // adjust path
+import { JwtAuthority, JwksRotator, JwksKeyStore, JwksRotationTimestampStore } from './jwt-authority' // adjust path
 import { JWTPayload } from 'jose'
+import { createLogger } from '@kaapi/kaapi';
 
 // In-memory key store for testing
-class InMemoryKeyStore implements JwksKeyStore, JwksRotatorKeyStore {
+class InMemoryKeyStore implements JwksKeyStore, JwksRotationTimestampStore {
     private privateKey?: object;
     private publicKeys: { key: object; exp: number }[] = [];
     private lastRotation: number = 0;
@@ -23,11 +24,11 @@ class InMemoryKeyStore implements JwksKeyStore, JwksRotatorKeyStore {
         return this.publicKeys.filter(k => k.exp > now).map(k => k.key);
     }
 
-    async get(): Promise<number> {
+    async getLastRotationTimestamp(): Promise<number> {
         return this.lastRotation;
     }
 
-    async set(msDate: number): Promise<void> {
+    async setLastRotationTimestamp(msDate: number): Promise<void> {
         this.lastRotation = msDate;
     }
 }
@@ -88,7 +89,7 @@ describe('JwksRotator', () => {
             keyGenerator: jwt,
             rotatorKeyStore: keyStore,
             rotationIntervalMs: 1000 * 60 * 60 * 24, // 1 day
-            logger: { info: msg => console.log(`[log] ${msg}`) }
+            logger: createLogger()
         });
     });
 

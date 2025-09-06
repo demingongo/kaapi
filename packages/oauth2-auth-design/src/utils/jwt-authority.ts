@@ -1,6 +1,7 @@
 import jose from 'node-jose'
 import jwktopem from 'jwk-to-pem'
 import { JWTPayload, jwtVerify, JWTHeaderParameters } from 'jose'
+import { ILogger } from '@kaapi/kaapi'
 
 export interface JwksKeyStore {
     /**
@@ -160,21 +161,21 @@ export class JwtAuthority implements KeyGenerator {
     }
 }
 
-export interface JwksRotatorKeyStore {
-    get(): Promise<number>
-    set(msDate: number): Promise<void>
+export interface JwksRotationTimestampStore {
+    getLastRotationTimestamp(): Promise<number>
+    setLastRotationTimestamp(rotationTimestamp: number): Promise<void>
 }
 
 export interface JwksRotatorOptions {
     keyGenerator: KeyGenerator;
-    rotatorKeyStore: JwksRotatorKeyStore;
+    rotatorKeyStore: JwksRotationTimestampStore;
     rotationIntervalMs: number; // e.g., 180 days
-    logger?: { info: (msg: string) => void };
+    logger?: ILogger;
 }
 
 export class JwksRotator {
     private readonly keyGenerator: KeyGenerator;
-    private readonly rotatorKeyStore: JwksRotatorKeyStore;
+    private readonly rotatorKeyStore: JwksRotationTimestampStore ;
     private readonly rotationIntervalMs: number;
     private readonly logger: JwksRotatorOptions['logger']
 
@@ -191,12 +192,12 @@ export class JwksRotator {
      */
     public async checkAndRotateKeys(): Promise<void> {
         const now = Date.now();
-        const lastRotation = await this.rotatorKeyStore.get();
+        const lastRotation = await this.rotatorKeyStore.getLastRotationTimestamp();
 
         if (isNaN(lastRotation) || now - lastRotation >= this.rotationIntervalMs) {
             this.logger?.info('[JWKS] Rotating signing keys...');
             await this.rotateKeys();
-            await this.rotatorKeyStore.set(now);
+            await this.rotatorKeyStore.setLastRotationTimestamp(now);
         } else {
             const nextIn = this.rotationIntervalMs - (now - lastRotation);
             this.logger?.info(`[JWKS] Key rotation not needed. Next rotation in ${Math.round(nextIn / 1000 / 60)} minutes`);

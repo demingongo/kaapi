@@ -8,6 +8,10 @@
 
 - @kaapi/oauth2-auth-design
     - jwks keys rotation freq and token ttl are independents, make it so. AND THE STORE shouldn't have to handle that.
+        - store
+        - publicKeyTtl
+        - rotationIntervalMs
+        - logger
     - REVIEW TOKEN SIGNING because something might be wrong
         - what is wrong is that the private part is in the saved keys. Private part should be saved separately.
     - check out token type DPoP (Demonstration of Proof-of-Possession) @done
