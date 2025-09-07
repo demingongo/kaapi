@@ -1072,3 +1072,577 @@ Let me know if you want help:
 Otherwise, **congrats — you're done!** ✅
 
 ---
+
+Great question. Let’s break it down quickly so you can choose a secure, cost-effective solution for storing private keys — especially for development, staging, or small-scale production use.
+
+---
+
+## 🔐 **Options for Secure Key Storage**
+
+| Option                                | Free Tier?                                      | Pros                                    | Cons                                                      |
+| ------------------------------------- | ----------------------------------------------- | --------------------------------------- | --------------------------------------------------------- |
+| **AWS KMS**                           | ✅ Yes, [free tier](#aws-kms-free-tier)          | Secure, integrated with AWS, auditable  | Slightly complex setup, AWS account required              |
+| **HashiCorp Vault OSS (Self-Hosted)** | ✅ Free                                          | Fully featured, flexible, highly secure | You must host and maintain it                             |
+| **HashiCorp Vault Cloud**             | ✅ [Free tier available](#vault-cloud-free-tier) | Hosted and managed, easy start          | Limited in free tier                                      |
+| **1Password Secrets Automation**      | ✅ 1 seat free                                   | Easy integration, managed               | Not as flexible, more dev-oriented                        |
+| **Doppler / Infisical / Akeyless**    | ✅ Free tiers                                    | Modern, secret-first platforms          | May not support full key management / encryption features |
+
+---
+
+## 🔐 **1. AWS KMS (Key Management Service)**
+
+### ✅ Free Tier
+
+AWS offers **20,000 free requests/month** for KMS:
+
+* First 20K requests are free every month.
+* Only \~\$1/month per key beyond that.
+
+**Perfect for:**
+
+* Apps already running on AWS.
+* Lightweight, secure key encryption/decryption.
+* Integration with Redis to **encrypt keys before storing**.
+
+### 🔧 Example Use Case
+
+Encrypt a private JWK before storing in Redis:
+
+```ts
+import { KMSClient, EncryptCommand, DecryptCommand } from '@aws-sdk/client-kms'
+
+const kms = new KMSClient({ region: 'us-east-1' })
+
+async function encryptWithKMS(plaintext: string, keyId: string): Promise<string> {
+  const res = await kms.send(new EncryptCommand({
+    KeyId: keyId,
+    Plaintext: Buffer.from(plaintext),
+  }))
+  return res.CiphertextBlob!.toString('base64')
+}
+
+async function decryptWithKMS(ciphertext: string): Promise<string> {
+  const res = await kms.send(new DecryptCommand({
+    CiphertextBlob: Buffer.from(ciphertext, 'base64'),
+  }))
+  return res.Plaintext!.toString()
+}
+```
+
+> 🔐 You store the encrypted version in Redis, and decrypt when needed.
+
+---
+
+## 🏰 **2. HashiCorp Vault OSS (Self-hosted)**
+
+* Open-source, free, production-ready if you're comfortable running it.
+* Supports **transit encryption**, secrets, dynamic keys, etc.
+* You can run it locally or in a container.
+
+```bash
+docker run --cap-add=IPC_LOCK -e 'VAULT_DEV_ROOT_TOKEN_ID=myroot' -p 8200:8200 hashicorp/vault
+```
+
+This gives you a **development server**, not production secure — but useful for local dev and testing.
+
+### 🔐 Vault Transit Encryption
+
+Instead of storing private keys in Redis, you:
+
+1. Store them in Vault
+2. Or use Vault’s **Transit Engine** to encrypt/decrypt on the fly (without exposing the key)
+
+---
+
+## ☁️ **3. HashiCorp Vault Cloud (HCP Vault)**
+
+**Free tier includes:**
+
+* 25 secrets
+* Up to 3 users
+* Limited performance
+* Useful for dev, prototyping, PoCs
+
+📍 Sign up: [https://cloud.hashicorp.com/products/vault](https://cloud.hashicorp.com/products/vault)
+
+---
+
+## 🧪 Dev-Time Simplicity
+
+If you're looking for:
+
+* **Minimal setup**
+* Free for hobby or internal apps
+* Lower risk tolerance (e.g., short-lived keys)
+
+Then consider:
+
+| Option                | Use When                                            |
+| --------------------- | --------------------------------------------------- |
+| 🛠️ Self-hosted Vault | You're OK running a container / managing some state |
+| ☁️ HCP Vault Free     | You want managed security with minimal cost         |
+| 🔒 AWS KMS            | You’re already on AWS and want solid integration    |
+
+---
+
+## 🔚 TL;DR — What to Use?
+
+| Need                               | Recommended                                       |
+| ---------------------------------- | ------------------------------------------------- |
+| ✅ Already on AWS                   | Use **AWS KMS** with free tier                    |
+| ✅ Want managed hosted option       | Use **HCP Vault Free Tier**                       |
+| ✅ Prefer self-hosted, open-source  | Use **Vault OSS (Docker)**                        |
+| ❌ Just prototyping or low-risk dev | Use **in-memory** or **encrypt with a local key** |
+
+---
+
+If you'd like, I can:
+
+* 🧱 Help you implement AWS KMS + Redis securely
+* ⚙️ Set up a local Vault + code example
+* 💾 Give you an in-memory or FS-backed key store for simple dev use
+
+Which direction do you want to go in?
+
+---
+
+Great — here’s a secure encryption/decryption helper using the built-in [`node:crypto`](https://nodejs.org/api/crypto.html) module, implementing **AES-256-GCM**, which provides both **confidentiality** and **integrity** (i.e. encryption + authentication).
+
+---
+
+### 🔐 Crypto Helper (AES-256-GCM)
+
+```ts
+// crypto-helper.ts
+import { randomBytes, createCipheriv, createDecipheriv, scryptSync } from 'node:crypto'
+
+const ALGORITHM = 'aes-256-gcm'
+const IV_LENGTH = 12 // GCM standard
+const KEY_LENGTH = 32 // 256 bits
+
+export interface EncryptedData {
+  ciphertext: string
+  iv: string
+  authTag: string
+}
+
+/**
+ * Derive a 32-byte key from a password (optional: salt).
+ * Note: Use only for local dev. In production, store a 32-byte random key securely (e.g., in AWS KMS).
+ */
+export function deriveKeyFromPassword(password: string, salt = 'static-salt'): Buffer {
+  return scryptSync(password, salt, KEY_LENGTH)
+}
+
+/**
+ * Encrypts a UTF-8 string using AES-256-GCM
+ */
+export function encrypt(plaintext: string, key: Buffer): EncryptedData {
+  const iv = randomBytes(IV_LENGTH)
+  const cipher = createCipheriv(ALGORITHM, key, iv)
+
+  const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()])
+  const authTag = cipher.getAuthTag()
+
+  return {
+    ciphertext: encrypted.toString('base64'),
+    iv: iv.toString('base64'),
+    authTag: authTag.toString('base64'),
+  }
+}
+
+/**
+ * Decrypts AES-256-GCM encrypted data
+ */
+export function decrypt({ ciphertext, iv, authTag }: EncryptedData, key: Buffer): string {
+  const decipher = createDecipheriv(
+    ALGORITHM,
+    key,
+    Buffer.from(iv, 'base64')
+  )
+  decipher.setAuthTag(Buffer.from(authTag, 'base64'))
+
+  const decrypted = Buffer.concat([
+    decipher.update(Buffer.from(ciphertext, 'base64')),
+    decipher.final(),
+  ])
+  return decrypted.toString('utf8')
+}
+```
+
+---
+
+### ✅ Example Usage
+
+```ts
+import { encrypt, decrypt, deriveKeyFromPassword } from './crypto-helper'
+
+// In production, load the key from KMS or env securely.
+const key = deriveKeyFromPassword('my-super-secret-password') // Or just load Buffer.from(KEY, 'base64')
+
+const secret = 'this is my private JWK or PEM'
+
+// Encrypt before storing in Redis
+const encrypted = encrypt(secret, key)
+// → { ciphertext, iv, authTag }
+
+// Decrypt after retrieving from Redis
+const decrypted = decrypt(encrypted, key)
+// → "this is my private JWK or PEM"
+```
+
+---
+
+### 🧠 Notes
+
+* `iv`: Initialization vector – random per encryption. Must be stored along with the ciphertext.
+* `authTag`: Ensures integrity – required for decryption.
+* `key`: Must be **32 bytes** for AES-256. Store it securely.
+
+---
+
+### 🧪 Integration with Redis-OM
+
+You can store the `EncryptedData` object as a serialized JSON string in Redis:
+
+```ts
+await redis.set('privateKey', JSON.stringify(encrypted))
+
+const data = JSON.parse(await redis.get('privateKey')!)
+const decrypted = decrypt(data, key)
+```
+
+---
+
+### 🔒 In production:
+
+* Use a securely generated 256-bit key (`randomBytes(32)`), stored in **AWS KMS**, **Vault**, or **environment variables**.
+* Don’t derive from password unless it's a local or fallback dev setup.
+
+Let me know if you want a Redis store implementation (`JwksKeyStore`) that plugs this in directly.
+
+---
+
+Absolutely! Here's a complete example of a **secure Redis OM implementation for your `JwksKeyStore`**, incorporating **AES-256-GCM encryption** via Node's built-in `node:crypto` and storing the encrypted private key safely in Redis, while keeping public keys exposed as is.
+
+---
+
+## 1. **Encryption Helper with `node:crypto`**
+
+First, implement AES-256-GCM encryption and decryption. You'll store the `ciphertext`, `iv`, and `authTag` as a JSON object.
+
+```ts
+// crypto-helper.ts
+import { randomBytes, createCipheriv, createDecipheriv } from 'node:crypto';
+
+const ALGORITHM = 'aes-256-gcm';
+const IV_LENGTH = 12;   // AES-GCM standard
+const KEY_LENGTH = 32;  // 256 bits
+
+export interface EncryptedData {
+  ciphertext: string;
+  iv: string;
+  authTag: string;
+}
+
+/**
+ * Encrypts a UTF-8 string using AES-256-GCM.
+ */
+export function encrypt(plaintext: string, key: Buffer): EncryptedData {
+  const iv = randomBytes(IV_LENGTH);
+  const cipher = createCipheriv(ALGORITHM, key, iv);
+
+  const ciphertext = Buffer.concat([
+    cipher.update(plaintext, 'utf8'),
+    cipher.final(),
+  ]);
+
+  const authTag = cipher.getAuthTag();
+
+  return {
+    ciphertext: ciphertext.toString('base64'),
+    iv: iv.toString('base64'),
+    authTag: authTag.toString('base64'),
+  };
+}
+
+/**
+ * Decrypts previously encrypted data using AES-256-GCM.
+ */
+export function decrypt(encrypted: EncryptedData, key: Buffer): string {
+  const decipher = createDecipheriv(
+    ALGORITHM,
+    key,
+    Buffer.from(encrypted.iv, 'base64')
+  );
+  decipher.setAuthTag(Buffer.from(encrypted.authTag, 'base64'));
+
+  const decrypted = Buffer.concat([
+    decipher.update(Buffer.from(encrypted.ciphertext, 'base64')),
+    decipher.final(),
+  ]);
+
+  return decrypted.toString('utf8');
+}
+```
+
+---
+
+## 2. **Redis OM Schema & Entity Definition**
+
+Define your key-pair entity schema, storing encrypted private key and plain public key JSON as text:
+
+```ts
+// redis-om-keypair.ts
+import { Entity, Schema } from 'redis-om';
+
+export class KeyPairEntity extends Entity {
+  kid!: string;
+  encryptedPrivateKey!: string;  // stored as JSON string of EncryptedData
+  publicKey!: string;            // stored as JSON stringified JWK
+  createdAt!: Date;
+  expiresAt!: Date;
+}
+
+export const keyPairSchema = new Schema(
+  KeyPairEntity,
+  {
+    kid: { type: 'string' },
+    encryptedPrivateKey: { type: 'string' },
+    publicKey: { type: 'string' },
+    createdAt: { type: 'date' },
+    expiresAt: { type: 'date' },
+  },
+  {
+    dataStructure: 'JSON'
+  }
+);
+```
+
+---
+
+## 3. **`RedisOmEncryptedJwksKeyStore` Implementation**
+
+This class implements `JwksKeyStore`, encrypting private keys before saving and decrypting upon retrieval.
+
+```ts
+// redis-om-encrypted-jwks-store.ts
+import { Repository } from 'redis-om';
+import { KeyPairEntity } from './redis-om-keypair';
+import { encrypt, decrypt, EncryptedData } from './crypto-helper';
+import { JwksKeyStore } from './types';  // your interface
+
+export class RedisOmEncryptedJwksKeyStore implements JwksKeyStore {
+  private repo: Repository<KeyPairEntity>;
+  private encryptionKey: Buffer;
+
+  constructor(repo: Repository<KeyPairEntity>, encryptionKey: Buffer) {
+    this.repo = repo;
+    this.encryptionKey = encryptionKey;
+  }
+
+  async storeKeyPair(
+    kid: string,
+    privateKey: object,
+    publicKey: object,
+    ttl: number // seconds
+  ): Promise<void> {
+    const plaintextPriv = JSON.stringify(privateKey);
+    const encryptedPriv: EncryptedData = encrypt(plaintextPriv, this.encryptionKey);
+
+    const entity = this.repo.createEntity({
+      kid,
+      encryptedPrivateKey: JSON.stringify(encryptedPriv),
+      publicKey: JSON.stringify(publicKey),
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + ttl * 1000),
+    });
+
+    await this.repo.save(entity);
+  }
+
+  async getPrivateKey(): Promise<object | undefined> {
+    const results = await this.repo.search()
+      .sortDescending('createdAt')
+      .return.first();
+
+    if (!results) return undefined;
+
+    const encryptedPriv = JSON.parse(results.encryptedPrivateKey) as EncryptedData;
+    const decrypted = decrypt(encryptedPriv, this.encryptionKey);
+    return JSON.parse(decrypted);
+  }
+
+  async getPublicKeys(): Promise<object[]> {
+    const now = new Date();
+    const results = await this.repo.search()
+      .where('expiresAt').gt(now)
+      .return.all();
+
+    return results.map(r => JSON.parse(r.publicKey));
+  }
+}
+```
+
+---
+
+### Summary of Benefits
+
+| Feature                         | Description                                   |
+| ------------------------------- | --------------------------------------------- |
+| **AES-256-GCM encryption**      | Ensures confidentiality and integrity         |
+| **Encryption key not in Redis** | Requires a secure key (e.g., from env or KMS) |
+| **Separation of concerns**      | Public keys exposed; private keys protected   |
+| **TTL-enabled cleanup**         | `expiresAt` allows query-based key expiry     |
+
+---
+
+Let me know if you'd like help with:
+
+* Wiring this into your `JwksRotationTimestampStore`
+* Example Redis OM client setup and repository creation
+* Integration into your test suite for secure storage verification
+
+You're building a highly secure and maintainable auth infrastructure — nicely done.
+
+---
+
+Great — here’s how to wire **Redis OM** into your `JwksRotationTimestampStore` implementation, ensuring it's clean, timestamp-specific, and matches your updated interface:
+
+---
+
+## ✅ Interface Recap
+
+```ts
+export interface JwksRotationTimestampStore {
+  getLastRotationTimestamp(): Promise<number>
+  setLastRotationTimestamp(rotationTimestamp: number): Promise<void>
+}
+```
+
+---
+
+## 🧱 Redis OM Entity & Schema for Rotation Timestamp
+
+We’ll store a single record under a well-known ID like `"jwks-rotation-timestamp"`.
+
+```ts
+// redis-om-rotation-timestamp.ts
+import { Entity, Schema } from 'redis-om';
+
+export class RotationTimestampEntity extends Entity {
+  key!: string;
+  timestamp!: number;
+}
+
+export const rotationTimestampSchema = new Schema(
+  RotationTimestampEntity,
+  {
+    key: { type: 'string' },
+    timestamp: { type: 'number' },
+  },
+  {
+    dataStructure: 'JSON'
+  }
+);
+```
+
+---
+
+## 🔌 RedisOmRotationTimestampStore Implementation
+
+```ts
+// redis-om-jwks-rotation-store.ts
+import { Repository } from 'redis-om';
+import { JwksRotationTimestampStore } from './types';
+import { RotationTimestampEntity } from './redis-om-rotation-timestamp';
+
+const STATIC_ID = 'jwks-rotation-timestamp';
+
+export class RedisOmRotationTimestampStore implements JwksRotationTimestampStore {
+  private repo: Repository<RotationTimestampEntity>;
+
+  constructor(repo: Repository<RotationTimestampEntity>) {
+    this.repo = repo;
+  }
+
+  async getLastRotationTimestamp(): Promise<number> {
+    const existing = await this.repo.fetch(STATIC_ID);
+    if (!existing || !existing.timestamp) {
+      return 0;
+    }
+    return existing.timestamp;
+  }
+
+  async setLastRotationTimestamp(rotationTimestamp: number): Promise<void> {
+    const entity = this.repo.createEntity({
+      key: STATIC_ID,
+      timestamp: rotationTimestamp,
+    });
+
+    await this.repo.save(entity, { id: STATIC_ID });
+  }
+}
+```
+
+---
+
+## 🧪 Optional: In-Memory Fallback (for tests/dev)
+
+If you’re testing or developing without Redis:
+
+```ts
+export class InMemoryRotationTimestampStore implements JwksRotationTimestampStore {
+  private last: number = 0;
+
+  async getLastRotationTimestamp(): Promise<number> {
+    return this.last;
+  }
+
+  async setLastRotationTimestamp(rotationTimestamp: number): Promise<void> {
+    this.last = rotationTimestamp;
+  }
+}
+```
+
+---
+
+## 🧬 Hooking It All Together (Redis OM Bootstrapping Example)
+
+```ts
+import { Client } from 'redis-om';
+import { createClient } from 'redis';
+import { keyPairSchema } from './redis-om-keypair';
+import { rotationTimestampSchema } from './redis-om-rotation-timestamp';
+
+const redis = createClient({ url: 'redis://localhost:6379' });
+await redis.connect();
+
+const omClient = await new Client().use(redis);
+
+const keyPairRepo = omClient.fetchRepository(keyPairSchema);
+await keyPairRepo.createIndex();
+
+const rotationRepo = omClient.fetchRepository(rotationTimestampSchema);
+await rotationRepo.createIndex();
+
+// Now use these repositories to initialize your stores
+```
+
+---
+
+## 🛡 Final Notes
+
+* This uses a **single static Redis key** to track last rotation — efficient and simple.
+* If you're doing multi-environment or multi-tenant setups, prefix the ID like `jwks-rotation:tenant-id`.
+* Consider setting a `maxAge` or TTL if you want Redis to auto-clean (optional).
+
+Let me know if you want to:
+
+* Add expiry policies
+* Set up `mocha` tests for this
+* Add retry logic in Redis failure scenarios
+
+Ready when you are.
+
+---
