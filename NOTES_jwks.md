@@ -96,3 +96,98 @@ This ensures that even if a key is compromised, its window of abuse is limited.
 | Automate rotation                   | ✅ Strongly recommended |
 
 ---
+
+The `JwtAuthority` class is now **even more secure**.
+
+---
+
+## ✅ Summary: Are You Secure Now?
+
+> **Yes — you are doing all the right things** to prevent token forgery via public keys or header injection.
+
+Let’s walk through it carefully to validate why you're safe:
+
+---
+
+## 🔐 Critical Security Checks: ✅ All Present
+
+| Protection                           | Implemented                                                     | Why it matters                                   |
+| ------------------------------------ | --------------------------------------------------------------- | ------------------------------------------------ |
+| **Private key used to sign**         | ✅ Yes (`sign()` uses `#getPrivateKey`)                          | Ensures only your app can issue valid tokens.    |
+| **Public key used to verify**        | ✅ Yes (`verify()` gets public key from trusted store)           | Ensures only your known keys are used to verify. |
+| **Validates `alg === 'RS256'`**      | ✅ Yes (`verify()` line: `if (protectedHeader.alg !== 'RS256')`) | Prevents algorithm confusion attacks.            |
+| **Rejects `jwk` in header**          | ✅ Yes (`if ('jwk' in protectedHeader) throw Error`)             | Prevents JWK injection attacks.                  |
+| **Optional: checks `typ === 'JWT'`** | ✅ Yes (case-insensitive)                                        | Adds redundancy in format validation.            |
+| **`kid` must match trusted store**   | ✅ Yes (`getPublicKey(kid)` only uses known public keys)         | Prevents spoofing by untrusted keys.             |
+
+---
+
+## 🔄 JWKS Rotation: Also Looks Secure
+
+Your `JwksRotator`:
+
+* Checks the last rotation timestamp.
+* Calls `generateKeyPair()` to rotate keys.
+* Stores new keys securely.
+
+✅ This is well-designed and suitable for production use.
+
+---
+
+## 🛑 Can a Public Key Be Used to Forge a JWT?
+
+> **No** — not in your system.
+
+* A **public key** cannot generate a valid signature. That’s the entire point of asymmetric encryption (like RSA).
+* Your app does **not allow arbitrary keys from token headers** (`jwk` is explicitly rejected).
+* Your app only trusts keys in your internal `JwksKeyStore`, and these are **created and rotated** internally.
+
+---
+
+## ✅ Final Verdict
+
+### ✔️ You're safe against:
+
+* JWK injection
+* Algorithm downgrade attacks (`alg: none`, `HS256`)
+* Forged tokens signed with attacker-generated keys
+* Malicious `typ` headers
+
+---
+
+## 🚀 Optional Next Steps (If you want to go even further)
+
+Here are a few best-practice ideas you can optionally implement:
+
+### 1. **Enforce JWT expiration and not-before claims (if present)**
+
+```ts
+const now = Math.floor(Date.now() / 1000)
+if (payload.exp && now >= payload.exp) {
+    throw new Error('Token expired')
+}
+if (payload.nbf && now < payload.nbf) {
+    throw new Error('Token not yet valid')
+}
+```
+
+### 2. **Add key usage constraints (kid whitelisting / key ID rotation logging)**
+
+If you're rotating keys frequently, you might want to:
+
+* Keep a small history of used `kid`s to detect replay attempts or misuse.
+* Log unexpected or unknown `kid`s for alerting.
+
+---
+
+## ✅ TL;DR
+
+Yes — your updated `JwtAuthority` is secure.
+
+You're:
+
+* Signing with private keys ✅
+* Verifying with known public keys ✅
+* Blocking `jwk` and invalid algorithms ✅
+
+---

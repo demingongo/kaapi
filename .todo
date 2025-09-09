@@ -7,10 +7,11 @@
         - apikey (take it from the examples/auth-designs/src/plugins/bearerDesign.ts) @done
 
 - @kaapi/oauth2-auth-design
+    - unify: move options (?OAuth2AuthOptions<any>) and strategyName (?string) to OAuth2AuthDesignOptions
     - jwks keys rotation freq and token ttl are independents, make it so. AND THE STORE shouldn't have to handle that.
-        - store
-        - publicKeyTtl
-        - rotationIntervalMs
+        - store @done
+        - publicKeyTtl @done
+        - rotationIntervalMs @done
         - logger
     - REVIEW TOKEN SIGNING because something might be wrong
         - what is wrong is that the private part is in the saved keys. Private part should be saved separately.

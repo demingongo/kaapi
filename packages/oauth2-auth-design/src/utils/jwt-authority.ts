@@ -157,6 +157,14 @@ export class JwtAuthority implements KeyGenerator {
             throw new Error(`Unexpected algorithm: ${protectedHeader.alg}`)
         }
 
+        // additional checks hardening security
+        if ('jwk' in protectedHeader) {
+            throw new Error('Unexpected JWK in header — potential forgery attempt')
+        }
+        if (protectedHeader.typ && protectedHeader.typ.toLowerCase() !== 'jwt') {
+            throw new Error(`Unexpected typ: ${protectedHeader.typ}`)
+        }
+
         return payload
     }
 }
