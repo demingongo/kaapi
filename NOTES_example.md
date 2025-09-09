@@ -195,3 +195,196 @@ Define the access level granted to the client. Pass via the `scope` parameter.
 * [JWKS (RFC 7517)](https://datatracker.ietf.org/doc/html/rfc7517)
 
 ---
+
+Perfect — here is the **Markdown version** of the documentation, ready to paste into your internal or public Wiki.
+
+---
+
+# 🛡️ OAuth2 Client Credentials Provider with `@kaapi/oauth2-auth-design`
+
+This example shows how to create and register an **OAuth2 Client Credentials** provider using the [`@kaapi/oauth2-auth-design`](https://www.npmjs.com/package/@kaapi/oauth2-auth-design) module in a [`@kaapi/kaapi`](https://github.com/kaapi/kaapi) application.
+
+---
+
+## 📦 What This Example Does
+
+* Implements **Client Credentials** grant flow.
+* Issues JWT access tokens.
+* Supports `client_secret_basic` and `client_secret_post` authentication.
+* Exposes `.well-known/jwks.json` for JWKS key discovery.
+* Uses an in-memory JWKS keystore (for development).
+* Defines and validates access token structure.
+* Adds custom token generation logic using your database.
+* Supports optional `id_token` issuance if the `openid` scope is requested.
+
+---
+
+## ⚙️ Code Example
+
+```ts
+import {
+  BearerToken,
+  ClientSecretBasic,
+  ClientSecretPost,
+  createInMemoryKeyStore,
+  OAuth2TokenResponse,
+  OIDCClientCredentialsBuilder
+} from '@kaapi/oauth2-auth-design'
+
+import db from './database'
+
+export default OIDCClientCredentialsBuilder
+  .create()
+  .setTokenType(new BearerToken())                   // Optional, default is Bearer
+  .setTokenTTL(3600)                                 // Token TTL in seconds (1h)
+  .addClientAuthenticationMethod(new ClientSecretBasic()) // Enable client_secret_basic
+  .addClientAuthenticationMethod(new ClientSecretPost())  // Enable client_secret_post
+  .useAccessTokenJwks(true)                          // Enable JWT verification with JWKS
+  .jwksRoute(route => route.setPath('/.well-known/jwks.json')) // JWKS discovery endpoint
+  .setJwksKeyStore(createInMemoryKeyStore())         // In-memory key store (dev only)
+  .validate(async (_, { jwtAccessTokenPayload }) => {
+    const user = jwtAccessTokenPayload?.type === 'machine' &&
+                 jwtAccessTokenPayload?.machine
+      ? await db.users.findById(`${jwtAccessTokenPayload.machine}`)
+      : undefined
+
+    return user
+      ? {
+          isValid: true,
+          credentials: {
+            user: {
+              machine: user.id,
+              name: user.name,
+              type: 'machine'
+            }
+          }
+        }
+      : { isValid: false }
+  })
+  .tokenRoute(route =>
+    route
+      .setPath('/oauth2/token') // Optional, defaults to /oauth2/token
+      .generateToken(async ({
+        clientId,
+        clientSecret,
+        ttl,
+        scope,
+        tokenType,
+        createJwtAccessToken,
+        createIdToken
+      }) => {
+        if (!clientSecret) {
+          return {
+            error: 'invalid_request',
+            error_description: 'Missing client_secret.'
+          }
+        }
+
+        if (!ttl) {
+          return {
+            error: 'invalid_request',
+            error_description: 'Missing ttl.'
+          }
+        }
+
+        const client = await db.clients.findByCredentials(clientId, clientSecret)
+        if (!client) {
+          return { error: 'invalid_client' }
+        }
+
+        try {
+          if (createJwtAccessToken) {
+            const { token: accessToken } = await createJwtAccessToken({
+              machine: client.details?.id,
+              name: client.details?.name,
+              type: 'machine'
+            })
+
+            return new OAuth2TokenResponse({ access_token: accessToken })
+              .setExpiresIn(ttl)
+              .setScope(scope?.split(' '))
+              .setTokenType(tokenType)
+              .setIdToken(
+                scope?.includes('openid') &&
+                (await createIdToken?.({ sub: clientId }))?.token
+              )
+          }
+        } catch (err) {
+          console.error('Token generation failed:', err)
+        }
+
+        return null
+      })
+  )
+  .setDescription('Client credentials grant flow. [More info](https://www.oauth.com/oauth2-servers/access-tokens/client-credentials/)')
+  .setScopes({
+    'read:data': 'Allows the client to retrieve or query data from the service.',
+    'write:data': 'Allows the client to create or update data in the service.',
+    'delete:data': 'Allows the client to remove data from the service.',
+    'read:config': 'Allows the client to access configuration or metadata settings.',
+    'write:config': 'Allows the client to modify configuration or metadata settings.',
+    'read:logs': 'Allows the client to retrieve logs or audit trails from the service.',
+    'write:logs': 'Allows the client to send or store logs into the system.',
+    'execute:tasks': 'Allows the client to trigger or run predefined tasks or jobs.',
+    'manage:tokens': 'Allows the client to manage access or refresh tokens for automation.',
+    'admin:all': 'Grants full administrative access to all available resources and operations.'
+  })
+// .build() — Don't forget to call `.build()` before registering in Kaapi!
+```
+
+---
+
+## 🛠 How to Register in Kaapi
+
+After building the provider:
+
+```ts
+import { Kaapi } from '@kaapi/kaapi'
+import authDesign from './auth/client-credentials-provider'
+
+const app = new Kaapi({
+    port: 3000,
+    host: 'localhost'
+})
+
+app.extend(authDesign.build())
+```
+
+---
+
+## 📡 Exposed Endpoints
+
+| Endpoint                     | Purpose                        |
+| ---------------------------- | ------------------------------ |
+| `POST /oauth2/token`         | Token issuance endpoint        |
+| `GET /.well-known/jwks.json` | Public JWKS for JWT validation |
+
+---
+
+## 🔐 Requirements
+
+* `client_id` and `client_secret` are required in the request.
+* Clients must exist in your database and be validated during `generateToken`.
+* Access tokens contain a payload like:
+
+  ```json
+  {
+    "machine": "client-id",
+    "name": "client-name",
+    "type": "machine"
+  }
+  ```
+* Optional `id_token` will be added if `openid` is in the requested scope.
+
+---
+
+## ⚠️ Notes
+
+* `createInMemoryKeyStore()` is suitable only for development. In production, use a persistent keystore (e.g. Redis, file, or database).
+* Scope configuration is optional but highly recommended to control client capabilities.
+* `validate` is a hook to validate the decoded JWT on protected routes.
+
+---
+
+Let me know if you’d like a version with additional formatting (e.g., for GitHub wiki), or to split this into multiple sections!
+

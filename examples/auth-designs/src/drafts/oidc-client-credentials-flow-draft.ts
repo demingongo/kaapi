@@ -17,7 +17,7 @@ export default OIDCClientCredentialsBuilder
     .addClientAuthenticationMethod(new ClientSecretPost())          // client authentication methods
     .useAccessTokenJwks(true)                                       // activates JWT access token verification with JWKS
     .jwksRoute(route => route.setPath('/.well-known/jwks.json'))    // optional, default '/oauth2/keys'
-    .setJwksKeyStore(createInMemoryKeyStore())                           // store for jwks, in-memory for dev
+    .setJwksKeyStore(createInMemoryKeyStore())                      // store for jwks, in-memory for dev
     .validate(async (_, { jwtAccessTokenPayload }) => {             // auth scheme
         // db query
         const user = jwtAccessTokenPayload?.type === 'machine' &&

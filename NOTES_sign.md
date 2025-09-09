@@ -1646,3 +1646,111 @@ Let me know if you want to:
 Ready when you are.
 
 ---
+
+## ReplayStore with redis-om
+
+While `redis-om` is powerful for entity modeling, it's **not ideal** for basic TTL key tracking (e.g. `SET key EX 300`) unless you use its **low-level client access**.
+
+---
+
+## ✅ Good News
+
+You *can still use `redis-om`* — you just need to drop down to its **low-level Redis client** via `repository.redis`.
+
+---
+
+## ✅ Implementation Using `redis-om`
+
+### 🔧 Step 1: Make Sure You Have `redis-om` Installed
+
+```bash
+npm install redis-om
+```
+
+And a Redis instance running that supports keys and expiration (standard Redis is fine; no need for RedisJSON here).
+
+---
+
+### 📦 `RedisReplayStore` using `redis-om`
+
+```ts
+// src/redis-replay-store.ts
+import { Client } from 'redis-om'
+import type { ReplayStore } from './replay-store'
+
+export class RedisReplayStore implements ReplayStore<string> {
+  private readonly redis: ReturnType<Client['fetch']>
+  private readonly keyPrefix: string
+
+  constructor(client: Client, keyPrefix = 'replay:') {
+    if (!client.isOpen()) {
+      throw new Error('Redis OM client is not open. Call client.open() first.')
+    }
+
+    this.redis = client.fetch()
+    this.keyPrefix = keyPrefix
+  }
+
+  private getKey(value: string): string {
+    return `${this.keyPrefix}${value}`
+  }
+
+  async has(value: string): Promise<boolean> {
+    const key = this.getKey(value)
+    const exists = await this.redis.EXISTS(key)
+    return exists === 1
+  }
+
+  async delete(value: string): Promise<void> {
+    const key = this.getKey(value)
+    await this.redis.DEL(key)
+  }
+
+  async add(value: string, ttlSeconds: number): Promise<void> {
+    const key = this.getKey(value)
+    await this.redis.SET(key, '1', { EX: ttlSeconds })
+  }
+}
+```
+
+---
+
+## ✅ Usage Example with `redis-om`
+
+```ts
+import { Client } from 'redis-om'
+import { RedisReplayStore } from './redis-replay-store'
+
+// Create and connect client
+const redisClient = new Client()
+await redisClient.open('redis://localhost:6379')
+
+const replayStore = new RedisReplayStore(redisClient)
+
+await replayStore.add('some-jti', 300)
+
+const exists = await replayStore.has('some-jti') // true or false
+```
+
+---
+
+## 🧪 Want to Unit Test It?
+
+`redis-om` doesn't support a mocked interface out-of-the-box, but you can:
+
+* Mock the `Client` and `fetch()` in your tests
+* Or use an actual Redis container (via Docker) for integration testing
+
+Let me know if you want help setting up a **testable mock** version for RedisReplayStore or using `docker-compose` for test Redis.
+
+---
+
+## ✅ Summary
+
+| You Have…        | You Want…                      | Solution                              |
+| ---------------- | ------------------------------ | ------------------------------------- |
+| `redis-om`       | Replay detection with TTL keys | Use `client.fetch()` and raw commands |
+| `ReplayStore<T>` | `has`, `add`, `delete`         | Use `EXISTS`, `SET ... EX`, `DEL`     |
+
+---
+
