@@ -86,7 +86,7 @@ export const ${this.#values.name} = new OpenIDAuthDesign(
                         .setExpiresIn(ttl)
                         .setRefreshToken(refreshToken)
                         .setScope(scope)
-                        .setIDToken(
+                        .setIdToken(
                             await createIdToken?.({
                                 sub: '248289761001',
                                 name: 'Jane Doe',

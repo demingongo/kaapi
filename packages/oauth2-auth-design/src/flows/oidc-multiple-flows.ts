@@ -1,5 +1,6 @@
 import {
     AuthDesign,
+    ILogger,
     KaapiTools,
     ReqRef,
     ReqRefDefaults,
@@ -10,29 +11,32 @@ import {
     IJWKSRoute,
     JWKSRoute,
     OAuth2AuthDesignBuilder,
+    OAuth2JwksOptions,
     OAuth2SingleAuthFlow,
     OAuth2SingleAuthFlowBuilder,
     OIDCAuthUtil
 } from './common'
-import { JWKS, JWKSStore } from '../utils/jwks-store'
 import { BaseAuthUtil } from '@novice1/api-doc-generator/lib/utils/auth/baseAuthUtils'
-import { JWKSGenerator } from '../utils/jwks-generator'
-import { getInMemoryJWKSStore } from '../utils/in-memory-jwks-store'
+import { JwksKeyStore, JwksRotationTimestampStore, JwksRotator, JwtAuthority } from '../utils/jwt-authority'
+import { InMemoryKeyStore } from '../utils/in-memory-key-store'
 
 export type SingleCodeFlow = AuthDesign & OAuth2SingleAuthFlow
 
 //#region MultipleFlows
 
 export interface MultipleFlowsArg {
-    jwksStore?: JWKSStore
+    logger?: ILogger;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     jwksRoute?: DefaultJWKSRoute<any>
     openidConfiguration?: Record<string, unknown>
+    jwksOptions: OAuth2JwksOptions;
     tokenEndpoint: string
     flows: SingleCodeFlow[]
 }
 
 export class MultipleFlows extends AuthDesign {
+
+    protected logger?: ILogger;
 
     protected flows: SingleCodeFlow[];
     protected securitySchemeName = 'OIDC Multiple Flows';
@@ -42,40 +46,63 @@ export class MultipleFlows extends AuthDesign {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     protected jwksRoute?: IJWKSRoute<any>;
-    protected jwksStore?: JWKSStore;
-    protected jwksGenerator?: JWKSGenerator | undefined;
-    protected tokenTTL?: number;
+    protected jwksKeyStore?: JwksKeyStore;
+    protected jwksPublicKeyTtl?: number;
+    protected jwksRotationIntervalMs?: number;
+    protected jwksRotationTimestampStore?: JwksRotationTimestampStore;
+
+    protected jwtAuthority?: JwtAuthority;
+    protected jwksRotator?: JwksRotator;
 
     constructor({
         flows,
         tokenEndpoint,
         jwksRoute,
-        jwksStore,
-        openidConfiguration
+        openidConfiguration,
+        logger,
+        ...props
     }: MultipleFlowsArg) {
         super();
+        this.logger = logger
         this.flows = [...flows]
         this.tokenEndpoint = tokenEndpoint
         this.jwksRoute = jwksRoute
-        this.jwksStore = jwksStore
         this.openidConfiguration = openidConfiguration || {}
+
+        this.jwksKeyStore = props?.jwksOptions?.keyStore
+        this.jwksPublicKeyTtl = props?.jwksOptions?.ttl
+        this.jwksRotationIntervalMs = props?.jwksOptions?.rotation?.intervalMs
+        this.jwksRotationTimestampStore = props?.jwksOptions?.rotation?.timestampStore
     }
 
-    protected getJwksGenerator() {
-        if (this.jwksGenerator) return this.jwksGenerator;
-        if (this.jwksStore) {
-            this.jwksGenerator = new JWKSGenerator(this.jwksStore, this.tokenTTL)
+    protected getJwtAuthority(): JwtAuthority | undefined {
+        if (this.jwtAuthority) return this.jwtAuthority;
+        if (this.jwksRoute || this.jwksKeyStore /*|| this.options.useAccessTokenJwks*/) {
+            this.jwtAuthority = new JwtAuthority(this.jwksKeyStore || new InMemoryKeyStore(), this.jwksPublicKeyTtl)
         }
-        return this.jwksGenerator
+        return this.jwtAuthority
     }
 
-    setTokenTTL(ttlSeconds?: number): this {
-        this.tokenTTL = ttlSeconds
-        return this
+    protected getJwksRotator(): JwksRotator | undefined {
+        if (this.jwksRotator) return this.jwksRotator;
+        const jwtAuthority = this.getJwtAuthority();
+        if (jwtAuthority && this.jwksRotationIntervalMs) {
+            this.jwksRotator = new JwksRotator({
+                keyGenerator: jwtAuthority,
+                rotationIntervalMs: this.jwksRotationIntervalMs,
+                rotatorKeyStore: this.jwksRotationTimestampStore || new InMemoryKeyStore(),
+                logger: this.logger
+            })
+        }
+        return this.jwksRotator
     }
 
-    getTokenTTL(): number | undefined {
-        return this.tokenTTL
+    async checkAndRotateKeys(): Promise<void> {
+        return this.getJwksRotator()?.checkAndRotateKeys()
+    }
+
+    async generateKeyPair(): Promise<void> {
+        return this.getJwtAuthority()?.generateKeyPair()
     }
 
     /**
@@ -98,7 +125,7 @@ export class MultipleFlows extends AuthDesign {
 
     integrateHook(t: KaapiTools): void | Promise<void> {
 
-        const jwksGenerator = this.getJwksGenerator();
+        const jwtAuthority = this.getJwtAuthority();
         const host = t.postman?.getHost()[0] || ''
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -163,7 +190,7 @@ export class MultipleFlows extends AuthDesign {
             });
 
         // jwks
-        if (this.jwksRoute && jwksGenerator) {
+        if (this.jwksRoute && jwtAuthority) {
             t.route({
                 path: this.jwksRoute.path,
                 method: 'GET',
@@ -176,7 +203,7 @@ export class MultipleFlows extends AuthDesign {
                 },
                 handler: async (req, h) => {
 
-                    const jwks = await jwksGenerator.generateIfNeeded() as JWKS
+                    const jwks = await jwtAuthority.getJwksEndpointResponse()
 
                     if (this.jwksRoute?.handler) {
                         return this.jwksRoute.handler({
@@ -263,7 +290,6 @@ export type MultipleFlowsBuilderArg = Omit<MultipleFlowsArg, 'flows'>
 export class MultipleFlowsBuilder implements OAuth2AuthDesignBuilder {
 
     protected params: MultipleFlowsBuilderArg
-    protected tokenTTL?: number
 
     protected builders: OAuth2SingleAuthFlowBuilder[] = []
 
@@ -274,8 +300,13 @@ export class MultipleFlowsBuilder implements OAuth2AuthDesignBuilder {
     static create(params?: Partial<MultipleFlowsBuilderArg>) {
         const paramsComplete: MultipleFlowsBuilderArg = {
             tokenEndpoint: params && params.tokenEndpoint || '/oauth2/token',
+            jwksOptions: {},
             ...(params || {})
         };
+        paramsComplete.jwksOptions = paramsComplete.jwksOptions || {}
+        if (!paramsComplete.jwksOptions.keyStore) {
+            paramsComplete.jwksOptions.keyStore = new InMemoryKeyStore()
+        }
         return new MultipleFlowsBuilder(paramsComplete)
     }
 
@@ -284,16 +315,25 @@ export class MultipleFlowsBuilder implements OAuth2AuthDesignBuilder {
         return this
     }
 
-    /**
-     * Max TTL for a token all flows included
-     */
-    setTokenTTL(ttlSeconds?: number): this {
-        this.tokenTTL = ttlSeconds
+    setJwksKeyStore(keyStore: JwksKeyStore): this {
+        this.params.jwksOptions = this.params.jwksOptions || {}
+        this.params.jwksOptions.keyStore = keyStore
         return this
     }
 
-    setJwksStore(store: JWKSStore): this {
-        this.params.jwksStore = store
+    /**
+     * Should be greater than token TTL for all flows included
+     * @param ttl seconds
+     */
+    setPublicKeyExpiry(ttl: number): this {
+        this.params.jwksOptions = this.params.jwksOptions || {}
+        this.params.jwksOptions.ttl = ttl
+        return this
+    }
+
+    setJwksRotatorOptions(jwksRotatorOptions: OAuth2JwksOptions['rotation']): this {
+        this.params.jwksOptions = this.params.jwksOptions || {}
+        this.params.jwksOptions.rotation = jwksRotatorOptions
         return this
     }
 
@@ -318,12 +358,12 @@ export class MultipleFlowsBuilder implements OAuth2AuthDesignBuilder {
         const result = new MultipleFlows({
             ...this.params,
             flows: this.builders.map(b => {
-                b.setJwksStore(this.params.jwksStore || getInMemoryJWKSStore())
+                b.setJwksKeyStore(this.params.jwksOptions.keyStore!);
+                if (this.params.jwksOptions.ttl)
+                    b.setPublicKeyExpiry(this.params.jwksOptions.ttl)
                 return b.build()
             })
         });
-
-        result.setTokenTTL(this.tokenTTL)
 
         return result
     }

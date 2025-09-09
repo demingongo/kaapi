@@ -2,6 +2,7 @@ import {
     Auth,
     AuthCredentials,
     AuthDesign,
+    ILogger,
     KaapiTools,
     Lifecycle,
     ReqRef,
@@ -14,9 +15,7 @@ import { JWTPayload } from 'jose';
 import { OAuth2Util } from '@novice1/api-doc-generator';
 import { SecuritySchemeObject } from '@novice1/api-doc-generator/lib/generators/openapi/definitions';
 
-import { JWKSStore, JWKS } from '../utils/jwks-store';
-import { getInMemoryJWKSStore } from '../utils/in-memory-jwks-store';
-import { JWKSGenerator, OAuth2JwtPayload } from '../utils/jwks-generator';
+import { OAuth2JwtPayload } from '../utils/jwt-utils';
 import { BearerToken, TokenType } from '../utils/token-types';
 import {
     ClientAuthMethod,
@@ -26,6 +25,9 @@ import {
     sortTokenEndpointAuthMethods,
     TokenEndpointAuthMethod
 } from '../utils/client-auth-methods';
+import { JwksKeyStore, JwksRotationTimestampStore, JwksRotator, JwtAuthority } from '../utils/jwt-authority';
+import { InMemoryKeyStore } from '../utils/in-memory-key-store';
+import { JWK } from 'node-jose';
 
 //#region Types
 
@@ -72,7 +74,10 @@ export type OAuth2AuthOptions<
 
 export interface OpenIDHelpers {
     readonly ttl?: number
-    createIdToken: (payload: WithRequired<Partial<OAuth2JwtPayload>, 'sub'>) => Promise<string>
+    createIdToken: (payload: WithRequired<Partial<OAuth2JwtPayload>, 'sub'>) => Promise<{
+        token: string;
+        kid: string;
+    }>
 }
 
 //#endregion Types
@@ -92,7 +97,10 @@ export interface OAuth2TokenParams extends Partial<OpenIDHelpers> {
     grantType: string
     tokenType: string
     readonly ttl?: number
-    createJwtAccessToken?: (payload: JWTPayload) => Promise<string>
+    createJwtAccessToken?: (payload: JWTPayload) => Promise<{
+        token: string;
+        kid: string;
+    }>
 }
 
 export type OAuth2TokenHandler<
@@ -308,7 +316,7 @@ export class OAuth2TokenResponse implements IOAuth2TokenResponse {
         return this.scope;
     }
 
-    setIDToken(value?: string): this {
+    setIdToken(value?: string): this {
         this.idToken = value
         return this;
     }
@@ -336,6 +344,29 @@ export class OAuth2TokenResponse implements IOAuth2TokenResponse {
 
 //#region OAuth2AuthDesign
 
+export interface OAuth2JwksOptions {
+    keyStore?: JwksKeyStore;
+    /**
+     * Public key ttl in seconds
+     */
+    ttl?: number;
+
+    /**
+     * key pair rotation
+     */
+    rotation?: {
+        intervalMs: number;
+        timestampStore: JwksRotationTimestampStore;
+    }
+}
+
+export interface OAuth2AuthDesignOptions {
+    logger?: ILogger;
+    jwksOptions?: OAuth2JwksOptions;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    jwksRoute?: IJWKSRoute<any>;
+}
+
 export abstract class OAuth2AuthDesign extends AuthDesign {
 
     protected _clientAuthMethods: Record<TokenEndpointAuthMethod, ClientAuthMethod | undefined> = {
@@ -348,7 +379,6 @@ export abstract class OAuth2AuthDesign extends AuthDesign {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     protected _tokenType: TokenType<any>
-
 
     get tokenType(): string {
         return this._tokenType.prefix
@@ -381,11 +411,29 @@ export abstract class OAuth2AuthDesign extends AuthDesign {
     protected description?: string
     protected scopes?: Record<string, string>
     protected tokenTTL?: number;
+    protected logger?: ILogger;
 
-    constructor() {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    protected jwksRoute?: IJWKSRoute<any>;
+    protected jwksKeyStore?: JwksKeyStore;
+    protected jwksPublicKeyTtl?: number;
+    protected jwksRotationIntervalMs?: number;
+    protected jwksRotationTimestampStore?: JwksRotationTimestampStore;
+
+    protected jwtAuthority?: JwtAuthority;
+    protected jwksRotator?: JwksRotator;
+
+    constructor(options?: OAuth2AuthDesignOptions) {
         super()
         this._tokenType = new BearerToken()
         this.strategyName = 'oauth2-auth-design'
+
+        //
+        this.jwksRoute = options?.jwksRoute
+        this.jwksKeyStore = options?.jwksOptions?.keyStore
+        this.jwksPublicKeyTtl = options?.jwksOptions?.ttl
+        this.jwksRotationIntervalMs = options?.jwksOptions?.rotation?.intervalMs
+        this.jwksRotationTimestampStore = options?.jwksOptions?.rotation?.timestampStore
     }
 
     protected async _extractClientParams(
@@ -427,6 +475,66 @@ export abstract class OAuth2AuthDesign extends AuthDesign {
             clientId,
             clientSecret
         }
+    }
+
+    protected getJwtAuthority(): JwtAuthority | undefined {
+        if (this.jwtAuthority) return this.jwtAuthority;
+        if (this.jwksRoute || this.jwksKeyStore /*|| this.options.useAccessTokenJwks*/) {
+            this.jwtAuthority = new JwtAuthority(this.jwksKeyStore || new InMemoryKeyStore(), this.jwksPublicKeyTtl)
+        }
+        return this.jwtAuthority
+    }
+
+    protected getJwksRotator(): JwksRotator | undefined {
+        if (this.jwksRotator) return this.jwksRotator;
+        const jwtAuthority = this.getJwtAuthority();
+        if (jwtAuthority && this.jwksRotationIntervalMs) {
+            this.jwksRotator = new JwksRotator({
+                keyGenerator: jwtAuthority,
+                rotationIntervalMs: this.jwksRotationIntervalMs,
+                rotatorKeyStore: this.jwksRotationTimestampStore || new InMemoryKeyStore(),
+                logger: this.logger
+            })
+        }
+        return this.jwksRotator
+    }
+
+    protected createJwksEndpoint(t: KaapiTools) {
+        const jwtAuthority = this.getJwtAuthority();
+
+        if (this.jwksRoute && jwtAuthority) {
+            t.route({
+                path: this.jwksRoute.path,
+                method: 'GET',
+                options: {
+                    plugins: {
+                        kaapi: {
+                            docs: false
+                        }
+                    }
+                },
+                handler: async (req, h) => {
+
+                    const jwks = await jwtAuthority.getJwksEndpointResponse()
+
+                    if (this.jwksRoute?.handler) {
+                        return this.jwksRoute.handler({
+                            jwks
+                        }, req, h)
+                    }
+
+                    return jwks
+                }
+            })
+        }
+    }
+
+    async checkAndRotateKeys(): Promise<void> {
+        return this.getJwksRotator()?.checkAndRotateKeys()
+    }
+
+    async generateKeyPair(): Promise<void> {
+        return this.getJwtAuthority()?.generateKeyPair()
     }
 
     setTokenType<Refs extends ReqRef = ReqRefDefaults>(value: TokenType<Refs>): this {
@@ -514,35 +622,14 @@ export abstract class OAuth2AuthDesign extends AuthDesign {
     }
 }
 
-export abstract class OAuth2WithJWKSAuthDesign extends OAuth2AuthDesign {
-
-    #jwksGenerator: JWKSGenerator
-
-    get jwksGenerator(): JWKSGenerator {
-        return this.#jwksGenerator
-    }
-
-    constructor(jwksStore?: JWKSStore, ttlSeconds?: number) {
-        super()
-        this.#jwksGenerator = new JWKSGenerator(jwksStore || getInMemoryJWKSStore(), ttlSeconds)
-    }
-
-    setTokenTTL(ttlSeconds?: number): this {
-        this.#jwksGenerator.ttl = ttlSeconds
-        return this
-    }
-
-    getTokenTTL(): number | undefined {
-        return this.#jwksGenerator.ttl
-    }
-}
-
 //#endregion OAuth2AuthDesign
 
 //#region JWKSRoute
 
 export interface JWKSParams {
-    jwks: JWKS
+    jwks: {
+        keys: JWK.RawKey[];
+    }
 }
 
 export type JWKSHandler<
@@ -612,7 +699,8 @@ export class DefaultJWKSRoute<
 //#region OAuth2AuthDesignBuilder
 
 export interface OAuth2AuthDesignBuilder {
-    setJwksStore(store: JWKSStore): this;
+    setJwksKeyStore(keyStore: JwksKeyStore): this;
+    setJwksRotatorOptions(jwksRotatorOptions: OAuth2JwksOptions['rotation']): this;
     build(): AuthDesign
 }
 
@@ -666,7 +754,8 @@ export interface OAuth2SingleAuthFlow {
 //#region OAuth2SingleAuthFlowBuilder
 
 export interface OAuth2SingleAuthFlowBuilder extends OAuth2AuthDesignBuilder {
-    setJwksStore(store: JWKSStore): this;
+    setJwksKeyStore(keyStore: JwksKeyStore): this;
+    setPublicKeyExpiry(ttl: number): this;
     build(): AuthDesign & OAuth2SingleAuthFlow
 }
 

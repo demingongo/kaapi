@@ -17,15 +17,15 @@ import {
     OAuth2RefreshTokenParams,
     OAuth2AuthDesign,
     OAuth2SingleAuthFlow,
-    IJWKSRoute,
     DefaultOAuth2RefreshTokenRoute,
     DefaultJWKSRoute,
     OAuth2AuthDesignBuilder,
     JWKSRoute,
-    OAuth2RefreshTokenRoute
+    OAuth2RefreshTokenRoute,
+    OAuth2AuthDesignOptions,
+    OAuth2JwksOptions
 } from './common'
-import { createIdToken, createJwtAccessToken, JWKSGenerator } from '../utils/jwks-generator'
-import { JWKS, JWKSStore } from '../utils/jwks-store'
+import { createIdToken, createJwtAccessToken } from '../utils/jwt-utils'
 import {
     DefaultOAuth2DeviceAuthorizationRoute,
     IOAuth2DeviceAuthorizationRoute,
@@ -35,9 +35,9 @@ import {
 import { DefaultOAuth2DeviceAuthTokenRoute, IOAuth2DeviceAuthTokenRoute, OAuth2DeviceAuthTokenParams, OAuth2DeviceAuthTokenRoute, OAuth2DeviceCodeTokenErrorBody } from './device-auth/token-route'
 import { TokenType, TokenTypeValidationResponse } from '../utils/token-types'
 import { BaseAuthUtil } from '@novice1/api-doc-generator/lib/utils/auth/baseAuthUtils'
-import { getInMemoryJWKSStore } from '../utils/in-memory-jwks-store'
 import { ClientAuthMethod, ClientSecretBasic, ClientSecretPost, NoneAuthMethod, TokenEndpointAuthMethod } from '../utils/client-auth-methods'
 import { JWTPayload } from 'jose'
+import { JwksKeyStore } from '../utils/jwt-authority'
 
 const GRANT_TYPE = 'urn:ietf:params:oauth:grant-type:device_code'
 
@@ -47,7 +47,7 @@ export type DefaultOAuth2DeviceAuthRefreshTokenRoute<Refs extends ReqRef = ReqRe
 
 //#region OAuth2DeviceAuthorization
 
-export interface OAuth2DeviceAuthorizationArg {
+export interface OAuth2DeviceAuthorizationArg extends OAuth2AuthDesignOptions {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     authorizationRoute: IOAuth2DeviceAuthorizationRoute<any>;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -55,11 +55,8 @@ export interface OAuth2DeviceAuthorizationArg {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     refreshTokenRoute?: IOAuth2RefreshTokenRoute<any>;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    jwksRoute?: IJWKSRoute<any>;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     options?: OAuth2AuthOptions<any>;
     strategyName?: string;
-    jwksStore?: JWKSStore;
 }
 
 export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth2SingleAuthFlow {
@@ -78,11 +75,6 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     protected refreshTokenRoute?: IOAuth2RefreshTokenRoute<any>
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    protected jwksRoute?: IJWKSRoute<any>;
-    protected jwksStore?: JWKSStore;
-    protected jwksGenerator?: JWKSGenerator | undefined;
-
     constructor(
         {
             authorizationRoute,
@@ -90,18 +82,14 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
             refreshTokenRoute,
             options,
             strategyName,
-            jwksStore,
-            jwksRoute
+            ...props
         }: OAuth2DeviceAuthorizationArg
     ) {
-        super();
-
-        this.jwksStore = jwksStore
+        super(props);
 
         this.authorizationRoute = authorizationRoute
         this.tokenRoute = tokenRoute
         this.refreshTokenRoute = refreshTokenRoute
-        this.jwksRoute = jwksRoute
 
         this.strategyName = strategyName || 'oauth2-device-authorization'
         this.options = options ? { ...options } : {}
@@ -124,14 +112,6 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
 
     noneAuthenticationMethod(): this {
         return this.withPkce()
-    }
-
-    protected getJwksGenerator() {
-        if (this.jwksGenerator) return this.jwksGenerator;
-        if (this.jwksRoute || this.jwksStore || this.options.useAccessTokenJwks) {
-            this.jwksGenerator = new JWKSGenerator(this.jwksStore || getInMemoryJWKSStore(), this.tokenTTL)
-        }
-        return this.jwksGenerator
     }
 
     protected async handleAuthorization<Refs extends ReqRef = ReqRefDefaults>(
@@ -199,7 +179,7 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
 
         const supported = this.getTokenEndpointAuthMethods();
         const authMethodsInstances = this.clientAuthMethods;
-        const jwksGenerator = this.getJwksGenerator();
+        const jwksGenerator = this.getJwtAuthority();
 
         const sr: {
             handle: Lifecycle.Method<{
@@ -247,21 +227,21 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
                         tokenType: tokenTypeInstance.prefix,
                         deviceCode: req.payload.device_code,
 
-                        ttl: jwksGenerator?.ttl || this.tokenTTL,
+                        ttl: this.tokenTTL,
                         createJwtAccessToken: jwksGenerator ? (async (payload) => {
                             return await createJwtAccessToken(jwksGenerator, {
                                 aud: t.postman?.getHost()[0] || '',
                                 iss: t.postman?.getHost()[0] || '',
                                 sub: clientId,
                                 ...payload
-                            })
+                            }, this.tokenTTL)
                         }) : undefined,
                         createIdToken: jwksGenerator && hasOpenIDScope() ? (async (payload) => {
                             return await createIdToken(jwksGenerator, {
                                 aud: clientId,
                                 iss: t.postman?.getHost()[0] || '',
                                 ...payload
-                            })
+                            }, this.tokenTTL)
                         }) : undefined
                     }
                     if (clientSecret) {
@@ -300,7 +280,7 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
     ) {
         const supported = this.getTokenEndpointAuthMethods();
         const authMethodsInstances = this.clientAuthMethods;
-        const jwksGenerator = this.getJwksGenerator();
+        const jwksGenerator = this.getJwtAuthority();
         const tokenTypePrefix = this.tokenType;
 
         const hasOpenIDScope = () => typeof this.getScopes()?.['openid'] != 'undefined';
@@ -351,7 +331,7 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
                         grantType: `${req.payload.grant_type}`,
                         tokenType: tokenTypePrefix,
                         refreshToken: `${req.payload.refresh_token}`,
-                        ttl: jwksGenerator?.ttl || this.tokenTTL,
+                        ttl: this.tokenTTL,
                         createJwtAccessToken: jwksGenerator ? (async (payload) => {
                             return await createJwtAccessToken(jwksGenerator, {
                                 aud: t.postman?.getHost()[0] || '',
@@ -359,14 +339,14 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
                                 sub: clientId,
                                 scope,
                                 ...payload
-                            })
+                            }, this.tokenTTL)
                         }) : undefined,
                         createIdToken: jwksGenerator && hasOpenIDScope() ? (async (payload) => {
                             return await createIdToken(jwksGenerator, {
                                 aud: clientId,
                                 iss: t.postman?.getHost()[0] || '',
                                 ...payload
-                            })
+                            }, this.tokenTTL)
                         }) : undefined
                     }
 
@@ -425,7 +405,7 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
     integrateStrategy(t: KaapiTools): void {
         const tokenTypePrefix = this.tokenType
         const tokenTypeInstance = this._tokenType
-        const getJwksGenerator = () => this.getJwksGenerator();
+        const getJwtAuthority = () => this.getJwtAuthority();
 
         t.scheme(this.strategyName, (_server, options) => {
 
@@ -451,7 +431,7 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
                         return Boom.unauthorized(null, tokenTypePrefix)
                     }
 
-                    const jwksGenerator = getJwksGenerator()
+                    const jwksGenerator = getJwtAuthority()
                     if (jwksGenerator && settings.useAccessTokenJwks) {
                         try {
                             jwtAccessTokenPayload = await jwksGenerator.verify(token)
@@ -500,8 +480,6 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
     }
 
     integrateHook(t: KaapiTools) {
-        const jwksGenerator = this.getJwksGenerator();
-
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const routesOptions: RouteOptions<any> = {
             plugins: {
@@ -560,31 +538,7 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
         }
 
         // jwks
-        if (this.jwksRoute && jwksGenerator) {
-            t.route({
-                path: this.jwksRoute.path,
-                method: 'GET',
-                options: {
-                    plugins: {
-                        kaapi: {
-                            docs: false
-                        }
-                    }
-                },
-                handler: async (req, h) => {
-
-                    const jwks = await jwksGenerator.generateIfNeeded() as JWKS
-
-                    if (this.jwksRoute?.handler) {
-                        return this.jwksRoute.handler({
-                            jwks
-                        }, req, h)
-                    }
-
-                    return jwks
-                }
-            })
-        }
+        this.createJwksEndpoint(t)
     }
 
 }
@@ -789,8 +743,25 @@ export class OAuth2DeviceAuthorizationBuilder implements OAuth2AuthDesignBuilder
         return this
     }
 
-    setJwksStore(store: JWKSStore): this {
-        this.params.jwksStore = store
+    setJwksKeyStore(keyStore: JwksKeyStore): this {
+        this.params.jwksOptions = this.params.jwksOptions || {}
+        this.params.jwksOptions.keyStore = keyStore
+        return this
+    }
+
+    /**
+     * 
+     * @param ttl seconds
+     */
+    setPublicKeyExpiry(ttl: number): this {
+        this.params.jwksOptions = this.params.jwksOptions || {}
+        this.params.jwksOptions.ttl = ttl
+        return this
+    }
+
+    setJwksRotatorOptions(jwksRotatorOptions: OAuth2JwksOptions['rotation']): this {
+        this.params.jwksOptions = this.params.jwksOptions || {}
+        this.params.jwksOptions.rotation = jwksRotatorOptions
         return this
     }
 

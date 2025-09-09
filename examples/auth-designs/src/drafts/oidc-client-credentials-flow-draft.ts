@@ -2,7 +2,7 @@ import {
     BearerToken,
     ClientSecretBasic,
     ClientSecretPost,
-    getInMemoryJWKSStore,
+    createInMemoryKeyStore,
     OAuth2TokenResponse,
     OIDCClientCredentialsBuilder
 } from '@kaapi/oauth2-auth-design'
@@ -17,9 +17,8 @@ export default OIDCClientCredentialsBuilder
     .addClientAuthenticationMethod(new ClientSecretPost())          // client authentication methods
     .useAccessTokenJwks(true)                                       // activates JWT access token verification with JWKS
     .jwksRoute(route => route.setPath('/.well-known/jwks.json'))    // optional, default '/oauth2/keys'
-    .setJwksStore(getInMemoryJWKSStore())                           // store for jwks, in-memory for dev
+    .setJwksKeyStore(createInMemoryKeyStore())                           // store for jwks, in-memory for dev
     .validate(async (_, { jwtAccessTokenPayload }) => {             // auth scheme
-
         // db query
         const user = jwtAccessTokenPayload?.type === 'machine' &&
             jwtAccessTokenPayload?.machine
@@ -68,7 +67,7 @@ export default OIDCClientCredentialsBuilder
 
                 try {
                     if (createJwtAccessToken) {
-                        const accessToken = await createJwtAccessToken({
+                        const { token: accessToken } = await createJwtAccessToken({
                             machine: client.details?.id,
                             name: client.details?.name,
                             type: 'machine'
@@ -77,10 +76,10 @@ export default OIDCClientCredentialsBuilder
                             .setExpiresIn(ttl)
                             .setScope(scope?.split(' '))
                             .setTokenType(tokenType)
-                            .setIDToken(
-                                (scope?.split(' ').includes('openid') || undefined) && await createIdToken?.({
+                            .setIdToken(
+                                (scope?.split(' ').includes('openid') || undefined) && (await createIdToken?.({
                                     sub: clientId
-                                })
+                                }))?.token
                             ) // add id_token if scope has 'openid'
                     }
                 } catch (err) {
@@ -102,4 +101,4 @@ export default OIDCClientCredentialsBuilder
         'manage:tokens': 'Allows the client to manage access or refresh tokens for automation.',
         'admin:all': 'Grants full administrative access to all available resources and operations.'
     })
-    .build()
+    //.build()

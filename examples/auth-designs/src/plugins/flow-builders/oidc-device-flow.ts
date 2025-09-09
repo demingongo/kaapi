@@ -10,7 +10,7 @@ const tokenType = new BearerToken()
 export default OIDCDeviceAuthorizationBuilder
     .create()
     .setTokenType(tokenType)
-    .setTokenTTL(3600)
+    .setTokenTTL(600) // 10m
     .addClientAuthenticationMethod(new NoneAuthMethod())
     .useAccessTokenJwks(true) // activates JWT access token verification with JWKS
     .validate(async (_, { token, jwtAccessTokenPayload }) => {
@@ -74,7 +74,7 @@ export default OIDCDeviceAuthorizationBuilder
             try {
                 //#region @TODO: validation + token
                 if (createJwtAccessToken) {
-                    const accessToken = await createJwtAccessToken({
+                    const { token: accessToken } = await createJwtAccessToken({
                         sub: '248289761001',
                         name: 'Jane Doe',
                     })
@@ -84,10 +84,10 @@ export default OIDCDeviceAuthorizationBuilder
                         .setRefreshToken((scope?.split(' ').includes('offline_access') || undefined) && refreshToken)
                         .setScope(scope?.split(' '))
                         .setTokenType(tokenType)
-                        .setIDToken(
-                            (scope?.split(' ').includes('openid') || undefined) && await createIdToken?.({
+                        .setIdToken(
+                            (scope?.split(' ').includes('openid') || undefined) && (await createIdToken?.({
                                 sub: clientId
-                            })
+                            }))?.token
                         )
                 }
                 //#endregion @TODO: validation + token
@@ -112,7 +112,7 @@ export default OIDCDeviceAuthorizationBuilder
             if (!ttl) {
                 return { error: 'access_denied', error_description: 'Missing ttl' }
             }
-            const accessToken = await createJwtAccessToken({
+            const { token: accessToken } = await createJwtAccessToken({
                 sub: '248289761001',
                 name: 'Jane Doe',
             })
@@ -122,10 +122,10 @@ export default OIDCDeviceAuthorizationBuilder
                 .setRefreshToken(newRefreshToken)
                 .setScope(scope?.split(' '))
                 .setTokenType(tokenType)
-                .setIDToken(
-                    (scope?.split(' ').includes('openid') || undefined) && await createIdToken?.({
+                .setIdToken(
+                    (scope?.split(' ').includes('openid') || undefined) && (await createIdToken?.({
                         sub: clientId
-                    })
+                    }))?.token
                 )
         }
 

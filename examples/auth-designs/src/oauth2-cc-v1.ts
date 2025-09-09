@@ -2,13 +2,13 @@ import {
     OAuth2TokenResponse,
     BearerToken,
     //DPoPToken,
-    getInMemoryJWKSStore,
     //getInMemoryCacheSet,
     //OAuth2ClientCredentialsBuilder,
     OIDCClientCredentialsBuilder,
     MultipleFlowsBuilder,
     ClientSecretPost,
     ClientSecretBasic,
+    createInMemoryKeyStore,
     //ClientSecretJwt,
     //PrivateKeyJwt
 } from '@kaapi/oauth2-auth-design';
@@ -21,8 +21,8 @@ const tokenType = new BearerToken()
 
 export const clientCredentialsDesignV1 = MultipleFlowsBuilder.create()
     .tokenEndpoint('/oauth2/m2mcc/token')
-    .setTokenTTL(36000)
-    .setJwksStore(getInMemoryJWKSStore({ timeThreshold: 36000 / 2 })) // store for JWKS
+    .setPublicKeyExpiry(36000 * 2)
+    .setJwksKeyStore(createInMemoryKeyStore()) // store for JWKS
     .jwksRoute(route => route.setPath('/oauth2/m2mcc/keys')) // activates jwks uri
     .add(
         OIDCClientCredentialsBuilder
@@ -54,51 +54,52 @@ export const clientCredentialsDesignV1 = MultipleFlowsBuilder.create()
                     }
                 }
             })
-            .tokenRoute(route => 
+            .tokenRoute(route =>
                 route//.setPath('/oauth2/m2m/token')
-                .generateToken(async ({ clientId, clientSecret, ttl, scope, createJwtAccessToken, createIdToken }, _req) => {
+                    .generateToken(async ({ clientId, clientSecret, ttl, scope, createJwtAccessToken, createIdToken }, _req) => {
 
-                    console.log('clientId', clientId)
-                    console.log('clientSecret', clientSecret)
-                    console.log('ttl', ttl)
+                        console.log('clientId', clientId)
+                        console.log('clientSecret', clientSecret)
+                        console.log('ttl', ttl)
 
-                    if (!clientSecret) {
-                        return { error: 'invalid_request', error_description: 'Token Request was missing the \'client_secret\' parameter.' }
-                    }
-                    if (!ttl) {
-                        return { error: 'invalid_request', error_description: 'Missing ttl' }
-                    }
-                    try {
-                        //#region @TODO: validation + token
-                        if (createJwtAccessToken) {
-                            const accessToken = await createJwtAccessToken({
-                                machine: '248289761001',
-                                name: 'Jane Doe',
-                            })
-                            const refreshToken = 'generated_refresh_token'/*await createJwtAccessToken({
+                        if (!clientSecret) {
+                            return { error: 'invalid_request', error_description: 'Token Request was missing the \'client_secret\' parameter.' }
+                        }
+                        if (!ttl) {
+                            return { error: 'invalid_request', error_description: 'Missing ttl' }
+                        }
+                        try {
+                            //#region @TODO: validation + token
+                            if (createJwtAccessToken) {
+                                const { token: accessToken } = await createJwtAccessToken({
+                                    machine: '248289761001',
+                                    name: 'Jane Doe',
+                                })
+                                const refreshToken = 'generated_refresh_token'/*await createJwtAccessToken({
                                 machine: '248289761001',
                                 name: 'Jane Doe',
                                 refresh: true,
                                 exp: ttl * 2
                             })*/
-                            return new OAuth2TokenResponse({ access_token: accessToken })
-                                .setExpiresIn(ttl)
-                                .setRefreshToken(refreshToken)
-                                .setScope(scope?.split(' '))
-                                .setTokenType(tokenType)
-                                .setIDToken(
-                                    (scope?.split(' ').includes('openid') || undefined) && await createIdToken?.({
-                                        sub: clientId
-                                    })
-                                )
+                                const idToken = (scope?.split(' ').includes('openid') || undefined) && await createIdToken?.({
+                                    sub: clientId
+                                })
+                                return new OAuth2TokenResponse({ access_token: accessToken })
+                                    .setExpiresIn(ttl)
+                                    .setRefreshToken(refreshToken)
+                                    .setScope(scope?.split(' '))
+                                    .setTokenType(tokenType)
+                                    .setIdToken(
+                                        idToken?.token
+                                    )
+                            }
+                            //#endregion @TODO: validation + token
+                        } catch (err) {
+                            console.error(err)
                         }
-                        //#endregion @TODO: validation + token
-                    } catch (err) {
-                        console.error(err)
-                    }
 
-                    return null
-                }))
+                        return null
+                    }))
             .setDescription('This API uses OAuth 2 with the client credentials grant flow. [More info](https://oauth.net/2/grant-types/authorization-code/)')
             .setScopes({
                 'read:data': 'Allows the client to retrieve or query data from the service.',
@@ -176,7 +177,7 @@ OIDCClientCredentialsBuilder
                     .setRefreshToken(refreshToken)
                     .setScope(scope?.split(' '))
                     .setTokenType(tokenType)
-                    .setIDToken(
+                    .setIdToken(
                         (scope?.split(' ').includes('openid') || undefined) && await createIdToken?.({
                             sub: clientId
                         })

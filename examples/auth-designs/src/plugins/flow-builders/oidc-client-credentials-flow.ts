@@ -11,7 +11,7 @@ const tokenType = new BearerToken()
 export default OIDCClientCredentialsBuilder
     .create()
     .setTokenType(tokenType)
-    .setTokenTTL(36000)
+    .setTokenTTL(600) // 10m
     .addClientAuthenticationMethod(new ClientSecretPost())
     .addClientAuthenticationMethod(new ClientSecretBasic())
     .useAccessTokenJwks(true) // activates JWT access token verification with JWKS
@@ -53,7 +53,7 @@ export default OIDCClientCredentialsBuilder
                 try {
                     //#region @TODO: validation + token
                     if (createJwtAccessToken) {
-                        const accessToken = await createJwtAccessToken({
+                        const { token: accessToken } = await createJwtAccessToken({
                             machine: '248289761001',
                             name: 'Jane Doe',
                         })
@@ -68,10 +68,10 @@ export default OIDCClientCredentialsBuilder
                             .setRefreshToken(refreshToken)
                             .setScope(scope?.split(' '))
                             .setTokenType(tokenType)
-                            .setIDToken(
-                                (scope?.split(' ').includes('openid') || undefined) && await createIdToken?.({
+                            .setIdToken(
+                                (scope?.split(' ').includes('openid') || undefined) && (await createIdToken?.({
                                     sub: clientId
-                                })
+                                }))?.token
                             )
                     }
                     //#endregion @TODO: validation + token

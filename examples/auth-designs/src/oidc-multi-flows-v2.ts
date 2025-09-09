@@ -2,7 +2,6 @@ import {
     OAuth2TokenResponse,
     BearerToken,
     //DPoPToken,
-    getInMemoryJWKSStore,
     //getInMemoryCacheSet,
     //OAuth2ClientCredentialsBuilder,
     OIDCClientCredentialsBuilder,
@@ -12,6 +11,7 @@ import {
     OIDCAuthorizationCodeBuilder,
     NoneAuthMethod,
     OIDCDeviceAuthorizationBuilder,
+    createInMemoryKeyStore,
     //ClientSecretJwt,
     //PrivateKeyJwt
 } from '@kaapi/oauth2-auth-design';
@@ -25,8 +25,8 @@ const tokenType = new BearerToken()
 export const OIDCMultiFlowsDesignV2 = MultipleFlowsBuilder
     .create()
     .tokenEndpoint('/oauth2/v2/token')
-    .setTokenTTL(36000)
-    .setJwksStore(getInMemoryJWKSStore({ timeThreshold: 36000 / 2 })) // store for JWKS
+    .setPublicKeyExpiry(36000 * 2)
+    .setJwksKeyStore(createInMemoryKeyStore()) // store for JWKS
     .jwksRoute(route => route.setPath('/oauth2/v2/keys')) // activates jwks uri
     .add(
         OIDCClientCredentialsBuilder
@@ -75,7 +75,7 @@ export const OIDCMultiFlowsDesignV2 = MultipleFlowsBuilder
                         try {
                             //#region @TODO: validation + token
                             if (createJwtAccessToken) {
-                                const accessToken = await createJwtAccessToken({
+                                const { token: accessToken } = await createJwtAccessToken({
                                     machine: '248289761001',
                                     name: 'Jane Doe',
                                 })
@@ -85,15 +85,16 @@ export const OIDCMultiFlowsDesignV2 = MultipleFlowsBuilder
                                 refresh: true,
                                 exp: ttl * 2
                             })*/
+                                const idToken = (scope?.split(' ').includes('openid') || undefined) && await createIdToken?.({
+                                    sub: clientId
+                                })
                                 return new OAuth2TokenResponse({ access_token: accessToken })
                                     .setExpiresIn(ttl)
                                     .setRefreshToken(refreshToken)
                                     .setScope(scope?.split(' '))
                                     .setTokenType(tokenType)
-                                    .setIDToken(
-                                        (scope?.split(' ').includes('openid') || undefined) && await createIdToken?.({
-                                            sub: clientId
-                                        })
+                                    .setIdToken(
+                                        idToken?.token
                                     )
                             }
                             //#endregion @TODO: validation + token
@@ -172,7 +173,7 @@ export const OIDCMultiFlowsDesignV2 = MultipleFlowsBuilder
                         console.log('ttl', ttl)
 
                         const decodedCode = JSON.parse(code);
-                        const scope = decodedCode.scope;
+                        const scope: string = decodedCode.scope;
 
                         console.log('scope', scope)
 
@@ -185,20 +186,21 @@ export const OIDCMultiFlowsDesignV2 = MultipleFlowsBuilder
                         try {
                             //#region @TODO: validation + token
                             if (createJwtAccessToken) {
-                                const accessToken = await createJwtAccessToken({
+                                const { token: accessToken } = await createJwtAccessToken({
                                     sub: '248289761001',
                                     name: 'Jane Doe',
                                 })
                                 const refreshToken = 'generated_refresh_token_from_ac'
+                                const idToken = (scope?.split(' ').includes('openid') || undefined) && await createIdToken?.({
+                                    sub: clientId
+                                })
                                 return new OAuth2TokenResponse({ access_token: accessToken })
                                     .setExpiresIn(ttl)
                                     .setRefreshToken((scope?.split(' ').includes('offline_access') || undefined) && refreshToken)
                                     .setScope(scope?.split(' '))
                                     .setTokenType(tokenType)
-                                    .setIDToken(
-                                        (scope?.split(' ').includes('openid') || undefined) && await createIdToken?.({
-                                            sub: clientId
-                                        })
+                                    .setIdToken(
+                                        idToken?.token
                                     )
                             }
                             //#endregion @TODO: validation + token
@@ -219,19 +221,20 @@ export const OIDCMultiFlowsDesignV2 = MultipleFlowsBuilder
 
                     //#region @TODO: validation + refresh token
                     if (refreshToken === 'generated_refresh_token_from_ac' && createJwtAccessToken) {
-                        const accessToken = await createJwtAccessToken({
+                        const { token: accessToken } = await createJwtAccessToken({
                             sub: '248289761001',
                             name: 'Jane Doe',
+                        })
+                        const idToken = (scope?.split(' ').includes('openid') || undefined) && await createIdToken?.({
+                            sub: clientId
                         })
                         return new OAuth2TokenResponse({ access_token: accessToken })
                             .setExpiresIn(ttl)
                             .setRefreshToken(refreshToken)
                             .setScope(scope?.split(' '))
                             .setTokenType(tokenType)
-                            .setIDToken(
-                                (scope?.split(' ').includes('openid') || undefined) && await createIdToken?.({
-                                    sub: clientId
-                                })
+                            .setIdToken(
+                                idToken?.token
                             )
                     }
 
@@ -310,7 +313,7 @@ export const OIDCMultiFlowsDesignV2 = MultipleFlowsBuilder
                         console.log('ttl', ttl)
 
                         const decodedCode = JSON.parse(deviceCode);
-                        const scope = decodedCode.scope;
+                        const scope: string = decodedCode.scope;
 
                         console.log('scope', scope)
 
@@ -323,20 +326,22 @@ export const OIDCMultiFlowsDesignV2 = MultipleFlowsBuilder
                         try {
                             //#region @TODO: validation + token
                             if (createJwtAccessToken) {
-                                const accessToken = await createJwtAccessToken({
+                                const { token: accessToken } = await createJwtAccessToken({
                                     sub: '248289761001',
                                     name: 'Jane Doe',
                                 })
                                 const refreshToken = 'generated_refresh_token_from_dc'
+
+                                const idToken = (scope?.split(' ').includes('openid') || undefined) && await createIdToken?.({
+                                    sub: clientId
+                                })
                                 return new OAuth2TokenResponse({ access_token: accessToken })
                                     .setExpiresIn(ttl)
                                     .setRefreshToken((scope?.split(' ').includes('offline_access') || undefined) && refreshToken)
                                     .setScope(scope?.split(' '))
                                     .setTokenType(tokenType)
-                                    .setIDToken(
-                                        (scope?.split(' ').includes('openid') || undefined) && await createIdToken?.({
-                                            sub: clientId
-                                        })
+                                    .setIdToken(
+                                        idToken?.token
                                     )
                             }
                             //#endregion @TODO: validation + token
@@ -357,19 +362,20 @@ export const OIDCMultiFlowsDesignV2 = MultipleFlowsBuilder
 
                     //#region @TODO: validation + refresh token
                     if (refreshToken === 'generated_refresh_token_from_dc' && createJwtAccessToken) {
-                        const accessToken = await createJwtAccessToken({
+                        const { token: accessToken } = await createJwtAccessToken({
                             sub: '248289761001',
                             name: 'Jane Doe',
+                        })
+                        const idToken = (scope?.split(' ').includes('openid') || undefined) && await createIdToken?.({
+                            sub: clientId
                         })
                         return new OAuth2TokenResponse({ access_token: accessToken })
                             .setExpiresIn(ttl)
                             .setRefreshToken(refreshToken)
                             .setScope(scope?.split(' '))
                             .setTokenType(tokenType)
-                            .setIDToken(
-                                (scope?.split(' ').includes('openid') || undefined) && await createIdToken?.({
-                                    sub: clientId
-                                })
+                            .setIdToken(
+                                idToken?.token
                             )
                     }
 

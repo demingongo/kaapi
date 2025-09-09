@@ -15,7 +15,7 @@ import {
     OAuth2TokenRoute,
     DefaultOAuth2TokenRoute
 } from '../common'
-import { verifyCodeVerifier } from '../../utils/verifyCodeVerifier'
+import { verifyCodeVerifier } from '../../utils/verify-code-verifier'
 
 //#region TokenRoute
 

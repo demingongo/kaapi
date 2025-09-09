@@ -141,22 +141,23 @@ export const openIDDesign = new OIDCAuthorizationCode(
                     const accessToken = 'generated_access_token'
                     const refreshToken = 'generated_refresh_token'
                     const scope: string[] = ['openid']
+                    const idToken = await createIdToken?.({
+                        sub: '248289761001',
+                        name: 'Jane Doe',
+                        given_name: 'Jane',
+                        family_name: 'Doe',
+                        preferred_username: 'janed',
+                        email: 'janed@example.com',
+                        email_verified: true,
+                        picture: 'https://example.com/janed.jpg'
+                    })
                     return h.response(
-                        new OAuth2TokenResponse({access_token: accessToken})
+                        new OAuth2TokenResponse({ access_token: accessToken })
                             .setExpiresIn(36000)
                             .setRefreshToken(refreshToken)
                             .setScope(scope)
-                            .setIDToken(
-                                await createIdToken?.({
-                                    sub: '248289761001',
-                                    name: 'Jane Doe',
-                                    given_name: 'Jane',
-                                    family_name: 'Doe',
-                                    preferred_username: 'janed',
-                                    email: 'janed@example.com',
-                                    email_verified: true,
-                                    picture: 'https://example.com/janed.jpg'
-                                })
+                            .setIdToken(
+                                idToken?.token
                             )).code(200)
                     //#endregion @TODO: validation + token
                 } catch (err) {
@@ -183,7 +184,7 @@ export const openIDDesign = new OIDCAuthorizationCode(
             }) as OAuth2RefreshTokenHandler,
         ),
         options: {
-            validate: async (_req, {token}, h) => {
+            validate: async (_req, { token }, h) => {
                 if (token) {
                     //#region @TODO: validation
                     if (token != 'generated_access_token') {

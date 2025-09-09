@@ -18,7 +18,7 @@ const tokenType = new DPoPToken()
 export default OIDCAuthorizationCodeBuilder
     .create()
     .setTokenType(tokenType)
-    .setTokenTTL(36000)
+    .setTokenTTL(3600) // 1h
     .addClientAuthenticationMethod(new ClientSecretPost())
     .addClientAuthenticationMethod(new ClientSecretBasic())
     .addClientAuthenticationMethod(new NoneAuthMethod())
@@ -88,7 +88,7 @@ export default OIDCAuthorizationCodeBuilder
                 try {
                     //#region @TODO: validation + token
                     if (createJwtAccessToken) {
-                        const accessToken = await createJwtAccessToken({
+                        const { token: accessToken } = await createJwtAccessToken({
                             sub: '248289761001',
                             name: 'Jane Doe',
                         })
@@ -98,10 +98,10 @@ export default OIDCAuthorizationCodeBuilder
                             .setRefreshToken((scope?.split(' ').includes('offline_access') || undefined) && refreshToken)
                             .setScope(scope?.split(' '))
                             .setTokenType(tokenType)
-                            .setIDToken(
-                                (scope?.split(' ').includes('openid') || undefined) && await createIdToken?.({
+                            .setIdToken(
+                                (scope?.split(' ').includes('openid') || undefined) && (await createIdToken?.({
                                     sub: clientId
-                                })
+                                }))?.token
                             )
                     }
                     //#endregion @TODO: validation + token
@@ -125,7 +125,7 @@ export default OIDCAuthorizationCodeBuilder
         try {
             //#region @TODO: validation + token
             if (refreshToken === 'generated_refresh_token_from_ac' && createJwtAccessToken) {
-                const accessToken = await createJwtAccessToken({
+                const { token: accessToken } = await createJwtAccessToken({
                     sub: '248289761001',
                     name: 'Jane Doe',
                 })
@@ -135,10 +135,10 @@ export default OIDCAuthorizationCodeBuilder
                     .setRefreshToken(newRefreshToken)
                     .setScope(scope?.split(' '))
                     .setTokenType(tokenType)
-                    .setIDToken(
-                        (scope?.split(' ').includes('openid') || undefined) && await createIdToken?.({
+                    .setIdToken(
+                        (scope?.split(' ').includes('openid') || undefined) && (await createIdToken?.({
                             sub: clientId
-                        })
+                        }))?.token
                     )
             }
             //#endregion @TODO: validation + token

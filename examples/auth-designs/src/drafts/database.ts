@@ -55,7 +55,7 @@ clients.insertOne({
     id: 'svc-data-ingestor',
     name: 'Data Ingestor Service',
     secret: '123',
-    user: user1
+    details: user1
 })
 clients.insertOne({
     id: 'public-app',

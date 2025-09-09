@@ -21,7 +21,8 @@ class InMemoryKeyStore implements JwksKeyStore, JwksRotationTimestampStore {
 
     async getPublicKeys(): Promise<object[]> {
         const now = Date.now();
-        return this.publicKeys.filter(k => k.exp > now).map(k => k.key);
+        this.publicKeys = this.publicKeys.filter(k => k.exp > now)
+        return this.publicKeys.map(k => k.key);
     }
 
     async getLastRotationTimestamp(): Promise<number> {

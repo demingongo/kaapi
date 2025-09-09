@@ -25,7 +25,7 @@ export const openIDDesign2 = new OIDCAuthorizationCode(
             // to announce the use of dpop in openid-configuration
             ...tokenType.configuration
         },
-        jwksStore: undefined,
+        jwksOptions: undefined,
         jwksRoute: new JWKSRoute('/openid/jwks'),
         /*
         userInfoRoute: new OpenIDUserInfoRoute('/openid/session', async () => {
@@ -73,12 +73,7 @@ export const openIDDesign2 = new OIDCAuthorizationCode(
                     const accessToken = 'generated_access_token'
                     const refreshToken = 'generated_refresh_token'
                     const scope: string[] = ['openid']
-                    return new OAuth2TokenResponse({ access_token: accessToken })
-                        .setExpiresIn(ttl)
-                        .setRefreshToken(refreshToken)
-                        .setScope(scope)
-                        .setIDToken(
-                            await createIdToken?.({
+                    const idToken = await createIdToken?.({
                                 sub: '248289761001',
                                 name: 'Jane Doe',
                                 given_name: 'Jane',
@@ -88,6 +83,12 @@ export const openIDDesign2 = new OIDCAuthorizationCode(
                                 email_verified: true,
                                 picture: 'https://example.com/janed.jpg'
                             })
+                    return new OAuth2TokenResponse({ access_token: accessToken })
+                        .setExpiresIn(ttl)
+                        .setRefreshToken(refreshToken)
+                        .setScope(scope)
+                        .setIdToken(
+                            idToken?.token
                         )
                         .setTokenType(tokenType)
                     //#endregion @TODO: validation + token

@@ -5,7 +5,7 @@ import {
     OIDCAuthorizationCodeBuilder,
     ClientSecretBasic,
     ClientSecretPost,
-    getInMemoryJWKSStore,
+    createInMemoryKeyStore,
     //ClientSecretPost,
     //ClientSecretBasic,
     //ClientSecretJwt,
@@ -51,7 +51,7 @@ export const openIDDesignV1 = OIDCAuthorizationCodeBuilder
             }
         }
     })
-    .setJwksStore(getInMemoryJWKSStore())
+    .setJwksKeyStore(createInMemoryKeyStore())
     .jwksRoute(route => route.setPath('/oauth2/v1/keys'))
     .authorizationRoute<object, { Payload: { email: string, password: string } }>(route => route
         .setPath('/oauth2/v1/authorization')
@@ -84,21 +84,22 @@ export const openIDDesignV1 = OIDCAuthorizationCodeBuilder
                 const accessToken = 'generated_access_token'
                 const refreshToken = 'generated_refresh_token'
                 const scope: string[] = ['openid']
+                const idToken = await createIdToken?.({
+                    sub: '248289761001',
+                    name: 'Jane Doe',
+                    given_name: 'Jane',
+                    family_name: 'Doe',
+                    preferred_username: 'janed',
+                    email: 'janed@example.com',
+                    email_verified: true,
+                    picture: 'https://example.com/janed.jpg'
+                })
                 return new OAuth2TokenResponse({ access_token: accessToken })
                     .setExpiresIn(ttl)
                     .setRefreshToken(refreshToken)
                     .setScope(scope)
-                    .setIDToken(
-                        await createIdToken?.({
-                            sub: '248289761001',
-                            name: 'Jane Doe',
-                            given_name: 'Jane',
-                            family_name: 'Doe',
-                            preferred_username: 'janed',
-                            email: 'janed@example.com',
-                            email_verified: true,
-                            picture: 'https://example.com/janed.jpg'
-                        })
+                    .setIdToken(
+                        idToken?.token
                     )
                     .setTokenType(tokenType)
                 //#endregion @TODO: validation + token

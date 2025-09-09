@@ -17,15 +17,15 @@ import {
     OAuth2RefreshTokenParams,
     OAuth2AuthDesign,
     OAuth2SingleAuthFlow,
-    IJWKSRoute,
     DefaultOAuth2RefreshTokenRoute,
     DefaultJWKSRoute,
     OAuth2AuthDesignBuilder,
     JWKSRoute,
-    OAuth2RefreshTokenRoute
+    OAuth2RefreshTokenRoute,
+    OAuth2AuthDesignOptions,
+    OAuth2JwksOptions
 } from './common'
-import { createIdToken, createJwtAccessToken, JWKSGenerator } from '../utils/jwks-generator'
-import { JWKS, JWKSStore } from '../utils/jwks-store'
+import { createIdToken, createJwtAccessToken } from '../utils/jwt-utils'
 import {
     DefaultOAuth2ACAuthorizationRoute,
     IOAuth2ACAuthorizationRoute,
@@ -35,14 +35,14 @@ import {
 import { DefaultOAuth2ACTokenRoute, IOAuth2ACTokenRoute, OAuth2ACTokenParams, OAuth2ACTokenRoute } from './auth-code/token-route'
 import { TokenType, TokenTypeValidationResponse } from '../utils/token-types'
 import { BaseAuthUtil } from '@novice1/api-doc-generator/lib/utils/auth/baseAuthUtils'
-import { getInMemoryJWKSStore } from '../utils/in-memory-jwks-store'
 import { ClientAuthMethod, ClientSecretBasic, ClientSecretPost, NoneAuthMethod, TokenEndpointAuthMethod } from '../utils/client-auth-methods'
 import { JWTPayload } from 'jose'
-import { verifyCodeVerifier } from '../utils/verifyCodeVerifier'
+import { verifyCodeVerifier } from '../utils/verify-code-verifier'
+import { JwksKeyStore } from '../utils/jwt-authority'
 
 //#region OAuth2AuthorizationCode
 
-export interface OAuth2AuthorizationCodeArg {
+export interface OAuth2AuthorizationCodeArg extends OAuth2AuthDesignOptions {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     authorizationRoute: IOAuth2ACAuthorizationRoute<any, any>;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -50,11 +50,8 @@ export interface OAuth2AuthorizationCodeArg {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     refreshTokenRoute?: IOAuth2RefreshTokenRoute<any>;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    jwksRoute?: IJWKSRoute<any>;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     options?: OAuth2AuthOptions<any>;
     strategyName?: string;
-    jwksStore?: JWKSStore;
 }
 
 export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2SingleAuthFlow {
@@ -73,11 +70,6 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     protected refreshTokenRoute?: IOAuth2RefreshTokenRoute<any>
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    protected jwksRoute?: IJWKSRoute<any>;
-    protected jwksStore?: JWKSStore;
-    protected jwksGenerator?: JWKSGenerator | undefined;
-
     constructor(
         {
             authorizationRoute,
@@ -85,18 +77,14 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
             refreshTokenRoute,
             options,
             strategyName,
-            jwksStore,
-            jwksRoute
+            ...props
         }: OAuth2AuthorizationCodeArg
     ) {
-        super();
-
-        this.jwksStore = jwksStore
+        super(props);
 
         this.authorizationRoute = authorizationRoute
         this.tokenRoute = tokenRoute
         this.refreshTokenRoute = refreshTokenRoute
-        this.jwksRoute = jwksRoute
 
         this.strategyName = strategyName || 'oauth2-authorization-code'
         this.options = options ? { ...options } : {}
@@ -119,14 +107,6 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
 
     noneAuthenticationMethod(): this {
         return this.withPkce()
-    }
-
-    protected getJwksGenerator() {
-        if (this.jwksGenerator) return this.jwksGenerator;
-        if (this.jwksRoute || this.jwksStore || this.options.useAccessTokenJwks) {
-            this.jwksGenerator = new JWKSGenerator(this.jwksStore || getInMemoryJWKSStore(), this.tokenTTL)
-        }
-        return this.jwksGenerator
     }
 
     protected async handleAuthorization<Refs extends ReqRef = ReqRefDefaults>(
@@ -215,7 +195,7 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
 
         const supported = this.getTokenEndpointAuthMethods();
         const authMethodsInstances = this.clientAuthMethods;
-        const jwksGenerator = this.getJwksGenerator();
+        const jwksGenerator = this.getJwtAuthority();
 
         const sr: {
             handle: Lifecycle.Method<{
@@ -265,21 +245,21 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
                         code: req.payload.code,
                         verifyCodeVerifier,
 
-                        ttl: jwksGenerator?.ttl || this.tokenTTL,
+                        ttl: this.tokenTTL,
                         createJwtAccessToken: jwksGenerator ? (async (payload) => {
                             return await createJwtAccessToken(jwksGenerator, {
                                 aud: t.postman?.getHost()[0] || '',
                                 iss: t.postman?.getHost()[0] || '',
                                 sub: clientId,
                                 ...payload
-                            })
+                            }, this.tokenTTL)
                         }) : undefined,
                         createIdToken: jwksGenerator && hasOpenIDScope() ? (async (payload) => {
                             return await createIdToken(jwksGenerator, {
                                 aud: clientId,
                                 iss: t.postman?.getHost()[0] || '',
                                 ...payload
-                            })
+                            }, this.tokenTTL)
                         }) : undefined
                     }
                     if (clientSecret) {
@@ -324,7 +304,7 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
     ) {
         const supported = this.getTokenEndpointAuthMethods();
         const authMethodsInstances = this.clientAuthMethods;
-        const jwksGenerator = this.getJwksGenerator();
+        const jwksGenerator = this.getJwtAuthority();
         const tokenTypePrefix = this.tokenType;
 
         const hasOpenIDScope = () => typeof this.getScopes()?.['openid'] != 'undefined';
@@ -375,7 +355,7 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
                         grantType: `${req.payload.grant_type}`,
                         tokenType: tokenTypePrefix,
                         refreshToken: `${req.payload.refresh_token}`,
-                        ttl: jwksGenerator?.ttl || this.tokenTTL,
+                        ttl: this.tokenTTL,
                         createJwtAccessToken: jwksGenerator ? (async (payload) => {
                             return await createJwtAccessToken(jwksGenerator, {
                                 aud: t.postman?.getHost()[0] || '',
@@ -383,14 +363,14 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
                                 sub: clientId,
                                 scope,
                                 ...payload
-                            })
+                            }, this.tokenTTL)
                         }) : undefined,
                         createIdToken: jwksGenerator && hasOpenIDScope() ? (async (payload) => {
                             return await createIdToken(jwksGenerator, {
                                 aud: clientId,
                                 iss: t.postman?.getHost()[0] || '',
                                 ...payload
-                            })
+                            }, this.tokenTTL)
                         }) : undefined
                     }
 
@@ -449,7 +429,7 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
     integrateStrategy(t: KaapiTools): void {
         const tokenTypePrefix = this.tokenType
         const tokenTypeInstance = this._tokenType
-        const getJwksGenerator = () => this.getJwksGenerator();
+        const getJwksGenerator = () => this.getJwtAuthority();
 
         t.scheme(this.strategyName, (_server, options) => {
 
@@ -524,8 +504,6 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
     }
 
     integrateHook(t: KaapiTools) {
-        const jwksGenerator = this.getJwksGenerator();
-
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const routesOptions: RouteOptions<any> = {
             plugins: {
@@ -584,31 +562,7 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
         }
 
         // jwks
-        if (this.jwksRoute && jwksGenerator) {
-            t.route({
-                path: this.jwksRoute.path,
-                method: 'GET',
-                options: {
-                    plugins: {
-                        kaapi: {
-                            docs: false
-                        }
-                    }
-                },
-                handler: async (req, h) => {
-
-                    const jwks = await jwksGenerator.generateIfNeeded() as JWKS
-
-                    if (this.jwksRoute?.handler) {
-                        return this.jwksRoute.handler({
-                            jwks
-                        }, req, h)
-                    }
-
-                    return jwks
-                }
-            })
-        }
+        this.createJwksEndpoint(t)
     }
 
 }
@@ -814,8 +768,25 @@ export class OAuth2AuthorizationCodeBuilder implements OAuth2AuthDesignBuilder {
         return this
     }
 
-    setJwksStore(store: JWKSStore): this {
-        this.params.jwksStore = store
+    setJwksKeyStore(keyStore: JwksKeyStore): this {
+        this.params.jwksOptions = this.params.jwksOptions || {}
+        this.params.jwksOptions.keyStore = keyStore
+        return this
+    }
+
+    /**
+     * 
+     * @param ttl seconds
+     */
+    setPublicKeyExpiry(ttl: number): this {
+        this.params.jwksOptions = this.params.jwksOptions || {}
+        this.params.jwksOptions.ttl = ttl
+        return this
+    }
+
+    setJwksRotatorOptions(jwksRotatorOptions: OAuth2JwksOptions['rotation']): this {
+        this.params.jwksOptions = this.params.jwksOptions || {}
+        this.params.jwksOptions.rotation = jwksRotatorOptions
         return this
     }
 
