@@ -191,3 +191,67 @@ You're:
 * Blocking `jwk` and invalid algorithms ✅
 
 ---
+
+Yes — **your library implementation already covers the most critical security aspects** of JWT signing and verification. Here's a breakdown of where your responsibilities end and what falls on the developer using your library:
+
+---
+
+## ✅ What Your Library Already Secures
+
+These are **core responsibilities** that the library must handle — and you **do**:
+
+| Security Area                  | Covered? | Notes                                          |
+| ------------------------------ | -------- | ---------------------------------------------- |
+| ✅ Private key signing only     | ✔️       | Only your code can generate valid tokens       |
+| ✅ Public key verification only | ✔️       | Only keys from your `JwksKeyStore` are trusted |
+| ✅ `kid` validation             | ✔️       | Prevents arbitrary key injection               |
+| ✅ `alg` enforcement (`RS256`)  | ✔️       | Mitigates alg-confusion attacks                |
+| ✅ Reject `jwk` in JWT header   | ✔️       | Prevents JWK header injection attacks          |
+| ✅ `typ` sanity check           | ✔️       | Adds format validation                         |
+
+This is **the minimum required for a secure and correct JWT authority**.
+
+---
+
+## 🛠️ What Developers Should Handle Themselves
+
+There are some things that are **application-specific**, and you’re absolutely right to leave them to the dev:
+
+| Responsibility                                                    | Why it’s app-level                                     |
+| ----------------------------------------------------------------- | ------------------------------------------------------ |
+| ❌ `exp`, `nbf`, `iat` validation                                  | You can’t assume token lifespan or clock drift margins |
+| ❌ `aud`, `iss`, `sub`, etc. checks                                | These are domain-specific claims                       |
+| ❌ Token revocation or `jti` replay protection                     | Usually depends on storage and business logic          |
+| ❌ `scope` or `role` checks                                        | Authz is app-specific                                  |
+| ❌ Business-level validation (user exists, machine ID valid, etc.) | Should be in the `validate()` callback in the builder  |
+
+You’ve kept your library focused on **JWT trust establishment**, and delegated **authorization and domain validation** to the app developer — which is exactly the right separation of concerns.
+
+---
+
+## 🧠 Developer Expectations
+
+If you're providing this as part of a framework or shared lib, you might want to document something like:
+
+```markdown
+### ⚠️ Developer Responsibilities
+
+This library ensures JWTs are securely signed and verified.
+
+However, application developers are responsible for:
+
+- Validating `exp`, `nbf`, and `iat` claims
+- Checking application-specific claims (`aud`, `iss`, `sub`, etc.)
+- Enforcing access control based on `scope`, `role`, or permissions
+- Implementing token revocation or replay prevention if needed
+- Performing user or machine identity lookups as needed
+```
+
+---
+
+## ✅ Final Verdict
+
+> **Yes — you’ve nailed the most critical parts.**
+> The surface area that’s left to developers is **appropriate, safe, and well-bounded**.
+
+---
