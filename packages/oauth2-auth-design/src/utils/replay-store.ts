@@ -1,10 +1,10 @@
-export interface CacheSet<T extends string | number> {
+export interface ReplayStore<T extends string | number> {
     has(value: T): Promise<boolean>;
     delete(value: T): Promise<void>;
     add(value: T, ttlSeconds: number): Promise<void>;
 }
 
-export class InMemoryTmpCache<T extends string | number = string | number> implements CacheSet<T> {
+export class InMemoryReplayStore<T extends string | number = string | number> implements ReplayStore<T> {
     private values: Record<string, NodeJS.Timeout> = {}
 
     async has(value: T): Promise<boolean> {
@@ -29,8 +29,8 @@ export class InMemoryTmpCache<T extends string | number = string | number> imple
     }
 }
 
-export type StringCacheSet = CacheSet<string>
+export type ReplayDetector = ReplayStore<string>
 
-export function getInMemoryCacheSet<T extends string | number = string | number>(): InMemoryTmpCache<T> {
-    return new InMemoryTmpCache<T>()
+export function createInMemoryReplayStore<T extends string | number = string | number>(): InMemoryReplayStore<T> {
+    return new InMemoryReplayStore<T>()
 }
