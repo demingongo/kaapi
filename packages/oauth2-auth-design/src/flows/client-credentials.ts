@@ -8,8 +8,6 @@ import {
     RouteOptions
 } from '@kaapi/kaapi'
 import { GrantType, OAuth2Util } from '@novice1/api-doc-generator'
-import Boom from '@hapi/boom'
-import Hoek from '@hapi/hoek'
 import {
     DefaultJWKSRoute,
     JWKSRoute,
@@ -26,7 +24,6 @@ import { DefaultOAuth2ClientCredentialsTokenRoute, IOAuth2ClientCredentialsToken
 import { TokenType, TokenTypeValidationResponse } from '../utils/token-types'
 import { JwksKeyStore } from '../utils/jwt-authority'
 import { createIdToken, createJwtAccessToken } from '../utils/jwt-utils'
-import { JWTPayload } from 'jose'
 
 
 //#region OAuth2ClientCredentials
@@ -34,13 +31,9 @@ import { JWTPayload } from 'jose'
 export interface OAuth2ClientCredentialsArg extends OAuth2AuthDesignOptions {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     tokenRoute: IOAuth2ClientCredentialsTokenRoute<any>;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    options?: OAuth2AuthOptions<any>;
-    strategyName?: string;
 }
 
 export class OAuth2ClientCredentials extends OAuth2AuthDesign implements OAuth2SingleAuthFlow {
-    protected options: OAuth2AuthOptions
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     protected tokenRoute: IOAuth2ClientCredentialsTokenRoute<any>
 
@@ -51,17 +44,12 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign implements OAuth2S
     constructor(
         {
             tokenRoute,
-            options,
-            strategyName,
             ...props
         }: OAuth2ClientCredentialsArg
     ) {
-        super(props)
+        super({...props, strategyName: props.strategyName || 'oauth2-client-credentials'})
 
         this.tokenRoute = tokenRoute
-
-        this.strategyName = strategyName || 'oauth2-client-credentials'
-        this.options = options ? { ...options } : {}
     }
 
     /**
@@ -233,87 +221,6 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign implements OAuth2S
         }
 
         return docs
-    }
-
-    /**
-     * Where authentication schemes and strategies are registered.
-     */
-    integrateStrategy(t: KaapiTools) {
-        const tokenTypePrefix = this.tokenType;
-        const tokenTypeInstance = this._tokenType;
-        const getJwksGenerator = () => this.getJwtAuthority();
-
-        t.scheme(this.strategyName, (_server, options) => {
-
-            return {
-                async authenticate(request, h) {
-
-                    const settings: OAuth2AuthOptions = Hoek.applyToDefaults({}, options || {});
-
-                    const authorization = request.raw.req.headers.authorization;
-
-                    const authSplit = authorization ? authorization.split(/\s+/) : ['', ''];
-
-                    const tokenType = authSplit[0]
-                    let token = authSplit[1]
-                    let jwtAccessTokenPayload: JWTPayload | undefined;
-
-                    if (tokenType.toLowerCase() !== tokenTypePrefix.toLowerCase()) {
-                        token = ''
-                        return Boom.unauthorized(null, tokenTypePrefix)
-                    }
-
-                    if (!(await tokenTypeInstance.isValid(request, token)).isValid) {
-                        return Boom.unauthorized(null, tokenTypePrefix)
-                    }
-
-                    const jwksGenerator = getJwksGenerator()
-
-                    if (jwksGenerator && settings.useAccessTokenJwks) {
-                        try {
-                            jwtAccessTokenPayload = await jwksGenerator.verify(token)
-                        } catch (err) {
-                            t.log.error(err)
-                            return Boom.unauthorized(null, tokenTypePrefix)
-                        }
-                    }
-
-                    if (settings.validate) {
-                        try {
-                            const result = await settings.validate?.(request, { token, jwtAccessTokenPayload }, h)
-
-                            if (result && 'isAuth' in result) {
-                                return result
-                            }
-
-                            if (result && 'isBoom' in result) {
-                                return result
-                            }
-
-                            if (result) {
-                                const { isValid, credentials, artifacts, message } = result;
-
-                                if (isValid && credentials) {
-                                    return h.authenticated({ credentials, artifacts })
-                                }
-
-                                if (message) {
-                                    return h.unauthenticated(Boom.unauthorized(message, tokenTypePrefix), {
-                                        credentials: credentials || {},
-                                        artifacts
-                                    })
-                                }
-                            }
-                        } catch (err) {
-                            return Boom.internal(err instanceof Error ? err : `${err}`)
-                        }
-                    }
-
-                    return Boom.unauthorized(null, tokenTypePrefix)
-                },
-            }
-        })
-        t.strategy(this.strategyName, this.strategyName, this.options)
     }
 
     integrateHook(t: KaapiTools) {

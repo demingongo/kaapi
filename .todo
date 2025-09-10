@@ -7,7 +7,7 @@
         - apikey (take it from the examples/auth-designs/src/plugins/bearerDesign.ts) @done
 
 - @kaapi/oauth2-auth-design
-    - unify: move options (?OAuth2AuthOptions<any>) and strategyName (?string) to OAuth2AuthDesignOptions
+    - unify: move options (?OAuth2AuthOptions<any>) and strategyName (?string) and integrateStrategy to OAuth2AuthDesignOptions @done
     - jwks keys rotation freq and token ttl are independents, make it so. AND THE STORE shouldn't have to handle that.
         - store @done
         - publicKeyTtl @done

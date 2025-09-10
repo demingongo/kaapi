@@ -10,7 +10,8 @@ import {
     Request,
     ResponseToolkit
 } from '@kaapi/kaapi'
-import { Boom } from '@hapi/boom'
+import Boom, { Boom as IBoom } from '@hapi/boom'
+import Hoek from '@hapi/hoek'
 import { JWTPayload } from 'jose';
 import { OAuth2Util } from '@novice1/api-doc-generator';
 import { SecuritySchemeObject } from '@novice1/api-doc-generator/lib/generators/openapi/definitions';
@@ -69,7 +70,7 @@ export type OAuth2AuthOptions<
         artifacts?: unknown;
         credentials?: AuthCredentials;
         message?: string;
-    } | Auth | Boom>;
+    } | Auth | IBoom>;
 };
 
 export interface OpenIDHelpers {
@@ -365,6 +366,9 @@ export interface OAuth2AuthDesignOptions {
     jwksOptions?: OAuth2JwksOptions;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     jwksRoute?: IJWKSRoute<any>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    options?: OAuth2AuthOptions<any>;
+    strategyName?: string;
 }
 
 export abstract class OAuth2AuthDesign extends AuthDesign {
@@ -408,6 +412,7 @@ export abstract class OAuth2AuthDesign extends AuthDesign {
 
     //
     protected strategyName: string
+    protected options: OAuth2AuthOptions
     protected description?: string
     protected scopes?: Record<string, string>
     protected tokenTTL?: number;
@@ -426,7 +431,8 @@ export abstract class OAuth2AuthDesign extends AuthDesign {
     constructor(options?: OAuth2AuthDesignOptions) {
         super()
         this._tokenType = new BearerToken()
-        this.strategyName = 'oauth2-auth-design'
+        this.strategyName = options?.strategyName || 'oauth2-auth-design'
+        this.options = options?.options ? { ...(options.options) } : {}
 
         //
         this.jwksRoute = options?.jwksRoute
@@ -479,7 +485,7 @@ export abstract class OAuth2AuthDesign extends AuthDesign {
 
     protected getJwtAuthority(): JwtAuthority | undefined {
         if (this.jwtAuthority) return this.jwtAuthority;
-        if (this.jwksRoute || this.jwksKeyStore /*|| this.options.useAccessTokenJwks*/) {
+        if (this.jwksRoute || this.jwksKeyStore || this.options.useAccessTokenJwks) {
             this.jwtAuthority = new JwtAuthority(this.jwksKeyStore || new InMemoryKeyStore(), this.jwksPublicKeyTtl)
         }
         return this.jwtAuthority
@@ -619,6 +625,87 @@ export abstract class OAuth2AuthDesign extends AuthDesign {
 
     getDescription(): string | undefined {
         return this.description;
+    }
+
+    /**
+     * Where authentication schemes and strategies are registered.
+     */
+    integrateStrategy(t: KaapiTools): void {
+        const tokenTypePrefix = this.tokenType
+        const tokenTypeInstance = this._tokenType
+        const getJwtAuthority = () => this.getJwtAuthority();
+
+        t.scheme(this.strategyName, (_server, options) => {
+
+            return {
+                async authenticate(request, h) {
+
+                    const settings: OAuth2AuthOptions = Hoek.applyToDefaults({}, options || {});
+
+                    const authorization = request.raw.req.headers.authorization;
+
+                    const authSplit = authorization ? authorization.split(/\s+/) : ['', ''];
+
+                    const tokenType = authSplit[0]
+                    let token = authSplit[1]
+                    let jwtAccessTokenPayload: JWTPayload | undefined;
+
+                    if (tokenType.toLowerCase() !== tokenTypePrefix.toLowerCase()) {
+                        token = ''
+                        return Boom.unauthorized(null, tokenTypePrefix)
+                    }
+
+                    if (!(await tokenTypeInstance.isValid(request, token)).isValid) {
+                        return Boom.unauthorized(null, tokenTypePrefix)
+                    }
+
+                    const jwtAuthority = getJwtAuthority()
+
+                    if (jwtAuthority && settings.useAccessTokenJwks) {
+                        try {
+                            jwtAccessTokenPayload = await jwtAuthority.verify(token)
+                        } catch (err) {
+                            t.log.error(err)
+                            return Boom.unauthorized(null, tokenTypePrefix)
+                        }
+                    }
+
+                    if (settings.validate) {
+                        try {
+                            const result = await settings.validate?.(request, { token, jwtAccessTokenPayload }, h)
+
+                            if (result && 'isAuth' in result) {
+                                return result
+                            }
+
+                            if (result && 'isBoom' in result) {
+                                return result
+                            }
+
+                            if (result) {
+                                const { isValid, credentials, artifacts, message } = result;
+
+                                if (isValid && credentials) {
+                                    return h.authenticated({ credentials, artifacts })
+                                }
+
+                                if (message) {
+                                    return h.unauthenticated(Boom.unauthorized(message, tokenTypePrefix), {
+                                        credentials: credentials || {},
+                                        artifacts
+                                    })
+                                }
+                            }
+                        } catch (err) {
+                            return Boom.internal(err instanceof Error ? err : `${err}`)
+                        }
+                    }
+
+                    return Boom.unauthorized(null, tokenTypePrefix)
+                },
+            }
+        })
+        t.strategy(this.strategyName, this.strategyName, this.options)
     }
 }
 

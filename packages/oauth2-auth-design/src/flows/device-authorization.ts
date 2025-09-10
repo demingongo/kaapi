@@ -8,8 +8,6 @@ import {
     RouteOptions
 } from '@kaapi/kaapi'
 import { ClientAuthentication, OAuth2Util } from '@novice1/api-doc-generator'
-import Boom from '@hapi/boom'
-import Hoek from '@hapi/hoek'
 import {
     IOAuth2RefreshTokenRoute,
     OAuth2AuthOptions,
@@ -36,7 +34,6 @@ import { DefaultOAuth2DeviceAuthTokenRoute, IOAuth2DeviceAuthTokenRoute, OAuth2D
 import { TokenType, TokenTypeValidationResponse } from '../utils/token-types'
 import { BaseAuthUtil } from '@novice1/api-doc-generator/lib/utils/auth/baseAuthUtils'
 import { ClientAuthMethod, ClientSecretBasic, ClientSecretPost, NoneAuthMethod, TokenEndpointAuthMethod } from '../utils/client-auth-methods'
-import { JWTPayload } from 'jose'
 import { JwksKeyStore } from '../utils/jwt-authority'
 
 const GRANT_TYPE = 'urn:ietf:params:oauth:grant-type:device_code'
@@ -54,9 +51,6 @@ export interface OAuth2DeviceAuthorizationArg extends OAuth2AuthDesignOptions {
     tokenRoute: IOAuth2DeviceAuthTokenRoute<any>;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     refreshTokenRoute?: IOAuth2RefreshTokenRoute<any>;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    options?: OAuth2AuthOptions<any>;
-    strategyName?: string;
 }
 
 export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth2SingleAuthFlow {
@@ -67,7 +61,6 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
 
     protected pkce: boolean = false
 
-    protected options: OAuth2AuthOptions
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     protected authorizationRoute: IOAuth2DeviceAuthorizationRoute<any>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -80,19 +73,14 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
             authorizationRoute,
             tokenRoute,
             refreshTokenRoute,
-            options,
-            strategyName,
             ...props
         }: OAuth2DeviceAuthorizationArg
     ) {
-        super(props);
+        super({...props, strategyName: props.strategyName || 'oauth2-device-authorization'});
 
         this.authorizationRoute = authorizationRoute
         this.tokenRoute = tokenRoute
         this.refreshTokenRoute = refreshTokenRoute
-
-        this.strategyName = strategyName || 'oauth2-device-authorization'
-        this.options = options ? { ...options } : {}
     }
 
     withPkce(): this {
@@ -400,83 +388,6 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
         }
 
         return docs
-    }
-
-    integrateStrategy(t: KaapiTools): void {
-        const tokenTypePrefix = this.tokenType
-        const tokenTypeInstance = this._tokenType
-        const getJwtAuthority = () => this.getJwtAuthority();
-
-        t.scheme(this.strategyName, (_server, options) => {
-
-            return {
-                async authenticate(request, h) {
-
-                    const settings: OAuth2AuthOptions = Hoek.applyToDefaults({}, options || {});
-
-                    const authorization = request.raw.req.headers.authorization;
-
-                    const authSplit = authorization ? authorization.split(/\s+/) : ['', ''];
-
-                    const tokenType = authSplit[0]
-                    let token = authSplit[1]
-                    let jwtAccessTokenPayload: JWTPayload | undefined;
-
-                    if (tokenType.toLowerCase() !== tokenTypePrefix.toLowerCase()) {
-                        token = ''
-                        return Boom.unauthorized(null, tokenTypePrefix)
-                    }
-
-                    if (!(await tokenTypeInstance.isValid(request, token)).isValid) {
-                        return Boom.unauthorized(null, tokenTypePrefix)
-                    }
-
-                    const jwksGenerator = getJwtAuthority()
-                    if (jwksGenerator && settings.useAccessTokenJwks) {
-                        try {
-                            jwtAccessTokenPayload = await jwksGenerator.verify(token)
-                        } catch (err) {
-                            t.log.error(err)
-                            return Boom.unauthorized(null, tokenTypePrefix)
-                        }
-                    }
-
-                    if (settings.validate) {
-                        try {
-                            const result = await settings.validate?.(request, { token, jwtAccessTokenPayload }, h)
-
-                            if (result && 'isAuth' in result) {
-                                return result
-                            }
-
-                            if (result && 'isBoom' in result) {
-                                return result
-                            }
-
-                            if (result) {
-                                const { isValid, credentials, artifacts, message } = result;
-
-                                if (isValid && credentials) {
-                                    return h.authenticated({ credentials, artifacts })
-                                }
-
-                                if (message) {
-                                    return h.unauthenticated(Boom.unauthorized(message, tokenTypePrefix), {
-                                        credentials: credentials || {},
-                                        artifacts
-                                    })
-                                }
-                            }
-                        } catch (err) {
-                            return Boom.internal(err instanceof Error ? err : `${err}`)
-                        }
-                    }
-
-                    return Boom.unauthorized(null, tokenTypePrefix)
-                },
-            }
-        })
-        t.strategy(this.strategyName, this.strategyName, this.options)
     }
 
     integrateHook(t: KaapiTools) {
