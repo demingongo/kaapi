@@ -4,10 +4,12 @@ import {
     Kaapi
 } from '@kaapi/kaapi'
 import { customAuthDesign } from './plugins/customAuthDesign'
+//import logger from './drafts/logger'
 
 export const app = new Kaapi({
     port: 3000,
     host: 'localhost',
+    //logger: logger,
     loggerOptions: {
         level: 'debug'
     },

@@ -7,10 +7,11 @@ import {
     OIDCClientCredentialsBuilder
 } from '@kaapi/oauth2-auth-design'
 
+import logger from './logger'
 import db from './database'
 
 export default OIDCClientCredentialsBuilder
-    .create()
+    .create({ logger })
     .setTokenType(new BearerToken())                                // optional, default BearerToken
     .setTokenTTL(3600)                                              // 1h
     .addClientAuthenticationMethod(new ClientSecretBasic())         // client authentication methods
@@ -101,4 +102,4 @@ export default OIDCClientCredentialsBuilder
         'manage:tokens': 'Allows the client to manage access or refresh tokens for automation.',
         'admin:all': 'Grants full administrative access to all available resources and operations.'
     })
-    //.build()
+//.build()
