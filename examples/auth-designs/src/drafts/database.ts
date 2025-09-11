@@ -75,7 +75,8 @@ clients.insertOne({
 })
 clients.insertOne({
     id: 'public-app',
-    name: 'Jane Doe',
+    name: 'Public App',
+    secret: 'public-app',
 })
 clients.insertOne({
     id: 'device-app',

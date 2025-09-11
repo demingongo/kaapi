@@ -12,7 +12,7 @@ import logger from './logger'
 import db from './database'
 import renderHtml from './render-html'
 
-const tokenType = new DPoPToken()
+const tokenType = new DPoPToken()                       // DPoP support
     .setTTL(300)                                        // default 300s
     .setReplayDetector(createInMemoryReplayStore())     // cache DPoP tokens
     .validateTokenRequest(() => ({ isValid: true }))    // for testing without validating dpop
@@ -53,7 +53,7 @@ export default OIDCAuthorizationCodeBuilder
     })
     .authorizationRoute<object, { Payload: { email: string, password: string } }>(route =>
         route
-            .setPath('/oauth2/authorize') // optional, default '/oauth2/authorize'
+            .setPath('/oauth2/v2/authorize') // optional, default '/oauth2/authorize'
             .setEmailField('email')
             .setPasswordField('password')
             .setGETResponseRenderer(async (reason, params, req) => {
@@ -89,13 +89,14 @@ export default OIDCAuthorizationCodeBuilder
             }))
     .tokenRoute(route =>
         route
-            .setPath('/oauth2/token') // optional, default '/oauth2/token'
+            .setPath('/oauth2/v2/token') // optional, default '/oauth2/token'
             .generateToken(async ({ clientId, clientSecret, ttl, tokenType, createJwtAccessToken, createIdToken, code, codeVerifier, verifyCodeVerifier }, _req) => {
 
                 const decodedCode = JSON.parse(code);
                 const scope = decodedCode.scope;
                 const codeChallenge = decodedCode.codeChallenge;
                 const userId = decodedCode.user;
+                const nonce = decodedCode.nonce;
 
                 // db query
                 const client = await db.clients.findById(clientId)
@@ -142,6 +143,7 @@ export default OIDCAuthorizationCodeBuilder
                                     name: (scope?.split(' ').includes('profile') || undefined) && user.name,
                                     given_name: (scope?.split(' ').includes('profile') || undefined) && user.given_name,
                                     email: (scope?.split(' ').includes('email') || undefined) && user.email,
+                                    nonce
                                 }))?.token
                             ) // add id_token if scope has 'openid'
                     }
@@ -151,47 +153,49 @@ export default OIDCAuthorizationCodeBuilder
 
                 return null
             }))
-    .refreshTokenRoute(route => route.generateToken(async ({ clientId, refreshToken, scope, ttl, tokenType, createJwtAccessToken, createIdToken }, _req) => {
+    .refreshTokenRoute(route =>
+        route
+            .setPath('/oauth2/v2/token') // optional, default '/oauth2/token'
+            .generateToken(async ({ clientId, refreshToken, scope, ttl, tokenType, createJwtAccessToken, createIdToken }, _req) => {
+                // db query
+                const client = await db.clients.findById(clientId)
+                const user = await db.users.findById('TODO') // TODO
 
-        // db query
-        const client = await db.clients.findById(clientId)
-        const user = await db.users.findById(userId)
+                // client or user not found
+                if (!client || !user) {
+                    return { error: 'invalid_request' }
+                }
 
-        // client or user not found
-        if (!client || !user) {
-            return null
-        }
-
-        if (!ttl) {
-            return { error: 'invalid_request', error_description: 'Missing ttl' }
-        }
-        try {
-            if (refreshToken === 'generated_refresh_token_from_ac' && createJwtAccessToken) {
-                const { token: accessToken } = await createJwtAccessToken({
-                    sub: user.id,
-                    type: 'user'
-                })
-                const newRefreshToken = (!scope || (scope && scope?.split(' ').includes('offline_access')) || undefined) && 'generated_refresh_token_from_ac'
-                return new OAuth2TokenResponse({ access_token: accessToken })
-                    .setExpiresIn(ttl)
-                    .setRefreshToken(newRefreshToken)
-                    .setScope(scope?.split(' '))
-                    .setTokenType(tokenType)
-                    .setIdToken(
-                        (scope?.split(' ').includes('openid') || undefined) && (await createIdToken?.({
+                if (!ttl) {
+                    return { error: 'invalid_request', error_description: 'Missing ttl' }
+                }
+                try {
+                    if (refreshToken === 'generated_refresh_token_from_ac' && createJwtAccessToken) {
+                        const { token: accessToken } = await createJwtAccessToken({
                             sub: user.id,
-                            name: (scope?.split(' ').includes('profile') || undefined) && user.name,
-                            given_name: (scope?.split(' ').includes('profile') || undefined) && user.given_name,
-                            email: (scope?.split(' ').includes('email') || undefined) && user.email,
-                        }))?.token
-                    ) // add id_token if scope has 'openid'
-            }
-        } catch (err) {
-            console.error(err)
-        }
+                            type: 'user'
+                        })
+                        const newRefreshToken = (!scope || (scope && scope?.split(' ').includes('offline_access')) || undefined) && 'generated_refresh_token_from_ac'
+                        return new OAuth2TokenResponse({ access_token: accessToken })
+                            .setExpiresIn(ttl)
+                            .setRefreshToken(newRefreshToken)
+                            .setScope(scope?.split(' '))
+                            .setTokenType(tokenType)
+                            .setIdToken(
+                                (scope?.split(' ').includes('openid') || undefined) && (await createIdToken?.({
+                                    sub: user.id,
+                                    name: (scope?.split(' ').includes('profile') || undefined) && user.name,
+                                    given_name: (scope?.split(' ').includes('profile') || undefined) && user.given_name,
+                                    email: (scope?.split(' ').includes('email') || undefined) && user.email,
+                                }))?.token
+                            ) // add id_token if scope has 'openid'
+                    }
+                } catch (err) {
+                    console.error(err)
+                }
 
-        return null
-    }))
+                return null
+            }))
     .setDescription('This API uses OAuth 2 with the authorization code grant flow. [More info](https://oauth.net/2/grant-types/authorization-code/)')
     .setScopes({
         openid: 'Required for OpenID Connect; enables ID token issuance.',
