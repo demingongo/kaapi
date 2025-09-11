@@ -13,7 +13,7 @@ import db from './database'
 export default OIDCClientCredentialsBuilder
     .create({ logger })
     .setTokenType(new BearerToken())                                // optional, default BearerToken
-    .setTokenTTL(3600)                                              // 1h
+    .setTokenTTL(600)                                               // 10m
     .addClientAuthenticationMethod(new ClientSecretBasic())         // client authentication methods
     .addClientAuthenticationMethod(new ClientSecretPost())          // client authentication methods
     .useAccessTokenJwks(true)                                       // activates JWT access token verification with JWKS

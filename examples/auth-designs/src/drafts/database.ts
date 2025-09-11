@@ -5,18 +5,18 @@ export interface InMemoryData {
 }
 
 export class InMemoryCollection<Data extends InMemoryData = InMemoryData> {
-    #documents: Record<string, Data> = {}
+    protected documents: Record<string, Data> = {}
 
     async findById(id: string) {
-        return this.#documents[id]
+        return this.documents[id]
     }
 
     async findByCredentials(id: string, secret: string) {
-        return this.#documents[id]?.secret === secret ? this.#documents[id] : undefined
+        return this.documents[id]?.secret === secret ? this.documents[id] : undefined
     }
 
     async insertOne(data: Data) {
-        this.#documents[data.id] = data
+        this.documents[data.id] = data
     }
 }
 
@@ -24,6 +24,7 @@ export type User = InMemoryData & {
     name: string
     given_name?: string
     email?: string
+    password?: string
 }
 
 export type Client = InMemoryData & {
@@ -32,7 +33,21 @@ export type Client = InMemoryData & {
     details?: User
 }
 
-const users = new InMemoryCollection<User>();
+export class InMemoryUsers extends InMemoryCollection<User> {
+    async findByCredentials(email: string, password: string) {
+        let result: User | undefined;
+        for(const k in this.documents) {
+            const user = this.documents[k]
+            if(user.email === email && user.password === password) {
+                result = user
+                break;
+            }
+        }
+        return result
+    }
+}
+
+const users = new InMemoryUsers();
 
 const user1: User = {
     id: 'machine-123',
@@ -43,7 +58,8 @@ const user2: User = {
     id: '248289761001',
     name: 'Jane Doe',
     given_name: 'Jane',
-    email: 'janed@example.com'
+    email: 'janed@example.com',
+    password: '123'
 }
 
 users.insertOne(user1)
