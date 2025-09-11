@@ -12,6 +12,13 @@ import logger from './logger'
 import db from './database'
 import renderHtml from './render-html'
 
+interface RefreshPayload {
+    client_id?: string
+    scope?: string
+    sub?: string
+    type?: 'refresh'
+}
+
 const tokenType = new DPoPToken()                       // DPoP support
     .setTTL(300)                                        // default 300s
     .setReplayDetector(createInMemoryReplayStore())     // cache DPoP tokens
@@ -131,10 +138,17 @@ export default OIDCAuthorizationCodeBuilder
                             sub: user.id,
                             type: 'user'
                         })
-                        const refreshToken = 'generated_refresh_token_from_ac'
+                        const refreshToken = (scope?.split(' ').includes('offline_access') || undefined) && await createJwtAccessToken({
+                            sub: user.id,
+                            client_id: clientId,
+                            scope,
+                            exp: Date.now() / 1000 + 604_800, // 7 days
+
+                            type: 'refresh'
+                        })
                         return new OAuth2TokenResponse({ access_token: accessToken })
                             .setExpiresIn(ttl)
-                            .setRefreshToken((scope?.split(' ').includes('offline_access') || undefined) && refreshToken)
+                            .setRefreshToken(refreshToken?.token)
                             .setScope(scope?.split(' '))
                             .setTokenType(tokenType)
                             .setIdToken(
@@ -156,30 +170,48 @@ export default OIDCAuthorizationCodeBuilder
     .refreshTokenRoute(route =>
         route
             .setPath('/oauth2/v2/token') // optional, default '/oauth2/token'
-            .generateToken(async ({ clientId, refreshToken, scope, ttl, tokenType, createJwtAccessToken, createIdToken }, _req) => {
-                // db query
-                const client = await db.clients.findById(clientId)
-                const user = await db.users.findById('TODO') // TODO
-
-                // client or user not found
-                if (!client || !user) {
-                    return { error: 'invalid_request' }
-                }
-
-                if (!ttl) {
-                    return { error: 'invalid_request', error_description: 'Missing ttl' }
-                }
+            .generateToken(async ({ clientId, refreshToken, scope, ttl, tokenType, createJwtAccessToken, createIdToken, verifyJwt }, _req) => {
+                
                 try {
-                    if (refreshToken === 'generated_refresh_token_from_ac' && createJwtAccessToken) {
+                    // verify refresh token
+                    const payload = await verifyJwt?.<RefreshPayload>(refreshToken)
+                    if (!payload || !(payload.client_id && payload.client_id === clientId && payload.sub && payload.type === 'refresh')) {
+                        return { error: 'invalid_request' }
+                    }
+
+                    // db query
+                    const client = await db.clients.findById(clientId)
+                    const user = await db.users.findById(payload.sub)
+
+                    // client or user not found
+                    if (!client || !user) {
+                        return { error: 'invalid_request' }
+                    }
+
+                    if (!ttl) {
+                        return { error: 'invalid_request', error_description: 'Missing ttl' }
+                    }
+
+                    const newScope = scope || payload.scope
+
+                    if (createJwtAccessToken) {
                         const { token: accessToken } = await createJwtAccessToken({
                             sub: user.id,
                             type: 'user'
                         })
-                        const newRefreshToken = (!scope || (scope && scope?.split(' ').includes('offline_access')) || undefined) && 'generated_refresh_token_from_ac'
+                        const newRefreshToken = (!newScope || (newScope && newScope?.split(' ').includes('offline_access')) || undefined) &&
+                            await createJwtAccessToken({
+                                sub: user.id,
+                                client_id: clientId,
+                                scope: newScope,
+                                exp: Date.now() / 1000 + 604_800, // 7 days
+
+                                type: 'refresh'
+                            } as Required<RefreshPayload>)
                         return new OAuth2TokenResponse({ access_token: accessToken })
                             .setExpiresIn(ttl)
-                            .setRefreshToken(newRefreshToken)
-                            .setScope(scope?.split(' '))
+                            .setRefreshToken(newRefreshToken?.token)
+                            .setScope(newScope?.split(' '))
                             .setTokenType(tokenType)
                             .setIdToken(
                                 (scope?.split(' ').includes('openid') || undefined) && (await createIdToken?.({
@@ -188,7 +220,7 @@ export default OIDCAuthorizationCodeBuilder
                                     given_name: (scope?.split(' ').includes('profile') || undefined) && user.given_name,
                                     email: (scope?.split(' ').includes('email') || undefined) && user.email,
                                 }))?.token
-                            ) // add id_token if scope has 'openid'
+                            ) // add id_token if the new scope has 'openid'
                     }
                 } catch (err) {
                     console.error(err)

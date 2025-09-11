@@ -23,7 +23,7 @@ import {
     OAuth2AuthDesignOptions,
     OAuth2JwksOptions
 } from './common'
-import { createIdToken, createJwtAccessToken } from '../utils/jwt-utils'
+import { createIdToken, createJwtAccessToken, verifyJwt } from '../utils/jwt-utils'
 import {
     DefaultOAuth2ACAuthorizationRoute,
     IOAuth2ACAuthorizationRoute,
@@ -71,7 +71,7 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
             ...props
         }: OAuth2AuthorizationCodeArg
     ) {
-        super({...props, strategyName: props.strategyName || 'oauth2-authorization-code'});
+        super({ ...props, strategyName: props.strategyName || 'oauth2-authorization-code' });
 
         this.authorizationRoute = authorizationRoute
         this.tokenRoute = tokenRoute
@@ -183,7 +183,7 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
 
         const supported = this.getTokenEndpointAuthMethods();
         const authMethodsInstances = this.clientAuthMethods;
-        const jwksGenerator = this.getJwtAuthority();
+        const jwtAuthority = this.getJwtAuthority();
 
         const sr: {
             handle: Lifecycle.Method<{
@@ -234,16 +234,16 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
                         verifyCodeVerifier,
 
                         ttl: this.tokenTTL,
-                        createJwtAccessToken: jwksGenerator ? (async (payload) => {
-                            return await createJwtAccessToken(jwksGenerator, {
+                        createJwtAccessToken: jwtAuthority ? (async (payload) => {
+                            return await createJwtAccessToken(jwtAuthority, {
                                 aud: t.postman?.getHost()[0] || '',
                                 iss: t.postman?.getHost()[0] || '',
                                 sub: clientId,
                                 ...payload
                             }, this.tokenTTL)
                         }) : undefined,
-                        createIdToken: jwksGenerator && hasOpenIDScope() ? (async (payload) => {
-                            return await createIdToken(jwksGenerator, {
+                        createIdToken: jwtAuthority && hasOpenIDScope() ? (async (payload) => {
+                            return await createIdToken(jwtAuthority, {
                                 aud: clientId,
                                 iss: t.postman?.getHost()[0] || '',
                                 ...payload
@@ -292,7 +292,7 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
     ) {
         const supported = this.getTokenEndpointAuthMethods();
         const authMethodsInstances = this.clientAuthMethods;
-        const jwksGenerator = this.getJwtAuthority();
+        const jwtAuthority = this.getJwtAuthority();
         const tokenTypePrefix = this.tokenType;
 
         const hasOpenIDScope = () => typeof this.getScopes()?.['openid'] != 'undefined';
@@ -344,8 +344,8 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
                         tokenType: tokenTypePrefix,
                         refreshToken: `${req.payload.refresh_token}`,
                         ttl: this.tokenTTL,
-                        createJwtAccessToken: jwksGenerator ? (async (payload) => {
-                            return await createJwtAccessToken(jwksGenerator, {
+                        createJwtAccessToken: jwtAuthority ? (async (payload) => {
+                            return await createJwtAccessToken(jwtAuthority, {
                                 aud: t.postman?.getHost()[0] || '',
                                 iss: t.postman?.getHost()[0] || '',
                                 sub: clientId,
@@ -353,12 +353,15 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
                                 ...payload
                             }, this.tokenTTL)
                         }) : undefined,
-                        createIdToken: jwksGenerator && hasOpenIDScope() ? (async (payload) => {
-                            return await createIdToken(jwksGenerator, {
+                        createIdToken: jwtAuthority && hasOpenIDScope() ? (async (payload) => {
+                            return await createIdToken(jwtAuthority, {
                                 aud: clientId,
                                 iss: t.postman?.getHost()[0] || '',
                                 ...payload
                             }, this.tokenTTL)
+                        }) : undefined,
+                        verifyJwt: jwtAuthority ? (async (token) => {
+                            return await verifyJwt(jwtAuthority, token)
                         }) : undefined
                     }
 
@@ -515,12 +518,7 @@ export class OIDCAuthorizationCode extends OAuth2AuthorizationCode implements OA
             grant_types_supported: [
                 GrantType.authorizationCode
             ],
-            response_types_supported: [
-                'code',
-                'token',
-                'code token',
-                'code token id_token'
-            ],
+            response_types_supported: ['code'],
             scopes_supported: Object.keys(scopes),
             subject_types_supported: [
                 'public'

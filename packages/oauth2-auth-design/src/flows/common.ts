@@ -165,6 +165,7 @@ export interface OAuth2RefreshTokenParams extends OAuth2TokenParams {
     clientId: string
     clientSecret?: string
     scope?: string
+    verifyJwt?<P extends object = object>(token: string): Promise<P & JWTPayload>
 }
 
 export type OAuth2RefreshTokenHandler<

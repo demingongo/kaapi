@@ -47,7 +47,7 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign implements OAuth2S
             ...props
         }: OAuth2ClientCredentialsArg
     ) {
-        super({...props, strategyName: props.strategyName || 'oauth2-client-credentials'})
+        super({ ...props, strategyName: props.strategyName || 'oauth2-client-credentials' })
 
         this.tokenRoute = tokenRoute
     }
@@ -78,7 +78,7 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign implements OAuth2S
 
         const supported = this.getTokenEndpointAuthMethods();
         const authMethodsInstances = this.clientAuthMethods;
-        const jwksGenerator = this.getJwtAuthority();
+        const jwtAuthority = this.getJwtAuthority();
 
         const hasOpenIDScope = () => typeof this.getScopes()?.['openid'] != 'undefined';
 
@@ -160,8 +160,8 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign implements OAuth2S
                         grantType: req.payload.grant_type,
                         tokenType: tokenTypeInstance.prefix,
                         ttl: this.tokenTTL,
-                        createJwtAccessToken: jwksGenerator ? (async (payload) => {
-                            return await createJwtAccessToken(jwksGenerator, {
+                        createJwtAccessToken: jwtAuthority ? (async (payload) => {
+                            return await createJwtAccessToken(jwtAuthority, {
                                 aud: t.postman?.getHost()[0] || '',
                                 iss: t.postman?.getHost()[0] || '',
                                 sub: clientId,
@@ -169,8 +169,8 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign implements OAuth2S
                                 ...payload
                             }, this.tokenTTL)
                         }) : undefined,
-                        createIdToken: jwksGenerator && hasOpenIDScope() ? (async (payload) => {
-                            return await createIdToken(jwksGenerator, {
+                        createIdToken: jwtAuthority && hasOpenIDScope() ? (async (payload) => {
+                            return await createIdToken(jwtAuthority, {
                                 aud: clientId,
                                 iss: t.postman?.getHost()[0] || '',
                                 ...payload

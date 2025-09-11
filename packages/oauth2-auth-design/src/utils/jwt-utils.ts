@@ -25,7 +25,7 @@ export interface OAuth2JwtPayload extends JWTPayload {
 }
 
 export async function createIdToken(
-    generator: JwtAuthority,
+    authority: JwtAuthority,
     payload: OAuth2JwtPayload,
     ttl?: number
 ): Promise<{
@@ -34,7 +34,7 @@ export async function createIdToken(
 }> {
     const now = Math.floor(Date.now() / 1000)
 
-    return await generator.sign({
+    return await authority.sign({
         ...(payload),
         exp: typeof ttl === 'number' ? now + ttl : payload?.exp,
         iat: now
@@ -42,7 +42,7 @@ export async function createIdToken(
 }
 
 export async function createJwtAccessToken(
-    generator: JwtAuthority,
+    authority: JwtAuthority,
     payload: JWTPayload,
     ttl?: number
 ): Promise<{
@@ -51,9 +51,16 @@ export async function createJwtAccessToken(
 }> {
     const now = Math.floor(Date.now() / 1000)
 
-    return await generator.sign({
+    return await authority.sign({
         ...(payload),
         exp: payload?.exp || (typeof ttl === 'number' ? now + ttl : payload?.exp),
         iat: now
     })
+}
+
+export async function verifyJwt<P extends object = object>(
+    authority: JwtAuthority,
+    token: string
+) {
+    return await authority.verify<P & JWTPayload>(token)
 }
