@@ -2,6 +2,7 @@ import {
     ClientSecretBasic,
     ClientSecretPost,
     createInMemoryReplayStore,
+    createMatchAuthCodeResult,
     DPoPToken,
     NoneAuthMethod,
     OAuth2TokenResponse,
@@ -11,6 +12,15 @@ import {
 import logger from './logger'
 import db from './database'
 import renderHtml from './render-html'
+
+function fakeEncode(payload: object): string {
+  return Buffer.from(JSON.stringify(payload)).toString('base64url');
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function fakeDecode(str: string): any {
+  return JSON.parse(Buffer.from(str, 'base64url').toString('utf8'));
+}
 
 interface RefreshPayload {
     client_id?: string
@@ -58,26 +68,26 @@ export default OIDCAuthorizationCodeBuilder
             }
         }
     })
-    .authorizationRoute<object, { Payload: { email: string, password: string } }>(route =>
+    .authorizationRoute<object, { Payload: { email?: string, password?: string, step?: string, submit?: string } }>(route =>
         route
             .setPath('/oauth2/v2/authorize') // optional, default '/oauth2/authorize'
             .setEmailField('email')
             .setPasswordField('password')
-            .setGETResponseRenderer(async (reason, params, req) => {
+            .setGETResponseRenderer(async (context, params, req) => {
                 // db query
                 const client = await db.clients.findById(params.clientId)
 
                 // client not found
                 if (!client) {
-                    return await renderHtml('authorization-page', { reason: { ...reason, error: 'invalid_client' }, params, req })
+                    return await renderHtml('authorization-page', { context: { ...context, error: 'invalid_client' }, params, req })
                 }
 
-                return await renderHtml('authorization-page', { reason, params, req })
+                return await renderHtml('authorization-page', { context, params, req })
             })
-            .setPOSTResponseRenderer(async (reason, params, req) => {
-                return await renderHtml('authorization-page', { reason, params, req })
+            .setPOSTResponseRenderer(async (context, params, req) => {
+                return await renderHtml('authorization-page', { context, params, req })
             })
-            .generateCode(async ({ clientId, codeChallenge, scope, nonce }, { payload: { email, password } }) => {
+            .generateCode(async ({ clientId, codeChallenge, scope, nonce }, { payload: { email, password, step, submit }, state }, h) => {
                 // db query
                 const client = await db.clients.findById(clientId)
 
@@ -86,20 +96,59 @@ export default OIDCAuthorizationCodeBuilder
                     return null
                 }
 
+                if (step === 'consent') {
+                    if (submit === 'allow') {
+                        // code generation
+                        const session = state.kaapisession
+                        console.log('session', session)
+                        if (session?.user) {
+                            // Consider storing intermediate data instead of fully encoding it into the code string (unless encrypted).
+                            return {
+                                type: 'code',
+                                value: fakeEncode({ clientId, codeChallenge, scope, nonce, user: session.user })
+                            }
+                        }
+                    }
+                    return { type: 'deny' }
+                }
+
+                // invalid payload
+                if (!email || !password) return null
+
                 // db query + password validation + code generation
                 const user = await db.users.findByCredentials(email, password)
                 if (user) {
-                    return JSON.stringify({ clientId, codeChallenge, scope, nonce, user: user.id })
+                    h.state('kaapisession', { user: user.id })
+                    return { type: 'continue' }
                 }
 
                 return null
+            })
+            .finalizeAuthorization(async (ctx, params, _req, h) => {
+                const matcher = createMatchAuthCodeResult({
+                    code: async () => h.redirect(`${ctx.fullRedirectUri}`),
+                    continue: async () => renderHtml('consent-page', { params }),
+                    deny: async () => h.redirect(`${ctx.fullRedirectUri}`), // use the prepared uri by the framwork
+                })
+
+                return matcher(ctx.authorizationResult)
             }))
     .tokenRoute(route =>
         route
             .setPath('/oauth2/v2/token') // optional, default '/oauth2/token'
-            .generateToken(async ({ clientId, clientSecret, ttl, tokenType, createJwtAccessToken, createIdToken, code, codeVerifier, verifyCodeVerifier }, _req) => {
+            .generateToken(async ({
+                clientId,
+                clientSecret,
+                ttl,
+                tokenType,
+                createJwtAccessToken,
+                createIdToken,
+                code,
+                codeVerifier,
+                verifyCodeVerifier
+            }, _req) => {
 
-                const decodedCode = JSON.parse(code);
+                const decodedCode = fakeDecode(code);
                 const scope = decodedCode.scope;
                 const codeChallenge = decodedCode.codeChallenge;
                 const userId = decodedCode.user;
@@ -171,7 +220,7 @@ export default OIDCAuthorizationCodeBuilder
         route
             .setPath('/oauth2/v2/token') // optional, default '/oauth2/token'
             .generateToken(async ({ clientId, refreshToken, scope, ttl, tokenType, createJwtAccessToken, createIdToken, verifyJwt }, _req) => {
-                
+
                 try {
                     // verify refresh token
                     const payload = await verifyJwt?.<RefreshPayload>(refreshToken)

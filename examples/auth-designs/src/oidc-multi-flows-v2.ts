@@ -157,7 +157,7 @@ export const OIDCMultiFlowsDesignV2 = MultipleFlowsBuilder
                     .generateCode(async ({ clientId, codeChallenge, scope, nonce }, { payload: { email, password } }) => {
                         // validate and generate code
                         if (email == 'janed@example.com' && password == '1234') {
-                            return JSON.stringify({ clientId, codeChallenge, scope, nonce, user: '248289761001' })
+                            return { type: 'code', value: JSON.stringify({ clientId, codeChallenge, scope, nonce, user: '248289761001' })}
                         }
 
                         return null

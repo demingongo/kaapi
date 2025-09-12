@@ -25,9 +25,21 @@ export const app = new Kaapi({
             mode: 'try'
         }
         */
+        // parse cookies
+        state: {
+            parse: true,
+            failAction: 'log'
+        }
     },
     extend: customAuthDesign
 })
+
+// cookies
+app.base().state('kaapisession', {
+    ttl: 60000,
+    isHttpOnly: true,
+    encoding: 'base64json'
+});
 
 // register plugins
 /*

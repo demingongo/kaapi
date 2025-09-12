@@ -49,7 +49,7 @@ export const openIDDesign2 = new OIDCAuthorizationCode(
             .generateCode(async ({ clientId, codeChallenge, scope, nonce }, { payload: { user, pass } }) => {
                 // validate and generate code
                 if (user == 'janed@example.com' && pass == '1234') {
-                    return JSON.stringify({ clientId, codeChallenge, scope, nonce, user: '248289761001' })
+                    return { type: 'code', value: JSON.stringify({ clientId, codeChallenge, scope, nonce, user: '248289761001' }) }
                 }
 
                 return null

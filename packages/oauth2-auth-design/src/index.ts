@@ -1,5 +1,6 @@
 export * from './flows/common'
 export * from './flows/auth-code/authorization-route'
+export * from './flows/auth-code/authorization-utils'
 export * from './flows/auth-code/token-route'
 export * from './flows/client-creds/token-route'
 export * from './flows/device-auth/authorization-route'
