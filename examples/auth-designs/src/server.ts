@@ -4,6 +4,7 @@ import {
     Kaapi
 } from '@kaapi/kaapi'
 import { customAuthDesign } from './plugins/customAuthDesign'
+import { randomBytes } from 'node:crypto';
 //import logger from './drafts/logger'
 
 export const app = new Kaapi({
@@ -36,9 +37,11 @@ export const app = new Kaapi({
 
 // cookies
 app.base().state('kaapisession', {
-    ttl: 60000,
+    ttl: 60000 * 2, // 2 min
     isHttpOnly: true,
-    encoding: 'base64json'
+    //encoding: 'base64json'
+    encoding: 'iron',
+    password: randomBytes(32).toString('base64url')
 });
 
 // register plugins

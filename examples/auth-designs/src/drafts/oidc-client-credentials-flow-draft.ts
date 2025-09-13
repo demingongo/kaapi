@@ -84,7 +84,7 @@ export default OIDCClientCredentialsBuilder
                             ) // add id_token if scope has 'openid'
                     }
                 } catch (err) {
-                    console.error(err)
+                    logger.error(err)
                 }
 
                 return null

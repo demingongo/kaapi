@@ -82,6 +82,15 @@ export default OIDCAuthorizationCodeBuilder
                     return await renderHtml('authorization-page', { context: { ...context, error: 'invalid_client' }, params, req })
                 }
 
+                const session = req.state['kaapisession']
+                logger.debug('session', session)
+                if (session?.user) {
+                    const user = await db.users.findById(session.user)
+                    if (user) {
+                        return renderHtml('consent-page', { params })
+                    }
+                }
+
                 return await renderHtml('authorization-page', { context, params, req })
             })
             .setPOSTResponseRenderer(async (context, params, req) => {
@@ -100,7 +109,7 @@ export default OIDCAuthorizationCodeBuilder
                     if (submit === 'allow') {
                         // code generation
                         const session = state.kaapisession
-                        console.log('session', session)
+                        logger.debug('session', session)
                         if (session?.user) {
                             // Consider storing intermediate data instead of fully encoding it into the code string (unless encrypted).
                             return {
@@ -211,7 +220,7 @@ export default OIDCAuthorizationCodeBuilder
                             ) // add id_token if scope has 'openid'
                     }
                 } catch (err) {
-                    console.error(err)
+                    logger.error(err)
                 }
 
                 return null
@@ -272,7 +281,7 @@ export default OIDCAuthorizationCodeBuilder
                             ) // add id_token if the new scope has 'openid'
                     }
                 } catch (err) {
-                    console.error(err)
+                    logger.error(err)
                 }
 
                 return null
