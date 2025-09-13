@@ -8,6 +8,14 @@ import {
 import { encode } from 'html-entities'
 import { OAuth2Error, OAuth2ErrorBody, PathValue } from '../common'
 
+const AUTH_ERRORS = {
+    INVALID_CLIENT: 'invalid_client',
+    ACCESS_DENIED: 'access_denied',
+    INVALID_REQUEST: 'invalid_request',
+    CREDENTIALS: 'credentials',
+    UNKNOWN: 'unknown'
+} as const
+
 //#region AuthorizationRoute
 
 export interface OAuth2ACAuthorizationParams {
@@ -174,6 +182,16 @@ const authResponseHandler: AuthResponseHandler<any> = async (ctx, _params, _req,
     return h.redirect(`${ctx.fullRedirectUri}`)
 }
 
+function buildRedirectUri(base: string, params: Record<string, string>): string {
+    const searchParams = new URLSearchParams()
+    for (const [key, value] of Object.entries(params)) {
+        if (value !== undefined && value !== null) {
+            searchParams.append(key, value)
+        }
+    }
+    return `${base}?${searchParams.toString()}`
+}
+
 export class DefaultOAuth2ACAuthorizationRoute<
     GetRefs extends ReqRef = ReqRefDefaults,
     PostRefs extends ReqRef = ReqRefDefaults,
@@ -191,32 +209,8 @@ export class DefaultOAuth2ACAuthorizationRoute<
 
     constructor() {
         super('/oauth2/authorize', async ({ clientId, redirectUri, ...props }, req, h) => {
-            if (this.#clientId && this.#clientId != clientId) {
-                return h.response(
-                    await this.#renderResponse(
-                        {
-                            emailField: this.#emailField,
-                            passwordField: this.#passwordField,
-                            statusCode: 400,
-                            error: 'invalid_client',
-                            errorMessage: 'Bad \'client_id\' parameter'
-                        },
-                        { clientId, redirectUri, ...props },
-                        req, h)).code(400)
-            }
-            if (this.#redirectUri && this.#redirectUri != redirectUri) {
-                return h.response(
-                    await this.#renderResponse(
-                        {
-                            emailField: this.#emailField,
-                            passwordField: this.#passwordField,
-                            statusCode: 400,
-                            error: 'invalid_client',
-                            errorMessage: 'Bad \'redirect_uri\' parameter'
-                        },
-                        { clientId, redirectUri, ...props },
-                        req, h)).code(400)
-            }
+            const validationError = await this.validateClientParams(clientId, redirectUri, { clientId, redirectUri, ...props }, req, h, this.#renderResponse)
+            if (validationError) return validationError
 
             // render form
             return h.response(
@@ -227,53 +221,41 @@ export class DefaultOAuth2ACAuthorizationRoute<
                 }, { clientId, redirectUri, ...props }, req, h)
             ).code(200)
         }, async (props, req, h) => {
-            if (this.#clientId && this.#clientId != props.clientId) {
-                return h.response(
-                    await this.#renderPOSTResponse(
-                        {
-                            emailField: this.#emailField,
-                            passwordField: this.#passwordField,
-                            statusCode: 400,
-                            error: 'invalid_client',
-                            errorMessage: 'Bad \'client_id\' parameter'
-                        },
-                        props,
-                        req, h)).code(400)
-            }
-            if (this.#redirectUri && this.#redirectUri != props.redirectUri) {
-                return h.response(
-                    await this.#renderPOSTResponse(
-                        {
-                            emailField: this.#emailField,
-                            passwordField: this.#passwordField,
-                            statusCode: 400,
-                            error: 'invalid_client',
-                            errorMessage: 'Bad \'redirect_uri\' parameter'
-                        },
-                        props,
-                        req, h)).code(400)
-            }
+            const validationError = await this.validateClientParams(props.clientId, props.redirectUri, props, req, h, this.#renderResponse)
+            if (validationError) return validationError
 
-            let error: AuthErrorType = 'unknown'
-            let errorMessage = 'someting went wrong'
+            let error: AuthErrorType = AUTH_ERRORS.UNKNOWN
+            let errorMessage = 'something went wrong'
 
             if (
                 props.clientId &&
                 req.payload &&
-                typeof req.payload === 'object' /*&&
+                typeof req.payload === 'object' &&
+                !Array.isArray(req.payload)/*&&
                 this.#emailField in req.payload &&
                 this.#passwordField in req.payload
                 */
             ) {
-                const code = await this.#generateCode(props, req, h)
+                const code = await this.#generateCode(props, req, h);
                 if (code) {
                     let fullRedirectUri = '';
                     if (code.type === 'code' && code.value) {
-                        fullRedirectUri = `${props.redirectUri}?code=${encodeURIComponent(code.value)}${props.state ? `&state=${encodeURIComponent(props.state)}` : ''}`
+                        fullRedirectUri = buildRedirectUri(props.redirectUri, {
+                            code: code.value,
+                            state: props.state ?? ''
+                        });
                     } else if (code.type === 'deny') {
-                        fullRedirectUri = `${props.redirectUri}?error=invalid_request&error_description=${encodeURIComponent('User denied consent')}${props.state ? `&state=${encodeURIComponent(props.state)}` : ''}`
+                        fullRedirectUri = buildRedirectUri(props.redirectUri, {
+                            error: AUTH_ERRORS.ACCESS_DENIED,
+                            error_description: 'User denied consent',
+                            state: props.state ?? ''
+                        });
                     } else {
-                        fullRedirectUri = `${props.redirectUri}?error=invalid_request&error_description=${encodeURIComponent('No code')}${props.state ? `&state=${encodeURIComponent(props.state)}` : ''}`
+                        fullRedirectUri = buildRedirectUri(props.redirectUri, {
+                            error: AUTH_ERRORS.INVALID_REQUEST,
+                            error_description: 'No code',
+                            state: props.state ?? ''
+                        });
                     }
                     return this.#authorizationResponseHandler({
                         authorizationResult: code,
@@ -282,11 +264,12 @@ export class DefaultOAuth2ACAuthorizationRoute<
                         fullRedirectUri
                     }, props, req, h)
                 } else {
-                    error = 'credentials'
+                    error = AUTH_ERRORS.CREDENTIALS
                     errorMessage = 'wrong credentials'
                 }
             } else {
-                error = 'invalid_request'
+                error = AUTH_ERRORS.INVALID_REQUEST
+                errorMessage = 'Missing or invalid request payload'
             }
 
             // render form
@@ -308,6 +291,70 @@ export class DefaultOAuth2ACAuthorizationRoute<
         this.#renderResponse = render
         this.#renderPOSTResponse = render
         this.#authorizationResponseHandler = authResponseHandler
+    }
+
+    /**
+     * Creates a new `DefaultOAuth2ACAuthorizationRoute` instance from the provided configuration.
+     */
+    static fromConfig<
+        GetRefs extends ReqRef = ReqRefDefaults,
+        PostRefs extends ReqRef = ReqRefDefaults,
+    >(config: {
+        path?: PathValue,
+        clientId?: string,
+        redirectUri?: string,
+        emailField?: string,
+        passwordField?: string,
+        codeGenerator?: AuthCodeGenerator<PostRefs>,
+        responseRenderer?: AuthResponseRenderer<GetRefs>,
+        postResponseRenderer?: AuthResponseRenderer<PostRefs>,
+        finalizeAuthorization?: AuthResponseHandler<PostRefs>
+    }) {
+        const instance = new DefaultOAuth2ACAuthorizationRoute<GetRefs, PostRefs>()
+        if (config.path) instance.setPath(config.path)
+        if (config.clientId) instance.setClientId(config.clientId)
+        if (config.redirectUri) instance.setRedirectUri(config.redirectUri)
+        if (config.emailField) instance.setEmailField(config.emailField)
+        if (config.passwordField) instance.setPasswordField(config.passwordField)
+        if (config.codeGenerator) instance.generateCode(config.codeGenerator)
+        if (config.responseRenderer) instance.setGETResponseRenderer(config.responseRenderer)
+        if (config.postResponseRenderer) instance.setPOSTResponseRenderer(config.postResponseRenderer)
+        if (config.finalizeAuthorization) instance.finalizeAuthorization(config.finalizeAuthorization)
+        return instance
+    }
+
+    private async validateClientParams(
+        clientId: string,
+        redirectUri: string,
+        props: OAuth2ACAuthorizationParams,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        req: Request<any>,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        h: ResponseToolkit<any>,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        renderer: AuthResponseRenderer<any>
+    ) {
+        if (this.#clientId && this.#clientId !== clientId) {
+            return h.response(await renderer({
+                emailField: this.#emailField,
+                passwordField: this.#passwordField,
+                statusCode: 400,
+                error: AUTH_ERRORS.INVALID_CLIENT,
+                errorMessage: 'Bad \'client_id\' parameter'
+            }, props, req, h)).code(400)
+        }
+
+        if (this.#redirectUri && this.#redirectUri !== redirectUri) {
+            return h.response(await renderer({
+                emailField: this.#emailField,
+                passwordField: this.#passwordField,
+                statusCode: 400,
+                error: AUTH_ERRORS.INVALID_CLIENT,
+                errorMessage: 'Bad \'redirect_uri\' parameter'
+            }, props, req, h)).code(400)
+        }
+
+        return null
     }
 
     setPath(path: PathValue): this {
@@ -370,14 +417,14 @@ export class DefaultOAuth2ACAuthorizationRoute<
     }
 
     setEmailField(value: string): this {
-        const escaped = encodeURIComponent(encode(value))
+        const escaped = encode(value) // For HTML rendering, use encode() (from html-entities)
         if (escaped)
             this.#emailField = escaped
         return this
     }
 
     setPasswordField(value: string): this {
-        const escaped = encodeURIComponent(encode(value))
+        const escaped = encode(value) // For HTML rendering, use encode() (from html-entities)
         if (escaped)
             this.#passwordField = escaped
         return this

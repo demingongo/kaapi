@@ -530,3 +530,186 @@ This:
 * Stick with `"code"` (with PKCE) as your baseline.
 * Let devs opt into other response types **only when needed**.
 
+---
+
+`response_mode=form_post` is an **OAuth 2.0 / OpenID Connect feature** that controls **how authorization responses** (like the authorization code or error) are delivered to the client’s `redirect_uri`.
+
+---
+
+## 🔍 What is `response_mode`?
+
+In OAuth2 / OIDC, after a user authenticates and authorizes, the Authorization Server **redirects the user back** to the Client’s `redirect_uri`, along with:
+
+* an **authorization code** (on success), or
+* an **error** (on failure)
+
+The `response_mode` parameter tells the server **how** to deliver this information.
+
+---
+
+## ✳️ Common `response_mode` values
+
+| Mode        | How the response is returned                    | Use Case                                       |
+| ----------- | ----------------------------------------------- | ---------------------------------------------- |
+| `query`     | As query params in the redirect URI             | Default for most `code` flows                  |
+| `fragment`  | As URI fragment (`#`)                           | Used with `implicit` flow                      |
+| `form_post` | As `POST` parameters in an HTML form submission | Useful for large payloads or enhanced security |
+
+---
+
+## 🧪 Example: `response_mode=form_post`
+
+### 🔁 Flow
+
+1. The client redirects the user to the Authorization Server:
+
+```
+GET /authorize?
+  response_type=code&
+  client_id=abc123&
+  redirect_uri=https://client.example.com/cb&
+  response_mode=form_post&
+  state=xyz
+```
+
+2. After successful auth, instead of redirecting with query params:
+
+```
+302 Found
+Location: https://client.example.com/cb?code=AUTH_CODE&state=xyz
+```
+
+...the server returns an **HTML page with an auto-submitting form**:
+
+```html
+<!DOCTYPE html>
+<html>
+  <body onload="document.forms[0].submit()">
+    <form method="POST" action="https://client.example.com/cb">
+      <input type="hidden" name="code" value="AUTH_CODE"/>
+      <input type="hidden" name="state" value="xyz"/>
+    </form>
+  </body>
+</html>
+```
+
+3. The user's browser submits the form → the client receives the code **in the request body**, not the URL.
+
+---
+
+## ✅ Benefits of `form_post`
+
+| Advantage                           | Description                                            |
+| ----------------------------------- | ------------------------------------------------------ |
+| **Avoids long URLs**                | POST allows larger payloads (e.g., long `id_token`s)   |
+| **No sensitive data in URL**        | Prevents leaks via browser history or referrer headers |
+| **Cleaner redirect URIs**           | The URI isn't cluttered with query params              |
+| **Required for some SSO scenarios** | Often used with OpenID Connect `id_token` responses    |
+
+---
+
+## ⚠️ Considerations
+
+* Your **client’s redirect endpoint must accept POST requests**.
+* Some older clients (or misconfigured ones) may only expect GET with query params.
+* CSRF protection may be needed if you're processing POSTs from browsers.
+
+---
+
+## 📌 TL;DR
+
+`response_mode=form_post` tells the auth server:
+
+> “Instead of putting the authorization `code` in the redirect URI, return it in an HTML form that POSTs to my `redirect_uri`.”
+
+✅ It's more secure and flexible than using query parameters.
+📦 Especially helpful when returning large tokens or sensitive data.
+
+Let me know if you want a working implementation sketch of this inside your `DefaultOAuth2ACAuthorizationRoute`.
+
+---
+
+Perfect — that’s a clean and flexible place to handle it. ✅
+
+Letting the `finalizeAuthorization()` hook manage the `response_mode` behavior allows you to:
+
+* Keep your core route logic agnostic of transport details,
+* Support future modes like `query`, `fragment`, or `form_post` without clutter,
+* And let developers cleanly inject custom behavior based on `params.response_mode`.
+
+If you ever standardize it later, you could support `response_mode` via a utility:
+
+```ts
+function sendAuthorizationResponse(mode: 'query' | 'form_post', data: Record<string, string>, redirectUri: string, h: ResponseToolkit) {
+    if (mode === 'form_post') {
+        const inputs = Object.entries(data)
+            .map(([k, v]) => `<input type="hidden" name="${k}" value="${encode(v)}" />`)
+            .join('')
+        const html = `<!DOCTYPE html><html><body onload="document.forms[0].submit()"><form method="POST" action="${redirectUri}">${inputs}</form></body></html>`
+        return h.response(html).type('text/html')
+    } else {
+        const url = new URL(redirectUri)
+        Object.entries(data).forEach(([k, v]) => url.searchParams.set(k, v))
+        return h.redirect(url.toString())
+    }
+}
+```
+
+But for now — leaving it to the `finalizeAuthorization()` method is a solid design. No action needed.
+
+---
+
+Here's a compact ✅ **OAuth 2.0 Error Cheat Sheet** — ideal for implementing or validating OAuth flows like **Authorization Code**, **Implicit**, **Client Credentials**, etc.
+
+---
+
+## 📄 OAuth 2.0 Error Cheat Sheet
+
+| **Error Code**              | **When to Use**                                                                                                                      | **Relevant To**     |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------- |
+| `invalid_request`           | The request is missing a required parameter, includes an unsupported parameter or value, or is malformed.                            | All flows           |
+| `unauthorized_client`       | The client is **not authorized** to use this authorization grant type.                                                               | Auth Code, Implicit |
+| `access_denied`             | The resource owner or authorization server **denied the request**.                                                                   | Auth Code, Implicit |
+| `unsupported_response_type` | The `response_type` is not supported by the server (e.g. `token`, `code`).                                                           | Auth Code, Implicit |
+| `invalid_scope`             | The requested scope is invalid, unknown, or malformed.                                                                               | All flows           |
+| `server_error`              | Unexpected server error (e.g., DB failure). Should be used **only when something unexpected fails**, and not due to client mistakes. | All flows           |
+| `temporarily_unavailable`   | The server is temporarily too busy or down. Retry later.                                                                             | All flows           |
+| `invalid_client`            | The client authentication **failed** (e.g., wrong client secret or unknown client ID). Usually returned with `401 Unauthorized`.     | Token endpoint only |
+| `invalid_grant`             | The provided `authorization_code`, `refresh_token`, or other grant is **invalid**, expired, revoked, or doesn't match the client.    | Token exchange      |
+| `unsupported_grant_type`    | The `grant_type` provided is not supported by the authorization server.                                                              | Token exchange      |
+
+---
+
+## 🧾 Example OAuth Error Response (Authorization Endpoint)
+
+```http
+HTTP/1.1 302 Found
+Location: https://client.example.com/callback?
+  error=access_denied
+  &error_description=User+denied+access
+  &state=xyz
+```
+
+---
+
+## 🧾 Example OAuth Error Response (Token Endpoint)
+
+```json
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{
+  "error": "invalid_grant",
+  "error_description": "The authorization code is expired"
+}
+```
+
+---
+
+## 🧠 Notes
+
+* `error_description` is optional but **very useful** for debugging.
+* Always include the original `state` in error responses from the **authorization endpoint** (if it was included in the request).
+* These errors are defined in [RFC 6749, Section 4.1.2.1](https://tools.ietf.org/html/rfc6749#section-4.1.2.1) and [5.2](https://tools.ietf.org/html/rfc6749#section-5.2).
+
+---

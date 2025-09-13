@@ -36,6 +36,22 @@ export type PathValue = `/${string}`;
 
 export type WithRequired<T, K extends keyof T> = T & { [P in K]-?: T[P] }
 
+export const OAuth2ErrorCode = {
+  INVALID_REQUEST: 'invalid_request',
+  UNAUTHORIZED_CLIENT: 'unauthorized_client',
+  ACCESS_DENIED: 'access_denied',
+  UNSUPPORTED_RESPONSE_TYPE: 'unsupported_response_type',
+  INVALID_SCOPE: 'invalid_scope',
+  SERVER_ERROR: 'server_error',
+  TEMPORARILY_UNAVAILABLE: 'temporarily_unavailable',
+  INVALID_CLIENT: 'invalid_client',
+  INVALID_GRANT: 'invalid_grant',
+  UNSUPPORTED_GRANT_TYPE: 'unsupported_grant_type',
+} as const
+
+export type OAuth2ErrorCode =
+  typeof OAuth2ErrorCode[keyof typeof OAuth2ErrorCode]
+
 export type OAuth2Error = 'invalid_request' | 'invalid_client' | 'invalid_grant' | 'invalid_scope' | 'unauthorized_client' | 'unsupported_grant_type' | 'invalid_token'
 
 export type OAuth2ErrorBody = {

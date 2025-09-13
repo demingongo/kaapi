@@ -8,7 +8,8 @@
 
 - @kaapi/oauth2-auth-design
     - improvements - the return type for generateCode (AuthCodeGenerator): AuthCodeGeneratorResult @done
-    - finalizeAuthorization: handleAuthorizationResult or resolveAuthorizationResult or completeAuthorizationFlow or keep the name
+    - REPLACE OAuth2Error by OAuth2ErrorCode
+    - auth code: response_mode - `query` or `form_post`
     - be able to verify jwt in refresh token @done
     - unify: move options (?OAuth2AuthOptions<any>) and strategyName (?string) and integrateStrategy to OAuth2AuthDesignOptions @done
     - jwks keys rotation freq and token ttl are independents, make it so. AND THE STORE shouldn't have to handle that. @done
