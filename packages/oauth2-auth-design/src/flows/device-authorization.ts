@@ -11,7 +11,7 @@ import { ClientAuthentication, OAuth2Util } from '@novice1/api-doc-generator'
 import {
     IOAuth2RefreshTokenRoute,
     OAuth2AuthOptions,
-    OAuth2Error,
+    AnyOAuth2ErrorCodeType,
     OAuth2RefreshTokenParams,
     OAuth2AuthDesign,
     OAuth2SingleAuthFlow,
@@ -243,7 +243,7 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
 
                     return this.tokenRoute.handler(params, req, h)
                 } else {
-                    let error: OAuth2Error = 'unauthorized_client';
+                    let error: AnyOAuth2ErrorCodeType = 'unauthorized_client';
                     let errorDescription = ''
                     if (!clientId) {
                         error = 'invalid_request'
@@ -347,7 +347,7 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
 
                     return this.refreshTokenRoute?.handler(params, req, h)
                 } else {
-                    let error: OAuth2Error = 'unauthorized_client';
+                    let error: AnyOAuth2ErrorCodeType = 'unauthorized_client';
                     let errorDescription = ''
                     if (!clientId) {
                         error = 'invalid_request'
@@ -422,7 +422,7 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
                         const result = await this.handleRefreshToken(t, req, h)
 
                         if (result === h.continue) {
-                            return h.response({ error: 'invalid_token', error_description: 'Token was not validated by any handler.' }).code(400)
+                            return h.response({ error: 'invalid_grant', error_description: 'Token was not validated by any handler.' }).code(400)
                         }
 
                         return result
@@ -443,7 +443,7 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
                     const result = await this.handleRefreshToken(t, req, h)
 
                     if (result === h.continue) {
-                        return h.response({ error: 'invalid_token', error_description: 'Token was not validated by any handler.' }).code(400)
+                        return h.response({ error: 'invalid_grant', error_description: 'Token was not validated by any handler.' }).code(400)
                     }
 
                     return result

@@ -180,7 +180,7 @@ export const openIDDesign = new OIDCAuthorizationCode(
 
                 //#endregion @TODO: validation + refresh token
 
-                return h.response({ error: 'invalid_token' }).code(400)
+                return h.response({ error: 'invalid_grant' }).code(400)
             }) as OAuth2RefreshTokenHandler,
         ),
         options: {

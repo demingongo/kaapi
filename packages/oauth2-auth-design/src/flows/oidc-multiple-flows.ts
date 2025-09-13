@@ -180,7 +180,7 @@ export class MultipleFlows extends AuthDesign {
                                         }
                                     }
                                 }
-                                return h.response({ error: 'invalid_token', error_description: 'Token was not validated by any handler.' }).code(400)
+                                return h.response({ error: 'invalid_grant', error_description: 'Token was not validated by any handler.' }).code(400)
                             }
                         }
                     }

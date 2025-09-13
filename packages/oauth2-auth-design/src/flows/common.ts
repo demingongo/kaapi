@@ -36,26 +36,56 @@ export type PathValue = `/${string}`;
 
 export type WithRequired<T, K extends keyof T> = T & { [P in K]-?: T[P] }
 
-export const OAuth2ErrorCode = {
-  INVALID_REQUEST: 'invalid_request',
-  UNAUTHORIZED_CLIENT: 'unauthorized_client',
-  ACCESS_DENIED: 'access_denied',
-  UNSUPPORTED_RESPONSE_TYPE: 'unsupported_response_type',
-  INVALID_SCOPE: 'invalid_scope',
-  SERVER_ERROR: 'server_error',
-  TEMPORARILY_UNAVAILABLE: 'temporarily_unavailable',
-  INVALID_CLIENT: 'invalid_client',
-  INVALID_GRANT: 'invalid_grant',
-  UNSUPPORTED_GRANT_TYPE: 'unsupported_grant_type',
-} as const
+export const StandardOAuth2ErrorCode = Object.freeze({
+    INVALID_REQUEST: 'invalid_request',
+    UNAUTHORIZED_CLIENT: 'unauthorized_client',
+    ACCESS_DENIED: 'access_denied',
+    UNSUPPORTED_RESPONSE_TYPE: 'unsupported_response_type',
+    INVALID_SCOPE: 'invalid_scope',
+    SERVER_ERROR: 'server_error',
+    TEMPORARILY_UNAVAILABLE: 'temporarily_unavailable',
+    INVALID_CLIENT: 'invalid_client',
+    INVALID_GRANT: 'invalid_grant',
+    UNSUPPORTED_GRANT_TYPE: 'unsupported_grant_type',
+} as const);
 
-export type OAuth2ErrorCode =
-  typeof OAuth2ErrorCode[keyof typeof OAuth2ErrorCode]
+export const ExtendedOAuth2ErrorCode = Object.freeze({
+    LOGIN_REQUIRED: 'login_required',
+    INTERACTION_REQUIRED: 'interaction_required',
+    CONSENT_REQUIRED: 'consent_required',
+    ACCOUNT_LOCKED: 'account_locked',
+    PASSWORD_EXPIRED: 'password_expired',
+} as const);
 
-export type OAuth2Error = 'invalid_request' | 'invalid_client' | 'invalid_grant' | 'invalid_scope' | 'unauthorized_client' | 'unsupported_grant_type' | 'invalid_token'
+export const OAuth2ErrorCode = Object.freeze({
+    // Standard OAuth 2.0 errors
+    ...StandardOAuth2ErrorCode,
+    // Custom or OIDC-specific extensions
+    ...ExtendedOAuth2ErrorCode,
+} as const);
+
+export const OAuth2TokenErrorCode = Object.freeze({
+  INVALID_TOKEN: 'invalid_token',
+  INSUFFICIENT_SCOPE: 'insufficient_scope',
+} as const);
+
+export type StandardOAuth2ErrorCodeType =
+  typeof StandardOAuth2ErrorCode[keyof typeof StandardOAuth2ErrorCode]
+
+export type ExtendedOAuth2ErrorCodeType =
+  typeof ExtendedOAuth2ErrorCode[keyof typeof ExtendedOAuth2ErrorCode]
+
+export type OAuth2ErrorCodeType = StandardOAuth2ErrorCodeType | ExtendedOAuth2ErrorCodeType
+
+export type OAuth2TokenErrorCodeType = typeof OAuth2TokenErrorCode[keyof typeof OAuth2TokenErrorCode];
+
+export type AnyOAuth2ErrorCodeType =
+  | StandardOAuth2ErrorCodeType
+  | ExtendedOAuth2ErrorCodeType
+  | OAuth2TokenErrorCodeType;
 
 export type OAuth2ErrorBody = {
-    error: OAuth2Error
+    error: AnyOAuth2ErrorCodeType
     error_description?: string
     error_uri?: string
     [key: string]: unknown
@@ -463,10 +493,10 @@ export abstract class OAuth2AuthDesign extends AuthDesign {
         req: Request<ReqRefDefaults>,
         authMethodsInstances: Record<TokenEndpointAuthMethod, ClientAuthMethod | undefined>,
         checkOrder: TokenEndpointAuthMethod[],
-    ): Promise<{ clientId?: string; clientSecret?: string; error?: OAuth2Error; errorDescription?: string }> {
+    ): Promise<{ clientId?: string; clientSecret?: string; error?: AnyOAuth2ErrorCodeType; errorDescription?: string }> {
         let clientId: string | undefined;
         let clientSecret: string | undefined;
-        let error: OAuth2Error | undefined;
+        let error: AnyOAuth2ErrorCodeType | undefined;
         let errorDescription: string | undefined;
 
         for (const am of checkOrder) {

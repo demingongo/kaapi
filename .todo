@@ -8,7 +8,8 @@
 
 - @kaapi/oauth2-auth-design
     - improvements - the return type for generateCode (AuthCodeGenerator): AuthCodeGeneratorResult @done
-    - REPLACE OAuth2Error by OAuth2ErrorCode
+    - REPLACE AnyOAuth2ErrorCodeType by OAuth2ErrorCode
+    - REPLACE all error codes written in string to use OAuth2ErrorCode... 
     - auth code: response_mode - `query` or `form_post`
     - be able to verify jwt in refresh token @done
     - unify: move options (?OAuth2AuthOptions<any>) and strategyName (?string) and integrateStrategy to OAuth2AuthDesignOptions @done

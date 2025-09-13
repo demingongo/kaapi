@@ -14,7 +14,7 @@ import {
     OAuth2AuthDesign,
     OAuth2AuthDesignBuilder,
     OAuth2AuthOptions,
-    OAuth2Error,
+    AnyOAuth2ErrorCodeType,
     OAuth2AuthDesignOptions,
     OAuth2SingleAuthFlow,
     OAuth2JwksOptions
@@ -188,7 +188,7 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign implements OAuth2S
 
                     return this.tokenRoute.handler(params, req, h)
                 } else {
-                    let error: OAuth2Error = 'unauthorized_client';
+                    let error: AnyOAuth2ErrorCodeType = 'unauthorized_client';
                     let errorDescription = ''
                     if (!clientId) {
                         error = 'invalid_request'

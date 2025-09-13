@@ -6,15 +6,7 @@ import {
     ResponseToolkit
 } from '@kaapi/kaapi'
 import { encode } from 'html-entities'
-import { OAuth2Error, OAuth2ErrorBody, PathValue } from '../common'
-
-const AUTH_ERRORS = {
-    INVALID_CLIENT: 'invalid_client',
-    ACCESS_DENIED: 'access_denied',
-    INVALID_REQUEST: 'invalid_request',
-    CREDENTIALS: 'credentials',
-    UNKNOWN: 'unknown'
-} as const
+import { AnyOAuth2ErrorCodeType, OAuth2ErrorBody, OAuth2ErrorCode, PathValue } from '../common'
 
 //#region AuthorizationRoute
 
@@ -86,14 +78,12 @@ export class OAuth2ACAuthorizationRoute<
 
 //#region Defaults
 
-export type AuthErrorType = OAuth2Error | 'credentials' | 'unknown'
-
 export type AuthResponseRenderer<Refs extends ReqRef = ReqRefDefaults> = (
     context: {
         statusCode: number,
         emailField: string,
         passwordField: string,
-        error?: AuthErrorType,
+        error?: AnyOAuth2ErrorCodeType ,
         errorMessage?: string
     },
     params: OAuth2ACAuthorizationParams,
@@ -224,7 +214,7 @@ export class DefaultOAuth2ACAuthorizationRoute<
             const validationError = await this.validateClientParams(props.clientId, props.redirectUri, props, req, h, this.#renderResponse)
             if (validationError) return validationError
 
-            let error: AuthErrorType = AUTH_ERRORS.UNKNOWN
+            let error: AnyOAuth2ErrorCodeType = OAuth2ErrorCode.SERVER_ERROR
             let errorMessage = 'something went wrong'
 
             if (
@@ -246,13 +236,13 @@ export class DefaultOAuth2ACAuthorizationRoute<
                         });
                     } else if (code.type === 'deny') {
                         fullRedirectUri = buildRedirectUri(props.redirectUri, {
-                            error: AUTH_ERRORS.ACCESS_DENIED,
+                            error: OAuth2ErrorCode.ACCESS_DENIED,
                             error_description: 'User denied consent',
                             state: props.state ?? ''
                         });
                     } else {
                         fullRedirectUri = buildRedirectUri(props.redirectUri, {
-                            error: AUTH_ERRORS.INVALID_REQUEST,
+                            error: OAuth2ErrorCode.INVALID_REQUEST,
                             error_description: 'No code',
                             state: props.state ?? ''
                         });
@@ -264,11 +254,11 @@ export class DefaultOAuth2ACAuthorizationRoute<
                         fullRedirectUri
                     }, props, req, h)
                 } else {
-                    error = AUTH_ERRORS.CREDENTIALS
+                    error = OAuth2ErrorCode.ACCESS_DENIED
                     errorMessage = 'wrong credentials'
                 }
             } else {
-                error = AUTH_ERRORS.INVALID_REQUEST
+                error = OAuth2ErrorCode.INVALID_REQUEST
                 errorMessage = 'Missing or invalid request payload'
             }
 
@@ -339,7 +329,7 @@ export class DefaultOAuth2ACAuthorizationRoute<
                 emailField: this.#emailField,
                 passwordField: this.#passwordField,
                 statusCode: 400,
-                error: AUTH_ERRORS.INVALID_CLIENT,
+                error: OAuth2ErrorCode.INVALID_CLIENT,
                 errorMessage: 'Bad \'client_id\' parameter'
             }, props, req, h)).code(400)
         }
@@ -349,7 +339,7 @@ export class DefaultOAuth2ACAuthorizationRoute<
                 emailField: this.#emailField,
                 passwordField: this.#passwordField,
                 statusCode: 400,
-                error: AUTH_ERRORS.INVALID_CLIENT,
+                error: OAuth2ErrorCode.INVALID_CLIENT,
                 errorMessage: 'Bad \'redirect_uri\' parameter'
             }, props, req, h)).code(400)
         }

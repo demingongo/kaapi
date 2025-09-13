@@ -203,7 +203,7 @@ OIDCClientCredentialsBuilder
 
         //#endregion @TODO: validation + refresh token
 
-        return h.response({ error: 'invalid_token' }).code(400)
+        return h.response({ error: 'invalid_grant' }).code(400)
     }))
 .setDescription('This API uses OAuth 2 with the authentication code grant flow. [More info](https://oauth.net/2/grant-types/authorization-code/)')
 .setScopes({

@@ -11,7 +11,7 @@ import { ClientAuthentication, GrantType, OAuth2Util } from '@novice1/api-doc-ge
 import {
     IOAuth2RefreshTokenRoute,
     OAuth2AuthOptions,
-    OAuth2Error,
+    AnyOAuth2ErrorCodeType,
     OAuth2RefreshTokenParams,
     OAuth2AuthDesign,
     OAuth2SingleAuthFlow,
@@ -21,7 +21,8 @@ import {
     JWKSRoute,
     OAuth2RefreshTokenRoute,
     OAuth2AuthDesignOptions,
-    OAuth2JwksOptions
+    OAuth2JwksOptions,
+    OAuth2ErrorCode
 } from './common'
 import { createIdToken, createJwtAccessToken, verifyJwt } from '../utils/jwt-utils'
 import {
@@ -262,18 +263,18 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
 
                     const ttR: TokenTypeValidationResponse = tokenTypeInstance.isValidTokenRequest ? (await tokenTypeInstance.isValidTokenRequest(req)) : { isValid: true }
                     if (!ttR.isValid) {
-                        return h.response({ error: 'invalid_request', error_description: ttR.message || '' }).code(400)
+                        return h.response({ error: OAuth2ErrorCode.INVALID_REQUEST, error_description: ttR.message || '' }).code(400)
                     }
 
                     return this.tokenRoute.handler(params, req, h)
                 } else {
-                    let error: OAuth2Error = 'unauthorized_client';
+                    let error: AnyOAuth2ErrorCodeType = OAuth2ErrorCode.UNAUTHORIZED_CLIENT;
                     let errorDescription = ''
                     if (!clientId) {
-                        error = 'invalid_request'
+                        error = OAuth2ErrorCode.INVALID_REQUEST
                         errorDescription = 'Request was missing the \'client_id\' parameter.'
                     } else if (!(req.payload.code && typeof req.payload.code === 'string')) {
-                        error = 'invalid_request'
+                        error = OAuth2ErrorCode.INVALID_REQUEST
                         errorDescription = 'Request was missing the \'code\' parameter.'
                     }
                     return h.response({ error, error_description: errorDescription }).code(400)
@@ -371,7 +372,7 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
 
                     return this.refreshTokenRoute?.handler(params, req, h)
                 } else {
-                    let error: OAuth2Error = 'unauthorized_client';
+                    let error: AnyOAuth2ErrorCodeType = 'unauthorized_client';
                     let errorDescription = ''
                     if (!clientId) {
                         error = 'invalid_request'
@@ -446,7 +447,7 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
                         const result = await this.handleRefreshToken(t, req, h)
 
                         if (result === h.continue) {
-                            return h.response({ error: 'invalid_token', error_description: 'Token was not validated by any handler.' }).code(400)
+                            return h.response({ error: 'invalid_grant', error_description: 'Token was not validated by any handler.' }).code(400)
                         }
 
                         return result
@@ -467,7 +468,7 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
                     const result = await this.handleRefreshToken(t, req, h)
 
                     if (result === h.continue) {
-                        return h.response({ error: 'invalid_token', error_description: 'Token was not validated by any handler.' }).code(400)
+                        return h.response({ error: 'invalid_grant', error_description: 'Token was not validated by any handler.' }).code(400)
                     }
 
                     return result
