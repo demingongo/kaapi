@@ -3,6 +3,7 @@ import {
     ClientSecretBasic,
     ClientSecretPost,
     createInMemoryKeyStore,
+    OAuth2ErrorCode,
     OAuth2TokenResponse,
     OIDCClientCredentialsBuilder
 } from '@kaapi/oauth2-auth-design'
@@ -50,12 +51,12 @@ export default OIDCClientCredentialsBuilder
 
                 // no secret
                 if (!clientSecret) {
-                    return { error: 'invalid_request', error_description: 'Token Request was missing the \'client_secret\' parameter.' }
+                    return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Token Request was missing the \'client_secret\' parameter.' }
                 }
 
                 // no token ttl
                 if (!ttl) {
-                    return { error: 'invalid_request', error_description: 'Missing ttl' }
+                    return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Missing ttl' }
                 }
 
                 // db query + secret validation

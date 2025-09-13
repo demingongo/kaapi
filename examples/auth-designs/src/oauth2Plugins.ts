@@ -7,7 +7,8 @@ import {
     OAuth2RefreshTokenHandler,
     OAuth2RefreshTokenRoute,
     OAuth2ACTokenHandler,
-    OAuth2ACTokenRoute
+    OAuth2ACTokenRoute,
+    OAuth2ErrorCode
 } from '@kaapi/oauth2-auth-design';
 
 function buildSignInHTML(options: { title: string, error?: string }) {
@@ -117,7 +118,7 @@ export const authenticationCodeDesign = new OAuth2AuthorizationCode(
                 console.log('clientSecret', clientSecret)
 
                 if (!clientSecret && !codeVerifier) {
-                    return h.response({ error: 'invalid_request', error_description: 'Token Request was missing the \'client_secret\' parameter.' }).code(400)
+                    return h.response({ error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Token Request was missing the \'client_secret\' parameter.' }).code(400)
                 }
                 try {
                     //#region @TODO: validation + token
@@ -136,7 +137,7 @@ export const authenticationCodeDesign = new OAuth2AuthorizationCode(
                     console.error(err)
                 }
 
-                return h.response({ error: 'invalid_request' }).code(400)
+                return h.response({ error:  OAuth2ErrorCode.INVALID_REQUEST }).code(400)
             }) as OAuth2ACTokenHandler,
         ),
         refreshTokenRoute: new OAuth2RefreshTokenRoute(
@@ -152,7 +153,7 @@ export const authenticationCodeDesign = new OAuth2AuthorizationCode(
 
                 //#endregion @TODO: validation + refresh token
 
-                return h.response({ error: 'invalid_grant' }).code(400)
+                return h.response({ error: OAuth2ErrorCode.INVALID_GRANT }).code(400)
             }) as OAuth2RefreshTokenHandler,
         ),
         options: {

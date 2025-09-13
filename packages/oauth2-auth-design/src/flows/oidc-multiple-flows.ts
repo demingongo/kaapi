@@ -11,6 +11,7 @@ import {
     IJWKSRoute,
     JWKSRoute,
     OAuth2AuthDesignBuilder,
+    OAuth2ErrorCode,
     OAuth2JwksOptions,
     OAuth2SingleAuthFlow,
     OAuth2SingleAuthFlowBuilder,
@@ -180,12 +181,12 @@ export class MultipleFlows extends AuthDesign {
                                         }
                                     }
                                 }
-                                return h.response({ error: 'invalid_grant', error_description: 'Token was not validated by any handler.' }).code(400)
+                                return h.response({ error: OAuth2ErrorCode.INVALID_GRANT, error_description: 'Token was not validated by any handler.' }).code(400)
                             }
                         }
                     }
 
-                    return h.response({ error: 'unsupported_grant_type', error_description: `Request does not support the 'grant_type' '${req.payload.grant_type}'.` }).code(400)
+                    return h.response({ error: OAuth2ErrorCode.UNSUPPORTED_GRANT_TYPE, error_description: `Request does not support the 'grant_type' '${req.payload.grant_type}'.` }).code(400)
                 }
             });
 

@@ -12,6 +12,7 @@ import {
     NoneAuthMethod,
     OIDCDeviceAuthorizationBuilder,
     createInMemoryKeyStore,
+    OAuth2ErrorCode,
     //ClientSecretJwt,
     //PrivateKeyJwt
 } from '@kaapi/oauth2-auth-design';
@@ -67,10 +68,10 @@ export const OIDCMultiFlowsDesignV2 = MultipleFlowsBuilder
                         console.log('ttl', ttl)
 
                         if (!clientSecret) {
-                            return { error: 'invalid_request', error_description: 'Token Request was missing the \'client_secret\' parameter.' }
+                            return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Token Request was missing the \'client_secret\' parameter.' }
                         }
                         if (!ttl) {
-                            return { error: 'invalid_request', error_description: 'Missing ttl' }
+                            return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Missing ttl' }
                         }
                         try {
                             //#region @TODO: validation + token
@@ -178,10 +179,10 @@ export const OIDCMultiFlowsDesignV2 = MultipleFlowsBuilder
                         console.log('scope', scope)
 
                         if (!clientSecret) {
-                            return { error: 'invalid_request', error_description: 'Token Request was missing the \'client_secret\' parameter.' }
+                            return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Token Request was missing the \'client_secret\' parameter.' }
                         }
                         if (!ttl) {
-                            return { error: 'invalid_request', error_description: 'Missing ttl' }
+                            return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Missing ttl' }
                         }
                         try {
                             //#region @TODO: validation + token
@@ -318,10 +319,10 @@ export const OIDCMultiFlowsDesignV2 = MultipleFlowsBuilder
                         console.log('scope', scope)
 
                         if (clientId != 'testabc') {
-                            return { error: 'access_denied', error_description: 'Token Request was missing the \'client_secret\' parameter.' }
+                            return { error:  OAuth2ErrorCode.ACCESS_DENIED, error_description: 'Token Request was missing the \'client_secret\' parameter.' }
                         }
                         if (!ttl) {
-                            return { error: 'access_denied', error_description: 'Missing ttl' }
+                            return { error:  OAuth2ErrorCode.ACCESS_DENIED, error_description: 'Missing ttl' }
                         }
                         try {
                             //#region @TODO: validation + token

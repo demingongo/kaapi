@@ -65,32 +65,50 @@ export const OAuth2ErrorCode = Object.freeze({
 } as const);
 
 export const OAuth2TokenErrorCode = Object.freeze({
-  INVALID_TOKEN: 'invalid_token',
-  INSUFFICIENT_SCOPE: 'insufficient_scope',
+    INVALID_TOKEN: 'invalid_token',
+    INSUFFICIENT_SCOPE: 'insufficient_scope',
+} as const);
+
+export const DeviceFlowOAuth2ErrorCode = Object.freeze({
+    ACCESS_DENIED: 'access_denied',
+    AUTHORIZATION_PENDING: 'authorization_pending',
+    SLOW_DOWN: 'slow_down',
+    EXPIRED_TOKEN: 'expired_token',
+} as const);
+
+export const AllOAuth2ErrorCode = Object.freeze({
+  ...StandardOAuth2ErrorCode,
+  ...ExtendedOAuth2ErrorCode,
+  ...OAuth2TokenErrorCode,
+  ...DeviceFlowOAuth2ErrorCode,
 } as const);
 
 export type StandardOAuth2ErrorCodeType =
-  typeof StandardOAuth2ErrorCode[keyof typeof StandardOAuth2ErrorCode]
+    typeof StandardOAuth2ErrorCode[keyof typeof StandardOAuth2ErrorCode]
 
 export type ExtendedOAuth2ErrorCodeType =
-  typeof ExtendedOAuth2ErrorCode[keyof typeof ExtendedOAuth2ErrorCode]
+    typeof ExtendedOAuth2ErrorCode[keyof typeof ExtendedOAuth2ErrorCode]
 
 export type OAuth2ErrorCodeType = StandardOAuth2ErrorCodeType | ExtendedOAuth2ErrorCodeType
 
 export type OAuth2TokenErrorCodeType = typeof OAuth2TokenErrorCode[keyof typeof OAuth2TokenErrorCode];
 
+export type DeviceFlowOAuth2ErrorCodeType =
+    typeof DeviceFlowOAuth2ErrorCode[keyof typeof DeviceFlowOAuth2ErrorCode];
+
 export type AnyOAuth2ErrorCodeType =
-  | StandardOAuth2ErrorCodeType
-  | ExtendedOAuth2ErrorCodeType
-  | OAuth2TokenErrorCodeType;
+    | StandardOAuth2ErrorCodeType
+    | ExtendedOAuth2ErrorCodeType
+    | OAuth2TokenErrorCodeType
+    | DeviceFlowOAuth2ErrorCodeType;
 
 export function createMatchOAuth2ErrorCode<R>(
-  handlers: Partial<Record<AnyOAuth2ErrorCodeType, () => R>>
+    handlers: Partial<Record<AnyOAuth2ErrorCodeType, () => R>>
 ) {
-  return (code: AnyOAuth2ErrorCodeType): R | undefined => {
-    const handler = handlers[code];
-    return handler ? handler() : undefined;
-  };
+    return (code: AnyOAuth2ErrorCodeType): R | undefined => {
+        const handler = handlers[code];
+        return handler ? handler() : undefined;
+    };
 }
 
 export type OAuth2ErrorBody = {
@@ -518,10 +536,10 @@ export abstract class OAuth2AuthDesign extends AuthDesign {
                     clientId = v.clientId
                     clientSecret = v.clientSecret
                     if (!v.clientId) {
-                        error = 'invalid_request'
+                        error = OAuth2ErrorCode.INVALID_REQUEST
                         errorDescription = `Error ${amInstance.method}: Missing client_id`
                     } else if (!amInstance.secretIsOptional && !v.clientSecret) {
-                        error = 'invalid_request'
+                        error = OAuth2ErrorCode.INVALID_REQUEST
                         errorDescription = `Error ${amInstance.method}: Missing client_secret`
                     }
                     break;

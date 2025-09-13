@@ -75,7 +75,7 @@ export const ${this.#values.name} = new OpenIDAuthDesign(
             .generateToken(async ({ clientId, clientSecret, code, codeVerifier, redirectUri, ttl, createIdToken }, _req) => {
 
                 if (!clientSecret && !codeVerifier) {
-                    return { error: 'invalid_request', error_description: 'Token Request was missing the \\'client_secret\\' parameter.' }
+                    return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Token Request was missing the \\'client_secret\\' parameter.' }
                 }
                 try {
                     //#region @TODO: validation + token
@@ -114,7 +114,7 @@ export const ${this.#values.name} = new OpenIDAuthDesign(
 
                 //#endregion @TODO: validation + refresh token
 
-                return h.response({ error: 'invalid_grant' }).code(400)
+                return h.response({ error: OAuth2ErrorCode.INVALID_GRANT }).code(400)
             }) as OAuth2RefreshTokenHandler,
         ),
         options: {

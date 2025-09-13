@@ -5,6 +5,7 @@ import {
     createMatchAuthCodeResult,
     DPoPToken,
     NoneAuthMethod,
+    OAuth2ErrorCode,
     OAuth2TokenResponse,
     OIDCAuthorizationCodeBuilder
 } from '@kaapi/oauth2-auth-design'
@@ -179,15 +180,15 @@ export default OIDCAuthorizationCodeBuilder
                     }
                 } else if (codeVerifier) {
                     if (!verifyCodeVerifier(codeVerifier, codeChallenge)) {
-                        return { error: 'invalid_request', error_description: 'Invalid code exchange' }
+                        return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Invalid code exchange' }
                     }
                 } else {
-                    return { error: 'invalid_request', error_description: 'Token Request was missing the \'client_secret\' parameter.' }
+                    return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Token Request was missing the \'client_secret\' parameter.' }
                 }
 
                 // no token ttl
                 if (!ttl) {
-                    return { error: 'invalid_request', error_description: 'Missing ttl' }
+                    return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Missing ttl' }
                 }
 
                 try {
@@ -234,7 +235,7 @@ export default OIDCAuthorizationCodeBuilder
                     // verify refresh token
                     const payload = await verifyJwt?.<RefreshPayload>(refreshToken)
                     if (!payload || !(payload.client_id && payload.client_id === clientId && payload.sub && payload.type === 'refresh')) {
-                        return { error: 'invalid_request' }
+                        return { error:  OAuth2ErrorCode.INVALID_REQUEST }
                     }
 
                     // db query
@@ -243,11 +244,11 @@ export default OIDCAuthorizationCodeBuilder
 
                     // client or user not found
                     if (!client || !user) {
-                        return { error: 'invalid_request' }
+                        return { error:  OAuth2ErrorCode.INVALID_REQUEST }
                     }
 
                     if (!ttl) {
-                        return { error: 'invalid_request', error_description: 'Missing ttl' }
+                        return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Missing ttl' }
                     }
 
                     const newScope = scope || payload.scope

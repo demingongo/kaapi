@@ -9,7 +9,8 @@ import {
     OAuth2ACTokenRoute,
     JWKSRoute,
     OAuth2TokenResponse,
-    OIDCAuthorizationCode
+    OIDCAuthorizationCode,
+    OAuth2ErrorCode
 } from '@kaapi/oauth2-auth-design';
 
 function buildSignInHTML(options: { title: string, error?: string }) {
@@ -134,7 +135,7 @@ export const openIDDesign = new OIDCAuthorizationCode(
                 console.log('clientSecret', clientSecret)
 
                 if (!clientSecret && !codeVerifier) {
-                    return h.response({ error: 'invalid_request', error_description: 'Token Request was missing the \'client_secret\' parameter.' }).code(400)
+                    return h.response({ error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Token Request was missing the \'client_secret\' parameter.' }).code(400)
                 }
                 try {
                     //#region @TODO: validation + token
@@ -164,7 +165,7 @@ export const openIDDesign = new OIDCAuthorizationCode(
                     console.error(err)
                 }
 
-                return h.response({ error: 'invalid_request' }).code(400)
+                return h.response({ error:  OAuth2ErrorCode.INVALID_REQUEST }).code(400)
             }) as OAuth2ACTokenHandler,
         ),
         refreshTokenRoute: new OAuth2RefreshTokenRoute(
@@ -180,7 +181,7 @@ export const openIDDesign = new OIDCAuthorizationCode(
 
                 //#endregion @TODO: validation + refresh token
 
-                return h.response({ error: 'invalid_grant' }).code(400)
+                return h.response({ error: OAuth2ErrorCode.INVALID_GRANT }).code(400)
             }) as OAuth2RefreshTokenHandler,
         ),
         options: {

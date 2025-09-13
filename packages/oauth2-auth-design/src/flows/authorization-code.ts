@@ -146,7 +146,7 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
                         errorDescription = 'Request was missing the \'redirect_uri\' parameter.'
                     }
 
-                    return h.response({ error: 'invalid_request', error_description: errorDescription }).code(400)
+                    return h.response({ error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: errorDescription }).code(400)
                 }
             }
         };
@@ -198,7 +198,7 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
                     supportedGrants.push('refresh_token')
                 }
                 if (!(typeof req.payload.grant_type === 'string' && supportedGrants.includes(req.payload.grant_type))) {
-                    return h.response({ error: 'unsupported_grant_type', error_description: `Request does not support the 'grant_type' '${req.payload.grant_type}'.` }).code(400)
+                    return h.response({ error: OAuth2ErrorCode.UNSUPPORTED_GRANT_TYPE, error_description: `Request does not support the 'grant_type' '${req.payload.grant_type}'.` }).code(400)
                 }
 
                 // Client authentication is present?
@@ -216,7 +216,7 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
                 if (!clientId) {
                     return h
                         .response({
-                            error: 'invalid_request',
+                            error:  OAuth2ErrorCode.INVALID_REQUEST,
                             error_description: `Supported token endpoint authentication methods: ${supported.join(', ')}`
                         }).code(400)
                 }
@@ -307,7 +307,7 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
                 // Grant validation
                 const supportedGrants = ['refresh_token']
                 if (!(typeof req.payload.grant_type === 'string' && supportedGrants.includes(req.payload.grant_type))) {
-                    return h.response({ error: 'unsupported_grant_type', error_description: `Request does not support the 'grant_type' '${req.payload.grant_type}'.` }).code(400)
+                    return h.response({ error: OAuth2ErrorCode.UNSUPPORTED_GRANT_TYPE, error_description: `Request does not support the 'grant_type' '${req.payload.grant_type}'.` }).code(400)
                 }
 
                 // Client authentication is present?
@@ -325,7 +325,7 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
                 if (!clientId) {
                     return h
                         .response({
-                            error: 'invalid_request',
+                            error:  OAuth2ErrorCode.INVALID_REQUEST,
                             error_description: `Supported token endpoint authentication methods: ${supported.join(', ')}`
                         }).code(400)
                 }
@@ -372,13 +372,13 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
 
                     return this.refreshTokenRoute?.handler(params, req, h)
                 } else {
-                    let error: AnyOAuth2ErrorCodeType = 'unauthorized_client';
+                    let error: AnyOAuth2ErrorCodeType =  OAuth2ErrorCode.UNAUTHORIZED_CLIENT;
                     let errorDescription = ''
                     if (!clientId) {
-                        error = 'invalid_request'
+                        error =  OAuth2ErrorCode.INVALID_REQUEST
                         errorDescription = 'Request was missing the \'client_id\' parameter.'
                     } else if (!(req.payload.refresh_token && typeof req.payload.refresh_token === 'string')) {
-                        error = 'invalid_request'
+                        error =  OAuth2ErrorCode.INVALID_REQUEST
                         errorDescription = 'Request was missing the \'refresh_token\' parameter.'
                     }
                     return h.response({ error, error_description: errorDescription }).code(400)
@@ -447,12 +447,12 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
                         const result = await this.handleRefreshToken(t, req, h)
 
                         if (result === h.continue) {
-                            return h.response({ error: 'invalid_grant', error_description: 'Token was not validated by any handler.' }).code(400)
+                            return h.response({ error: OAuth2ErrorCode.INVALID_GRANT, error_description: 'Token was not validated by any handler.' }).code(400)
                         }
 
                         return result
                     }
-                    return h.response({ error: 'unsupported_grant_type', error_description: `Request does not support the 'grant_type' '${req.payload.grant_type}'.` }).code(400)
+                    return h.response({ error: OAuth2ErrorCode.UNSUPPORTED_GRANT_TYPE, error_description: `Request does not support the 'grant_type' '${req.payload.grant_type}'.` }).code(400)
                 }
             })
 
@@ -468,7 +468,7 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
                     const result = await this.handleRefreshToken(t, req, h)
 
                     if (result === h.continue) {
-                        return h.response({ error: 'invalid_grant', error_description: 'Token was not validated by any handler.' }).code(400)
+                        return h.response({ error: OAuth2ErrorCode.INVALID_GRANT, error_description: 'Token was not validated by any handler.' }).code(400)
                     }
 
                     return result

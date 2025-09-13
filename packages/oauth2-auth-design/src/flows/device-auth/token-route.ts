@@ -5,6 +5,8 @@ import {
 } from '@kaapi/kaapi'
 import {
     DefaultOAuth2TokenRoute,
+    DeviceFlowOAuth2ErrorCode,
+    DeviceFlowOAuth2ErrorCodeType,
     IOAuth2TokenResponse,
     IOAuth2TokenRoute,
     OAuth2TokenHandler,
@@ -17,10 +19,8 @@ import {
 
 //#region Types
 
-export type OAuth2DeviceCodeTokenError = 'access_denied' | 'authorization_pending' | 'slow_down'
-
 export type OAuth2DeviceCodeTokenErrorBody = {
-    error: OAuth2DeviceCodeTokenError
+    error: DeviceFlowOAuth2ErrorCodeType
     error_description?: string
     error_uri?: string
     [key: string]: unknown
@@ -85,17 +85,17 @@ export class DefaultOAuth2DeviceAuthTokenRoute<
             try {
                 r = await this.#generateToken(props, req)
             } catch (err) {
-                return h.response({ error: 'access_denied', error_description: `${err}` }).code(400)
+                return h.response({ error: DeviceFlowOAuth2ErrorCode.ACCESS_DENIED, error_description: `${err}` }).code(400)
             }
 
-            if (!r) return h.response({ error: 'access_denied' }).code(400)
+            if (!r) return h.response({ error: DeviceFlowOAuth2ErrorCode.ACCESS_DENIED }).code(400)
 
             if ('error' in r) return h.response(r).code(400)
 
             return h.response(r).code(200)
         })
 
-        this.#generateToken = async () => ({ error: 'access_denied' })
+        this.#generateToken = async () => ({ error: DeviceFlowOAuth2ErrorCode.ACCESS_DENIED })
     }
 
     setPath(path: PathValue): this {

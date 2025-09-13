@@ -2,6 +2,7 @@ import {
     BearerToken,
     ClientSecretBasic,
     ClientSecretPost,
+    OAuth2ErrorCode,
     OAuth2TokenResponse,
     OIDCClientCredentialsBuilder
 } from '@kaapi/oauth2-auth-design'
@@ -45,10 +46,10 @@ export default OIDCClientCredentialsBuilder
                 console.log('ttl', ttl)
 
                 if (!clientSecret) {
-                    return { error: 'invalid_request', error_description: 'Token Request was missing the \'client_secret\' parameter.' }
+                    return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Token Request was missing the \'client_secret\' parameter.' }
                 }
                 if (!ttl) {
-                    return { error: 'invalid_request', error_description: 'Missing ttl' }
+                    return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Missing ttl' }
                 }
                 try {
                     //#region @TODO: validation + token

@@ -17,7 +17,8 @@ import {
     AnyOAuth2ErrorCodeType,
     OAuth2AuthDesignOptions,
     OAuth2SingleAuthFlow,
-    OAuth2JwksOptions
+    OAuth2JwksOptions,
+    OAuth2ErrorCode
 } from './common'
 import { ClientAuthMethod, ClientSecretBasic, ClientSecretPost, TokenEndpointAuthMethod } from '../utils/client-auth-methods'
 import { DefaultOAuth2ClientCredentialsTokenRoute, IOAuth2ClientCredentialsTokenRoute, OAuth2ClientCredentialsTokenParams, OAuth2ClientCredentialsTokenRoute } from './client-creds/token-route'
@@ -103,7 +104,7 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign implements OAuth2S
                 // Grant validation
                 const supportedGrants = ['client_credentials']
                 if (!(typeof req.payload.grant_type === 'string' && supportedGrants.includes(req.payload.grant_type))) {
-                    return h.response({ error: 'unsupported_grant_type', error_description: `Request does not support the 'grant_type' '${req.payload.grant_type}'.` }).code(400)
+                    return h.response({ error: OAuth2ErrorCode.UNSUPPORTED_GRANT_TYPE, error_description: `Request does not support the 'grant_type' '${req.payload.grant_type}'.` }).code(400)
                 }
 
                 // Client authentication is present?
@@ -121,7 +122,7 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign implements OAuth2S
                 if (!clientId || !clientSecret) {
                     return h
                         .response({
-                            error: 'invalid_request',
+                            error:  OAuth2ErrorCode.INVALID_REQUEST,
                             error_description: `Supported token endpoint authentication methods: ${supported.join(', ')}`
                         }).code(400)
                 }
@@ -146,12 +147,12 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign implements OAuth2S
                     if (tmpClientId) {
                         clientId = tmpClientId
                     } else {
-                        return h.response({ error: 'invalid_request', error_description: 'Request was missing the \'client_id\' parameter.' }).code(400)
+                        return h.response({ error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Request was missing the \'client_id\' parameter.' }).code(400)
                     }
                     if (tmpClientSecret) {
                         clientSecret = tmpClientSecret
                     } else {
-                        return h.response({ error: 'invalid_request', error_description: 'Request was missing the \'client_secret\' parameter.' }).code(400)
+                        return h.response({ error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Request was missing the \'client_secret\' parameter.' }).code(400)
                     }
                     const scope = req.payload.scope && typeof req.payload.scope === 'string' ? req.payload.scope : undefined
                     const params: OAuth2ClientCredentialsTokenParams = {
@@ -183,18 +184,18 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign implements OAuth2S
 
                     const ttR: TokenTypeValidationResponse = tokenTypeInstance.isValidTokenRequest ? (await tokenTypeInstance.isValidTokenRequest(req)) : { isValid: true }
                     if (!ttR.isValid) {
-                        return h.response({ error: 'invalid_request', error_description: ttR.message || '' }).code(400)
+                        return h.response({ error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: ttR.message || '' }).code(400)
                     }
 
                     return this.tokenRoute.handler(params, req, h)
                 } else {
-                    let error: AnyOAuth2ErrorCodeType = 'unauthorized_client';
+                    let error: AnyOAuth2ErrorCodeType =  OAuth2ErrorCode.UNAUTHORIZED_CLIENT;
                     let errorDescription = ''
                     if (!clientId) {
-                        error = 'invalid_request'
+                        error =  OAuth2ErrorCode.INVALID_REQUEST
                         errorDescription = 'Request was missing the \'client_id\' parameter.'
                     } else if (!clientSecret) {
-                        error = 'invalid_request'
+                        error =  OAuth2ErrorCode.INVALID_REQUEST
                         errorDescription = 'Request was missing the \'client_secret\' parameter.'
                     }
                     return h.response({ error, error_description: errorDescription }).code(400)
@@ -243,7 +244,7 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign implements OAuth2S
                     if (req.payload.grant_type === this.grantType) {
                         return await this.handleToken(t, req, h)
                     }
-                    return h.response({ error: 'unsupported_grant_type', error_description: `Request does not support the 'grant_type' '${req.payload.grant_type}'.` }).code(400)
+                    return h.response({ error: OAuth2ErrorCode.UNSUPPORTED_GRANT_TYPE, error_description: `Request does not support the 'grant_type' '${req.payload.grant_type}'.` }).code(400)
                 }
             })
 

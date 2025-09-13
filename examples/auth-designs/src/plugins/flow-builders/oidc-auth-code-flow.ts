@@ -5,6 +5,7 @@ import {
     createInMemoryReplayStore,
     DPoPToken,
     NoneAuthMethod,
+    OAuth2ErrorCode,
     OAuth2TokenResponse,
     OIDCAuthorizationCodeBuilder
 } from '@kaapi/oauth2-auth-design'
@@ -73,10 +74,10 @@ export default OIDCAuthorizationCodeBuilder
                 console.log('scope', scope)
 
                 if (!clientSecret && !codeVerifier) {
-                    return { error: 'invalid_request', error_description: 'Token Request was missing the \'client_secret\' parameter.' }
+                    return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Token Request was missing the \'client_secret\' parameter.' }
                 }
                 if (!ttl) {
-                    return { error: 'invalid_request', error_description: 'Missing ttl' }
+                    return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Missing ttl' }
                 }
 
                 //if (codeVerifier) {
@@ -120,7 +121,7 @@ export default OIDCAuthorizationCodeBuilder
         console.log('ttl', ttl)
 
         if (!ttl) {
-            return { error: 'invalid_request', error_description: 'Missing ttl' }
+            return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Missing ttl' }
         }
         try {
             //#region @TODO: validation + token

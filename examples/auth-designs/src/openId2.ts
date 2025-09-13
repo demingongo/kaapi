@@ -10,6 +10,7 @@ import {
     OAuth2TokenResponse,
     //OAuth2AuthorizationCode,
     BearerToken,
+    OAuth2ErrorCode,
     //ClientSecretPost,
     //ClientSecretBasic,
     //ClientSecretJwt,
@@ -66,7 +67,7 @@ export const openIDDesign2 = new OIDCAuthorizationCode(
                 console.log('ttl', ttl)
 
                 if (!clientSecret && !codeVerifier) {
-                    return { error: 'invalid_request', error_description: 'Token Request was missing the \'client_secret\' parameter.' }
+                    return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Token Request was missing the \'client_secret\' parameter.' }
                 }
                 try {
                     //#region @TODO: validation + token
@@ -112,7 +113,7 @@ export const openIDDesign2 = new OIDCAuthorizationCode(
 
                 //#endregion @TODO: validation + refresh token
 
-                return h.response({ error: 'invalid_grant' }).code(400)
+                return h.response({ error: OAuth2ErrorCode.INVALID_GRANT }).code(400)
             }) as OAuth2RefreshTokenHandler,
         ),
         options: {

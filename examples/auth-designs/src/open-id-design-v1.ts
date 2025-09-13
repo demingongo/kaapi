@@ -6,6 +6,7 @@ import {
     ClientSecretBasic,
     ClientSecretPost,
     createInMemoryKeyStore,
+    OAuth2ErrorCode,
     //ClientSecretPost,
     //ClientSecretBasic,
     //ClientSecretJwt,
@@ -77,7 +78,7 @@ export const openIDDesignV1 = OIDCAuthorizationCodeBuilder
             console.log('ttl', ttl)
 
             if (!clientSecret && !codeVerifier) {
-                return { error: 'invalid_request', error_description: 'Token Request was missing the \'client_secret\' parameter.' }
+                return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Token Request was missing the \'client_secret\' parameter.' }
             }
             try {
                 //#region @TODO: validation + token
@@ -122,7 +123,7 @@ export const openIDDesignV1 = OIDCAuthorizationCodeBuilder
 
             //#endregion @TODO: validation + refresh token
 
-            return h.response({ error: 'invalid_grant' }).code(400)
+            return h.response({ error: OAuth2ErrorCode.INVALID_GRANT }).code(400)
         }))
     .setDescription('This API uses OAuth 2 with the authentication code grant flow. [More info](https://oauth.net/2/grant-types/authorization-code/)')
     .setScopes({

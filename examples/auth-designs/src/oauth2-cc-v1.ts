@@ -9,6 +9,7 @@ import {
     ClientSecretPost,
     ClientSecretBasic,
     createInMemoryKeyStore,
+    OAuth2ErrorCode,
     //ClientSecretJwt,
     //PrivateKeyJwt
 } from '@kaapi/oauth2-auth-design';
@@ -63,10 +64,10 @@ export const clientCredentialsDesignV1 = MultipleFlowsBuilder.create()
                         console.log('ttl', ttl)
 
                         if (!clientSecret) {
-                            return { error: 'invalid_request', error_description: 'Token Request was missing the \'client_secret\' parameter.' }
+                            return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Token Request was missing the \'client_secret\' parameter.' }
                         }
                         if (!ttl) {
-                            return { error: 'invalid_request', error_description: 'Missing ttl' }
+                            return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Missing ttl' }
                         }
                         try {
                             //#region @TODO: validation + token
@@ -154,10 +155,10 @@ OIDCClientCredentialsBuilder
         console.log('ttl', ttl)
 
         if (!clientSecret) {
-            return { error: 'invalid_request', error_description: 'Token Request was missing the \'client_secret\' parameter.' }
+            return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Token Request was missing the \'client_secret\' parameter.' }
         }
         if (!ttl) {
-            return { error: 'invalid_request', error_description: 'Missing ttl' }
+            return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Missing ttl' }
         }
         try {
             //#region @TODO: validation + token
@@ -203,7 +204,7 @@ OIDCClientCredentialsBuilder
 
         //#endregion @TODO: validation + refresh token
 
-        return h.response({ error: 'invalid_grant' }).code(400)
+        return h.response({ error: OAuth2ErrorCode.INVALID_GRANT }).code(400)
     }))
 .setDescription('This API uses OAuth 2 with the authentication code grant flow. [More info](https://oauth.net/2/grant-types/authorization-code/)')
 .setScopes({
