@@ -84,6 +84,15 @@ export type AnyOAuth2ErrorCodeType =
   | ExtendedOAuth2ErrorCodeType
   | OAuth2TokenErrorCodeType;
 
+export function createMatchOAuth2ErrorCode<R>(
+  handlers: Partial<Record<AnyOAuth2ErrorCodeType, () => R>>
+) {
+  return (code: AnyOAuth2ErrorCodeType): R | undefined => {
+    const handler = handlers[code];
+    return handler ? handler() : undefined;
+  };
+}
+
 export type OAuth2ErrorBody = {
     error: AnyOAuth2ErrorCodeType
     error_description?: string
