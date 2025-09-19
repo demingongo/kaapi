@@ -296,5 +296,6 @@ export default OIDCAuthorizationCodeBuilder
         read: 'Read access to protected resources.',
         write: 'Write access to protected resources.',
         admin: 'Grants administrative or elevated privileges.',
-        'api:read': 'Read access to a specific API or resource group.'
+        'api:read': 'Read access to a specific API or resource group.',
+        'contacts.read': 'Read access to a specific API or resource group.'
     })

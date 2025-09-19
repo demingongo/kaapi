@@ -59,7 +59,7 @@ const SUBSCRIBE_CONFIG: KafkaMessagingSubscribeConfig = {
 
 async function createTopic(app: Kaapi) {
 
-    const admin = messenger.getKafka()?.admin({
+    const admin = await messenger.createAdmin({
         retry: {
             retries: 1,
             maxRetryTime: 10000
@@ -67,8 +67,6 @@ async function createTopic(app: Kaapi) {
     })
 
     if (admin) {
-        await admin.connect()
-
         const clusterInfo = await admin.describeCluster();
         const availableBrokers = clusterInfo?.brokers.length;
 

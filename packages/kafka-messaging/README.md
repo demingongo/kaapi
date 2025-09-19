@@ -15,18 +15,116 @@ It abstracts Kafka’s producer/consumer logic and provides a simple interface t
 ## ✨ Features
 
 * Simple `publish(topic, message)` API
-* Flexible `subscribe(topic, handler)` with offset tracking
+* Flexible `subscribe(topic, handler, config)` with offset tracking
 * KafkaJS-compatible configuration
 * Structured logging via Kaapi’s `ILogger`
 * Typed message handling with TypeScript
 
 ---
 
-## 📦 Installation
+## 🚀 Getting Started with KafkaMessaging
+
+This guide walks you through setting up and using the `KafkaMessaging` class to publish and consume messages with Apache Kafka.
+
+### Installation
 
 ```bash
 npm install @kaapi/kafka-messaging kafkajs
 ```
+
+---
+
+### Basic Setup
+
+```ts
+import { KafkaMessaging } from '@kaapi/kafka-messaging';
+
+const messaging = new KafkaMessaging({
+    clientId: 'my-app',
+    brokers: ['localhost:9092'],
+    name: 'my-service',
+    address: 'service-1',
+    logger: createLogger() // optional, use Kaapi ILogger
+});
+```
+
+The constructor accepts a `KafkaMessagingConfig` object, which extends `KafkaConfig` from [kafkajs](https://kafka.js.org/):
+
+| Option     | Type             | Description                                                               |
+| ---------- | ---------------- | ------------------------------------------------------------------------- |
+| `brokers`  | `string[]`       | List of Kafka broker addresses (e.g. `['localhost:9092']`). **Required.** |
+| `clientId` | `string`         | Unique client identifier for Kafka.                                       |
+| `logger`   | `ILogger`        | Optional logger implementing Kaapi's `ILogger` interface.                 |
+| `address`  | `string`         | Optional unique service address for routing and identification.           |
+| `name`     | `string`         | Optional human-readable name for service tracking/monitoring.             |
+| `producer` | `ProducerConfig` | Optional default KafkaJS producer configuration.                          |
+
+
+---
+
+### Creating a Topic
+
+```ts
+await messaging.createTopic({
+    topic: 'my-topic',
+    numPartitions: 1,
+    replicationFactor: 1,
+}, {
+    waitForLeaders: true
+});
+
+// ensure the topic is ready before publishing
+const timeoutMs = 10000;
+const checkIntervalMs = 200;
+await messaging.waitForTopicReady('my-topic', timeoutMs, checkIntervalMs);
+```
+
+---
+
+### Publishing a Message
+
+`publish(topic, message)` sends a message to a given Kafka topic.
+
+```ts
+await messaging.publish('my-topic', {
+    userId: '123',
+    action: 'login',
+});
+```
+
+* `topic`: The Kafka topic name
+* `message`: Any serializable object
+
+---
+
+### Subscribing to a Topic
+
+`subscribe(topic, handler, config?)` subscribes to a Kafka topic and calls the provided handler on each message.
+
+```ts
+await messaging.subscribe('my-topic', async (message, sender) => {
+    console.log('Received:', message);
+    console.log('From:', sender.name, sender.address);
+    console.log('Offset:', sender.offset);
+}, {
+    fromBeginning: true
+});
+```
+
+* `topic`: The Kafka topic name
+* `handler`: `(message, sender) => void | Promise<void>`
+* `config?`: `KafkaMessagingSubscribeConfig` (extends `ConsumerConfig`)
+    * `groupId?`: Kafka consumer group ID
+    * `fromBeginning?`: boolean - Start consuming from beginning of topic
+
+---
+
+### Graceful Shutdown
+
+```ts
+await messaging.shutdown();
+```
+This will disconnect all tracked producers, consumers, and admin clients safely.
 
 ---
 
@@ -39,9 +137,10 @@ import { Kaapi, createLogger } from '@kaapi/kaapi'
 import { KafkaMessaging } from '@kaapi/kafka-messaging';
 
 const messaging = new KafkaMessaging({
-    clientId: 'my-service',
+    clientId: 'my-app',
     brokers: ['localhost:9092'],
-    logger: createLogger() // optional, use Kaapi ILogger
+    name: 'my-service',
+    address: 'service-1'
 });
 
 /**
@@ -90,79 +189,36 @@ runExample().catch((err) => {
 
 ---
 
-## ⚙️ Configuration
+## Public API Contract
 
-### KafkaMessagingConfig (extends `KafkaConfig` from kafkajs)
+The `KafkaMessaging` class provides a safe and resilient interface for interacting with Kafka. Developers should use the following methods to ensure proper lifecycle management, resource tracking, and graceful shutdown.
 
-```ts
-{
-  brokers: string[];          // Kafka broker addresses
-  clientId?: string;          // Kafka client ID
-  logger?: ILogger;           // Optional logger
-  address?: string;           // Optional unique service address
-  name?: string;              // Optional name for tracking
-}
-```
+### Public Methods
 
-> 👉 Consider using the `name` or `address` options to distinguish multiple services in the same Kafka cluster.
+| Method                             | Purpose                                                                 |
+|-----------------------------------|-------------------------------------------------------------------------|
+| `createProducer()`                | Creates and connects a Kafka producer. Automatically tracked and cleaned up. |
+| `createConsumer(groupId, config?)`| Creates and connects a Kafka consumer. Automatically tracked and cleaned up. |
+| `createAdmin(config?)`                   | Creates and connects a Kafka admin client. Tracked for shutdown.        |
+| `publish(topic, message)`         | Sends a message to the specified topic using the managed producer.      |
+| `subscribe(topic, handler, config?)` | Subscribes to a topic and processes messages with the given handler. |
+| `shutdown()`                      | Gracefully disconnects all tracked producers, consumers, and admins.    |
+| `safeDisconnect(client, timeoutMs?)` | Disconnects a Kafka client with timeout protection.             |
+| `createTopic(topicConfig, options?)` | Creates a Kafka topic with optional validation and leader wait. |
+| `waitForTopicReady(topic, timeoutMs?, checkIntervalMs?)` | Ensures the topic is ready. |
 
-### KafkaMessagingSubscribeConfig (extends `ConsumerConfig`)
+### Internal Methods (Not Public)
 
-```ts
-{
-  groupId?: string;           // Kafka consumer group ID
-  fromBeginning?: boolean;    // Start consuming from beginning of topic
-}
-```
+| Method         | Status     | Reason for Restriction                          |
+|----------------|------------|-------------------------------------------------|
+| `getKafka()`   | Protected  | Used internally to instantiate Kafka clients. Avoid direct access to prevent unmanaged connections. |
 
----
+### Best Practices
 
-## 📤 `publish(topic, message)`
-
-Sends a message to a given Kafka topic.
-
-```ts
-await messaging.publish('orders.created', { orderId: 987 });
-```
-
-* `topic`: The Kafka topic name
-* `message`: Any serializable object
-
----
-
-## 📥 `subscribe(topic, handler, config?)`
-
-Subscribes to a Kafka topic and calls the provided handler on each message.
-
-```ts
-await messaging.subscribe('orders.created', async (msg, sender) => {
-    console.log('Received order:', msg);
-    console.log('Offset:', sender.offset);
-});
-```
-
-* `handler`: `(message, sender) => void | Promise<void>`
-* `sender.offset`: Kafka offset of the message
-
----
-
-## 🔧 Additional Methods
-
-### `getKafka(): Kafka | undefined`
-
-Returns the KafkaJS client instance.
-
-### `getProducer(): Promise<Producer | undefined>`
-
-Returns or creates the [KafkaJS](https://github.com/tulios/kafkajs) producer instance.
-
-### `getConsumer(topic, config): Promise<Consumer | undefined>`
-
-Returns a configured KafkaJS consumer.
-
-### `getAdmin(): Promise<Admin | undefined>`
-
-Returns the KafkaJS admin client.
+- Always use `createProducer`, `createConsumer`, or `createAdmin` to ensure proper tracking.
+- Avoid accessing the raw Kafka instance directly.
+- Call `shutdown()` during application teardown to release resources.
+- Use `createTopic()` and `waitForTopicReady()` in tests or dynamic topic scenarios.
 
 ---
 
