@@ -252,7 +252,8 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
      * [See docs](https://github.com/hapijs/hapi/blob/master/API.md#-await-serverstopoptions)
      */
     async stop(options?: { timeout: number; }): Promise<void> {
-        return await this.kaapiServer?.base.stop(options)
+        await this.kaapiServer?.base.stop(options)
+        await this.messaging?.shutdown?.()
     }
 
     route<Refs extends ReqRef = ReqRefDefaults>(

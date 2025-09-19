@@ -59,7 +59,6 @@ The constructor accepts a `KafkaMessagingConfig` object, which extends `KafkaCon
 | `name`     | `string`         | Optional human-readable name for service tracking/monitoring.             |
 | `producer` | `ProducerConfig` | Optional default KafkaJS producer configuration.                          |
 
-
 ---
 
 ### Creating a Topic

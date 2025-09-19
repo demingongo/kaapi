@@ -18,4 +18,5 @@ export interface ISubscribeMethod {
 export interface IMessaging {
     publish<T = unknown>(topic: string, message: T): Promise<void>
     subscribe<T = unknown>(topic: string, handler: (message: T, sender: IMessagingSender) => Promise<void> | void, conf?: IMessagingSubscribeConfig): Promise<void>
+    shutdown?(): Promise<unknown>
 }
