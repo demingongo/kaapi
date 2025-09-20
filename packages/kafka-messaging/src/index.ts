@@ -134,7 +134,7 @@ export class KafkaMessaging implements IMessaging {
      * 
      * @returns {Promise<void>} Resolves when the topic is ready.
      */
-    async waitForTopicReady(topic: string, timeoutMs = 10000, checkIntervalMs = 200): Promise<void> {
+    async waitForTopicReady(topic: string, timeoutMs: number = 10000, checkIntervalMs: number = 200): Promise<void> {
         if (checkIntervalMs < 200) {
             throw new Error(`Invalid checkIntervalMs: ${checkIntervalMs}. It must be at least 200ms to avoid overwhelming the broker.`);
         }
