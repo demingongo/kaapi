@@ -1,0 +1,31 @@
+{
+    "compilerOptions": {
+        "target": "ESNext",
+        "module": "ESNext",
+        "moduleResolution": "node",
+        "outDir": "dist",
+        "rootDir": "src",
+        "strict": true,
+        "resolveJsonModule": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "allowSyntheticDefaultImports": true,
+        "forceConsistentCasingInFileNames": true,
+
+        "typeRoots": ["types", "node_modules/@types"],
+        "lib": ["DOM", "ES6"],
+        "importHelpers": true,
+        "declaration": false,
+        "sourceMap": false,
+        // linter checks for common issues
+        "noImplicitReturns": true,
+        "noFallthroughCasesInSwitch": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true
+    },
+    "include": ["src"],
+    "exclude": ["node_modules", "dist"],
+  "ts-node": {
+    "esm": true
+  }
+}
