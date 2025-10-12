@@ -41,6 +41,7 @@
         "ts-node": "^10.9.2",
         "tsup": "^8.5.0",
         "tsx": "^4.20.6",
+        "type-coverage": "^2.29.7",
         "typescript": "^5.9.2",
         "typescript-eslint": "^8.40.0"
     },
@@ -55,6 +56,8 @@
         "lint": "eslint .",
         "start": "node dist/index.js",
         "test": "node --loader ts-node/esm --experimental-specifier-resolution=node --no-warnings ./node_modules/mocha/bin/mocha test/**/*.test.ts",
-        "test:kaukau": "node --loader ts-node/esm --experimental-specifier-resolution=node --no-warnings ./node_modules/kaukau/bin/kaukau -f test --ext .test.ts"
+        "test:kaukau": "node --loader ts-node/esm --experimental-specifier-resolution=node --no-warnings ./node_modules/kaukau/bin/kaukau -f test --ext .test.ts",
+        "type-coverage": "type-coverage --at-least 90 --detail",
+        "verify": "npm run lint && npm run format:check && npm run check && npm run check:deps && npm run type-coverage && npm run test:kaukau && npm run coverage"
     }
 }
