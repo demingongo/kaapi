@@ -6,6 +6,8 @@
   "main": "index.js",
   "scripts": {
     "build": "lerna run build --ignore docs",
+    "format": "lerna run format",
+    "format:check": "lerna run format:check",
     "lint": "lerna run lint",
     "release:build": "lerna run --concurrency 8 --no-private build --skip-nx-cache",
     "release:publish": "pnpm publish --recursive --tag latest",
@@ -28,6 +30,7 @@
     "@eslint/eslintrc": "^3.3.1",
     "@eslint/js": "^9.34.0",
     "@stylistic/eslint-plugin": "^5.2.3",
+    "@trivago/prettier-plugin-sort-imports": "^5.2.2",
     "@types/chai": "^5.2.2",
     "@types/mocha": "^10.0.10",
     "@types/node": "^24.3.0",
@@ -40,6 +43,7 @@
     "lerna": "^8.2.3",
     "mocha": "^11.7.1",
     "nodemon": "^3.1.10",
+    "prettier": "^3.6.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.40.0"

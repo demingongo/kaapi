@@ -1,91 +1,106 @@
+import Boom from '@hapi/boom';
 import Hapi from '@hapi/hapi';
-import Hoek from '@hapi/hoek'
-import Boom from '@hapi/boom'
+import Hoek from '@hapi/hoek';
 
-export type PartialServerRoute<Refs extends Hapi.ReqRef = Hapi.ReqRefDefaults> = Partial<Hapi.ServerRoute<Refs>>
+export type PartialServerRoute<Refs extends Hapi.ReqRef = Hapi.ReqRefDefaults> = Partial<Hapi.ServerRoute<Refs>>;
 
 export interface KaapiServerRoute<Refs extends Hapi.ReqRef = Hapi.ReqRefDefaults> extends PartialServerRoute<Refs> {
     /**
      * if true, it will set options.auth.startegy = 'kaapi'
      */
-    auth?: boolean
+    auth?: boolean;
 }
 
 export type KaapiAuthOptions = {
     tokenType?: string;
-    validate?: (request: Hapi.Request<Hapi.ReqRefDefaults>, token: string, h: Hapi.ResponseToolkit<Hapi.ReqRefDefaults>) =>
-        Promise<{ isValid?: boolean, artifacts?: unknown, credentials?: Hapi.AuthCredentials, message?: string, scheme?: string } | Hapi.Auth>
-}
+    validate?: (
+        request: Hapi.Request<Hapi.ReqRefDefaults>,
+        token: string,
+        h: Hapi.ResponseToolkit<Hapi.ReqRefDefaults>
+    ) => Promise<
+        | {
+              isValid?: boolean;
+              artifacts?: unknown;
+              credentials?: Hapi.AuthCredentials;
+              message?: string;
+              scheme?: string;
+          }
+        | Hapi.Auth
+    >;
+};
 
 export interface KaapiServerOptions extends Hapi.ServerOptions {
-    auth?: KaapiAuthOptions
+    auth?: KaapiAuthOptions;
 }
 
 export class KaapiServer<A = Hapi.ServerApplicationState> {
-
     #base: Hapi.Server<A>;
 
     get base() {
-        return this.#base
+        return this.#base;
     }
 
     constructor(opts?: KaapiServerOptions | undefined) {
-        const { auth: authOpts, ...serverOpts } = opts || {}
+        const { auth: authOpts, ...serverOpts } = opts || {};
 
-        this.#base = Hapi.server(serverOpts)
+        this.#base = Hapi.server(serverOpts);
 
         // register the auth scheme
         this.#base.auth.scheme('kaapi-auth', (_server, options) => {
-
             return {
                 async authenticate(request, h) {
-
-                    const settings: KaapiAuthOptions = Hoek.applyToDefaults({
-                        tokenType: 'Bearer'
-                    }, options || {});
+                    const settings: KaapiAuthOptions = Hoek.applyToDefaults(
+                        {
+                            tokenType: 'Bearer',
+                        },
+                        options || {}
+                    );
 
                     const authorization = request.raw.req.headers.authorization;
 
                     const authSplit = authorization ? authorization.split(/\s+/) : ['', ''];
 
-                    const tokenType = authSplit[0]
-                    let token = authSplit[1]
+                    const tokenType = authSplit[0];
+                    let token = authSplit[1];
 
                     if (tokenType.toLowerCase() !== settings.tokenType?.toLowerCase()) {
-                        token = ''
-                        return Boom.unauthorized(null, settings.tokenType || '')
+                        token = '';
+                        return Boom.unauthorized(null, settings.tokenType || '');
                     }
 
                     if (settings.validate) {
                         try {
-                            const result = await settings.validate?.(request, token, h)
+                            const result = await settings.validate?.(request, token, h);
 
                             if (result && 'isAuth' in result) {
-                                return result
+                                return result;
                             }
 
                             if (result) {
                                 const { isValid, credentials, artifacts, message, scheme } = result;
 
                                 if (isValid && credentials) {
-                                    return h.authenticated({ credentials, artifacts })
+                                    return h.authenticated({ credentials, artifacts });
                                 }
 
                                 if (message) {
-                                    return h.unauthenticated(Boom.unauthorized(message, scheme || settings.tokenType || ''), {
-                                        credentials: credentials || {},
-                                        artifacts
-                                    })
+                                    return h.unauthenticated(
+                                        Boom.unauthorized(message, scheme || settings.tokenType || ''),
+                                        {
+                                            credentials: credentials || {},
+                                            artifacts,
+                                        }
+                                    );
                                 }
                             }
                         } catch (err) {
-                            return Boom.internal(err instanceof Error ? err : `${err}`)
+                            return Boom.internal(err instanceof Error ? err : `${err}`);
                         }
                     }
 
-                    return Boom.unauthorized(null, settings.tokenType || '')
+                    return Boom.unauthorized(null, settings.tokenType || '');
                 },
-            }
+            };
         });
 
         // register the auth startegy
@@ -94,63 +109,63 @@ export class KaapiServer<A = Hapi.ServerApplicationState> {
 
     route<Refs extends Hapi.ReqRef = Hapi.ReqRefDefaults>(
         serverRoute: KaapiServerRoute<Refs>,
-        handler?: Hapi.HandlerDecorations | Hapi.Lifecycle.Method<Refs, Hapi.Lifecycle.ReturnValue<Refs>>): this {
+        handler?: Hapi.HandlerDecorations | Hapi.Lifecycle.Method<Refs, Hapi.Lifecycle.ReturnValue<Refs>>
+    ): this {
         // Set defaults
         if (!serverRoute.method) serverRoute.method = '*';
         if (!serverRoute.path) serverRoute.path = '/{any*}';
 
-        const { auth, ...route } = serverRoute
+        const { auth, ...route } = serverRoute;
 
         if (auth === false) {
-            if (route.options &&
+            if (
+                route.options &&
                 typeof route.options != 'function' &&
                 typeof route.options.auth != 'undefined' &&
-                (typeof route.options.auth != 'boolean' ||
-                    route.options.auth !== false)
+                (typeof route.options.auth != 'boolean' || route.options.auth !== false)
             ) {
-                throw new Error(`Ambiguous auth configuration. It cannot be "${auth}" and "${route.options.auth}" simultaneously: "${route.method}: ${route.path}".`)
-            } else if (!route.options ||
-                typeof route.options != 'function') {
+                throw new Error(
+                    `Ambiguous auth configuration. It cannot be "${auth}" and "${route.options.auth}" simultaneously: "${route.method}: ${route.path}".`
+                );
+            } else if (!route.options || typeof route.options != 'function') {
                 if (!route.options) {
-                    route.options = {}
+                    route.options = {};
                 }
                 if (!route.options.auth) {
-                    route.options.auth = false
+                    route.options.auth = false;
                 }
             }
         }
 
         if (auth) {
-            if (route.options &&
-                typeof route.options != 'function' &&
-                route.options.auth === false
-            ) {
-                throw new Error(`Ambiguous auth configuration. It cannot be "${auth}" and "${route.options.auth}" simultaneously: "${route.method}: ${route.path}".`)
+            if (route.options && typeof route.options != 'function' && route.options.auth === false) {
+                throw new Error(
+                    `Ambiguous auth configuration. It cannot be "${auth}" and "${route.options.auth}" simultaneously: "${route.method}: ${route.path}".`
+                );
             } else if (
                 !route.options ||
-                typeof route.options != 'function' && (
-                    !route.options.auth ||
-                    typeof route.options.auth === 'object')
+                (typeof route.options != 'function' && (!route.options.auth || typeof route.options.auth === 'object'))
             ) {
                 if (!route.options) {
-                    route.options = {}
+                    route.options = {};
                 }
                 if (!route.options.auth) {
-                    route.options.auth = {}
+                    route.options.auth = {};
                 }
                 if (typeof route.options.auth === 'object') {
                     if (!route.options.auth.mode || route.options.auth.mode === 'required') {
-                        route.options.auth.mode = 'required'
+                        route.options.auth.mode = 'required';
                     } else {
-                        throw new Error(`Ambiguous auth configuration. It cannot be "${auth}" and "${route.options.auth.mode}" simultaneously: "${route.method}: ${route.path}".`)
+                        throw new Error(
+                            `Ambiguous auth configuration. It cannot be "${auth}" and "${route.options.auth.mode}" simultaneously: "${route.method}: ${route.path}".`
+                        );
                     }
                 }
             }
         }
 
         // override handler
-        if (handler)
-            route.handler = handler
+        if (handler) route.handler = handler;
 
         this.#base.route(route as Hapi.ServerRoute<Refs>);
 
