@@ -1,8 +1,68 @@
 # kaapi/examples/esm
 
+![Lint](https://img.shields.io/badge/lint-eslint-blue)
+![Format](https://img.shields.io/badge/format-prettier-blue)
+![Type Check](https://img.shields.io/badge/typescript-checked-blue)
+![Dependency Check](https://img.shields.io/badge/dependencies-validated-blue)
+![Type Coverage](https://img.shields.io/badge/type--coverage-90%25%2B-brightgreen)
+![Tests](https://img.shields.io/badge/tests-kaukau%20%26%20mocha-blue)
+![Coverage](https://img.shields.io/badge/coverage-c8-yellowgreen)
+![CI](https://img.shields.io/badge/CI-pipeline-green)
+
 Script lineup forged in the fires of ESM chaos and Windows path quirks.
 
-## 🧰 Core Strengths of Your Script Suite
+## 🛠 Development Scripts
+
+This project includes a robust and modular set of npm scripts designed to streamline development, enforce code quality, and support cross-platform workflows.
+
+### 🔧 Core Scripts
+
+| Script  | Description                                                                                             |
+| ------- | ------------------------------------------------------------------------------------------------------- |
+| `build` | Bundles the source code using `tsup` with ESM output, cleans previous builds, and generates a metafile. |
+| `start` | Runs the compiled output from the `dist` directory.                                                     |
+| `dev`   | Starts a hot-reloading development server using `tsx`, with `.env` support.                             |
+| `clean` | Removes build and coverage artifacts using `shx` for cross-platform compatibility.                      |
+
+---
+
+### ✅ Code Quality & Validation
+
+| Script          | Description                                                                               |
+| --------------- | ----------------------------------------------------------------------------------------- |
+| `lint`          | Runs ESLint across the codebase to catch syntax and style issues.                         |
+| `format`        | Formats code using Prettier, with environment-specific config via `dotenvx`.              |
+| `format:check`  | Verifies formatting without making changes — useful for CI.                               |
+| `check`         | Runs TypeScript type checking without emitting files.                                     |
+| `check:deps`    | Uses Dependency Cruiser to validate architectural rules and detect circular dependencies. |
+| `type-coverage` | Reports TypeScript coverage and enforces a minimum threshold (90%).                       |
+
+---
+
+### 🧪 Testing & Coverage
+
+| Script        | Description                                                           |
+| ------------- | --------------------------------------------------------------------- |
+| `test`        | Runs Mocha tests with TypeScript support and clean module resolution. |
+| `test:kaukau` | Runs tests using the custom `kaukau` runner for advanced scenarios.   |
+| `coverage`    | Measures runtime test coverage using `c8`.                            |
+
+---
+
+### 🚦 CI & Verification
+
+| Script   | Description                                                                                                                                 |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `verify` | Runs a full validation pipeline: linting, formatting check, type checking, dependency analysis, type coverage, tests, and runtime coverage. |
+| `ci`     | Alias for `verify`, intended for use in continuous integration environments.                                                                |
+
+---
+
+This setup is designed to be lean, fast, and scalable — ideal for solo development or preparing for team collaboration. Each script is modular and can be run independently or as part of a larger workflow.
+
+---
+
+## 🧰 Core Strengths of this Script Suite
 
 - ⚡ **Fast builds** with `tsup`  
   Efficient bundling with ESM output, ideal for modern Node and browser environments.
