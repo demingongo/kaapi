@@ -1,0 +1,15 @@
+{
+  "reporter": ["lcov", "text-summary"],
+  "check-coverage": true,
+  "lines": 90,
+  "branches": 85,
+  "statements": 90,
+  "functions": 90,
+  "exclude": [
+    "src/plugins/**",
+    "src/drafts/**",
+    "src/routes.ts",
+    "test/**"
+  ],
+  "per-file": true
+}
