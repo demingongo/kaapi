@@ -388,3 +388,196 @@ app.extend(authDesign.build())
 
 Let me know if you’d like a version with additional formatting (e.g., for GitHub wiki), or to split this into multiple sections!
 
+---
+
+Yes—extracting things like login rendering, token generation, or validation logic into services or adapters is a great way to keep your OAuth implementation **modular**, **testable**, and **reusable**, especially as your app grows or the auth logic gets more complex.
+
+Here’s how and why you might extract each of these components:
+
+---
+
+### ✅ 1. **Login Renderer (Authorization UI)**
+
+**Current:**
+Rendering logic is embedded inside the `.authorizationRoute()` with direct calls like:
+
+```ts
+renderHtml('authorization-page', { context, params, req })
+```
+
+**Why extract it:**
+
+* Better separation of concerns (auth flow vs. UI rendering)
+* Easier testing (mock rendering in tests)
+* Allows reuse in other flows (e.g. login + password reset)
+
+**How to extract:**
+
+```ts
+// services/authorization-ui.ts
+
+export async function renderAuthorizationPage(context, params, req) {
+    return renderHtml('authorization-page', { context, params, req })
+}
+
+export async function renderConsentPage(params) {
+    return renderHtml('consent-page', { params })
+}
+```
+
+Then in the builder:
+
+```ts
+import * as authUI from './services/authorization-ui'
+
+.setGETResponseRenderer(async (context, params, req) => {
+    const client = await db.clients.findById(params.clientId)
+    if (!client) {
+        return await authUI.renderAuthorizationPage({ ...context, error: 'invalid_client' }, params, req)
+    }
+
+    const session = req.state['kaapisession']
+    if (session?.user) {
+        return await authUI.renderConsentPage(params)
+    }
+
+    return await authUI.renderAuthorizationPage(context, params, req)
+})
+```
+
+---
+
+### ✅ 2. **Token Generation Logic**
+
+**Current:**
+Token creation is handled directly inside `.generateToken()` callbacks with inline logic.
+
+**Why extract it:**
+
+* Encourages reuse (access, refresh, id_token logic in one place)
+* Easier to unit test token logic separately
+* Keeps your flow builder clean
+
+**How to extract:**
+
+```ts
+// services/token-service.ts
+
+export async function generateAccessToken({ user, ttl, createJwtAccessToken }) {
+    return (await createJwtAccessToken?.({ sub: user.id, type: 'user' }))?.token
+}
+
+export async function generateRefreshToken({ user, clientId, scope, createJwtAccessToken }) {
+    return (await createJwtAccessToken?.({
+        sub: user.id,
+        client_id: clientId,
+        scope,
+        exp: Date.now() / 1000 + 604_800, // 7 days
+        type: 'refresh'
+    }))?.token
+}
+```
+
+Then inside your flow:
+
+```ts
+import * as tokenService from './services/token-service'
+
+const accessToken = await tokenService.generateAccessToken({ user, ttl, createJwtAccessToken })
+const refreshToken = await tokenService.generateRefreshToken({ user, clientId, scope, createJwtAccessToken })
+```
+
+---
+
+### ✅ 3. **Validation Logic (JWT/Session)**
+
+**Current:**
+Validation is inline:
+
+```ts
+.validate(async (_, { jwtAccessTokenPayload }) => {
+    const user = jwtAccessTokenPayload?.sub ? await db.users.findById(jwtAccessTokenPayload.sub) : undefined
+    if (!user) return { isValid: false }
+    return { isValid: true, credentials: { ... } }
+})
+```
+
+**Why extract it:**
+
+* Makes validation strategy reusable across different flows
+* Easier to test against fake JWTs / sessions
+* Promotes consistency
+
+**How to extract:**
+
+```ts
+// services/token-validator.ts
+
+export async function validateJwtUserToken(payload) {
+    if (payload?.type !== 'user' || !payload.sub) return { isValid: false }
+
+    const user = await db.users.findById(payload.sub)
+    if (!user) return { isValid: false }
+
+    return {
+        isValid: true,
+        credentials: {
+            user: {
+                sub: user.id,
+                name: user.name,
+                given_name: user.given_name,
+                email: user.email,
+                type: 'user'
+            }
+        }
+    }
+}
+```
+
+Then use:
+
+```ts
+import { validateJwtUserToken } from './services/token-validator'
+
+.validate((_, { jwtAccessTokenPayload }) => validateJwtUserToken(jwtAccessTokenPayload))
+```
+
+---
+
+### ✅ Bonus: `adapter` Pattern
+
+If you want to take it further, you could define an **AuthAdapter** interface:
+
+```ts
+// interfaces/auth-adapter.ts
+
+export interface AuthAdapter {
+    findClientById(id: string): Promise<Client | null>
+    findUserByCredentials(email: string, password: string): Promise<User | null>
+    findUserById(id: string): Promise<User | null>
+    renderLogin(...): Promise<Response>
+    renderConsent(...): Promise<Response>
+    generateAccessToken(...): Promise<string>
+    generateRefreshToken(...): Promise<string>
+}
+```
+
+Then inject an adapter implementation into your builder:
+
+```ts
+const adapter: AuthAdapter = createKaapiAuthAdapter({ db, renderHtml, jwtFactory })
+```
+
+---
+
+### 🔚 Final Thoughts
+
+Refactoring your builder into adapters/services pays off when:
+
+* You're adding more grant types (e.g. device code, password, etc.)
+* You want to test your logic outside the HTTP layer
+* You’re evolving your UI, login flow, or persistence layer
+
+Let me know if you want a base `auth-adapter` implementation to start with.
+
+

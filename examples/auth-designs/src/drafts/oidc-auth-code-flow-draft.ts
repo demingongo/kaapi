@@ -13,15 +13,7 @@ import {
 import logger from './logger'
 import db from './database'
 import renderHtml from './render-html'
-
-function fakeEncode(payload: object): string {
-  return Buffer.from(JSON.stringify(payload)).toString('base64url');
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function fakeDecode(str: string): any {
-  return JSON.parse(Buffer.from(str, 'base64url').toString('utf8'));
-}
+import { decode, encode } from './encoder';
 
 interface RefreshPayload {
     client_id?: string
@@ -39,8 +31,8 @@ export default OIDCAuthorizationCodeBuilder
     .create({ logger })
     .setTokenType(tokenType)                                        // optional, default BearerToken
     .setTokenTTL(3600)                                              // 1h
-    .addClientAuthenticationMethod(new ClientSecretPost())          // client authentication methods
     .addClientAuthenticationMethod(new ClientSecretBasic())         // client authentication methods
+    .addClientAuthenticationMethod(new ClientSecretPost())          // client authentication methods
     .addClientAuthenticationMethod(new NoneAuthMethod())            // client authentication methods
     .useAccessTokenJwks(true)                                       // activates JWT access token verification with JWKS
     .validate(async (_, { jwtAccessTokenPayload }) => {
@@ -115,7 +107,7 @@ export default OIDCAuthorizationCodeBuilder
                             // Consider storing intermediate data instead of fully encoding it into the code string (unless encrypted).
                             return {
                                 type: 'code',
-                                value: fakeEncode({ clientId, codeChallenge, scope, nonce, user: session.user })
+                                value: encode({ clientId, codeChallenge, scope, nonce, user: session.user })
                             }
                         }
                     }
@@ -145,7 +137,7 @@ export default OIDCAuthorizationCodeBuilder
             }))
     .tokenRoute(route =>
         route
-            .setPath('/oauth2/v2/token') // optional, default '/oauth2/token'
+            .setPath('/oauth2/token') // optional, default '/oauth2/token'
             .generateToken(async ({
                 clientId,
                 clientSecret,
@@ -158,7 +150,7 @@ export default OIDCAuthorizationCodeBuilder
                 verifyCodeVerifier
             }, _req) => {
 
-                const decodedCode = fakeDecode(code);
+                const decodedCode = decode(code);
                 const scope = decodedCode.scope;
                 const codeChallenge = decodedCode.codeChallenge;
                 const userId = decodedCode.user;
@@ -180,15 +172,15 @@ export default OIDCAuthorizationCodeBuilder
                     }
                 } else if (codeVerifier) {
                     if (!verifyCodeVerifier(codeVerifier, codeChallenge)) {
-                        return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Invalid code exchange' }
+                        return { error: OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Invalid code exchange' }
                     }
                 } else {
-                    return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Token Request was missing the \'client_secret\' parameter.' }
+                    return { error: OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Token Request was missing the \'client_secret\' parameter.' }
                 }
 
                 // no token ttl
                 if (!ttl) {
-                    return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Missing ttl' }
+                    return { error: OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Missing ttl' }
                 }
 
                 try {
@@ -235,7 +227,7 @@ export default OIDCAuthorizationCodeBuilder
                     // verify refresh token
                     const payload = await verifyJwt?.<RefreshPayload>(refreshToken)
                     if (!payload || !(payload.client_id && payload.client_id === clientId && payload.sub && payload.type === 'refresh')) {
-                        return { error:  OAuth2ErrorCode.INVALID_REQUEST }
+                        return { error: OAuth2ErrorCode.INVALID_REQUEST }
                     }
 
                     // db query
@@ -244,11 +236,11 @@ export default OIDCAuthorizationCodeBuilder
 
                     // client or user not found
                     if (!client || !user) {
-                        return { error:  OAuth2ErrorCode.INVALID_REQUEST }
+                        return { error: OAuth2ErrorCode.INVALID_REQUEST }
                     }
 
                     if (!ttl) {
-                        return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Missing ttl' }
+                        return { error: OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Missing ttl' }
                     }
 
                     const newScope = scope || payload.scope
@@ -296,6 +288,6 @@ export default OIDCAuthorizationCodeBuilder
         read: 'Read access to protected resources.',
         write: 'Write access to protected resources.',
         admin: 'Grants administrative or elevated privileges.',
-        'api:read': 'Read access to a specific API or resource group.',
-        'contacts.read': 'Read access to a specific API or resource group.'
+        'api.read': 'Read access to a specific API or resource group.'
     })
+//.build() // Optionally build this as a standalone flow
