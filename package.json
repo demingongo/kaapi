@@ -6,8 +6,9 @@
   "main": "index.js",
   "scripts": {
     "build": "lerna run build --ignore docs",
-    "format": "lerna run format",
-    "format:check": "lerna run format:check",
+    "doc": "lerna run --no-private doc",
+    "format": "lerna run --no-private format",
+    "format:check": "lerna run --no-private format:check",
     "lint": "lerna run lint",
     "release:build": "lerna run --concurrency 8 --no-private build --skip-nx-cache",
     "release:publish": "pnpm publish --recursive --tag latest",
@@ -45,6 +46,7 @@
     "nodemon": "^3.1.10",
     "prettier": "^3.6.2",
     "ts-node": "^10.9.2",
+    "typedoc": "^0.28.14",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.40.0"
   }
