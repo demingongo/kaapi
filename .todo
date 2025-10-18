@@ -1,3 +1,13 @@
+- wiki:
+    - oauth2
+        - do a page per step: 
+            - authorizationRoute and refreshTokenRoute for Authorization code (createMatchAuthCodeResult, verifyCodeVerifier, ...)
+            - authorizationRoute and refreshTokenRoute for Device authorization
+            - use, generate and rotate jwks keys (generateKeyPair, checkAndRotateKeys, createIdToken) 
+            - sign access tokens with public keys (useAccessTokenJwks, createJwtAccessToken, ...),
+            - use the strategy (getStrategyName)
+            - MultipleFlows (OIDC Multiple Flows)
+            
 - @kaapi/server: `auth: true` should not set up startegy but only `mode: 'required'`. Strategy should be explicitly defined. @done
 
 - @kaapi/kaapi

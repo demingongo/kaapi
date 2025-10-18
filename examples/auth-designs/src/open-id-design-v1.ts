@@ -62,7 +62,7 @@ export const openIDDesignV1 = OIDCAuthorizationCodeBuilder
         .generateCode(async ({ clientId, codeChallenge, scope, nonce }, { payload: { email, password } }) => {
             // validate and generate code
             if (email == 'janed@example.com' && password == '1234') {
-                return { type: 'code', value: JSON.stringify({ clientId, codeChallenge, scope, nonce, user: '248289761001' })}
+                return { type: 'code', value: JSON.stringify({ clientId, codeChallenge, scope, nonce, user: '248289761001' }) }
             }
 
             return null
@@ -78,7 +78,7 @@ export const openIDDesignV1 = OIDCAuthorizationCodeBuilder
             console.log('ttl', ttl)
 
             if (!clientSecret && !codeVerifier) {
-                return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Token Request was missing the \'client_secret\' parameter.' }
+                return { error: OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Token Request was missing the \'client_secret\' parameter.' }
             }
             try {
                 //#region @TODO: validation + token

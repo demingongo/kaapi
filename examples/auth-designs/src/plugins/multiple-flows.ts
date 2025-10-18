@@ -11,6 +11,10 @@ const mflow = MultipleFlowsBuilder
     .jwksRoute(route => route.setPath('/oauth2/v2/keys')) // activates jwks uri
     .setPublicKeyExpiry(86400) // 24h
     .setJwksKeyStore(createInMemoryKeyStore()) // store for JWKS
+    .setJwksRotatorOptions({
+        intervalMs: 7.884e+9, // 91 days
+        timestampStore: createInMemoryKeyStore()
+    })
     .add(oidcAuthCodeFlowDraft)
     .add(oidcClientCredentialsFlowDraft)
     .add(oidcDeviceFlow)
