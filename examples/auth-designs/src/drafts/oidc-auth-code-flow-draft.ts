@@ -137,7 +137,7 @@ export default OIDCAuthorizationCodeBuilder
             }))
     .tokenRoute(route =>
         route
-            .setPath('/oauth2/token') // optional, default '/oauth2/token'
+            .setPath('/oauth2/v2/token') // optional, default '/oauth2/token'
             .generateToken(async ({
                 clientId,
                 clientSecret,

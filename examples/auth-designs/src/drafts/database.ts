@@ -33,8 +33,9 @@ export type Client = InMemoryData & {
     details?: User
 }
 
-export type Device = InMemoryData & {
+export type DeviceToken = InMemoryData & {
     userCode: string
+    expiresAt: number
     userId?: string
 }
 
@@ -52,14 +53,18 @@ export class InMemoryUsers extends InMemoryCollection<User> {
     }
 }
 
-export class InMemoryDevices extends InMemoryCollection<Device> {
+export class InMemoryDeviceTokens extends InMemoryCollection<DeviceToken> {
     async updateOneWithId(id: string, updateSet: { userId: string }) {
-        let result: Device | undefined;
+        let result: DeviceToken | undefined;
         if (this.documents[id]) {
             result = this.documents[id]
             result.userId = updateSet.userId
         }
         return result
+    }
+
+    async deleteOneWithId(id: string) {
+        delete this.documents[id]
     }
 }
 
@@ -102,5 +107,5 @@ clients.insertOne({
 export default {
     clients,
     users,
-    devices: new InMemoryDevices()
+    deviceTokens: new InMemoryDeviceTokens()
 }

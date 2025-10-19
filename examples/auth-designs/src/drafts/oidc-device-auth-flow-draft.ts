@@ -10,7 +10,7 @@ import {
 import logger from './logger'
 import db from './database'
 import { decode, encode } from './encoder';
-import { randomBytes } from 'crypto';
+import { generateCode, VERIFICATION_URI } from './utils';
 
 interface RefreshPayload {
     client_id?: string
@@ -65,14 +65,18 @@ export default OIDCDeviceAuthorizationBuilder
                     return null
                 }
 
-                // generate code
-                const userCode = randomBytes(6).toString('hex');
-                const deviceCode = encode({ clientId, scope, code: randomBytes(32).toString('hex') });
+                // generate codes
+                const userCode = generateCode(6);
+                const deviceCode = encode({ clientId, scope, code: generateCode(24) });
+
+                const searchParams = new URLSearchParams();
+                searchParams.append('user_code', userCode);
 
                 // save in db
-                await db.devices.insertOne({
+                await db.deviceTokens.insertOne({
                     id: deviceCode,
-                    userCode
+                    userCode,
+                    expiresAt: Date.now() + 900_000
                 });
 
                 return {
@@ -80,8 +84,8 @@ export default OIDCDeviceAuthorizationBuilder
                     expires_in: 900, // 15min
                     interval: 5, // 5s
                     user_code: userCode,
-                    verification_uri: 'http://localhost:3000/oauth2/v2/activate',
-                    verification_uri_complete: `http://localhost:3000/oauth2/v2/activate?user_code=${userCode}`
+                    verification_uri: VERIFICATION_URI,
+                    verification_uri_complete: `${VERIFICATION_URI}?${searchParams.toString()}`
                 };
             })
     )
@@ -106,23 +110,28 @@ export default OIDCDeviceAuthorizationBuilder
 
                 // db query
                 const client = await db.clients.findById(clientId)
-                const device = await db.devices.findById(deviceCode)
+                const deviceToken = await db.deviceTokens.findById(deviceCode)
 
                 // client not found
                 if (!client) {
                     return { error: DeviceFlowOAuth2ErrorCode.ACCESS_DENIED, error_description: 'Bad \'clientId\' parameter.' };
                 }
-                // device not found
-                if (!device) {
+                // device token not found
+                if (!deviceToken) {
                     return null;
                 }
-                // device authorization pending
-                if (!device.userId) {
+                // device token expired
+                if (deviceToken.expiresAt <= Date.now()) {
+                    db.deviceTokens.deleteOneWithId(deviceToken.id);
+                    return { error: DeviceFlowOAuth2ErrorCode.EXPIRED_TOKEN };
+                }
+                // device token authorization pending
+                if (!deviceToken.userId) {
                     return { error: DeviceFlowOAuth2ErrorCode.AUTHORIZATION_PENDING };
                 }
 
                 // db query
-                const user = await db.users.findById(device.userId);
+                const user = await db.users.findById(deviceToken.userId);
                 if (!user) {
                     return null;
                 }
@@ -162,7 +171,7 @@ export default OIDCDeviceAuthorizationBuilder
             }))
     .refreshTokenRoute(route =>
         route
-            .setPath('/oauth2/v2/token') // optional, default '/oauth2/token'
+            .setPath('/oauth2/token') // optional, default '/oauth2/token'
             .generateToken(async ({ clientId, refreshToken, scope, ttl, tokenType, createJwtAccessToken, createIdToken, verifyJwt }, _req) => {
 
                 try {
