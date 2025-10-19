@@ -67,7 +67,7 @@ export default OIDCDeviceAuthorizationBuilder
             console.log('scope', scope)
 
             if (clientId != 'testabc') {
-                return { error:  DeviceFlowOAuth2ErrorCode.ACCESS_DENIED, error_description: 'Token Request was missing the \'clientId\' parameter.' }
+                return { error: DeviceFlowOAuth2ErrorCode.ACCESS_DENIED, error_description: 'Token Request was missing the \'clientId\' parameter.' }
             }
             if (!ttl) {
                 return { error: DeviceFlowOAuth2ErrorCode.ACCESS_DENIED, error_description: 'Missing ttl' }
@@ -108,10 +108,10 @@ export default OIDCDeviceAuthorizationBuilder
         //#region @TODO: validation + refresh token
         if (refreshToken === 'generated_refresh_token_from_dc' && createJwtAccessToken) {
             if (clientId != 'testabc') {
-                return { error:  DeviceFlowOAuth2ErrorCode.ACCESS_DENIED, error_description: 'Invalid \'client_id\'.' }
+                return { error: DeviceFlowOAuth2ErrorCode.ACCESS_DENIED, error_description: 'Invalid \'client_id\'.' }
             }
             if (!ttl) {
-                return { error:  DeviceFlowOAuth2ErrorCode.ACCESS_DENIED, error_description: 'Missing ttl' }
+                return { error: DeviceFlowOAuth2ErrorCode.ACCESS_DENIED, error_description: 'Missing ttl' }
             }
             const { token: accessToken } = await createJwtAccessToken({
                 sub: '248289761001',

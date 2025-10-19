@@ -33,15 +33,31 @@ export type Client = InMemoryData & {
     details?: User
 }
 
+export type Device = InMemoryData & {
+    userCode: string
+    userId?: string
+}
+
 export class InMemoryUsers extends InMemoryCollection<User> {
     async findByCredentials(email: string, password: string) {
         let result: User | undefined;
-        for(const k in this.documents) {
+        for (const k in this.documents) {
             const user = this.documents[k]
-            if(user.email === email && user.password === password) {
+            if (user.email === email && user.password === password) {
                 result = user
                 break;
             }
+        }
+        return result
+    }
+}
+
+export class InMemoryDevices extends InMemoryCollection<Device> {
+    async updateOneWithId(id: string, updateSet: { userId: string }) {
+        let result: Device | undefined;
+        if (this.documents[id]) {
+            result = this.documents[id]
+            result.userId = updateSet.userId
         }
         return result
     }
@@ -85,5 +101,6 @@ clients.insertOne({
 
 export default {
     clients,
-    users
+    users,
+    devices: new InMemoryDevices()
 }
