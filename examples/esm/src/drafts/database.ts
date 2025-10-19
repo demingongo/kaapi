@@ -17,6 +17,10 @@ export class InMemoryCollection<Data extends InMemoryData = InMemoryData> {
     async insertOne(data: Data) {
         this.documents[data.id] = data;
     }
+
+    async deleteOneWithId(id: string) {
+        delete this.documents[id]
+    }
 }
 
 export type User = InMemoryData & {
@@ -31,6 +35,15 @@ export type Client = InMemoryData & {
     secret?: string;
     details?: User;
 };
+
+export type AuthCode = InMemoryData & {
+    clientId: string;
+    user: string;
+    expiresAt: number;
+    scope?: string;
+    codeChallenge?: string;
+    nonce?: string;
+}
 
 export class InMemoryUsers extends InMemoryCollection<User> {
     async findByCredentials(email: string, password: string) {
@@ -85,4 +98,5 @@ clients.insertOne({
 export default {
     clients,
     users,
+    authCodes: new InMemoryCollection<AuthCode>()
 };

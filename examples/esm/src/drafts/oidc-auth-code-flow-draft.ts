@@ -11,7 +11,7 @@ import {
 
 import logger from './logger'
 import db from './database'
-import { decode, encode } from './encoder';
+import { encode } from './encoder';
 
 interface RefreshPayload {
     client_id?: string
@@ -102,9 +102,20 @@ export default OIDCAuthorizationCodeBuilder
                         logger.debug('session', session)
                         if (session?.user) {
                             // Consider storing intermediate data instead of fully encoding it into the code string (unless encrypted).
+                            const code = encode({ clientId, scope, nonce, user: session.user, expiresAt: Date.now() + 10_000, createdAt: Date.now() });
+                            // store code and intermediate data
+                            await db.authCodes.insertOne({
+                                id: code,
+                                clientId,
+                                codeChallenge,
+                                scope,
+                                nonce,
+                                user: session.user,
+                                expiresAt: Date.now() + 10_000
+                            });
                             return {
                                 type: 'code',
-                                value: encode({ clientId, codeChallenge, scope, nonce, user: session.user, expiresAt: Date.now() + 10_000 })
+                                value: code
                             }
                         }
                     }
@@ -150,15 +161,24 @@ export default OIDCAuthorizationCodeBuilder
                 verifyCodeVerifier
             }, _req) => {
 
-                const decodedCode = decode(code);
-                const scope = decodedCode.scope;
-                const codeChallenge = decodedCode.codeChallenge;
-                const userId = decodedCode.user;
-                const nonce = decodedCode.nonce;
+                // db query
+                const decodedCode = await db.authCodes.findById(code);
+
+                if (!decodedCode || clientId != decodedCode.clientId) {
+                    return { error: OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Invalid code' }
+                }
+
+                // remove code from db
+                await db.authCodes.deleteOneWithId(code);
 
                 if (decodedCode.expiresAt <= Date.now()) {
                     return { error: OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Invalid code' }
                 }
+
+                const scope = decodedCode.scope;
+                const codeChallenge = decodedCode.codeChallenge;
+                const userId = decodedCode.user;
+                const nonce = decodedCode.nonce;
 
                 // db query
                 const client = await db.clients.findById(clientId)
@@ -175,7 +195,7 @@ export default OIDCAuthorizationCodeBuilder
                         return { error: 'invalid_client' }
                     }
                 } else if (codeVerifier) {
-                    if (!verifyCodeVerifier(codeVerifier, codeChallenge)) {
+                    if (!codeChallenge || !verifyCodeVerifier(codeVerifier, codeChallenge)) {
                         return { error: OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Invalid code exchange' }
                     }
                 } else {
