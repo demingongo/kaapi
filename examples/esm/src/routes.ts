@@ -19,7 +19,7 @@ app.route(
         options: {
             validate: {
                 headers: Joi.object({
-                    dpop: Joi.string().required(),
+                    dpop: Joi.string(),
                 }).unknown(),
             },
             description: 'greet me',

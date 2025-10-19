@@ -1,0 +1,21 @@
+doctype html
+html(lang='en')
+    head
+        meta(charset="UTF-8")
+        title Sign In
+        style.
+            .error {
+                color: red;
+                font-weight: bold;
+            }
+    body
+        form(method="POST")
+            h3.error 
+                | Consent to #{clientName}
+            div
+                input(type="hidden" id="step" name="step" value="consent")
+            div 
+                button(type="submit" name="submit" value="allow")
+                    | Allow
+                button(type="submit" name="submit" value="deny")
+                    | Deny

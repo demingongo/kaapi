@@ -1,4 +1,5 @@
 // server.ts
+import path from 'node:path';
 import logger from './drafts/logger';
 import { customAuthDesign } from './plugins/customAuthDesign';
 import { Kaapi } from '@kaapi/kaapi';
@@ -48,11 +49,14 @@ app.base().ext('onPreHandler', (request, h) => {
     return h.continue;
 });
 
-await app.base().register({
-    name: 'myplugin',
-    register(_server) {
-        // register "myplugin" plugin
-    },
-});
+await app.base().register(await import('@hapi/vision'));
 
-app.log.info('"myplugin" plugin registered');
+await app.base().register(await import('@hapi/vision'));
+
+app.base().views({
+    engines: {
+        pug: await import('pug')
+    },
+    relativeTo: path.join(import.meta.dirname, '..'),
+    path: 'templates'
+});
