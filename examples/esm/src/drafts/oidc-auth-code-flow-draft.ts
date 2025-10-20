@@ -59,16 +59,16 @@ export default OIDCAuthorizationCodeBuilder
     .authorizationRoute<object, { Payload: { email?: string, password?: string, step?: string, submit?: string } }>(route =>
         route
             .setPath('/oauth2/v2/authorize') // optional, default '/oauth2/authorize'
-            .setEmailField('email')
-            .setPasswordField('password')
+            .setEmailField('email') // email field name
+            .setPasswordField('password') // password field name
             .setGETResponseRenderer(async ({ emailField, passwordField, error, errorMessage }, params, req, h) => {
                 // db query
                 const client = await db.clients.findById(params.clientId)
 
                 // client not found
                 if (!client) {
-                    return h.view('authorization-page', {
-                        emailField, passwordField, error: OAuth2ErrorCode.INVALID_CLIENT, errorMessage: 'Invalid client'
+                    return h.view('error', {
+                        error: OAuth2ErrorCode.INVALID_CLIENT, errorMessage: 'Invalid client'
                     }).code(400)
                 }
 

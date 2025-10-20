@@ -83,7 +83,7 @@ export type AuthResponseRenderer<Refs extends ReqRef = ReqRefDefaults> = (
         statusCode: number,
         emailField: string,
         passwordField: string,
-        error?: AnyOAuth2ErrorCodeType ,
+        error?: AnyOAuth2ErrorCodeType,
         errorMessage?: string
     },
     params: OAuth2ACAuthorizationParams,
@@ -203,13 +203,11 @@ export class DefaultOAuth2ACAuthorizationRoute<
             if (validationError) return validationError
 
             // render form
-            return h.response(
-                await this.#renderResponse({
-                    emailField: this.#emailField,
-                    passwordField: this.#passwordField,
-                    statusCode: 200
-                }, { clientId, redirectUri, ...props }, req, h)
-            ).code(200)
+            return await this.#renderResponse({
+                emailField: this.#emailField,
+                passwordField: this.#passwordField,
+                statusCode: 200
+            }, { clientId, redirectUri, ...props }, req, h)
         }, async (props, req, h) => {
             const validationError = await this.validateClientParams(props.clientId, props.redirectUri, props, req, h, this.#renderResponse)
             if (validationError) return validationError

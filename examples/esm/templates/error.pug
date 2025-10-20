@@ -1,0 +1,15 @@
+extends layouts/main-layout.pug
+
+block meta
+    title #{error || 'error'}
+
+block stylesheets
+    style.
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+
+
+block content
+    div.error #{errorMessage}
