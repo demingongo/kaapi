@@ -194,7 +194,7 @@ export class DefaultOAuth2ACAuthorizationRoute<
 
     #generateCode: AuthCodeGenerator<PostRefs>
     #renderResponse: AuthResponseRenderer<GetRefs>
-    #renderPOSTResponse: AuthResponseRenderer<PostRefs>
+    #renderPOSTError: AuthResponseRenderer<PostRefs>
     #authorizationResponseHandler: AuthResponseHandler<PostRefs>
 
     constructor() {
@@ -262,7 +262,7 @@ export class DefaultOAuth2ACAuthorizationRoute<
 
             // render form
             return h.response(
-                await this.#renderPOSTResponse(
+                await this.#renderPOSTError(
                     {
                         emailField: this.#emailField,
                         passwordField: this.#passwordField,
@@ -277,7 +277,7 @@ export class DefaultOAuth2ACAuthorizationRoute<
         // @TODO: generate id for user, store it in-memory, generate jwt code ?
         this.#generateCode = async () => null
         this.#renderResponse = render
-        this.#renderPOSTResponse = render
+        this.#renderPOSTError = render
         this.#authorizationResponseHandler = authResponseHandler
     }
 
@@ -295,7 +295,7 @@ export class DefaultOAuth2ACAuthorizationRoute<
         passwordField?: string,
         codeGenerator?: AuthCodeGenerator<PostRefs>,
         responseRenderer?: AuthResponseRenderer<GetRefs>,
-        postResponseRenderer?: AuthResponseRenderer<PostRefs>,
+        postErrorRenderer?: AuthResponseRenderer<PostRefs>,
         finalizeAuthorization?: AuthResponseHandler<PostRefs>
     }) {
         const instance = new DefaultOAuth2ACAuthorizationRoute<GetRefs, PostRefs>()
@@ -306,7 +306,7 @@ export class DefaultOAuth2ACAuthorizationRoute<
         if (config.passwordField) instance.setPasswordField(config.passwordField)
         if (config.codeGenerator) instance.generateCode(config.codeGenerator)
         if (config.responseRenderer) instance.setGETResponseRenderer(config.responseRenderer)
-        if (config.postResponseRenderer) instance.setPOSTResponseRenderer(config.postResponseRenderer)
+        if (config.postErrorRenderer) instance.setPOSTErrorRenderer(config.postErrorRenderer)
         if (config.finalizeAuthorization) instance.finalizeAuthorization(config.finalizeAuthorization)
         return instance
     }
@@ -366,8 +366,8 @@ export class DefaultOAuth2ACAuthorizationRoute<
         return this
     }
 
-    setPOSTResponseRenderer(renderer: AuthResponseRenderer<PostRefs>): this {
-        this.#renderPOSTResponse = renderer
+    setPOSTErrorRenderer(renderer: AuthResponseRenderer<PostRefs>): this {
+        this.#renderPOSTError = renderer
         return this
     }
 

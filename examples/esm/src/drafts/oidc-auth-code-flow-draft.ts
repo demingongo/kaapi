@@ -83,7 +83,7 @@ export default OIDCAuthorizationCodeBuilder
 
                 return h.view('authorization-page', { emailField, passwordField, error, errorMessage })
             })
-            .setPOSTResponseRenderer(async ({ emailField, passwordField, error, errorMessage, statusCode }, _params, _req, h) => {
+            .setPOSTErrorRenderer(async ({ emailField, passwordField, error, errorMessage, statusCode }, _params, _req, h) => {
                 return h.view('authorization-page', { emailField, passwordField, error, errorMessage }).code(statusCode)
             })
             .generateCode(async ({ clientId, codeChallenge, scope, nonce }, { payload: { email, password, step, submit }, state }, h) => {

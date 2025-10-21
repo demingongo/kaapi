@@ -86,7 +86,7 @@ export default OIDCAuthorizationCodeBuilder
 
                 return await renderHtml('authorization-page', { context, params, req })
             })
-            .setPOSTResponseRenderer(async (context, params, req) => {
+            .setPOSTErrorRenderer(async (context, params, req) => {
                 return await renderHtml('authorization-page', { context, params, req })
             })
             .generateCode(async ({ clientId, codeChallenge, scope, nonce }, { payload: { email, password, step, submit }, state }, h) => {

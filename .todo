@@ -1,8 +1,10 @@
 - wiki:
     - oauth2
+        - naming: replace 'setPOSTResponseRenderer' by 'setPOSTErrorRenderer'
         - do a page per step: 
-            - authorizationRoute and refreshTokenRoute for Authorization code (createMatchAuthCodeResult, verifyCodeVerifier, ...)
-            - authorizationRoute and refreshTokenRoute for Device authorization
+            - authorizationRoute for Device authorization and Authorization code (createMatchAuthCodeResult, ...) @done
+            - tokenRoute (verifyCodeVerifier, ...) @done
+            - refreshTokenRoute for Device authorization and Authorization code
             - use, generate and rotate jwks keys (generateKeyPair, checkAndRotateKeys, createIdToken) 
             - sign access tokens with public keys (useAccessTokenJwks, createJwtAccessToken, ...),
             - use the strategy (getStrategyName)
@@ -17,6 +19,7 @@
         - apikey (take it from the examples/auth-designs/src/plugins/bearerDesign.ts) @done
 
 - @kaapi/oauth2-auth-design
+    - naming: replace 'setPOSTResponseRenderer' by 'setPOSTErrorRenderer'
     - improvements - the return type for generateCode (AuthCodeGenerator): AuthCodeGeneratorResult @done
     - REPLACE AnyOAuth2ErrorCodeType by OAuth2ErrorCode @done
     - REPLACE all error codes written in string to use OAuth2ErrorCode... @done 
