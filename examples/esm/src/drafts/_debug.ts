@@ -67,3 +67,130 @@ export default OIDCAuthorizationCodeBuilder
             })
     );
 */
+
+import {
+    ClientSecretBasic,
+    ClientSecretPost,
+    createMatchAuthCodeResult,
+    NoneAuthMethod,
+    OAuth2ErrorCode,
+    OIDCAuthorizationCodeBuilder
+} from '@kaapi/oauth2-auth-design'
+
+
+export default OIDCAuthorizationCodeBuilder
+    .create()
+    .setTokenTTL(3600)
+    .addClientAuthenticationMethod(new ClientSecretBasic())
+    .addClientAuthenticationMethod(new ClientSecretPost())
+    .addClientAuthenticationMethod(new NoneAuthMethod())
+    .useAccessTokenJwks(true)
+    .authorizationRoute<object, { Payload: { email?: string, password?: string, step?: string, submit?: string } }>(route =>
+        route
+            .setPath('/oauth2/v2/authorize')
+            .setEmailField('email') // used to validate request
+            .setPasswordField('password') // used to validate request
+
+            .setGETResponseRenderer(async (
+                // context
+                {
+                    emailField, // value of setEmailField
+                    passwordField, // value of setPasswordField
+                },
+                // params
+                {
+                    clientId, // string
+                    redirectUri, // string
+                    responseType, // string
+                    codeChallenge, // string | undefined
+                    scope, // string | undefined
+                    nonce, // string | undefined
+                    state // string | undefined
+                },
+                // request 
+                request,
+                h
+            ) => {
+                // Example: Validate the client
+                const isValid = true; // Replace with actual logic
+
+                if (!isValid) {
+                    return h.view('error', {
+                        error: OAuth2ErrorCode.INVALID_CLIENT,
+                        errorMessage: 'Invalid client'
+                    }).code(400)
+                }
+
+                // Example: Check if user is already logged in (e.g: valid session cookie)
+                const isAlreadyLoggedIn = false; // Replace with actual logic
+
+                if (isAlreadyLoggedIn) {
+                    return h.view('consent-page', { clientId })
+                }
+
+                return h.view('authorization-page', {
+                    emailField, passwordField
+                })
+            })
+
+            .setPOSTErrorRenderer(async (context, params, request, h) => {
+                return h.view('authorization-page', context).code(context.statusCode)
+            })
+
+            .generateCode(async (
+                // params
+                {
+                    clientId, // string
+                    redirectUri, // string
+                    responseType, // string
+                    codeChallenge, // string | undefined
+                    scope, // string | undefined
+                    nonce, // string | undefined
+                    state // string | undefined
+                },
+                // request with the payload ('email', 'password', ...)
+                request,
+                h
+            ) => {
+
+                // return `null` to trigger `setPOSTErrorRenderer`
+                return null;
+
+                // return 'continue' to trigger `finalizeAuthorization` that will send to consent page
+                return { type: 'continue' };
+
+
+                // return 'deny' to trigger `finalizeAuthorization` that will have a fullRedirectUri with error=access_denied
+                return { type: 'deny' };
+
+                // return code with generated code to trigger `finalizeAuthorization`
+                return {
+                    type: 'code',
+                    value: 'generated-code'
+                };
+            })
+
+            .finalizeAuthorization(async (
+                // context
+                {
+                    authorizationResult,
+                    fullRedirectUri,
+                    emailField,
+                    passwordField
+                },
+                // params (same as generateCode)
+                {
+                    clientId
+                },
+                request,
+                h
+            ) => {
+                const matcher = createMatchAuthCodeResult({
+                    code: async () => h.redirect(`${fullRedirectUri}`), // using the full redirect uri already formed by the package
+                    continue: async () => h.view('consent-page', { clientId }),
+                    deny: async () => h.redirect(`${fullRedirectUri}`) // using the full redirect uri already formed by the package (with error=access_denied)
+                })
+
+                return matcher(authorizationResult)
+            })
+    )

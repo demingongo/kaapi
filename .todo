@@ -4,7 +4,7 @@
         - do a page per step: 
             - authorizationRoute for Device authorization and Authorization code (createMatchAuthCodeResult, ...) @done
             - tokenRoute (verifyCodeVerifier, ...) @done
-            - refreshTokenRoute for Device authorization and Authorization code
+            - refreshTokenRoute for Device authorization and Authorization code @done
             - use, generate and rotate jwks keys (generateKeyPair, checkAndRotateKeys, createIdToken) 
             - sign access tokens with public keys (useAccessTokenJwks, createJwtAccessToken, ...),
             - use the strategy (getStrategyName)
