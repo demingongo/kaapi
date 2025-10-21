@@ -1,6 +1,6 @@
 - wiki:
     - oauth2
-        - naming: replace 'setPOSTResponseRenderer' by 'setPOSTErrorRenderer'
+        - naming: replace 'setPOSTResponseRenderer' by 'setPOSTErrorRenderer' @done
         - do a page per step: 
             - authorizationRoute for Device authorization and Authorization code (createMatchAuthCodeResult, ...) @done
             - tokenRoute (verifyCodeVerifier, ...) @done
@@ -19,7 +19,7 @@
         - apikey (take it from the examples/auth-designs/src/plugins/bearerDesign.ts) @done
 
 - @kaapi/oauth2-auth-design
-    - naming: replace 'setPOSTResponseRenderer' by 'setPOSTErrorRenderer'
+    - naming: replace 'setPOSTResponseRenderer' by 'setPOSTErrorRenderer' @done
     - improvements - the return type for generateCode (AuthCodeGenerator): AuthCodeGeneratorResult @done
     - REPLACE AnyOAuth2ErrorCodeType by OAuth2ErrorCode @done
     - REPLACE all error codes written in string to use OAuth2ErrorCode... @done 

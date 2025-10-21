@@ -56,7 +56,7 @@ export default OIDCAuthorizationCodeBuilder
         return h.view('authorization-page', context)
       })
 
-      .setPOSTResponseRenderer(async (context, _params, _req, h) => {
+      .setPOSTErrorRenderer(async (context, _params, _req, h) => {
         return h.view('authorization-page', context).code(context.statusCode)
       })
 
@@ -141,7 +141,7 @@ Handles GET requests to the authorization endpoint — typically used to render 
 
 ---
 
-### 📤 `setPOSTResponseRenderer`
+### 📤 `setPOSTErrorRenderer`
 
 Handles failed login or invalid payloads submitted to the authorization endpoint.
 
@@ -157,7 +157,7 @@ Main handler for form submissions (POST):
 * **Login Step**: Authenticates user via `email` and `password`.
 
   * On success: session is created, and flow continues to consent.
-  * On failure or invalid input: returns `null` to trigger `setPOSTResponseRenderer`.
+  * On failure or invalid input: returns `null` to trigger `setPOSTErrorRenderer`.
 
 **Return Values:**
 
