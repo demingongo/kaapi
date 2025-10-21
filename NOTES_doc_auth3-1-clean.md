@@ -20,11 +20,9 @@ import {
 
 export default OIDCAuthorizationCodeBuilder
   .create()
-  .setTokenTTL(3600)
   .addClientAuthenticationMethod(new ClientSecretBasic())
   .addClientAuthenticationMethod(new ClientSecretPost())
   .addClientAuthenticationMethod(new NoneAuthMethod())
-  .useAccessTokenJwks(true)
   .authorizationRoute<object, { Payload: { email?: string, password?: string, step?: string, submit?: string } }>(route =>
     route
       .setPath('/oauth2/authorize')

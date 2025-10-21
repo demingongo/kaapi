@@ -68,6 +68,7 @@ export default OIDCAuthorizationCodeBuilder
     );
 */
 
+/*
 import {
     ClientSecretBasic,
     ClientSecretPost,
@@ -76,7 +77,6 @@ import {
     OAuth2ErrorCode,
     OIDCAuthorizationCodeBuilder
 } from '@kaapi/oauth2-auth-design'
-
 
 export default OIDCAuthorizationCodeBuilder
     .create()
@@ -194,3 +194,43 @@ export default OIDCAuthorizationCodeBuilder
                 return matcher(authorizationResult)
             })
     )
+
+    */
+
+/*
+import {
+NoneAuthMethod,
+OIDCDeviceAuthorizationBuilder
+} from '@kaapi/oauth2-auth-design'
+
+export default OIDCDeviceAuthorizationBuilder
+.create()
+.addClientAuthenticationMethod(new NoneAuthMethod())
+.authorizationRoute(route =>
+    route
+        .setPath('/oauth2/devicecode')
+        .generateCode(async (
+            // params (contains only 1 or 2 properties: clientId and scope)
+            {
+                clientId, // string
+                scope // string | undefined
+            },
+            request
+        ) => {
+
+            // return `null` to respond `invalid_client`
+            return null;
+
+            // DeviceCodeResponse as according to Device authorization flow (need to shortly define each prop for the doc)
+            return {
+                device_code: '...',
+                expires_in: 900,
+                interval: 5,
+                user_code: '...',
+                verification_uri: '...',
+                verification_uri_complete: '...'
+            }
+        })
+)
+
+*/
