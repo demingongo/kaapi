@@ -5,8 +5,8 @@
             - authorizationRoute for Device authorization and Authorization code (createMatchAuthCodeResult, ...) @done
             - tokenRoute (verifyCodeVerifier, ...) @done
             - refreshTokenRoute for Device authorization and Authorization code @done
-            - use, generate and rotate jwks keys (generateKeyPair, checkAndRotateKeys, createIdToken) 
-            - sign access tokens with public keys (useAccessTokenJwks, createJwtAccessToken, ...),
+            - use, generate and rotate jwks keys (generateKeyPair, checkAndRotateKeys, createIdToken)  @done
+            - sign access tokens with public keys (useAccessTokenJwks, createJwtAccessToken, ...), @done
             - use the strategy (getStrategyName)
             - MultipleFlows (OIDC Multiple Flows)
             
