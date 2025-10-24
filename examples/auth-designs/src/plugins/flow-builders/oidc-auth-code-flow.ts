@@ -48,12 +48,12 @@ export default OIDCAuthorizationCodeBuilder
     .authorizationRoute<object, { Payload: { email: string, password: string } }>(route =>
         route.setPath('/oauth2/v2/authorize')
             .setClientId('testabc')
-            .setEmailField('email')
+            .setUsernameField('email')
             .setPasswordField('password')
             .generateCode(async ({ clientId, codeChallenge, scope, nonce }, { payload: { email, password } }) => {
                 // validate and generate code
                 if (email == 'janed@example.com' && password == '1234') {
-                    return { type: 'code', value: JSON.stringify({ clientId, codeChallenge, scope, nonce, user: '248289761001' })}
+                    return { type: 'code', value: JSON.stringify({ clientId, codeChallenge, scope, nonce, user: '248289761001' }) }
                 }
 
                 return null
@@ -74,10 +74,10 @@ export default OIDCAuthorizationCodeBuilder
                 console.log('scope', scope)
 
                 if (!clientSecret && !codeVerifier) {
-                    return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Token Request was missing the \'client_secret\' parameter.' }
+                    return { error: OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Token Request was missing the \'client_secret\' parameter.' }
                 }
                 if (!ttl) {
-                    return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Missing ttl' }
+                    return { error: OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Missing ttl' }
                 }
 
                 //if (codeVerifier) {
@@ -121,7 +121,7 @@ export default OIDCAuthorizationCodeBuilder
         console.log('ttl', ttl)
 
         if (!ttl) {
-            return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Missing ttl' }
+            return { error: OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Missing ttl' }
         }
         try {
             //#region @TODO: validation + token

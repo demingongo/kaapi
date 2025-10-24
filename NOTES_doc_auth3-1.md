@@ -32,7 +32,7 @@ export default OIDCAuthorizationCodeBuilder
   .authorizationRoute<object, { Payload: { email?: string, password?: string, step?: string, submit?: string } }>(route =>
     route
       .setPath('/oauth2/v2/authorize')
-      .setEmailField('email')
+      .setUsernameField('email')
       .setPasswordField('password')
 
       .setGETResponseRenderer(async (context, params, req, h) => {
@@ -126,7 +126,7 @@ The `authorizationRoute()` method defines the full lifecycle of the **authorizat
 | Method                            | Purpose                                                                    |
 | --------------------------------- | -------------------------------------------------------------------------- |
 | `setPath('/oauth2/v2/authorize')` | Sets the authorization endpoint path. Default is `/oauth2/authorize`.      |
-| `setEmailField('email')`          | Defines the field name for the user's email input in the login payload.    |
+| `setUsernameField('email')`          | Defines the field name for the user's email input in the login payload.    |
 | `setPasswordField('password')`    | Defines the field name for the user's password input in the login payload. |
 
 ---

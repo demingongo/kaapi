@@ -88,13 +88,13 @@ export default OIDCAuthorizationCodeBuilder
     .authorizationRoute<object, { Payload: { email?: string, password?: string, step?: string, submit?: string } }>(route =>
         route
             .setPath('/oauth2/v2/authorize')
-            .setEmailField('email') // used to validate request
+            .setUsernameField('email') // used to validate request
             .setPasswordField('password') // used to validate request
 
             .setGETResponseRenderer(async (
                 // context
                 {
-                    emailField, // value of setEmailField
+                    usernameField, // value of setUsernameField
                     passwordField, // value of setPasswordField
                 },
                 // params
@@ -129,7 +129,7 @@ export default OIDCAuthorizationCodeBuilder
                 }
 
                 return h.view('authorization-page', {
-                    emailField, passwordField
+                    usernameField, passwordField
                 })
             })
 
@@ -175,7 +175,7 @@ export default OIDCAuthorizationCodeBuilder
                 {
                     authorizationResult,
                     fullRedirectUri,
-                    emailField,
+                    usernameField,
                     passwordField
                 },
                 // params (same as generateCode)

@@ -59,9 +59,9 @@ export default OIDCAuthorizationCodeBuilder
     .authorizationRoute<object, { Payload: { email?: string, password?: string, step?: string, submit?: string } }>(route =>
         route
             .setPath('/oauth2/v2/authorize') // optional, default '/oauth2/authorize'
-            .setEmailField('email') // email field name
+            .setUsernameField('email') // email field name
             .setPasswordField('password') // password field name
-            .setGETResponseRenderer(async ({ emailField, passwordField, error, errorMessage }, params, req, h) => {
+            .setGETResponseRenderer(async ({ usernameField, passwordField, error, errorMessage }, params, req, h) => {
                 // db query
                 const client = await db.clients.findById(params.clientId)
 
@@ -81,10 +81,10 @@ export default OIDCAuthorizationCodeBuilder
                     }
                 }
 
-                return h.view('authorization-page', { emailField, passwordField, error, errorMessage })
+                return h.view('authorization-page', { usernameField, passwordField, error, errorMessage })
             })
-            .setPOSTErrorRenderer(async ({ emailField, passwordField, error, errorMessage, statusCode }, _params, _req, h) => {
-                return h.view('authorization-page', { emailField, passwordField, error, errorMessage }).code(statusCode)
+            .setPOSTErrorRenderer(async ({ usernameField, passwordField, error, errorMessage, statusCode }, _params, _req, h) => {
+                return h.view('authorization-page', { usernameField, passwordField, error, errorMessage }).code(statusCode)
             })
             .generateCode(async ({ clientId, codeChallenge, scope, nonce }, { payload: { email, password, step, submit }, state }, h) => {
                 // db query

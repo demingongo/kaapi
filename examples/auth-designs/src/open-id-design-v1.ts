@@ -57,7 +57,7 @@ export const openIDDesignV1 = OIDCAuthorizationCodeBuilder
     .authorizationRoute<object, { Payload: { email: string, password: string } }>(route => route
         .setPath('/oauth2/v1/authorization')
         .setClientId('testabc')
-        .setEmailField('email')
+        .setUsernameField('email')
         .setPasswordField('password')
         .generateCode(async ({ clientId, codeChallenge, scope, nonce }, { payload: { email, password } }) => {
             // validate and generate code

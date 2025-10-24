@@ -81,7 +81,7 @@ export class OAuth2ACAuthorizationRoute<
 export type AuthResponseRenderer<Refs extends ReqRef = ReqRefDefaults> = (
     context: {
         statusCode: number,
-        emailField: string,
+        usernameField: string,
         passwordField: string,
         error?: AnyOAuth2ErrorCodeType,
         errorMessage?: string
@@ -111,7 +111,7 @@ export type AuthResponseHandler<
     R extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<Refs>> = (
         context: {
             authorizationResult: AuthCodeGeneratorResult,
-            emailField: string,
+            usernameField: string,
             passwordField: string,
             /**
              * The full redirect URI that the user should be sent to after authorization.
@@ -128,7 +128,7 @@ export type AuthResponseHandler<
     ) => R
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const render: AuthResponseRenderer<any> = ({ error, errorMessage, emailField, passwordField }) => {
+const render: AuthResponseRenderer<any> = ({ error, errorMessage, usernameField, passwordField }) => {
     if (error && ['invalid_client'].includes(error)) {
         return { error, error_description: errorMessage } as OAuth2ErrorBody
     }
@@ -154,7 +154,7 @@ const render: AuthResponseRenderer<any> = ({ error, errorMessage, emailField, pa
     ${errorMessage || ''}
   </div>
   <div>
-  <input type="email" id="${emailField}" name="${emailField}" placeholder="${emailField}" autocomplete="${emailField}" />
+  <input type="text" id="${usernameField}" name="${usernameField}" placeholder="${usernameField}" autocomplete="${usernameField}" />
   <input type="password" id="${passwordField}" name="${passwordField}" placeholder="${passwordField}" />
   </div>
   <div>
@@ -189,7 +189,7 @@ export class DefaultOAuth2ACAuthorizationRoute<
     #clientId?: string | null
     #redirectUri?: string | null
 
-    #emailField = 'email'
+    #usernameField = 'username'
     #passwordField = 'password'
 
     #generateCode: AuthCodeGenerator<PostRefs>
@@ -204,7 +204,7 @@ export class DefaultOAuth2ACAuthorizationRoute<
 
             // render form
             return await this.#renderResponse({
-                emailField: this.#emailField,
+                usernameField: this.#usernameField,
                 passwordField: this.#passwordField,
                 statusCode: 200
             }, { clientId, redirectUri, ...props }, req, h)
@@ -220,7 +220,7 @@ export class DefaultOAuth2ACAuthorizationRoute<
                 req.payload &&
                 typeof req.payload === 'object' &&
                 !Array.isArray(req.payload)/*&&
-                this.#emailField in req.payload &&
+                this.#usernameField in req.payload &&
                 this.#passwordField in req.payload
                 */
             ) {
@@ -247,7 +247,7 @@ export class DefaultOAuth2ACAuthorizationRoute<
                     }
                     return this.#authorizationResponseHandler({
                         authorizationResult: code,
-                        emailField: this.#emailField,
+                        usernameField: this.#usernameField,
                         passwordField: this.#passwordField,
                         fullRedirectUri
                     }, props, req, h)
@@ -264,7 +264,7 @@ export class DefaultOAuth2ACAuthorizationRoute<
             return h.response(
                 await this.#renderPOSTError(
                     {
-                        emailField: this.#emailField,
+                        usernameField: this.#usernameField,
                         passwordField: this.#passwordField,
                         statusCode: 400,
                         error: error,
@@ -291,7 +291,7 @@ export class DefaultOAuth2ACAuthorizationRoute<
         path?: PathValue,
         clientId?: string,
         redirectUri?: string,
-        emailField?: string,
+        usernameField?: string,
         passwordField?: string,
         codeGenerator?: AuthCodeGenerator<PostRefs>,
         responseRenderer?: AuthResponseRenderer<GetRefs>,
@@ -302,7 +302,7 @@ export class DefaultOAuth2ACAuthorizationRoute<
         if (config.path) instance.setPath(config.path)
         if (config.clientId) instance.setClientId(config.clientId)
         if (config.redirectUri) instance.setRedirectUri(config.redirectUri)
-        if (config.emailField) instance.setEmailField(config.emailField)
+        if (config.usernameField) instance.setUsernameField(config.usernameField)
         if (config.passwordField) instance.setPasswordField(config.passwordField)
         if (config.codeGenerator) instance.generateCode(config.codeGenerator)
         if (config.responseRenderer) instance.setGETResponseRenderer(config.responseRenderer)
@@ -324,7 +324,7 @@ export class DefaultOAuth2ACAuthorizationRoute<
     ) {
         if (this.#clientId && this.#clientId !== clientId) {
             return h.response(await renderer({
-                emailField: this.#emailField,
+                usernameField: this.#usernameField,
                 passwordField: this.#passwordField,
                 statusCode: 400,
                 error: OAuth2ErrorCode.INVALID_CLIENT,
@@ -334,7 +334,7 @@ export class DefaultOAuth2ACAuthorizationRoute<
 
         if (this.#redirectUri && this.#redirectUri !== redirectUri) {
             return h.response(await renderer({
-                emailField: this.#emailField,
+                usernameField: this.#usernameField,
                 passwordField: this.#passwordField,
                 statusCode: 400,
                 error: OAuth2ErrorCode.INVALID_CLIENT,
@@ -404,10 +404,10 @@ export class DefaultOAuth2ACAuthorizationRoute<
         return this
     }
 
-    setEmailField(value: string): this {
+    setUsernameField(value: string): this {
         const escaped = encode(value) // For HTML rendering, use encode() (from html-entities)
         if (escaped)
-            this.#emailField = escaped
+            this.#usernameField = escaped
         return this
     }
 

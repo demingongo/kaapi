@@ -68,10 +68,10 @@ export const OIDCMultiFlowsDesignV2 = MultipleFlowsBuilder
                         console.log('ttl', ttl)
 
                         if (!clientSecret) {
-                            return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Token Request was missing the \'client_secret\' parameter.' }
+                            return { error: OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Token Request was missing the \'client_secret\' parameter.' }
                         }
                         if (!ttl) {
-                            return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Missing ttl' }
+                            return { error: OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Missing ttl' }
                         }
                         try {
                             //#region @TODO: validation + token
@@ -153,12 +153,12 @@ export const OIDCMultiFlowsDesignV2 = MultipleFlowsBuilder
             .authorizationRoute<object, { Payload: { email: string, password: string } }>(route =>
                 route.setPath('/oauth2/v2/authorization')
                     .setClientId('testabc')
-                    .setEmailField('email')
+                    .setUsernameField('email')
                     .setPasswordField('password')
                     .generateCode(async ({ clientId, codeChallenge, scope, nonce }, { payload: { email, password } }) => {
                         // validate and generate code
                         if (email == 'janed@example.com' && password == '1234') {
-                            return { type: 'code', value: JSON.stringify({ clientId, codeChallenge, scope, nonce, user: '248289761001' })}
+                            return { type: 'code', value: JSON.stringify({ clientId, codeChallenge, scope, nonce, user: '248289761001' }) }
                         }
 
                         return null
@@ -179,10 +179,10 @@ export const OIDCMultiFlowsDesignV2 = MultipleFlowsBuilder
                         console.log('scope', scope)
 
                         if (!clientSecret) {
-                            return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Token Request was missing the \'client_secret\' parameter.' }
+                            return { error: OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Token Request was missing the \'client_secret\' parameter.' }
                         }
                         if (!ttl) {
-                            return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Missing ttl' }
+                            return { error: OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Missing ttl' }
                         }
                         try {
                             //#region @TODO: validation + token
@@ -319,10 +319,10 @@ export const OIDCMultiFlowsDesignV2 = MultipleFlowsBuilder
                         console.log('scope', scope)
 
                         if (clientId != 'testabc') {
-                            return { error:  OAuth2ErrorCode.ACCESS_DENIED, error_description: 'Token Request was missing the \'client_secret\' parameter.' }
+                            return { error: OAuth2ErrorCode.ACCESS_DENIED, error_description: 'Token Request was missing the \'client_secret\' parameter.' }
                         }
                         if (!ttl) {
-                            return { error:  OAuth2ErrorCode.ACCESS_DENIED, error_description: 'Missing ttl' }
+                            return { error: OAuth2ErrorCode.ACCESS_DENIED, error_description: 'Missing ttl' }
                         }
                         try {
                             //#region @TODO: validation + token

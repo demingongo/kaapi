@@ -45,7 +45,7 @@ export const openIDDesign2 = new OIDCAuthorizationCode(
         authorizationRoute: OAuth2ACAuthorizationRoute.buildDefault<object, { Payload: { user: string, pass: string } }>()
             .setPath('/oauth2/ac/login')
             .setClientId('testabc')
-            .setEmailField('user')
+            .setUsernameField('user')
             .setPasswordField('pass')
             .generateCode(async ({ clientId, codeChallenge, scope, nonce }, { payload: { user, pass } }) => {
                 // validate and generate code
@@ -67,7 +67,7 @@ export const openIDDesign2 = new OIDCAuthorizationCode(
                 console.log('ttl', ttl)
 
                 if (!clientSecret && !codeVerifier) {
-                    return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Token Request was missing the \'client_secret\' parameter.' }
+                    return { error: OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Token Request was missing the \'client_secret\' parameter.' }
                 }
                 try {
                     //#region @TODO: validation + token
@@ -75,15 +75,15 @@ export const openIDDesign2 = new OIDCAuthorizationCode(
                     const refreshToken = 'generated_refresh_token'
                     const scope: string[] = ['openid']
                     const idToken = await createIdToken?.({
-                                sub: '248289761001',
-                                name: 'Jane Doe',
-                                given_name: 'Jane',
-                                family_name: 'Doe',
-                                preferred_username: 'janed',
-                                email: 'janed@example.com',
-                                email_verified: true,
-                                picture: 'https://example.com/janed.jpg'
-                            })
+                        sub: '248289761001',
+                        name: 'Jane Doe',
+                        given_name: 'Jane',
+                        family_name: 'Doe',
+                        preferred_username: 'janed',
+                        email: 'janed@example.com',
+                        email_verified: true,
+                        picture: 'https://example.com/janed.jpg'
+                    })
                     return new OAuth2TokenResponse({ access_token: accessToken })
                         .setExpiresIn(ttl)
                         .setRefreshToken(refreshToken)
@@ -117,8 +117,8 @@ export const openIDDesign2 = new OIDCAuthorizationCode(
             }) as OAuth2RefreshTokenHandler,
         ),
         options: {
-            async validate(req, {token}, h) {
-                console.log( 'validate => req.app.oauth2.proofThumbprint:', req.app.oauth2?.dpopThumbprint)
+            async validate(req, { token }, h) {
+                console.log('validate => req.app.oauth2.proofThumbprint:', req.app.oauth2?.dpopThumbprint)
                 if (token) {
                     console.log('token=', token)
                     //#region @TODO: validation
@@ -160,5 +160,5 @@ export const openIDDesign2 = new OIDCAuthorizationCode(
     //.addClientAuthenticationMethod(new PrivateKeyJwt())
     //.clientSecretBasicAuthenticationMethod()
     .clientSecretPostAuthenticationMethod() // to debug (used in SwaggerUI)
-    //.noneAuthenticationMethod() // or .withPkce() (default)
-    //.withoutPkce() // to remove 'none'
+//.noneAuthenticationMethod() // or .withPkce() (default)
+//.withoutPkce() // to remove 'none'

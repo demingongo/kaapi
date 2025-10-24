@@ -60,7 +60,7 @@ export const ${this.#values.name} = new OpenIDAuthDesign(
         jwksRoute: new OpenIDJWKSRoute('/openid/jwks'),
         authorizationRoute: OAuth2ACAuthorizationRoute.buildDefault<object, { Payload: { user: string, pass: string } }>()
             .setPath('/oauth2/authorize')
-            .setEmailField('email')
+            .setUsernameField('email')
             .setPasswordField('password')
             .generateCode(async ({ clientId, codeChallenge, scope, nonce }, { payload: { user, pass } }) => {
                 // validate and generate code

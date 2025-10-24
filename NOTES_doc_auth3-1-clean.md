@@ -26,7 +26,7 @@ export default OIDCAuthorizationCodeBuilder
   .authorizationRoute<object, { Payload: { email?: string, password?: string, step?: string, submit?: string } }>(route =>
     route
       .setPath('/oauth2/authorize')
-      .setEmailField('email')
+      .setUsernameField('email')
       .setPasswordField('password')
 
       .setGETResponseRenderer(async (context, params, req, h) => {
@@ -47,7 +47,7 @@ export default OIDCAuthorizationCodeBuilder
         }
 
         return h.view('authorization-page', {
-          emailField: context.emailField,
+          usernameField: context.usernameField,
           passwordField: context.passwordField
         })
       })
@@ -107,7 +107,7 @@ The builder supports customization through various lifecycle methods.
 | Method                            | Purpose                                                                          |
 | --------------------------------- | -------------------------------------------------------------------------------- |
 | `setPath('/oauth2/authorize')` | Defines the path for the authorization endpoint. Default is `/oauth2/authorize`. |
-| `setEmailField(field)`            | Defines the field name used to capture the user’s email during login.            |
+| `setUsernameField(field)`            | Defines the field name used to capture the user’s email during login.            |
 | `setPasswordField(field)`         | Defines the field name used to capture the password during login.                |
 
 ---
@@ -138,7 +138,7 @@ Each lifecycle method receives a `context` object, but its structure depends on 
 
 | Field           | Description                                       |
 | --------------- | ------------------------------------------------- |
-| `emailField`    | Name of the field used for email input.           |
+| `usernameField`    | Name of the field used for email input.           |
 | `passwordField` | Name of the field used for password input.        |
 | `statusCode`    | (In `setPOSTErrorRenderer`) Response status code. |
 | `error`         | (Optional) OAuth2 error code.                     |
@@ -154,7 +154,7 @@ Used mainly for rendering UI templates (e.g. login form or error display).
 | --------------------- | -------------------------------------------------- |
 | `authorizationResult` | The result returned by `generateCode()`. One of: `'code'`, `'continue'`, `'deny'`.          |
 | `fullRedirectUri`     | Fully constructed URI for client redirection.      |
-| `emailField`          | Field name for email (from earlier configuration). |
+| `usernameField`          | Field name for email (from earlier configuration). |
 | `passwordField`       | Field name for password.                           |
 
 This context is used to determine how to finalize the user's decision and redirect appropriately.
@@ -165,7 +165,7 @@ This context is used to determine how to finalize the user's decision and redire
 
 This method handles GET requests to the authorization endpoint.
 
-You typically use this to validate the client ID and either show the login form or, if the user is already authenticated (via session or cookies), display a consent page. The `context` provides helper fields like `emailField` and `passwordField` for use in rendering the login UI.
+You typically use this to validate the client ID and either show the login form or, if the user is already authenticated (via session or cookies), display a consent page. The `context` provides helper fields like `usernameField` and `passwordField` for use in rendering the login UI.
 
 ---
 

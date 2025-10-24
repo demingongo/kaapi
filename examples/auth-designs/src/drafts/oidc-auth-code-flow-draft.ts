@@ -64,7 +64,7 @@ export default OIDCAuthorizationCodeBuilder
     .authorizationRoute<object, { Payload: { email?: string, password?: string, step?: string, submit?: string } }>(route =>
         route
             .setPath('/oauth2/v2/authorize') // optional, default '/oauth2/authorize'
-            .setEmailField('email')
+            .setUsernameField('email')
             .setPasswordField('password')
             .setGETResponseRenderer(async (context, params, req) => {
                 // db query
