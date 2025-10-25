@@ -1,7 +1,7 @@
 import { OpenAPI, Postman, ProcessedRoute } from '@novice1/api-doc-generator';
 import { OpenAPIJoiHelper } from '@novice1/api-doc-generator/lib/generators/openapi/helpers/joiHelper';
 import { KaapiServerRoute } from '@kaapi/server';
-import { RouteMeta } from '@novice1/routing';
+import { type RouteMeta } from '@novice1/routing';
 import { ReqRef, ReqRefDefaults, RequestRoute } from '@hapi/hapi';
 import { JoiSchema } from '@novice1/api-doc-generator/lib/helpers/joiHelper';
 

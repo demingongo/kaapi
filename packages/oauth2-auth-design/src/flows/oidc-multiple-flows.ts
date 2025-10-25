@@ -246,7 +246,7 @@ export class MultipleFlows extends AuthDesign {
 
                 for (const flow of this.flows) {
                     if (typeof flow.getDiscoveryConfiguration === 'function') {
-                         const {
+                        const {
                             // eslint-disable-next-line @typescript-eslint/no-unused-vars
                             token_endpoint: _unused_token_endpoint,
                             // eslint-disable-next-line @typescript-eslint/no-unused-vars
