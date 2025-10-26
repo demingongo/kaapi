@@ -22,7 +22,8 @@ import {
     OAuth2RefreshTokenRoute,
     OAuth2AuthDesignOptions,
     OAuth2JwksOptions,
-    OAuth2ErrorCode
+    OAuth2ErrorCode,
+    OIDCAuthUtil
 } from './common'
 import { createIdToken, createJwtAccessToken, verifyJwt } from '../utils/jwt-utils'
 import {
@@ -109,7 +110,7 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
                         errorDescription = 'Request was missing the \'client_id\' parameter.'
                     }
 
-                    return h.response({ error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: errorDescription }).code(400)
+                    return h.response({ error: OAuth2ErrorCode.INVALID_REQUEST, error_description: errorDescription }).code(400)
                 }
             }
         };
@@ -179,7 +180,7 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
                 if (!clientId) {
                     return h
                         .response({
-                            error:  OAuth2ErrorCode.INVALID_REQUEST,
+                            error: OAuth2ErrorCode.INVALID_REQUEST,
                             error_description: `Supported token endpoint authentication methods: ${supported.join(', ')}`
                         }).code(400)
                 }
@@ -218,18 +219,18 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
 
                     const ttR: TokenTypeValidationResponse = tokenTypeInstance.isValidTokenRequest ? (await tokenTypeInstance.isValidTokenRequest(req)) : { isValid: true }
                     if (!ttR.isValid) {
-                        return h.response({ error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: ttR.message || '' }).code(400)
+                        return h.response({ error: OAuth2ErrorCode.INVALID_REQUEST, error_description: ttR.message || '' }).code(400)
                     }
 
                     return this.tokenRoute.handler(params, req, h)
                 } else {
-                    let error: AnyOAuth2ErrorCodeType =  OAuth2ErrorCode.UNAUTHORIZED_CLIENT;
+                    let error: AnyOAuth2ErrorCodeType = OAuth2ErrorCode.UNAUTHORIZED_CLIENT;
                     let errorDescription = ''
                     if (!clientId) {
-                        error =  OAuth2ErrorCode.INVALID_REQUEST
+                        error = OAuth2ErrorCode.INVALID_REQUEST
                         errorDescription = 'Request was missing the \'client_id\' parameter.'
                     } else if (!(req.payload.device_code && typeof req.payload.device_code === 'string')) {
-                        error =  OAuth2ErrorCode.INVALID_REQUEST
+                        error = OAuth2ErrorCode.INVALID_REQUEST
                         errorDescription = 'Request was missing the \'device_code\' parameter.'
                     }
                     return h.response({ error, error_description: errorDescription }).code(400)
@@ -280,7 +281,7 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
                 if (!clientId) {
                     return h
                         .response({
-                            error:  OAuth2ErrorCode.INVALID_REQUEST,
+                            error: OAuth2ErrorCode.INVALID_REQUEST,
                             error_description: `Supported token endpoint authentication methods: ${supported.join(', ')}`
                         }).code(400)
                 }
@@ -327,13 +328,13 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
 
                     return this.refreshTokenRoute?.handler(params, req, h)
                 } else {
-                    let error: AnyOAuth2ErrorCodeType =  OAuth2ErrorCode.UNAUTHORIZED_CLIENT;
+                    let error: AnyOAuth2ErrorCodeType = OAuth2ErrorCode.UNAUTHORIZED_CLIENT;
                     let errorDescription = ''
                     if (!clientId) {
-                        error =  OAuth2ErrorCode.INVALID_REQUEST
+                        error = OAuth2ErrorCode.INVALID_REQUEST
                         errorDescription = 'Request was missing the \'client_id\' parameter.'
                     } else if (!(req.payload.refresh_token && typeof req.payload.refresh_token === 'string')) {
-                        error =  OAuth2ErrorCode.INVALID_REQUEST
+                        error = OAuth2ErrorCode.INVALID_REQUEST
                         errorDescription = 'Request was missing the \'refresh_token\' parameter.'
                     }
                     return h.response({ error, error_description: errorDescription }).code(400)
@@ -503,6 +504,9 @@ export class OIDCDeviceAuthorization extends OAuth2DeviceAuthorization implement
         return { ...wellKnownOpenIDConfig, ...this.openidConfiguration }
     }
 
+    docs(): BaseAuthUtil | undefined {
+        return new OIDCAuthUtil(this.strategyName)
+    }
 
     integrateHook(t: KaapiTools): void {
         super.integrateHook(t);

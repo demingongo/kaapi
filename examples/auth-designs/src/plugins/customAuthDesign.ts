@@ -6,10 +6,12 @@ import {
     BearerAuthDesign,
     GroupAuthDesign
 } from '@kaapi/kaapi';
+//import oidcDeviceAuthFlowDraft from '../drafts/oidc-device-auth-flow-draft';
 import multipleFlows from './multiple-flows';
 //import { authenticationCodeDesign } from '../oauth2Plugins';
 //import { openIDDesignV1 } from '../open-id-design-v1';
 //import { clientCredentialsDesignV1 } from '../oauth2-cc-v1';
+//import oidcDe from '../drafts/oidc-device-auth-flow-draft'
 
 export const basicAuthDesign = new BasicAuthDesign({
     //strategyName: 'API Key',
@@ -73,6 +75,7 @@ export const customAuthDesign = new GroupAuthDesign([
     basicAuthDesign,
     apiKeyAuthDesign,
     bearerAuthDesign,
+    //oidcDeviceAuthFlowDraft.build()
     multipleFlows
     //OIDCMultiFlowsDesignV2,
     //openIDDesignV1,

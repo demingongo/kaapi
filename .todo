@@ -7,8 +7,8 @@
             - refreshTokenRoute for Device authorization and Authorization code @done
             - use, generate and rotate jwks keys (generateKeyPair, checkAndRotateKeys, createIdToken)  @done
             - sign access tokens with public keys (useAccessTokenJwks, createJwtAccessToken, ...), @done
-            - OIDC examples (use the strategy with getStrategyName, ...)
             - MultipleFlows (OIDC Multiple Flows) @done
+            - OIDC Auth code example
             
 - @kaapi/server: `auth: true` should not set up startegy but only `mode: 'required'`. Strategy should be explicitly defined. @done
 
@@ -19,7 +19,8 @@
         - apikey (take it from the examples/auth-designs/src/plugins/bearerDesign.ts) @done
 
 - @kaapi/oauth2-auth-design
-    - URGENT: oidc docs for OpanAPI should not be oauth2 but openid 
+    - oidc docs for OpanAPI should not be oauth2 but openid 
+    - auth code authorizationRoute: a method to validate params at GET would be nice if we don't want to use the whole setGETResponseRenderer
     - naming: replace 'setPOSTResponseRenderer' by 'setPOSTErrorRenderer' @done
     - improvements - the return type for generateCode (AuthCodeGenerator): AuthCodeGeneratorResult @done
     - REPLACE AnyOAuth2ErrorCodeType by OAuth2ErrorCode @done
