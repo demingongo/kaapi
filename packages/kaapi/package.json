@@ -9,6 +9,12 @@
     "build": "tsc && node ./scripts/buildDT.mjs",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "keywords": [
+    "typescript",
+    "backend",
+    "framework",
+    "api"
+  ],
   "author": "demingongo",
   "repository": {
     "type": "git",
