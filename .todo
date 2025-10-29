@@ -9,7 +9,7 @@
             - sign access tokens with public keys (useAccessTokenJwks, createJwtAccessToken, ...), @done
             - MultipleFlows (OIDC Multiple Flows) @done
             - OIDC Auth code example @done
-            - UserInfo endpoint (additionalConfiguration + route scopes (openid required))
+            - UserInfo endpoint (additionalConfiguration + route scopes (openid required)) (NOTES_doc_auth8)
             
 - @kaapi/server: `auth: true` should not set up startegy but only `mode: 'required'`. Strategy should be explicitly defined. @done
 
@@ -20,6 +20,7 @@
         - apikey (take it from the examples/auth-designs/src/plugins/bearerDesign.ts) @done
 
 - @kaapi/oauth2-auth-design
+    - URGENT: getDiscoveryConfiguration() should check if userinfo_endpoint was set. It should prefix it by the host if it starts with "/".
     - oidc docs for OpenAPI should not be oauth2 but openid 
     - auth code authorizationRoute: a method to validate params at GET would be nice if we don't want to use the whole setGETResponseRenderer
     - naming: replace 'setPOSTResponseRenderer' by 'setPOSTErrorRenderer' @done
