@@ -1,7 +1,7 @@
 - wiki:
     - oauth2
         - naming: replace 'setPOSTResponseRenderer' by 'setPOSTErrorRenderer' @done
-        - do a page per step: @done
+        - do a page per step:
             - authorizationRoute for Device authorization and Authorization code (createMatchAuthCodeResult, ...) @done
             - tokenRoute (verifyCodeVerifier, ...) @done
             - refreshTokenRoute for Device authorization and Authorization code @done
@@ -9,6 +9,7 @@
             - sign access tokens with public keys (useAccessTokenJwks, createJwtAccessToken, ...), @done
             - MultipleFlows (OIDC Multiple Flows) @done
             - OIDC Auth code example @done
+            - UserInfo endpoint (additionalConfiguration + route scopes (openid required))
             
 - @kaapi/server: `auth: true` should not set up startegy but only `mode: 'required'`. Strategy should be explicitly defined. @done
 
