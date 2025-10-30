@@ -122,7 +122,7 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign implements OAuth2S
                 if (!clientId || !clientSecret) {
                     return h
                         .response({
-                            error:  OAuth2ErrorCode.INVALID_REQUEST,
+                            error: OAuth2ErrorCode.INVALID_REQUEST,
                             error_description: `Supported token endpoint authentication methods: ${supported.join(', ')}`
                         }).code(400)
                 }
@@ -147,12 +147,12 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign implements OAuth2S
                     if (tmpClientId) {
                         clientId = tmpClientId
                     } else {
-                        return h.response({ error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Request was missing the \'client_id\' parameter.' }).code(400)
+                        return h.response({ error: OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Request was missing the \'client_id\' parameter.' }).code(400)
                     }
                     if (tmpClientSecret) {
                         clientSecret = tmpClientSecret
                     } else {
-                        return h.response({ error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Request was missing the \'client_secret\' parameter.' }).code(400)
+                        return h.response({ error: OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Request was missing the \'client_secret\' parameter.' }).code(400)
                     }
                     const scope = req.payload.scope && typeof req.payload.scope === 'string' ? req.payload.scope : undefined
                     const params: OAuth2ClientCredentialsTokenParams = {
@@ -184,18 +184,18 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign implements OAuth2S
 
                     const ttR: TokenTypeValidationResponse = tokenTypeInstance.isValidTokenRequest ? (await tokenTypeInstance.isValidTokenRequest(req)) : { isValid: true }
                     if (!ttR.isValid) {
-                        return h.response({ error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: ttR.message || '' }).code(400)
+                        return h.response({ error: OAuth2ErrorCode.INVALID_REQUEST, error_description: ttR.message || '' }).code(400)
                     }
 
                     return this.tokenRoute.handler(params, req, h)
                 } else {
-                    let error: AnyOAuth2ErrorCodeType =  OAuth2ErrorCode.UNAUTHORIZED_CLIENT;
+                    let error: AnyOAuth2ErrorCodeType = OAuth2ErrorCode.UNAUTHORIZED_CLIENT;
                     let errorDescription = ''
                     if (!clientId) {
-                        error =  OAuth2ErrorCode.INVALID_REQUEST
+                        error = OAuth2ErrorCode.INVALID_REQUEST
                         errorDescription = 'Request was missing the \'client_id\' parameter.'
                     } else if (!clientSecret) {
-                        error =  OAuth2ErrorCode.INVALID_REQUEST
+                        error = OAuth2ErrorCode.INVALID_REQUEST
                         errorDescription = 'Request was missing the \'client_secret\' parameter.'
                     }
                     return h.response({ error, error_description: errorDescription }).code(400)
@@ -279,7 +279,9 @@ export class OIDCClientCredentials extends OAuth2ClientCredentials implements OA
         const wellKnownOpenIDConfig: Record<string, string | string[] | undefined> = {
             issuer: host,
             token_endpoint: `${host}${this.tokenRoute.path}`,
+            userinfo_endpoint: undefined, // irrelevant and typically not used in the client credentials flow
             jwks_uri: this.jwksRoute?.path ? `${host}${this.jwksRoute.path}` : undefined,
+            registration_endpoint: undefined,
             claims_supported: [
                 'aud',
                 'exp',
@@ -318,7 +320,17 @@ export class OIDCClientCredentials extends OAuth2ClientCredentials implements OA
             ]
         }
 
-        return { ...wellKnownOpenIDConfig, ...this.openidConfiguration }
+        const result = { ...wellKnownOpenIDConfig, ...this.openidConfiguration }
+
+        // Format unhandled endpoints
+        if (typeof result.userinfo_endpoint === 'string' && (/^\/(?!\/)/.test(result.userinfo_endpoint))) {
+            result.userinfo_endpoint = `${host}${result.userinfo_endpoint}`
+        }
+        if (typeof result.registration_endpoint === 'string' && (/^\/(?!\/)/.test(result.registration_endpoint))) {
+            result.registration_endpoint = `${host}${result.registration_endpoint}`
+        }
+
+        return result
     }
 
 

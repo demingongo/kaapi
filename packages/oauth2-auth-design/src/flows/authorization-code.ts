@@ -146,7 +146,7 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
                         errorDescription = 'Request was missing the \'redirect_uri\' parameter.'
                     }
 
-                    return h.response({ error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: errorDescription }).code(400)
+                    return h.response({ error: OAuth2ErrorCode.INVALID_REQUEST, error_description: errorDescription }).code(400)
                 }
             }
         };
@@ -216,7 +216,7 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
                 if (!clientId) {
                     return h
                         .response({
-                            error:  OAuth2ErrorCode.INVALID_REQUEST,
+                            error: OAuth2ErrorCode.INVALID_REQUEST,
                             error_description: `Supported token endpoint authentication methods: ${supported.join(', ')}`
                         }).code(400)
                 }
@@ -325,7 +325,7 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
                 if (!clientId) {
                     return h
                         .response({
-                            error:  OAuth2ErrorCode.INVALID_REQUEST,
+                            error: OAuth2ErrorCode.INVALID_REQUEST,
                             error_description: `Supported token endpoint authentication methods: ${supported.join(', ')}`
                         }).code(400)
                 }
@@ -372,13 +372,13 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
 
                     return this.refreshTokenRoute?.handler(params, req, h)
                 } else {
-                    let error: AnyOAuth2ErrorCodeType =  OAuth2ErrorCode.UNAUTHORIZED_CLIENT;
+                    let error: AnyOAuth2ErrorCodeType = OAuth2ErrorCode.UNAUTHORIZED_CLIENT;
                     let errorDescription = ''
                     if (!clientId) {
-                        error =  OAuth2ErrorCode.INVALID_REQUEST
+                        error = OAuth2ErrorCode.INVALID_REQUEST
                         errorDescription = 'Request was missing the \'client_id\' parameter.'
                     } else if (!(req.payload.refresh_token && typeof req.payload.refresh_token === 'string')) {
-                        error =  OAuth2ErrorCode.INVALID_REQUEST
+                        error = OAuth2ErrorCode.INVALID_REQUEST
                         errorDescription = 'Request was missing the \'refresh_token\' parameter.'
                     }
                     return h.response({ error, error_description: errorDescription }).code(400)
@@ -508,7 +508,9 @@ export class OIDCAuthorizationCode extends OAuth2AuthorizationCode implements OA
             issuer: host,
             authorization_endpoint: `${host}${this.authorizationRoute.path}`,
             token_endpoint: `${host}${this.tokenRoute.path}`,
+            userinfo_endpoint: undefined,
             jwks_uri: this.jwksRoute?.path ? `${host}${this.jwksRoute.path}` : undefined,
+            registration_endpoint: undefined,
             claims_supported: [
                 'aud',
                 'exp',
@@ -545,7 +547,17 @@ export class OIDCAuthorizationCode extends OAuth2AuthorizationCode implements OA
             ]
         }
 
-        return { ...wellKnownOpenIDConfig, ...this.openidConfiguration }
+        const result = { ...wellKnownOpenIDConfig, ...this.openidConfiguration }
+
+        // Format unhandled endpoints
+        if (typeof result.userinfo_endpoint === 'string' && (/^\/(?!\/)/.test(result.userinfo_endpoint))) {
+            result.userinfo_endpoint = `${host}${result.userinfo_endpoint}`
+        }
+        if (typeof result.registration_endpoint === 'string' && (/^\/(?!\/)/.test(result.registration_endpoint))) {
+            result.registration_endpoint = `${host}${result.registration_endpoint}`
+        }
+
+        return result
     }
 
 

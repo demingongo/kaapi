@@ -239,7 +239,9 @@ export class MultipleFlows extends AuthDesign {
                     authorization_endpoint: undefined,
                     device_authorization_endpoint: undefined,
                     token_endpoint: `${host}${this.tokenEndpoint}`,
+                    userinfo_endpoint: undefined,
                     jwks_uri: this.jwksRoute ? `${host}${this.jwksRoute.path}` : undefined,
+                    registration_endpoint: undefined,
                     grant_types_supported: [],
                     token_endpoint_auth_methods_supported: []
                 }
@@ -271,7 +273,17 @@ export class MultipleFlows extends AuthDesign {
                     }
                 }
 
-                return { ...wellKnownOpenIDConfig, ...this.openidConfiguration }
+                const result = { ...wellKnownOpenIDConfig, ...this.openidConfiguration }
+
+                // Format unhandled endpoints
+                if (typeof result.userinfo_endpoint === 'string' && (/^\/(?!\/)/.test(result.userinfo_endpoint))) {
+                    result.userinfo_endpoint = `${host}${result.userinfo_endpoint}`
+                }
+                if (typeof result.registration_endpoint === 'string' && (/^\/(?!\/)/.test(result.registration_endpoint))) {
+                    result.registration_endpoint = `${host}${result.registration_endpoint}`
+                }
+
+                return result
             }
         })
     }

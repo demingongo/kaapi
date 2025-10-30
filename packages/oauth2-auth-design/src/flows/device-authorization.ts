@@ -464,7 +464,9 @@ export class OIDCDeviceAuthorization extends OAuth2DeviceAuthorization implement
             issuer: host,
             device_authorization_endpoint: `${host}${this.authorizationRoute.path}`,
             token_endpoint: `${host}${this.tokenRoute.path}`,
+            userinfo_endpoint: undefined,
             jwks_uri: this.jwksRoute?.path ? `${host}${this.jwksRoute.path}` : undefined,
+            registration_endpoint: undefined,
             claims_supported: [
                 'aud',
                 'exp',
@@ -501,7 +503,17 @@ export class OIDCDeviceAuthorization extends OAuth2DeviceAuthorization implement
             ]
         }
 
-        return { ...wellKnownOpenIDConfig, ...this.openidConfiguration }
+        const result = { ...wellKnownOpenIDConfig, ...this.openidConfiguration }
+
+        // Format unhandled endpoints
+        if (typeof result.userinfo_endpoint === 'string' && (/^\/(?!\/)/.test(result.userinfo_endpoint))) {
+            result.userinfo_endpoint = `${host}${result.userinfo_endpoint}`
+        }
+        if (typeof result.registration_endpoint === 'string' && (/^\/(?!\/)/.test(result.registration_endpoint))) {
+            result.registration_endpoint = `${host}${result.registration_endpoint}`
+        }
+
+        return result
     }
 
     docs(): BaseAuthUtil | undefined {
