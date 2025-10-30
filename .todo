@@ -14,7 +14,10 @@
 - @kaapi/server: `auth: true` should not set up startegy but only `mode: 'required'`. Strategy should be explicitly defined. @done
 
 - @kaapi/kaapi
-    - zod validator?
+    - zod validator? (NOTES_extensions)
+        - kapi app should have something like app.extensions()
+        - extend() should give access to a method to expose callable API to extensions()
+        - use it like: app.extend(MyPlugin); app.extensions().myplugin.run();
     - create some auth designs: @done
         - basic auth (to create from scratch) @done
         - bearer (take it from the examples/auth-designs/src/plugins/apiKeyDesign.ts) @done
