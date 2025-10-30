@@ -1,10 +1,10 @@
-export { 
-    LoggerOptions, 
-    Logger, 
-    Container, 
-    ExceptionHandler, 
-    Profiler, 
-    RejectionHandler, 
+export {
+    LoggerOptions,
+    Logger,
+    Container,
+    ExceptionHandler,
+    Profiler,
+    RejectionHandler,
     LeveledLogMethod,
     LogEntry,
     LogMethod,
@@ -12,6 +12,7 @@ export {
 } from 'winston'
 export * from '@hapi/hapi'
 export * from '@kaapi/server'
+export * from './services/docs/generators'
 export * from './services/docs/utils'
 export * from './services/plugins/plugin'
 export * from './services/plugins/auth-designs/api-key-auth-design'

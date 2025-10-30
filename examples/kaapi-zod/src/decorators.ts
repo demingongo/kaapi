@@ -60,7 +60,7 @@ function Validate<T extends z.ZodTypeAny>(schema: T): MethodDecorator {
             if (!result.success) {
                 throw new Error(`Validation failed: ${result.error.message}`);
             }
-            return originalMethod.apply(this, args);
+            return originalMethod.apply(_target, args);
         };
     };
 }

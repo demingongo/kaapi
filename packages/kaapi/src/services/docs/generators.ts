@@ -1,11 +1,25 @@
-import { OpenAPI, Postman, ProcessedRoute } from '@novice1/api-doc-generator';
+import { OpenAPI, OpenAPIHelperInterface, Postman, ProcessedRoute } from '@novice1/api-doc-generator';
 import { OpenAPIJoiHelper } from '@novice1/api-doc-generator/lib/generators/openapi/helpers/joiHelper';
 import { KaapiServerRoute } from '@kaapi/server';
 import { type RouteMeta } from '@novice1/routing';
-import { ReqRef, ReqRefDefaults, RequestRoute } from '@hapi/hapi';
+import { ReqRef, ReqRefDefaults, RequestRoute, RouteOptionsValidate } from '@hapi/hapi';
 import { JoiSchema } from '@novice1/api-doc-generator/lib/helpers/joiHelper';
 
-class CustomHelper extends OpenAPIJoiHelper {
+// declared in overrides.d.ts
+export interface KaapiOpenAPIHelperInterface extends OpenAPIHelperInterface {
+    isFile(): boolean | undefined;
+    getFilesChildren(): Record<string, unknown>;
+}
+
+// declared in overrides.d.ts
+export type KaapiOpenAPIHelperClass = {
+    new(args: {
+        isRoot?: boolean;
+        value: unknown;
+    }): KaapiOpenAPIHelperInterface;
+};
+
+class CustomHelper extends OpenAPIJoiHelper implements KaapiOpenAPIHelperInterface {
     isFile() {
         return this._joi['$_terms']
             && Array.isArray(this._joi['$_terms'].tags)
@@ -88,9 +102,18 @@ function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(serverRoutes: KaapiS
                     route.tags = sRoute.options?.tags
                     route.description = sRoute.options?.description
 
-                    let files: Record<string, JoiSchema> | undefined = undefined
-                    if (sRoute.options?.payload && typeof sRoute.options?.validate?.payload === 'object') {
-                        const helper = new CustomHelper({ value: sRoute.options.validate.payload })
+                    const pluginKaapiDocs = typeof sRoute.options?.plugins?.kaapi?.docs === 'object' ? sRoute.options.plugins.kaapi.docs : {}
+                    const schemaProp = pluginKaapiDocs.helperSchemaProperty
+                    const routeOptionsValidate: RouteOptionsValidate | undefined = schemaProp && sRoute.options?.plugins && schemaProp in sRoute.options.plugins ?
+                        (sRoute.options.plugins[schemaProp] as RouteOptionsValidate | undefined) :
+                        sRoute.options?.validate
+
+                    let files: Record<string, unknown> | undefined = undefined
+                    if (sRoute.options?.payload && typeof routeOptionsValidate?.payload === 'object') {
+                        const helperClass = (typeof sRoute.options.plugins?.kaapi?.docs === 'object' && sRoute.options.plugins.kaapi.docs.openAPIHelperClass) ?
+                            sRoute.options.plugins.kaapi.docs.openAPIHelperClass :
+                            CustomHelper;
+                        const helper = new helperClass({ value: routeOptionsValidate.payload })
                         if (helper.isValid() && helper.getType() === 'object') {
                             files = helper.getFilesChildren()
                             if (files && !Object.keys(files).length) {
@@ -99,7 +122,7 @@ function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(serverRoutes: KaapiS
                         }
                     }
 
-                    route.parameters = sRoute.options?.validate ? { ...sRoute.options?.validate, body: sRoute.options?.validate.payload, files: files } : undefined
+                    route.parameters = routeOptionsValidate ? { ...routeOptionsValidate, body: routeOptionsValidate.payload, files: files } : undefined
                     if (route.parameters && sRoute.options?.payload?.allow) {
                         route.parameters.consumes = Array.isArray(sRoute.options.payload.allow) ? sRoute.options.payload.allow : [sRoute.options.payload.allow];
                     }
@@ -165,9 +188,18 @@ function formatRequestRoute<Refs extends ReqRef = ReqRefDefaults>(reqRoute: Requ
                 route.tags = sRoute.settings?.tags
                 route.description = sRoute.settings?.description
 
-                let files: Record<string, JoiSchema> | undefined = undefined
-                if (sRoute.settings?.payload && typeof sRoute.settings?.validate?.payload === 'object') {
-                    const helper = new CustomHelper({ value: sRoute.settings.validate.payload })
+                const pluginKaapiDocs = typeof sRoute.settings?.plugins?.kaapi?.docs === 'object' ? sRoute.settings.plugins.kaapi.docs : {}
+                const schemaProp = pluginKaapiDocs.helperSchemaProperty
+                const routeOptionsValidate: RouteOptionsValidate | undefined = schemaProp && sRoute.settings?.plugins && schemaProp in sRoute.settings.plugins ?
+                    (sRoute.settings.plugins[schemaProp] as RouteOptionsValidate | undefined) :
+                    sRoute.settings?.validate
+
+                let files: Record<string, unknown> | undefined = undefined
+                if (sRoute.settings?.payload && typeof routeOptionsValidate?.payload === 'object') {
+                    const helperClass = (typeof sRoute.settings.plugins?.kaapi?.docs === 'object' && sRoute.settings.plugins.kaapi.docs.openAPIHelperClass) ?
+                        sRoute.settings.plugins.kaapi.docs.openAPIHelperClass :
+                        CustomHelper;
+                    const helper = new helperClass({ value: routeOptionsValidate.payload })
                     if (helper.isValid() && helper.getType() === 'object') {
                         files = helper.getFilesChildren()
                         if (files && !Object.keys(files).length) {
@@ -176,7 +208,7 @@ function formatRequestRoute<Refs extends ReqRef = ReqRefDefaults>(reqRoute: Requ
                     }
                 }
 
-                route.parameters = sRoute.settings?.validate ? { ...sRoute.settings?.validate, body: sRoute.settings?.validate.payload, files: files } : undefined
+                route.parameters = routeOptionsValidate ? { ...routeOptionsValidate, body: routeOptionsValidate.payload, files: files } : undefined
                 if (route.parameters && sRoute.settings?.payload?.allow) {
                     route.parameters.consumes = Array.isArray(sRoute.settings.payload.allow) ? sRoute.settings.payload.allow : [sRoute.settings.payload.allow];
                 }

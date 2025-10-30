@@ -1,10 +1,9 @@
 import { z } from 'zod/v4'
 //import Joi from 'joi'
 import { BearerUtil } from '@novice1/api-doc-generator';
-import { Kaapi } from '@kaapi/kaapi';
-import { kaapiZodDocs, kaapiZodValidator } from './extensions/kaapi-zod-plugin';
+import { KaapiZod } from './kaapi-zod';
 
-const app = new Kaapi({
+const app = new KaapiZod({
     port: 3000,
     host: 'localhost',
     loggerOptions: {
@@ -23,7 +22,6 @@ const app = new Kaapi({
         },
     },
     docs: {
-        ...kaapiZodDocs,
         security: new BearerUtil('mySecurityScheme')
     },
     routes: {
@@ -41,8 +39,7 @@ const schema = {
 }
 
 async function start() {
-
-    await app.extend(kaapiZodValidator)
+    await app.init()
 
     app.route(
         {
@@ -61,7 +58,7 @@ async function start() {
         (req) => req.query
     )
 
-    app.base().routeSafe({
+    app.endpoint({
         path: '/oops',
         method: 'POST',
         auth: true,
@@ -73,42 +70,22 @@ async function start() {
                     }
                 }
             },
+
+            //validate: {
+            //    payload: Joi.object({
+            //        version: Joi.number()
+            //    })
+            //}
         }
     }, {
         payload: z.object({
-            version: z.number().max(5120).meta({
-                description: 'version number'
-            })
-        }).meta({
-            description: 'payload'
-        }),
-        query: z.object({
-            name: z.string().optional()
+            version: z.number().max(5120)
         })
-    }, ({ payload, query: { name } }) => `${name}: ${payload?.version}`)
-
-    app.base().routeSafe({
-        path: '/greetings',
-        method: 'GET',
-        auth: false,
-        options: {
-            plugins: {
-                kaapi: {
-                    docs: {
-                        disabled: false
-                    }
-                }
-            },
-        }
-    }, {
-        query: z.object({
-            name: z.string().optional()
-        })
-    }, ({ query: { name } }) => `Hello ${name}`)
+    }, ({ payload: { version } }) => `${version}`)
 
     app.refreshDocs()
 
-    await app.listen()
+    app.listen()
 }
 
 

@@ -15,23 +15,24 @@
 
 - @kaapi/kaapi
     - zod validator? (NOTES_extensions)
-        - kapi app should have something like app.extensions()
-        - extend() should give access to a method to expose callable API to extensions()
-        - use it like: app.extend(MyPlugin); app.extensions().myplugin.run();
+        - kapi app should have something like app.extensions() --> using app.base() decorators instead @done
+        - extend() should give access to a method to expose callable API to extensions() --> using server.decorate (utilities) or server.method (reusable logic with caching) instead @done
+        - use it like: app.extend(MyPlugin); app.extensions().myplugin.run(); --> using app.base().myplugin.run() instead @done
     - create some auth designs: @done
         - basic auth (to create from scratch) @done
         - bearer (take it from the examples/auth-designs/src/plugins/apiKeyDesign.ts) @done
         - apikey (take it from the examples/auth-designs/src/plugins/bearerDesign.ts) @done
 
 - @kaapi/oauth2-auth-design
-    - URGENT: getDiscoveryConfiguration() should check if userinfo_endpoint was set. It should prefix it by the host if it starts with "/".
     - oidc docs for OpenAPI should not be oauth2 but openid 
     - auth code authorizationRoute: a method to validate params at GET would be nice if we don't want to use the whole setGETResponseRenderer
+    - auth code: response_mode - `query` or `form_post` for redirect
+    - cli create templates
+    - getDiscoveryConfiguration() should check if userinfo_endpoint was set. It should prefix it by the host if it starts with "/". @done
     - naming: replace 'setPOSTResponseRenderer' by 'setPOSTErrorRenderer' @done
     - improvements - the return type for generateCode (AuthCodeGenerator): AuthCodeGeneratorResult @done
     - REPLACE AnyOAuth2ErrorCodeType by OAuth2ErrorCode @done
-    - REPLACE all error codes written in string to use OAuth2ErrorCode... @done 
-    - auth code: response_mode - `query` or `form_post` for redirect
+    - REPLACE all error codes written in string to use OAuth2ErrorCode... @done   
     - be able to verify jwt in refresh token @done
     - unify: move options (?OAuth2AuthOptions<any>) and strategyName (?string) and integrateStrategy to OAuth2AuthDesignOptions @done
     - jwks keys rotation freq and token ttl are independents, make it so. AND THE STORE shouldn't have to handle that. @done
@@ -70,8 +71,6 @@
         - Supporting Multiple Flows (see NOTES: Intends to support multiple flows) (probably will have to expose route handlers and switch depending on the grant type) @done
     - make usage more simple (default classes with default routes, then all methods in the same class) @done
     - make usage more simple (get token type (string) in params for token and refresh token) @done
-    - cli create templates
-
 
 - @kaapi/kaapi
     - make an example with @novice1/socket @done
