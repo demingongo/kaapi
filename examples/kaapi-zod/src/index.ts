@@ -61,6 +61,7 @@ async function start() {
         (req) => req.query
     )
 
+    // with handler as 3rd argument
     app.base().routeSafe({
         path: '/oops',
         method: 'POST',
@@ -87,6 +88,7 @@ async function start() {
         })
     }, ({ payload, query: { name } }) => `${name}: ${payload?.version}`)
 
+    // with handler in the route config (Hapi's way)
     app.base().routeSafe({
         path: '/greetings',
         method: 'GET',
@@ -99,12 +101,13 @@ async function start() {
                     }
                 }
             },
-        }
+        },
+        handler: ({ query: { name } }) => `Hello mello ${name}`
     }, {
         query: z.object({
             name: z.string().optional()
         })
-    }, ({ query: { name } }) => `Hello ${name}`)
+    })
 
     app.refreshDocs()
 

@@ -31,7 +31,7 @@ declare module '@kaapi/kaapi' {
       Params: z.infer<RS['params']>;
       Payload: z.infer<RS['payload']>;
       Pres: z.infer<RS['state']>;
-    }>(serverRoute: KaapiServerRoute<Refs>, schema: RS, handler: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>): this;
+    }>(serverRoute: KaapiServerRoute<Refs>, schema?: RS, handler?: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>): this;
   }
 }
 

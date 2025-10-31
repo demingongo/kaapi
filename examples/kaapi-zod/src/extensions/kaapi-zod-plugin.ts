@@ -81,8 +81,8 @@ export const kaapiZodValidator: KaapiPlugin = {
                 Pres: z.infer<RS['state']>
             }>(
                 serverRoute: KaapiServerRoute<Refs>,
-                schema: RS,
-                handler: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>
+                schema?: RS,
+                handler?: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>
             ) => {
             if (!serverRoute.options) {
                 serverRoute.options = {}
