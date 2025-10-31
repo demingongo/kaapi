@@ -28,11 +28,11 @@ const apiKeyAuthDesign = new APIKeyAuthDesign({
             }
         },
         headerTokenType: 'Session'
-    }, 
+    },
     key: 'Authorization'
 })
-.inHeader()
-.setDescription('Session token type')
+    .inHeader()
+    .setDescription('Session token type')
 
 const app = new Kaapi({
     port: 3000,
@@ -83,7 +83,7 @@ const app = new Kaapi({
             }
         }
     },
-    extend: [ apiKeyAuthDesign ]
+    extend: [apiKeyAuthDesign]
 })
 
 //#endregion init

@@ -1,8 +1,11 @@
 import { z } from 'zod/v4'
+import inert from '@hapi/inert';
 //import Joi from 'joi'
 import { BearerUtil } from '@novice1/api-doc-generator';
 import { Kaapi } from '@kaapi/kaapi';
 import { kaapiZodDocs, kaapiZodValidator } from './extensions/kaapi-zod-plugin';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 
 const app = new Kaapi({
     port: 3000,
@@ -30,6 +33,9 @@ const app = new Kaapi({
         auth: {
             strategy: 'kaapi',
             mode: 'try'
+        },
+        files: {
+            relativeTo: path.join(__dirname, '..', 'uploads')
         }
     }
 })
@@ -42,7 +48,11 @@ const schema = {
 
 async function start() {
 
-    await app.extend(kaapiZodValidator)
+    await app.extend([kaapiZodValidator, {
+        async integrate(t) {
+            await t.server.register(inert)
+        },
+    }])
 
     app.route(
         {
@@ -106,15 +116,94 @@ async function start() {
     }, {
         query: z.object({
             name: z.string().optional()
-        })
+        }),
+        state: z.looseObject({
+            session: z.string().optional()
+        }).optional()
     })
+
+    // file upload
+    app.base().routeSafe({
+        method: 'POST',
+        path: '/upload',
+        auth: false,
+        options: {
+            description: 'Upload user pic',
+            tags: ['Index'],
+            payload: {
+                output: 'stream',
+                parse: true,
+                allow: 'multipart/form-data',
+                multipart: { output: 'stream' },
+                maxBytes: 1024 * 3_000
+            }
+        }
+    }, {
+        payload: z.object({
+            username: z.string().meta({
+                description: 'The username'
+            }),
+            picture: z.looseObject({
+                _data: z.instanceof(Buffer),
+                hapi: z.looseObject({
+                    filename: z.string(),
+                    headers: z.looseObject({
+                        'content-type': z.string()
+                    })
+                })
+            })
+        })
+    }, async (req) => {
+        app.log.warn(req.payload.username)
+
+        app.log.warn('payload', Object.keys(req.payload))
+
+        app.log.warn('file keys', Object.keys(req.payload.picture.hapi))
+
+        const pic = req.payload.picture
+
+        await fs.writeFile(
+            path.join(__dirname, '..', 'uploads', pic.hapi.filename), pic._data)
+
+        return 'ok'
+    });
+
+
+    app.base().routeSafe({
+        method: 'GET',
+        path: '/uploads/{filename}',
+        auth: false,
+        options: {
+            description: 'get uploaded file',
+            tags: ['Index'],
+            plugins: {
+                kaapi: {
+                    docs: {
+                        story: `_Notes:_
+
+- __Not recommended because the documentation does not understand paths with "*".__
+                    `
+                    }
+                }
+            }
+        }
+    }, {
+        params: z.object({
+            filename: z.string().meta(
+                { description: 'The name of the file' }
+            )
+        })
+    }, {
+        directory: {
+            path: '.',
+            redirectToSlash: true,
+        }
+    })
+
 
     app.refreshDocs()
 
     await app.listen()
 }
-
-
-
 
 start()

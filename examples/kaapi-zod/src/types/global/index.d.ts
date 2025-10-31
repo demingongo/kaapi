@@ -9,7 +9,6 @@ type ReqSchema = {
   query?: ZodSchema;
   params?: ZodSchema;
   headers?: ZodSchema;
-  state?: ZodSchema;
   options?: ParseContext<$ZodIssue>
 };
 
@@ -20,7 +19,6 @@ declare module '@kaapi/kaapi' {
       query?: ZodSchema;
       params?: ZodSchema;
       headers?: ZodSchema;
-      state?: ZodSchema;
     };
   }
 
@@ -30,7 +28,6 @@ declare module '@kaapi/kaapi' {
       Headers: z.infer<RS['headers']>;
       Params: z.infer<RS['params']>;
       Payload: z.infer<RS['payload']>;
-      Pres: z.infer<RS['state']>;
     }>(serverRoute: KaapiServerRoute<Refs>, schema?: RS, handler?: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>): this;
   }
 }

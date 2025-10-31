@@ -22,7 +22,9 @@ const normalizeBooleans = (obj: Record<string, any>) => {
 
 class CustomZodHelper extends OpenAPIZodHelper implements KaapiOpenAPIHelperInterface {
     isFile() {
-        return this.getType() === 'binary'
+        const children = this.getChildren()
+        const dataType = children._data?.getType()
+        return dataType === 'custom'
     }
 
     getRawSchema() {
@@ -78,7 +80,6 @@ export const kaapiZodValidator: KaapiPlugin = {
                 Headers: z.infer<RS['headers']>
                 Params: z.infer<RS['params']>
                 Payload: z.infer<RS['payload']>
-                Pres: z.infer<RS['state']>
             }>(
                 serverRoute: KaapiServerRoute<Refs>,
                 schema?: RS,
