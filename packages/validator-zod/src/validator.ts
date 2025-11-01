@@ -1,14 +1,13 @@
 import Boom from '@hapi/boom';
-import { KaapiServerRoute, HandlerDecorations, Lifecycle, KaapiPlugin, Request, ResponseToolkit, KaapiOpenAPIHelperInterface, ReqRefDefaults, ReqRef } from '@kaapi/kaapi';
-import { z, ZodType } from 'zod/v4'
-import { ParseContext, $ZodIssue } from 'zod/v4/core'
-import { fromError } from 'zod-validation-error/v4';
+import { KaapiServerRoute, HandlerDecorations, Lifecycle, KaapiPlugin, Request, ResponseToolkit, KaapiOpenAPIHelperInterface } from '@kaapi/kaapi';
 import { OpenAPIZodHelper, PostmanZodHelper } from '@novice1/api-doc-zod-helper';
-import pkg from '../../package.json'
+import type { KaapiReqRefDefaultsSubset, KaapiReqRefSubset, ValidatorZod, ValidatorZodReqRef, ValidatorZodSchema } from './types';
+import { mapIssue } from './utils';
+import pkg from '../package.json';
 
 const { parse = { payload: true, query: true, params: true, headers: true, state: true } } = {};
-const supportedProps = ['payload', 'query', 'params', 'headers', 'state'] as const;
-const normalizeBooleans = (obj: Record<string, any>) => {
+export const supportedProps = ['payload', 'query', 'params', 'headers', 'state'] as const;
+const normalizeBooleans = (obj: Record<string, unknown>) => {
     for (const key in obj) {
         const val = obj[key];
         if (typeof val === 'string') {
@@ -21,7 +20,7 @@ const normalizeBooleans = (obj: Record<string, any>) => {
     return obj;
 }
 
-class CustomZodHelper extends OpenAPIZodHelper implements KaapiOpenAPIHelperInterface {
+export class ZodDocHelper extends OpenAPIZodHelper implements KaapiOpenAPIHelperInterface {
     isFile() {
         const children = this.getChildren()
         const dataType = children._data?.getType()
@@ -42,7 +41,7 @@ class CustomZodHelper extends OpenAPIZodHelper implements KaapiOpenAPIHelperInte
             if ('shape' in schema.def && typeof schema.def.shape === 'object' && schema.def.shape) {
                 const properties: Record<string, unknown> = schema.def.shape as Record<string, unknown>
                 for (const p in properties) {
-                    const ch = new CustomZodHelper({ value: properties[p] })
+                    const ch = new ZodDocHelper({ value: properties[p] })
                     if (ch.isValid() && ch.isFile())
                         r[p] = ch.getRawSchema()
                 }
@@ -52,21 +51,7 @@ class CustomZodHelper extends OpenAPIZodHelper implements KaapiOpenAPIHelperInte
     }
 }
 
-export type ZodSchema = ZodType<any, any> | undefined | null;
-
-export type ZodValidate = {
-    payload?: ZodSchema;
-    query?: ZodSchema;
-    params?: ZodSchema;
-    headers?: ZodSchema;
-    state?: ZodSchema;
-    options?: ParseContext<$ZodIssue>
-}
-
-export type ReqRefDefaultsSubset = Omit<ReqRefDefaults, 'Query' | 'Headers' | 'Params' | 'Payload'>;
-export type ZodReqRefSubset = Omit<ReqRef, 'Query' | 'Headers' | 'Params' | 'Payload'>;
-
-export const kaapiZodDocs = {
+export const zodDocsConfig = {
     openAPIOptions: {
         helperClass: OpenAPIZodHelper
     },
@@ -75,20 +60,13 @@ export const kaapiZodDocs = {
     }
 }
 
-export interface ValidatorReqRef<RS extends ZodValidate = ZodValidate> {
-    Query: z.infer<RS['query']>,
-    Headers: z.infer<RS['headers']>
-    Params: z.infer<RS['params']>
-    Payload: z.infer<RS['payload']>
-}
-
-export const kaapiZodValidator: KaapiPlugin = {
+export const validatorZod: KaapiPlugin = {
     async integrate(t) {
-        const zodValidate = <RS extends ZodValidate>(schema: RS) => {
+        const validator: ValidatorZod = <V extends ValidatorZodSchema>(schema: V) => {
             return {
-                route<R extends ZodReqRefSubset = ReqRefDefaultsSubset>(
-                    serverRoute: KaapiServerRoute<ValidatorReqRef<RS> & R>,
-                    handler: HandlerDecorations | Lifecycle.Method<ValidatorReqRef<RS> & R, Lifecycle.ReturnValue<ValidatorReqRef<RS> & R>>
+                route<R extends KaapiReqRefSubset = KaapiReqRefDefaultsSubset>(
+                    serverRoute: KaapiServerRoute<ValidatorZodReqRef<V> & R>,
+                    handler?: HandlerDecorations | Lifecycle.Method<ValidatorZodReqRef<V> & R, Lifecycle.ReturnValue<ValidatorZodReqRef<V> & R>>
                 ) {
                     if (!serverRoute.options) {
                         serverRoute.options = {}
@@ -108,7 +86,7 @@ export const kaapiZodValidator: KaapiPlugin = {
                             if (!serverRoute.options.plugins?.kaapi?.docs?.helperSchemaProperty) // docs have not helperSchemaProperty
                                 serverRoute.options.plugins.kaapi.docs = { ...serverRoute.options.plugins.kaapi.docs, helperSchemaProperty: 'zod' }
                             if (!serverRoute.options.plugins?.kaapi?.docs?.openAPIHelperClass) // docs have not openAPIHelperClass
-                                serverRoute.options.plugins.kaapi.docs = { ...serverRoute.options.plugins.kaapi.docs, openAPIHelperClass: CustomZodHelper }
+                                serverRoute.options.plugins.kaapi.docs = { ...serverRoute.options.plugins.kaapi.docs, openAPIHelperClass: ZodDocHelper }
                         }
                     }
                     t.route(
@@ -121,15 +99,13 @@ export const kaapiZodValidator: KaapiPlugin = {
         };
 
         await t.server.register({
-            name: 'kaapi-zod-validator',
+            name: 'kaapi-validator-zod',
             version: pkg.version,
             register: async function (server) {
                 server.ext('onPreHandler', async (request: Request, h: ResponseToolkit) => {
-                    const routeValidation = request?.route?.settings?.plugins?.zod as ZodValidate;
-
+                    const routeValidation = request?.route?.settings?.plugins?.zod as ValidatorZodSchema;
                     try {
-
-                        // Adding loop so that in future adding in array will be enough
+                        // loop through supported props
                         for (const prop of supportedProps) {
                             if (routeValidation?.[prop] && parse[prop]) {
                                 if (prop === 'query') {
@@ -142,18 +118,33 @@ export const kaapiZodValidator: KaapiPlugin = {
                                 }
                             }
                         }
-
                         return h.continue;
                     } catch (err) {
-                        const error = fromError(err).message;
-                        t.log.debug(error);
-                        return Boom.badRequest(error);
+                        let message: string;
+                        if (err instanceof Object &&
+                            'name' in err &&
+                            (err.name === 'ZodError' || err.name === '$ZodError') &&
+                            'issues' in err &&
+                            Array.isArray(err.issues)) {
+                            const zodIssues = err.issues;
+                            if (zodIssues.length !== 0) {
+                                message = zodIssues
+                                    .map((issue) => mapIssue(issue))
+                                    .join('; ');
+                            } else {
+                                message = 'message' in err && typeof err.message === 'string' ? err.message : '';
+                            }
+                        } else if (err instanceof Error) {
+                            message = err.message
+                        } else {
+                            message = 'Unknown error'
+                        }
+                        t.log.debug(message);
+                        return Boom.badRequest(message);
                     }
                 });
-                server.decorate('server', 'zod', zodValidate)
+                server.decorate('server', 'zod', validator)
             },
         })
     },
 }
-
-export default kaapiZodValidator

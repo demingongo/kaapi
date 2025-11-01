@@ -3,7 +3,7 @@ import inert from '@hapi/inert';
 //import Joi from 'joi'
 import { BearerUtil } from '@novice1/api-doc-generator';
 import { Kaapi } from '@kaapi/kaapi';
-import { kaapiZodDocs, kaapiZodValidator } from './extensions/kaapi-zod-plugin';
+import { validatorZod, zodDocsConfig } from '@kaapi/validator-zod';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
@@ -26,7 +26,7 @@ const app = new Kaapi({
         },
     },
     docs: {
-        ...kaapiZodDocs,
+        ...zodDocsConfig,
         security: new BearerUtil('mySecurityScheme')
     },
     routes: {
@@ -48,7 +48,7 @@ const schema = {
 
 async function start() {
 
-    await app.extend([kaapiZodValidator, {
+    await app.extend([validatorZod, {
         async integrate(t) {
             await t.server.register(inert)
         },
