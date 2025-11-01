@@ -1,9 +1,10 @@
 import Boom from '@hapi/boom';
-import { KaapiServerRoute, HandlerDecorations, Lifecycle, KaapiPlugin, Request, ResponseToolkit, KaapiOpenAPIHelperInterface } from '@kaapi/kaapi';
+import { KaapiServerRoute, HandlerDecorations, Lifecycle, KaapiPlugin, Request, ResponseToolkit, KaapiOpenAPIHelperInterface, ReqRefDefaults, ReqRef } from '@kaapi/kaapi';
 import { z, ZodType } from 'zod/v4'
 import { ParseContext, $ZodIssue } from 'zod/v4/core'
 import { fromError } from 'zod-validation-error/v4';
 import { OpenAPIZodHelper, PostmanZodHelper } from '@novice1/api-doc-zod-helper';
+import pkg from '../../package.json'
 
 const { parse = { payload: true, query: true, params: true, headers: true, state: true } } = {};
 const supportedProps = ['payload', 'query', 'params', 'headers', 'state'] as const;
@@ -53,7 +54,7 @@ class CustomZodHelper extends OpenAPIZodHelper implements KaapiOpenAPIHelperInte
 
 export type ZodSchema = ZodType<any, any> | undefined | null;
 
-export type ReqSchema = {
+export type ZodValidate = {
     payload?: ZodSchema;
     query?: ZodSchema;
     params?: ZodSchema;
@@ -61,6 +62,9 @@ export type ReqSchema = {
     state?: ZodSchema;
     options?: ParseContext<$ZodIssue>
 }
+
+export type ReqRefDefaultsSubset = Omit<ReqRefDefaults, 'Query' | 'Headers' | 'Params' | 'Payload'>;
+export type ZodReqRefSubset = Omit<ReqRef, 'Query' | 'Headers' | 'Params' | 'Payload'>;
 
 export const kaapiZodDocs = {
     openAPIOptions: {
@@ -71,52 +75,57 @@ export const kaapiZodDocs = {
     }
 }
 
+export interface ValidatorReqRef<RS extends ZodValidate = ZodValidate> {
+    Query: z.infer<RS['query']>,
+    Headers: z.infer<RS['headers']>
+    Params: z.infer<RS['params']>
+    Payload: z.infer<RS['payload']>
+}
+
 export const kaapiZodValidator: KaapiPlugin = {
     async integrate(t) {
-        const routeSafe = <
-            RS extends ReqSchema,
-            Refs extends {
-                Query: z.infer<RS['query']>,
-                Headers: z.infer<RS['headers']>
-                Params: z.infer<RS['params']>
-                Payload: z.infer<RS['payload']>
-            }>(
-                serverRoute: KaapiServerRoute<Refs>,
-                schema?: RS,
-                handler?: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>
-            ) => {
-            if (!serverRoute.options) {
-                serverRoute.options = {}
-            }
-            if (typeof serverRoute.options === 'object') {
-                // validate
-                if (!serverRoute.options.plugins) {
-                    serverRoute.options.plugins = {}
-                }
-                serverRoute.options.plugins.zod = schema
-
-                // docs
-                serverRoute.options.plugins.kaapi = serverRoute.options.plugins.kaapi || {}
-                if (serverRoute.options.plugins.kaapi.docs != false && // docs not disabled
-                    !serverRoute.options.plugins.kaapi.docs?.disabled // docs not disabled
+        const zodValidate = <RS extends ZodValidate>(schema: RS) => {
+            return {
+                route<R extends ZodReqRefSubset = ReqRefDefaultsSubset>(
+                    serverRoute: KaapiServerRoute<ValidatorReqRef<RS> & R>,
+                    handler: HandlerDecorations | Lifecycle.Method<ValidatorReqRef<RS> & R, Lifecycle.ReturnValue<ValidatorReqRef<RS> & R>>
                 ) {
-                    if (!serverRoute.options.plugins?.kaapi?.docs?.helperSchemaProperty) // docs have not helperSchemaProperty
-                        serverRoute.options.plugins.kaapi.docs = { ...serverRoute.options.plugins.kaapi.docs, helperSchemaProperty: 'zod' }
-                    if (!serverRoute.options.plugins?.kaapi?.docs?.openAPIHelperClass) // docs have not openAPIHelperClass
-                        serverRoute.options.plugins.kaapi.docs = { ...serverRoute.options.plugins.kaapi.docs, openAPIHelperClass: CustomZodHelper }
+                    if (!serverRoute.options) {
+                        serverRoute.options = {}
+                    }
+                    if (typeof serverRoute.options === 'object') {
+                        // validate
+                        if (!serverRoute.options.plugins) {
+                            serverRoute.options.plugins = {}
+                        }
+                        serverRoute.options.plugins.zod = schema
+
+                        // docs
+                        serverRoute.options.plugins.kaapi = serverRoute.options.plugins.kaapi || {}
+                        if (serverRoute.options.plugins.kaapi.docs != false && // docs not disabled
+                            !serverRoute.options.plugins.kaapi.docs?.disabled // docs not disabled
+                        ) {
+                            if (!serverRoute.options.plugins?.kaapi?.docs?.helperSchemaProperty) // docs have not helperSchemaProperty
+                                serverRoute.options.plugins.kaapi.docs = { ...serverRoute.options.plugins.kaapi.docs, helperSchemaProperty: 'zod' }
+                            if (!serverRoute.options.plugins?.kaapi?.docs?.openAPIHelperClass) // docs have not openAPIHelperClass
+                                serverRoute.options.plugins.kaapi.docs = { ...serverRoute.options.plugins.kaapi.docs, openAPIHelperClass: CustomZodHelper }
+                        }
+                    }
+                    t.route(
+                        serverRoute,
+                        handler
+                    )
+                    return t.server
                 }
-            }
-            return t.route(
-                serverRoute,
-                handler
-            )
-        }
+            };
+        };
+
         await t.server.register({
             name: 'kaapi-zod-validator',
-            version: '1.0.0',
+            version: pkg.version,
             register: async function (server) {
                 server.ext('onPreHandler', async (request: Request, h: ResponseToolkit) => {
-                    const routeValidation = request?.route?.settings?.plugins?.zod as ReqSchema;
+                    const routeValidation = request?.route?.settings?.plugins?.zod as ZodValidate;
 
                     try {
 
@@ -141,7 +150,7 @@ export const kaapiZodValidator: KaapiPlugin = {
                         return Boom.badRequest(error);
                     }
                 });
-                server.decorate('server', 'routeSafe', routeSafe)
+                server.decorate('server', 'zod', zodValidate)
             },
         })
     },

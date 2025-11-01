@@ -71,8 +71,19 @@ async function start() {
         (req) => req.query
     )
 
-    // with handler as 3rd argument
-    app.base().routeSafe({
+    // with handler as argument
+    app.base().zod({
+        payload: z.object({
+            version: z.number().max(5120).meta({
+                description: 'version number'
+            })
+        }).meta({
+            description: 'payload'
+        }),
+        query: z.object({
+            name: z.string().optional()
+        })
+    }).route({
         path: '/oops',
         method: 'POST',
         auth: true,
@@ -85,21 +96,17 @@ async function start() {
                 }
             },
         }
-    }, {
-        payload: z.object({
-            version: z.number().max(5120).meta({
-                description: 'version number'
-            })
-        }).meta({
-            description: 'payload'
-        }),
-        query: z.object({
-            name: z.string().optional()
-        })
     }, ({ payload, query: { name } }) => `${name}: ${payload?.version}`)
 
     // with handler in the route config (Hapi's way)
-    app.base().routeSafe({
+    app.base().zod({
+        query: z.object({
+            name: z.string().optional()
+        }),
+        state: z.looseObject({
+            session: z.string().optional()
+        }).optional()
+    }).route({
         path: '/greetings',
         method: 'GET',
         auth: false,
@@ -113,32 +120,10 @@ async function start() {
             },
         },
         handler: ({ query: { name } }) => `Hello mello ${name}`
-    }, {
-        query: z.object({
-            name: z.string().optional()
-        }),
-        state: z.looseObject({
-            session: z.string().optional()
-        }).optional()
     })
 
     // file upload
-    app.base().routeSafe({
-        method: 'POST',
-        path: '/upload',
-        auth: false,
-        options: {
-            description: 'Upload user pic',
-            tags: ['Index'],
-            payload: {
-                output: 'stream',
-                parse: true,
-                allow: 'multipart/form-data',
-                multipart: { output: 'stream' },
-                maxBytes: 1024 * 3_000
-            }
-        }
-    }, {
+    app.base().zod({
         payload: z.object({
             username: z.string().meta({
                 description: 'The username'
@@ -153,6 +138,21 @@ async function start() {
                 })
             })
         })
+    }).route({
+        method: 'POST',
+        path: '/upload',
+        auth: false,
+        options: {
+            description: 'Upload user pic',
+            tags: ['Index'],
+            payload: {
+                output: 'stream',
+                parse: true,
+                allow: 'multipart/form-data',
+                multipart: { output: 'stream' },
+                maxBytes: 1024 * 3_000
+            }
+        }
     }, async (req) => {
         app.log.warn(req.payload.username)
 
@@ -169,7 +169,13 @@ async function start() {
     });
 
 
-    app.base().routeSafe({
+    app.base().zod({
+        params: z.object({
+            filename: z.string().meta(
+                { description: 'The name of the file' }
+            )
+        })
+    }).route({
         method: 'GET',
         path: '/uploads/{filename}',
         auth: false,
@@ -187,12 +193,6 @@ async function start() {
                 }
             }
         }
-    }, {
-        params: z.object({
-            filename: z.string().meta(
-                { description: 'The name of the file' }
-            )
-        })
     }, {
         directory: {
             path: '.',

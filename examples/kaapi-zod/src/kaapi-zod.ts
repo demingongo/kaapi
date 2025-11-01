@@ -1,5 +1,5 @@
 import Boom from '@hapi/boom';
-import { Kaapi, KaapiServerRoute, HandlerDecorations, Lifecycle, KaapiPlugin, Request, ResponseToolkit } from '@kaapi/kaapi';
+import { Kaapi, KaapiServerRoute, HandlerDecorations, Lifecycle, KaapiPlugin, Request, ResponseToolkit, ReqRefDefaults, ReqRef } from '@kaapi/kaapi';
 import { z, ZodType } from 'zod/v4'
 import { fromError } from 'zod-validation-error/v4';
 
@@ -12,6 +12,16 @@ export type ReqSchema = {
     headers?: ZodSchema;
     state?: ZodSchema;
 }
+
+export interface SubReqRef<RS extends ReqSchema = ReqSchema> {
+    Query: z.infer<RS['query']>,
+    Headers: z.infer<RS['headers']>
+    Params: z.infer<RS['params']>
+    Payload: z.infer<RS['payload']>
+}
+
+export type ReqRefDefaultsSubset = Omit<ReqRefDefaults, 'Query' | 'Headers' | 'Params' | 'Payload'>;
+export type ReqRefSubset = Omit<ReqRef, 'Query' | 'Headers' | 'Params' | 'Payload'>;
 
 const { parse = { payload: true, query: true, params: true, headers: true, state: true } } = {};
 const supportedProps = ['payload', 'query', 'params', 'headers', 'state'] as const;
@@ -84,18 +94,33 @@ export class KaapiZod extends Kaapi {
     }
 
     endpoint<
-        RS extends ReqSchema,
-        Refs extends {
-            Query: z.infer<RS['query']>,
-            Headers: z.infer<RS['headers']>
-            Params: z.infer<RS['params']>
-            Payload: z.infer<RS['payload']>
-            Pres: z.infer<RS['state']>
-        }>(
-            serverRoute: KaapiServerRoute<Refs>,
-            schema: RS,
-            handler: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>
-        ) {
+        R extends ReqRefSubset = ReqRefDefaultsSubset
+    >(
+        serverRoute: KaapiServerRoute<{
+            Query: z.infer<typeof schema['query']>;
+            Headers: z.infer<typeof schema['headers']>;
+            Params: z.infer<typeof schema['params']>;
+            Payload: z.infer<typeof schema['payload']>;
+        } & R>,
+        schema: {
+            payload?: ZodSchema;
+            query?: ZodSchema;
+            params?: ZodSchema;
+            headers?: ZodSchema;
+            state?: ZodSchema;
+        },
+        handler: HandlerDecorations | Lifecycle.Method<{
+            Query: z.infer<typeof schema['query']>;
+            Headers: z.infer<typeof schema['headers']>;
+            Params: z.infer<typeof schema['params']>;
+            Payload: z.infer<typeof schema['payload']>;
+        } & R, Lifecycle.ReturnValue<{
+            Query: z.infer<typeof schema['query']>;
+            Headers: z.infer<typeof schema['headers']>;
+            Params: z.infer<typeof schema['params']>;
+            Payload: z.infer<typeof schema['payload']>;
+        } & R>>
+    ) {
         if (!serverRoute.options) {
             serverRoute.options = {}
         }
@@ -109,5 +134,51 @@ export class KaapiZod extends Kaapi {
             serverRoute,
             handler
         )
+    }
+
+    zod<RS extends {
+        payload?: ZodSchema;
+        query?: ZodSchema;
+        params?: ZodSchema;
+        headers?: ZodSchema;
+        state?: ZodSchema;
+    }>(schema: RS) {
+        const self = () => this; // ✅ capture class instance
+        return {
+            route<R extends ReqRefSubset = ReqRefDefaultsSubset>(
+                serverRoute: KaapiServerRoute<{
+                    Query: z.infer<RS['query']>;
+                    Headers: z.infer<RS['headers']>;
+                    Params: z.infer<RS['params']>;
+                    Payload: z.infer<RS['payload']>;
+                } & R>,
+                handler: HandlerDecorations | Lifecycle.Method<{
+                    Query: z.infer<RS['query']>;
+                    Headers: z.infer<RS['headers']>;
+                    Params: z.infer<RS['params']>;
+                    Payload: z.infer<RS['payload']>;
+                } & R, Lifecycle.ReturnValue<{
+                    Query: z.infer<RS['query']>;
+                    Headers: z.infer<RS['headers']>;
+                    Params: z.infer<RS['params']>;
+                    Payload: z.infer<RS['payload']>;
+                } & R>>
+            ): KaapiZod {
+                if (!serverRoute.options) {
+                    serverRoute.options = {}
+                }
+                if (typeof serverRoute.options === 'object') {
+                    if (!serverRoute.options.plugins) {
+                        serverRoute.options.plugins = {}
+                    }
+                    serverRoute.options.plugins.zod = schema
+                }
+                self().route(
+                    serverRoute,
+                    handler
+                )
+                return self()
+            }
+        };
     }
 }

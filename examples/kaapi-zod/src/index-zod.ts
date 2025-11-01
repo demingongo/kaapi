@@ -58,7 +58,11 @@ async function start() {
         (req) => req.query
     )
 
-    app.endpoint({
+    const pschema = z.object({
+        version: z.number().max(5120)
+    })
+
+    app.endpoint<{ AuthCredentialsExtra: { cot: string } }>({
         path: '/oops',
         method: 'POST',
         auth: true,
@@ -78,10 +82,25 @@ async function start() {
             //}
         }
     }, {
-        payload: z.object({
-            version: z.number().max(5120)
-        })
-    }, ({ payload: { version } }) => `${version}`)
+        payload: pschema
+    }, ({ payload: { version }, auth: { credentials: { cot } } }) => `${version} -> ${cot}`)
+
+    app.zod({
+        payload: pschema
+    }).route<{ AuthCredentialsExtra: { cot: string } }>({
+        path: '/oops2',
+        method: 'POST',
+        auth: true,
+        options: {
+            plugins: {
+                kaapi: {
+                    docs: {
+                        disabled: false
+                    }
+                }
+            },
+        }
+    }, ({ payload: { version }, auth: { credentials: { cot } } }) => `${version} -> ${cot}`)
 
     app.refreshDocs()
 
@@ -92,3 +111,4 @@ async function start() {
 
 
 start()
+
