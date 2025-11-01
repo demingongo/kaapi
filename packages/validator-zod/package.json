@@ -4,6 +4,12 @@
   "private": false,
   "description": "Zod validator for kaapi",
   "main": "lib/index.js",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    }
+  },
   "scripts": {
     "lint": "eslint .",
     "build": "tsc && node ./scripts/buildDT.mjs"

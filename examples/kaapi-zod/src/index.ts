@@ -83,7 +83,7 @@ async function start() {
         query: z.object({
             name: z.string().optional()
         })
-    }).route({
+    }).route<{ AuthCredentialsExtra: { extraextra?: string } }>({
         path: '/oops',
         method: 'POST',
         auth: true,
@@ -96,7 +96,7 @@ async function start() {
                 }
             },
         }
-    }, ({ payload, query: { name } }) => `${name}: ${payload?.version}`)
+    }, ({ payload, query: { name }, auth: { credentials: { extraextra } } }) => `${name ?? 'NONAME'}: ${payload?.version} ${extraextra ?? ''}`)
 
     // with handler in the route config (Hapi's way)
     app.base().zod({
