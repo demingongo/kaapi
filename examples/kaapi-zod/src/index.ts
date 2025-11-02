@@ -124,11 +124,23 @@ async function start() {
     // with handler in the route config (Hapi's way)
     app.base().zod({
         query: z.object({
-            name: z.string().optional()
+            name: z.string().nonempty().optional()
         }),
         state: z.looseObject({
             session: z.string().optional()
-        }).optional()
+        }).optional(),
+        options: {
+            reportInput: true // includes the input in the issue
+        },
+        failAction: async (_req, h, err) => {
+            if (Boom.isBoom(err)) {
+                return h.response({
+                    ...err.output.payload,
+                    details: err.data.validationError.issues
+                }).code(err.output.statusCode).takeover()
+            }
+            return err
+        }
     }).route({
         path: '/greetings',
         method: 'GET',
