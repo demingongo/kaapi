@@ -1,9 +1,9 @@
 import { z } from 'zod/v4'
 import inert from '@hapi/inert';
-//import Joi from 'joi'
+import Joi from 'joi'
 import { BearerUtil } from '@novice1/api-doc-generator';
 import { Kaapi } from '@kaapi/kaapi';
-import { validatorZod, zodDocsConfig } from '@kaapi/validator-zod';
+import { validatorZod, ZodDocHelper, zodDocsConfig } from '@kaapi/validator-zod';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
@@ -42,7 +42,7 @@ const app = new Kaapi({
 
 const schema = {
     query: z.object({
-        name: z.string()
+        name: z.string().max(10)
     })
 }
 
@@ -168,7 +168,7 @@ async function start() {
         return 'ok'
     });
 
-
+    // custom handler (inert)
     app.base().zod({
         params: z.object({
             filename: z.string().meta(
@@ -200,6 +200,46 @@ async function start() {
         }
     })
 
+    // without code typing (ts)
+    app.route(
+        {
+            path: '/validates-and-generates-doc/but-no-typing',
+            auth: false,
+            method: 'GET',
+            options: {
+                plugins: {
+                    zod: schema,
+                    kaapi: {
+                        docs: {
+                            helperSchemaProperty: 'zod',
+                            openAPIHelperClass: ZodDocHelper
+                        }
+                    }
+                }
+            }
+        },
+        (req) => req.query
+    )
+
+    // Regular validation (joi):
+    // - still works
+    // - still generates documentation
+    // so easy transition as both validators can coexist in the app
+    app.route(
+        {
+            path: '/joi',
+            auth: false,
+            method: 'GET',
+            options: {
+                validate: {
+                    query: Joi.object({
+                        name: Joi.string().required().max(10)
+                    })
+                }
+            }
+        },
+        (req) => req.query
+    )
 
     app.refreshDocs()
 

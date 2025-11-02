@@ -1,9 +1,10 @@
-import { OpenAPI, OpenAPIHelperInterface, Postman, ProcessedRoute } from '@novice1/api-doc-generator';
+import { OpenAPI, OpenAPIHelperInterface, OpenAPIOptions, Postman, PostmanOptions, ProcessedRoute } from '@novice1/api-doc-generator';
 import { OpenAPIJoiHelper } from '@novice1/api-doc-generator/lib/generators/openapi/helpers/joiHelper';
 import { KaapiServerRoute } from '@kaapi/server';
 import { type RouteMeta } from '@novice1/routing';
 import { ReqRef, ReqRefDefaults, RequestRoute, RouteOptionsValidate } from '@hapi/hapi';
 import { JoiSchema } from '@novice1/api-doc-generator/lib/helpers/joiHelper';
+import { OpenAPIMixHelper, PostmanMixHelper } from './api-doc-mix-helpers';
 
 // declared in overrides.d.ts
 export interface KaapiOpenAPIHelperInterface extends OpenAPIHelperInterface {
@@ -236,6 +237,15 @@ export interface KaapiDocGenerator {
 }
 
 export class KaapiOpenAPI extends OpenAPI implements KaapiDocGenerator {
+
+    constructor(options?: OpenAPIOptions) {
+        if (options?.helperClass) {
+            OpenAPIMixHelper.helperClasses.add(options.helperClass)
+            options = { ...options, helperClass: OpenAPIMixHelper }
+        }
+        super(options);
+    }
+
     addRoutes<Refs extends ReqRef = ReqRefDefaults>(serverRoutes: KaapiServerRoute<Refs>[] | KaapiServerRoute<Refs>): ProcessedRoute[] {
         return super.add(formatRoutes(serverRoutes))
     }
@@ -246,6 +256,15 @@ export class KaapiOpenAPI extends OpenAPI implements KaapiDocGenerator {
 }
 
 export class KaapiPostman extends Postman implements KaapiDocGenerator {
+
+    constructor(options?: PostmanOptions) {
+        if (options?.helperClass) {
+            PostmanMixHelper.helperClasses.add(options.helperClass)
+            options = { ...options, helperClass: PostmanMixHelper }
+        }
+        super(options);
+    }
+
     addRoutes<Refs extends ReqRef = ReqRefDefaults>(serverRoutes: KaapiServerRoute<Refs>[] | KaapiServerRoute<Refs>): ProcessedRoute[] {
         return super.add(formatRoutes(serverRoutes))
     }
