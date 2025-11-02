@@ -29,3 +29,10 @@ npm install zod@^4.0.0
 ### Overrides
 
 Override the validator's options
+
+| failAction | Behavior                     | Safe?                    | Description                                   |
+| ---------- | ---------------------------- | ------------------------ | --------------------------------------------- |
+| `'error'`  | Reject with validation error | ✅                        | Default safe behavior                         |
+| `'log'`    | Log + reject                 | ✅                        | For observability without accepting bad input |
+| `function` | Custom handler               | ✅ (developer-controlled) | Must return or throw explicitly               |
+| `'ignore'` | ❌ Not supported              | ❌                        | Unsafe, not implemented                       |

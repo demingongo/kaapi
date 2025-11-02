@@ -1,4 +1,5 @@
 import { z } from 'zod/v4'
+import Boom from '@hapi/boom'
 import inert from '@hapi/inert';
 import Joi from 'joi'
 import { BearerUtil } from '@novice1/api-doc-generator';
@@ -36,6 +37,26 @@ const app = new Kaapi({
         },
         files: {
             relativeTo: path.join(__dirname, '..', 'uploads')
+        },
+        plugins: {
+            zod: {
+                options: {
+                    /**
+                     * jitless: Skip eval-based fast path. Default false.
+                     * Validation rules should be properly ordered (.default(...).optional(...)).
+                     * That will help fast validation and documentation generation.
+                     * If set to true, slower (every property is visited, defaults are applied, lazy/recursive schemas are resolved) but safer 
+                     * BUT documentation might be badly generated. 
+                     * So either way (true or false), validation rules should be properly ordered.
+                     */
+                    jitless: false,
+                    reportInput: true // includes the input in the issue
+                },
+                failAction: async (_req, _h, err) => {
+                    console.log(Boom.isBoom(err) ? err.data.validationError.issues[0] : err)
+                    return Boom.isBoom(err) ? Boom.badRequest(err.data.validationError.issues[0].message) : err
+                }
+            }
         }
     }
 })
@@ -61,7 +82,9 @@ async function start() {
             method: 'GET',
             options: {
                 plugins: {
-                    zod: schema,
+                    zod: {
+                        ...schema
+                    },
                     kaapi: {
                         docs: false
                     }
@@ -208,7 +231,9 @@ async function start() {
             method: 'GET',
             options: {
                 plugins: {
-                    zod: schema,
+                    zod: {
+
+                    },
                     kaapi: {
                         docs: {
                             helperSchemaProperty: 'zod',
@@ -234,12 +259,24 @@ async function start() {
                 validate: {
                     query: Joi.object({
                         name: Joi.string().required().max(10)
-                    })
+                    }),
+                    failAction: async (_req, _h, err) => {
+                        console.log(Boom.isBoom(err) ? err.data.defaultError : err)
+                        return err
+                    }
+                    //failAction: 'log'
+
                 }
             }
         },
         (req) => req.query
     )
+
+    app.base().events.on('request', async (_req, event, tags) => {
+        if (tags.validation) {
+            console.log(event);
+        }
+    })
 
     app.refreshDocs()
 

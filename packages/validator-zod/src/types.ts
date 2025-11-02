@@ -13,7 +13,8 @@ export type ValidatorZodSchema = {
     params?: ZodSchema;
     headers?: ZodSchema;
     state?: ZodSchema;
-    options?: ParseContext<$ZodIssue>
+    options?: ParseContext<$ZodIssue>;
+    failAction?: 'error' | 'log' | Lifecycle.Method | undefined;
 }
 
 export type KaapiReqRefDefaultsSubset = Omit<ReqRefDefaults, 'Query' | 'Headers' | 'Params' | 'Payload'>;
