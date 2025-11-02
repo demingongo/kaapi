@@ -124,7 +124,9 @@ async function start() {
     // with handler in the route config (Hapi's way)
     app.base().zod({
         query: z.object({
-            name: z.string().nonempty().optional()
+            name: z.string().trim().nonempty().max(10).meta({
+                description: 'The name'
+            }).optional().default('World')
         }),
         state: z.looseObject({
             session: z.string().optional()

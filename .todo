@@ -13,8 +13,29 @@
             
 - @kaapi/server: `auth: true` should not set up startegy but only `mode: 'required'`. Strategy should be explicitly defined. @done
 
+- @kaapi/validator-zod
+    - Test coverage (Use Vitest or Jest)
+        - Plugin registration
+            - Test that validatorZod integrates correctly with Kaapi
+            - Ensure zodDocsConfig is applied when docs are enabled
+        - Schema validation
+            - Validate correct payloads, queries, headers, etc.
+            - Test failure cases with malformed input
+            - Confirm failAction behaves as expected (e.g., logs, custom handler)
+        - Overrides
+            - Global options and failAction are respected
+            - Per-route overrides override global ones
+        - Edge cases
+            - Optional/default fields
+            - Nested schemas
+            - Meta descriptions (if used in docs)
+        - Docs generation (if applicable)
+            - Confirm schema metadata is reflected in generated docs
+
 - @kaapi/kaapi
-    - zod validator? (NOTES_extensions)
+    - api-doc-helper: 
+        - authorize array of helper classes in the config for DelegatingHelper to do its job
+    - zod validator @done
         - kapi app should have something like app.extensions() --> using app.base() decorators instead @done
         - extend() should give access to a method to expose callable API to extensions() --> using server.decorate (utilities) or server.method (reusable logic with caching) instead @done
         - use it like: app.extend(MyPlugin); app.extensions().myplugin.run(); --> using app.base().myplugin.run() instead @done

@@ -2,7 +2,7 @@
   "name": "@kaapi/validator-zod",
   "version": "0.0.16",
   "private": false,
-  "description": "Zod validator for kaapi",
+  "description": "Zod-powered request validation and documentation plugin for Kaapi.",
   "main": "lib/index.js",
   "exports": {
     ".": {

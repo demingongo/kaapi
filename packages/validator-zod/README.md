@@ -1,69 +1,69 @@
-# @kaapi/validator-zod
+# 🧪 @kaapi/validator-zod
 
-Zod validator for kaapi.
+![npm](https://img.shields.io/npm/v/@kaapi/validator-zod)
+![license](https://img.shields.io/npm/l/@kaapi/validator-zod)
+![bundle size](https://img.shields.io/bundlephobia/min/@kaapi/validator-zod)
 
-It provides validation of request `params`, `payload`, `query`, `headers`, `state` with a [Zod 4](https://www.npmjs.com/package/zod) schema and documentation generator helpers.
+**Zod-powered validation plugin for [Kaapi](https://www.npmjs.com/package/@kaapi/kaapi)**. Validate request `params`, `payload`, `query`, `headers`, and `state` using [Zod 4](https://www.npmjs.com/package/zod) schemas. Includes built-in documentation helpers for seamless API docs generation.
 
-## Installation
+---
+
+## 🚀 Installation
 
 ```bash
 npm install @kaapi/validator-zod
 ```
 
-### Requirements
+### 📦 Peer Dependency
 
-Zod 4
+Requires Zod v4:
 
 ```bash
 npm install zod@^4.0.0
 ```
 
-## Usage
+---
 
-### Set validator
+## 🛠️ Usage
+
+### 🔌 Register the Plugin
 
 ```ts
 import { z } from 'zod/v4'
-import Boom from '@hapi/boom'
 import { Kaapi } from '@kaapi/kaapi'
 import { validatorZod, zodDocsConfig } from '@kaapi/validator-zod'
 
 const app = new Kaapi({
-    port: 3000,
-    host: 'localhost',
-    docs: {
-        // register documentation generator helpers
-        ...zodDocsConfig
-    }
+  port: 3000,
+  host: 'localhost',
+  docs: {
+    ...zodDocsConfig // enables documentation generation
+  }
 });
 
-// register the plugin
-await app.extend(validatorZod);
+await app.extend(validatorZod); // register the plugin
 ```
 
-### Create schema
+---
+
+### 📐 Define a Schema
 
 ```ts
 import { z } from 'zod/v4'
 import { ValidatorZodSchema } from '@kaapi/validator-zod'
 
-// ...
-
 const routeSchema: ValidatorZodSchema = {
-    payload: z.object({                
-        name: z.string()
-    })
+  payload: z.object({
+    name: z.string()
+  })
 }
 ```
 
-### Create route
+---
+
+### 🧭 Create a Route
 
 ```ts
-import { z } from 'zod/v4'
-import { ValidatorZodSchema } from '@kaapi/validator-zod'
-
-// ...
-
 app.zod(routeSchema).route(
   {
     method: 'POST',
@@ -72,89 +72,116 @@ app.zod(routeSchema).route(
   req => ({ id: Date.now(), name: req.payload.name })
 )
 
-// or
+// or using inline handler
 /*
-app.zod(routeSchema).route(
-  {
-    method: 'POST',
-    path: '/items',
-    handler: req => ({ id: Date.now(), name: req.payload.name })
-  }
-)
+app.zod(routeSchema).route({
+  method: 'POST',
+  path: '/items',
+  handler: req => ({ id: Date.now(), name: req.payload.name })
+})
 */
 ```
 
-### Overrides
+---
 
-Override the parsing **`options`** and the **`failAction`**.
+## ⚙️ Advanced Configuration
 
+### 🔧 `options`
 
-#### options
+Customize Zod parsing behavior:
 
-| **Property**  | **Type**                 | **Default** | **Description**                                                                                                                                  |
-| ------------- | ------------------------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `error`       | `errors.$ZodErrorMap<T>` | `undefined` | A custom error map function to override default Zod error messages. Useful for localization or custom formatting.                                |
-| `reportInput` | `boolean`                | `false`     | When `true`, includes the original `input` value in each issue object within the error. Helpful for debugging.                                   |
-| `jitless`     | `boolean`                | `false`     | When `true`, disables Zod’s eval-based fast path (JIT optimizations). Use in environments where `eval` is restricted (e.g., Cloudflare Workers). |
+| Property      | Type                      | Default     | Description                                                                 |
+|---------------|---------------------------|-------------|-----------------------------------------------------------------------------|
+| `error`       | `errors.$ZodErrorMap<T>` | `undefined` | Custom error map for localization or formatting                            |
+| `reportInput` | `boolean`                | `false`     | When `true`, includes original input in error issues (useful for debugging)             |
+| `jitless`     | `boolean`                | `false`     | When `true`, disables JIT optimizations for environments where `eval` is restricted (e.g., Cloudflare Workers). |
 
+---
 
-#### failAction
+### 🚨 `failAction`
 
-| failAction | Behavior                     | Safe?                    | Description                                   |
-| ---------- | ---------------------------- | ------------------------ | --------------------------------------------- |
-| `'error'`  | Reject with validation error | ✅                        | Default safe behavior                         |
-| `'log'`    | Log + reject                 | ✅                        | For observability without accepting bad input |
-| `function` | Custom handler               | ✅ (developer-controlled) | Must return or throw explicitly               |
-| `'ignore'` | ❌ Not supported              | ❌                        | Unsafe, not implemented                       |
+Control how validation failures are handled:
 
+| Value         | Behavior                     | Safe? | Description                                      |
+|---------------|------------------------------|-------|--------------------------------------------------|
+| `'error'`     | Reject with validation error | ✅     | Default safe behavior                                 |
+| `'log'`       | Log and reject               | ✅     | Useful for observability                         |
+| `function`    | Custom handler               | ✅ (developer-controlled)    | Must return or throw explicitly                  |
+| `'ignore'`    | ❌ Not supported              | ❌     | Unsafe and not implemented                       |
 
-#### Example
+---
+
+### 🧪 Example with Overrides
+
+You can override Zod validation behavior **globally** for all routes, or **per route** as needed.
+
+#### 🔁 Global Override (All Routes)
+
 ```ts
-import { z } from 'zod/v4'
-import Boom from '@hapi/boom'
-import { Kaapi } from '@kaapi/kaapi'
-import { validatorZod } from '@kaapi/validator-zod'
-
 const app = new Kaapi({
-    // ...
-    routes: {
-        plugins: {
-            // override for all routes
-            zod: {
-                options: {},
-                failAction: 'log'
-            }
-        }
+  // ...
+  routes: {
+    plugins: {
+      zod: {
+        options: {
+          reportInput: true
+        },
+        failAction: 'log'
+      }
     }
-})
+  }
+});
 
 await app.extend(validatorZod);
-
-app.base().zod({
-    query: z.object({
-        name: z.string().optional()
-    }),
-
-    // override per route
-    options: {
-        reportInput: true // includes the input in the issue
-    },
-    failAction: async (request, h, err) => {
-        if (Boom.isBoom(err)) {
-            return h.response({
-                ...err.output.payload,
-                details: err.data.validationError.issues
-            }).code(err.output.statusCode).takeover()
-        }
-        return err
-    }
-}).route({
-    path: '/greetings',
-    method: 'GET',
-    handler: ({ query: { name } }) => `Hello ${name || 'World'}!`
-})
 ```
 
-## Flexible API
+This sets `reportInput` to `true` for all Zod-validated routes, and logs validation errors before throwing them.
 
-Data validation can still be made using `Joi` by using `app.route` instead of `app.base().zod(...).route`. This enables a graceful evolution as it can be added without breaking eventual old routes, allowing both to coexist.
+#### 🔂 Per-Route Override
+
+```ts
+app.base().zod({
+  query: z.object({
+    name: z.string().trim().nonempty().max(10).meta({
+      description: 'Optional name to personalize the greeting response'
+    }).optional().default('World')
+  }),
+  options: {
+    reportInput: false
+  },
+  failAction: async (request, h, err) => {
+    if (Boom.isBoom(err)) {
+      return h.response({
+        ...err.output.payload,
+        details: err.data.validationError.issues
+      }).code(err.output.statusCode).takeover()
+    }
+    return err
+  }
+}).route({
+  path: '/greetings',
+  method: 'GET',
+  handler: ({ query: { name } }) => `Hello ${name}!`
+});
+```
+
+---
+
+## 🔄 Flexible API Design
+
+Prefer `Joi` or migrating gradually? No problem.
+
+You can still use `app.route(...)` with Joi-based validation while adopting Zod via `app.base().zod(...).route(...)`. This dual-mode support ensures **graceful evolution** — allowing legacy and modern routes to coexist without breaking changes.
+
+---
+
+## 📚 License
+
+MIT
+
+> This package is tested as part of the Kaapi monorepo. See the [main Kaapi README](../../README.md) for coverage details.
+
+## 🤝 Contributing
+
+Contributions, issues, and feature requests are welcome! Feel free to open a discussion or submit a pull request.
+
