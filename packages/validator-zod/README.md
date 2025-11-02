@@ -2,7 +2,7 @@
 
 Zod validator for kaapi.
 
-It provides validation of `req.params`, `req.payload`, `req.query`, `req.headers`, `req.state` with a [Zod 4](https://www.npmjs.com/package/zod) schema and documentation generator helpers.
+It provides validation of request `params`, `payload`, `query`, `headers`, `state` with a [Zod 4](https://www.npmjs.com/package/zod) schema and documentation generator helpers.
 
 ## Installation
 
@@ -32,7 +32,7 @@ const app = new Kaapi({
     port: 3000,
     host: 'localhost',
     docs: {
-        // config to generate documentation based on zod schemas
+        // register documentation generator helpers
         ...zodDocsConfig
     }
 });
@@ -154,3 +154,7 @@ app.base().zod({
     handler: ({ query: { name } }) => `Hello ${name || 'World'}!`
 })
 ```
+
+## Flexible API
+
+Data validation can still be made using `Joi` by using `app.route` instead of `app.base().zod(...).route`. This enables a graceful evolution as it can be added without breaking eventual old routes, allowing both to coexist.
