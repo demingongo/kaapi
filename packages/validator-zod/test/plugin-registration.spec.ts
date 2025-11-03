@@ -3,7 +3,7 @@
 import { expect } from 'chai';
 import { Kaapi } from '@kaapi/kaapi';
 import { validatorZod, zodDocsConfig } from '@kaapi/validator-zod';
-import { z } from 'zod'
+import { z } from 'zod';
 
 describe('ValidatorZod Plugin Registration', () => {
     it('should integrate validatorZod plugin with Kaapi', async () => {
@@ -52,7 +52,6 @@ describe('ValidatorZod Plugin Registration', () => {
             expect(openapi.paths['/test'].get).to.not.be.null;
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const testGetPath = openapi.paths['/test'].get as any
-            console.log(testGetPath.parameters)
             expect(testGetPath.parameters).to.be.an('array')
                 .that.has.lengthOf(2, 'number of parameters')
                 .that.deep.includes({

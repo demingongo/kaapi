@@ -17,8 +17,8 @@ export type ValidatorZodSchema = {
     failAction?: 'error' | 'log' | Lifecycle.Method | undefined;
 }
 
-export type KaapiReqRefDefaultsSubset = Omit<ReqRefDefaults, 'Query' | 'Headers' | 'Params' | 'Payload'>;
-export type KaapiReqRefSubset = Omit<ReqRef, 'Query' | 'Headers' | 'Params' | 'Payload'>;
+export type ZodlessReqRefDefaults = Omit<ReqRefDefaults, 'Query' | 'Headers' | 'Params' | 'Payload'>;
+export type ZodlessReqRef = Omit<ReqRef, 'Query' | 'Headers' | 'Params' | 'Payload'>;
 
 export interface ValidatorZodReqRef<RS extends ValidatorZodSchema = ValidatorZodSchema> {
     Query: z.infer<RS['query']>,
@@ -28,7 +28,7 @@ export interface ValidatorZodReqRef<RS extends ValidatorZodSchema = ValidatorZod
 }
 
 export type ValidatorZod = <V extends ValidatorZodSchema>(schema: V) => {
-    route<R extends KaapiReqRefSubset = KaapiReqRefDefaultsSubset>(
+    route<R extends ZodlessReqRef = ZodlessReqRefDefaults>(
         serverRoute: KaapiServerRoute<ValidatorZodReqRef<V> & R>,
         handler?: HandlerDecorations | Lifecycle.Method<ValidatorZodReqRef<V> & R, Lifecycle.ReturnValue<ValidatorZodReqRef<V> & R>>
     ): Server;

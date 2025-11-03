@@ -3,7 +3,7 @@ import { z } from 'zod/v4';
 import { $ZodIssue } from 'zod/v4/core';
 import { KaapiServerRoute, HandlerDecorations, Lifecycle, KaapiPlugin, Request, ResponseToolkit, KaapiOpenAPIHelperInterface } from '@kaapi/kaapi';
 import { OpenAPIZodHelper, PostmanZodHelper } from '@novice1/api-doc-zod-helper';
-import type { KaapiReqRefDefaultsSubset, KaapiReqRefSubset, ValidatorZod, ValidatorZodReqRef, ValidatorZodSchema, ZodSchema } from './types';
+import type { ValidatorZod, ValidatorZodReqRef, ValidatorZodSchema, ZodlessReqRef, ZodlessReqRefDefaults, ZodSchema } from './types';
 import { mapIssue } from './utils';
 import pkg from '../package.json';
 
@@ -66,7 +66,7 @@ export const validatorZod: KaapiPlugin = {
     async integrate(t) {
         const validator: ValidatorZod = <V extends ValidatorZodSchema>(schema: V) => {
             return {
-                route<R extends KaapiReqRefSubset = KaapiReqRefDefaultsSubset>(
+                route<R extends ZodlessReqRef = ZodlessReqRefDefaults>(
                     serverRoute: KaapiServerRoute<ValidatorZodReqRef<V> & R>,
                     handler?: HandlerDecorations | Lifecycle.Method<ValidatorZodReqRef<V> & R, Lifecycle.ReturnValue<ValidatorZodReqRef<V> & R>>
                 ) {
