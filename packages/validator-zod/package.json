@@ -12,7 +12,8 @@
   },
   "scripts": {
     "lint": "eslint .",
-    "build": "tsc && node ./scripts/buildDT.mjs"
+    "build": "tsc && node ./scripts/buildDT.mjs",
+    "test": "kaukau --require ts-node/register --config kaukau.config.mjs"
   },
   "author": "demingongo",
   "repository": {
@@ -30,5 +31,8 @@
   },
   "peerDependencies": {
     "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10"
   }
 }

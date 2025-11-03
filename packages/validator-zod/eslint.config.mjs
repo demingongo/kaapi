@@ -5,17 +5,10 @@ import { defineConfig } from 'eslint/config';
 export default defineConfig([
     ...parentConfig,
     {
-        files: ['{src,test}/**/*.ts', '*.{ts,mjs}'],
+        files: ['test/**/*.ts'],
 
         rules: {
-            '@typescript-eslint/no-unused-vars': [
-                'error',
-                {
-                    argsIgnorePattern: '^_',
-                    caughtErrorsIgnorePattern: '^_',
-                    varsIgnorePattern: '^_'
-                }
-            ]
+            '@typescript-eslint/no-unused-expressions': 'off'
         },
     }
 ]);
