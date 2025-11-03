@@ -124,4 +124,51 @@ describe('ValidatorZod Edge Cases', () => {
             allowEmptyValue: true
         });
     });
+
+    it('should validate union types', async () => {
+        app.base().zod({
+            query: z.object({
+                user: z.union([
+                    z.literal('authenticated'),
+                    z.literal('anonymous')
+                ])
+            })
+        }).route({
+            method: 'GET',
+            path: '/union',
+            handler: ({ query }) => `User: ${query.user}`
+        });
+
+        const res = await app.base().inject({
+            method: 'GET',
+            url: '/union?user=anonymous'
+        });
+
+        expect(res.statusCode).to.equal(200);
+        expect(res.result).to.equal('User: anonymous');
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        expect((app.openapi.result().paths['/union'] as any).get.parameters[0].schema)
+            .to.have.deep.property('enum', ['authenticated', 'anonymous']);
+    });
+
+    it('should apply transformations', async () => {
+        app.base().zod({
+            query: z.object({
+                tag: z.string().transform(val => val.trim().toLowerCase())
+            })
+        }).route({
+            method: 'GET',
+            path: '/transform',
+            handler: ({ query }) => `Tag: ${query.tag}`
+        });
+
+        const res = await app.base().inject({
+            method: 'GET',
+            url: '/transform?tag=  HeLLo  '
+        });
+
+        expect(res.statusCode).to.equal(200);
+        expect(res.result).to.equal('Tag: hello');
+    });
 });
