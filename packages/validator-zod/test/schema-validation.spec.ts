@@ -75,6 +75,30 @@ describe('ValidatorZod Schema Validation', () => {
             .that.matches(/^Too small.*"query.age"$/i);
     });
 
+    it('should reject malformed input with "log" failAction', async () => {
+        app.base().zod({
+            payload: z.object({ name: z.string().min(3) }),
+            query: z.object({ age: z.coerce.number().int().positive() }),
+            failAction: 'log'
+        }).route({
+            method: 'POST',
+            path: '/fail-log',
+            handler: () => 'ok'
+        });
+
+        const res = await app.base().inject({
+            method: 'POST',
+            url: '/fail-default?age=-5',
+            payload: { name: 'Al' }
+        });
+
+        expect(res.statusCode).to.equal(400);
+        expect(res.result).to.have.property('message');
+        expect('message' in res.result! ? res.result.message : undefined)
+            .to.be.a('string')
+            .that.matches(/^Too small.*"query.age"$/i);
+    });
+
     it('should use custom failAction to format error response', async () => {
         app.base().zod({
             payload: z.object({ name: z.string().min(3) }),
