@@ -15,9 +15,9 @@
 
 - @kaapi/validator-zod
     - Test coverage (Use Vitest or Jest)
-        - Plugin registration
-            - Test that validatorZod integrates correctly with Kaapi
-            - Ensure zodDocsConfig is applied when docs are enabled
+        - Plugin registration @done
+            - Test that validatorZod integrates correctly with Kaapi @done
+            - Ensure zodDocsConfig is applied when docs are enabled @done
         - Schema validation
             - Validate correct payloads, queries, headers, etc.
             - Test failure cases with malformed input
