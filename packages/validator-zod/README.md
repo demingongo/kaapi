@@ -171,7 +171,7 @@ app.base().zod({
 
 Prefer `Joi` or migrating gradually? No problem.
 
-You can still use `app.route(...)` with Joi-based validation while adopting Zod via `app.base().zod(...).route(...)`. This dual-mode support ensures **graceful evolution**, allowing legacy and modern routes to coexist without breaking changes.
+You can still use `app.route(...)` with Joi-based validation while adopting Zod via `app.base().zod(...).route(...)`. This dual-mode support ensures **graceful evolution**, allowing traditional and modern routes to coexist without breaking changes.
 
 ---
 
