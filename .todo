@@ -18,17 +18,17 @@
         - Plugin registration @done
             - Test that validatorZod integrates correctly with Kaapi @done
             - Ensure zodDocsConfig is applied when docs are enabled @done
-        - Schema validation
-            - Validate correct payloads, queries, headers, etc.
-            - Test failure cases with malformed input
-            - Confirm failAction behaves as expected (e.g., logs, custom handler)
-        - Overrides
-            - Global options and failAction are respected
-            - Per-route overrides override global ones
-        - Edge cases
-            - Optional/default fields
-            - Nested schemas
-            - Meta descriptions (if used in docs)
+        - Schema validation @done
+            - Validate correct payloads, queries, headers, etc. @done
+            - Test failure cases with malformed input @done
+            - Confirm failAction behaves as expected (e.g., logs, custom handler) @done
+        - Overrides @done
+            - Global options and failAction are respected @done
+            - Per-route overrides override global ones @done
+        - Edge cases @done
+            - Optional/default fields @done
+            - Nested schemas @done
+            - Meta descriptions (if used in docs) @done
         - Docs generation (if applicable)
             - Confirm schema metadata is reflected in generated docs
 
