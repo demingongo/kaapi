@@ -29,8 +29,8 @@
             - Optional/default fields @done
             - Nested schemas @done
             - Meta descriptions (if used in docs) @done
-        - Docs generation (if applicable)
-            - Confirm schema metadata is reflected in generated docs
+        - Docs generation (if applicable) @done
+            - Confirm schema metadata is reflected in generated docs @done
 
 - @kaapi/kaapi
     - api-doc-helper: 
