@@ -4,3 +4,6 @@ tsconfig.json
 scripts
 plugins/
 kaapi.config.mjs
+test
+.c8rc.json
+kaukau.config.mjs

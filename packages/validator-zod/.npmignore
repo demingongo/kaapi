@@ -5,3 +5,6 @@ scripts
 plugins/
 kaapi.config.mjs
 fixtures
+test
+.c8rc.json
+kaukau.config.mjs

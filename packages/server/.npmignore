@@ -1,3 +1,6 @@
 eslint.config.mjs
 src/
 tsconfig.json
+test
+.c8rc.json
+kaukau.config.mjs
