@@ -88,7 +88,7 @@ describe('ValidatorZod Schema Validation', () => {
 
         const res = await app.base().inject({
             method: 'POST',
-            url: '/fail-default?age=-5',
+            url: '/fail-log?age=-5',
             payload: { name: 'Al' }
         });
 

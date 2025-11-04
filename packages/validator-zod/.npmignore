@@ -4,3 +4,4 @@ tsconfig.json
 scripts
 plugins/
 kaapi.config.mjs
+fixtures

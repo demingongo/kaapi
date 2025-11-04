@@ -171,4 +171,84 @@ describe('ValidatorZod Edge Cases', () => {
         expect(res.statusCode).to.equal(200);
         expect(res.result).to.equal('Tag: hello');
     });
+
+    it('should normalize boolean in query', async () => {
+        app.base().zod({
+            query: z.object({
+                tic: z.boolean(),
+                tac: z.boolean().optional(),
+                toe: z.array(
+                    z.boolean()
+                ).optional()
+            })
+        }).route({
+            method: 'GET',
+            path: '/normalize-boolean',
+            handler: ({ query }) => query.tic
+        });
+
+        const res = await app.base().inject({
+            method: 'GET',
+            url: '/normalize-boolean?tic=true&tac=false&toe=false&toe=false&toe=true'
+        });
+
+        expect(res.statusCode).to.equal(200);
+        expect(res.result).to.be.a('boolean').that.is.true;
+    });
+
+    it('should include file field in body of OpenAPI docs', async () => {
+        app.base().zod({
+            payload: z.object({
+                username: z.string().meta({
+                    description: 'The username'
+                }),
+                picture: z.looseObject({
+                    _data: z.instanceof(Buffer),
+                    hapi: z.looseObject({
+                        filename: z.string(),
+                        headers: z.looseObject({
+                            'content-type': z.string()
+                        })
+                    })
+                })
+            })
+        }).route({
+            method: 'POST',
+            path: '/upload',
+            options: {
+                description: 'Upload user\'s picture',
+                payload: {
+                    output: 'stream',
+                    parse: true,
+                    allow: 'multipart/form-data',
+                    multipart: { output: 'stream' },
+                    maxBytes: 1024 * 3_000
+                }
+            }
+        }, () => 'ok');
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        expect((app.openapi.result().paths['/upload'] as any).post.requestBody)
+            .to.deep.include({
+                content: {
+                    'multipart/form-data': {
+                        schema: {
+                            type: 'object',
+                            properties: {
+                                username: {
+                                    type: 'string',
+                                    description: 'The username'
+                                },
+                                picture: {
+                                    type: 'string',
+                                    format: 'binary'
+                                }
+                            },
+                            required: ['username', 'picture']
+                        }
+                    }
+                },
+                required: true
+            });
+    });
 });

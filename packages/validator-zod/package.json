@@ -13,7 +13,8 @@
   "scripts": {
     "lint": "eslint .",
     "build": "tsc && node ./scripts/buildDT.mjs",
-    "test": "kaukau --require ts-node/register --config kaukau.config.mjs"
+    "test": "kaukau --require ts-node/register --config kaukau.config.mjs",
+    "coverage": "c8 npm test"
   },
   "author": "demingongo",
   "repository": {
