@@ -1,8 +1,7 @@
 # 🧪 @kaapi/validator-zod
 
-![npm](https://img.shields.io/npm/v/@kaapi/validator-zod)
-![license](https://img.shields.io/npm/l/@kaapi/validator-zod)
-![bundle size](https://img.shields.io/bundlephobia/min/@kaapi/validator-zod)
+![npm](https://img.shields.io/npm/v/@kaapi/validator-zod?style=flat-square)
+![license](https://img.shields.io/npm/l/@kaapi/validator-zod?style=flat-square)
 
 **Zod-powered validation plugin for [Kaapi](https://www.npmjs.com/package/@kaapi/kaapi)**. Validate request `params`, `payload`, `query`, `headers`, and `state` using [Zod 4](https://www.npmjs.com/package/zod) schemas. Includes built-in documentation helpers for seamless API docs generation.
 
@@ -164,6 +163,51 @@ app.base().zod({
   handler: ({ query: { name } }) => `Hello ${name}!`
 });
 ```
+
+---
+
+## 📤 File Upload Example
+
+Multipart file uploads with Zod validation is supported. Here's how to validate an uploaded image file and stream it back in the response:
+
+```ts
+app.base().zod({
+  payload: z.object({
+    file: z.looseObject({
+      _data: z.instanceof(Buffer),
+      hapi: z.looseObject({
+        filename: z.string(),
+        headers: z.looseObject({
+          'content-type': z.enum(['image/jpeg', 'image/jpg', 'image/png'])
+        })
+      })
+    })
+  })
+}).route({
+  method: 'POST',
+  path: '/upload-image',
+  options: {
+    description: 'Upload an image',
+    payload: {
+      output: 'stream',
+      parse: true,
+      allow: 'multipart/form-data',
+      multipart: { output: 'stream' },
+      maxBytes: 1024 * 3_000
+    }
+  }
+}, (req, h) =>
+  h.response(req.payload.file._data)
+    .type(req.payload.file.hapi.headers['content-type'])
+);
+```
+
+### 🧾 Notes
+
+- `z.looseObject` is used to accommodate the structure of multipart file metadata.
+- The `_data: z.instanceof(Buffer)` field is automatically interpreted as a binary field by the documentation generator.
+- This ensures correct OpenAPI and Postman documentation is generated, with the file field shown as a binary upload.
+- The route streams the uploaded image back with its original content type.
 
 ---
 

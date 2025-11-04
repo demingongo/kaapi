@@ -205,6 +205,33 @@ async function start() {
         return 'ok'
     });
 
+    app.base().zod({
+        payload: z.object({
+            file: z.looseObject({
+                _data: z.instanceof(Buffer),
+                hapi: z.looseObject({
+                    filename: z.string(),
+                    headers: z.looseObject({
+                        'content-type': z.enum(['image/jpeg', 'image/jpg', 'image/png'])
+                    })
+                })
+            })
+        })
+    }).route({
+        method: 'POST',
+        path: '/upload-image',
+        options: {
+            description: 'Upload an image',
+            payload: {
+                output: 'stream',
+                parse: true,
+                allow: 'multipart/form-data',
+                multipart: { output: 'stream' },
+                maxBytes: 1024 * 3_000
+            }
+        }
+    }, (req, h) => h.response(req.payload.file._data).type(req.payload.file.hapi.headers['content-type']));
+
     // custom handler (inert)
     app.base().zod({
         params: z.object({
