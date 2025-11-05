@@ -6,8 +6,7 @@
   "main": "lib/index.js",
   "scripts": {
     "lint": "eslint .",
-    "build": "tsc && node ./scripts/buildDT.mjs",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc && node ./scripts/buildDT.mjs"
   },
   "keywords": [
     "typescript",

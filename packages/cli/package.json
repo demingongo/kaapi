@@ -19,7 +19,7 @@
   "scripts": {
     "lint": "eslint .",
     "build": "tsc",
-    "test": "ts-node src/index.ts",
+    "test:run": "ts-node src/index.ts",
     "test:bin": "node dist/index.js"
   },
   "author": "demingongo",
