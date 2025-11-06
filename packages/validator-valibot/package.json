@@ -1,0 +1,37 @@
+{
+  "name": "@kaapi/validator-valibot",
+  "version": "0.0.16",
+  "private": true,
+  "description": "Valibot-powered request validation and documentation plugin for Kaapi.",
+  "main": "lib/index.js",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    }
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "build": "tsc && node ./scripts/buildDT.mjs",
+    "test": "kaukau --require ts-node/register --config kaukau.config.mjs",
+    "coverage": "c8 npm test"
+  },
+  "author": "demingongo",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/demingongo/kaapi.git",
+    "directory": "packages/validator-valibot"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@hapi/boom": "^10.0.1",
+    "@kaapi/kaapi": "workspace:^",
+    "tslib": "^2.8.1"
+  },
+  "peerDependencies": {
+    "valibot": "^1.1.0"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10"
+  }
+}
