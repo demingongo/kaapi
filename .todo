@@ -9,12 +9,12 @@
             - sign access tokens with public keys (useAccessTokenJwks, createJwtAccessToken, ...), @done
             - MultipleFlows (OIDC Multiple Flows) @done
             - OIDC Auth code example @done
-            - UserInfo endpoint (additionalConfiguration + route scopes (openid required)) (NOTES_doc_auth8)
+            - UserInfo endpoint (additionalConfiguration + route scopes (openid required)) @done
             
 - @kaapi/server: `auth: true` should not set up startegy but only `mode: 'required'`. Strategy should be explicitly defined. @done
 
-- @kaapi/validator-zod
-    - Test coverage (Use Vitest or Jest)
+- @kaapi/validator-zod @done
+    - Test coverage (c8) @done
         - Plugin registration @done
             - Test that validatorZod integrates correctly with Kaapi @done
             - Ensure zodDocsConfig is applied when docs are enabled @done

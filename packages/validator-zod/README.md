@@ -30,13 +30,13 @@ npm install zod@^4.0.0
 ```ts
 import { z } from 'zod/v4'
 import { Kaapi } from '@kaapi/kaapi'
-import { validatorZod, zodDocsConfig } from '@kaapi/validator-zod'
+import { validatorZod } from '@kaapi/validator-zod'
 
 const app = new Kaapi({
   port: 3000,
   host: 'localhost',
   docs: {
-    ...zodDocsConfig // enables documentation generation
+    disabled: false // explicitly enables documentation generation
   }
 });
 

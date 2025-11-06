@@ -4,7 +4,7 @@ import inert from '@hapi/inert';
 import Joi from 'joi'
 import { BearerUtil } from '@novice1/api-doc-generator';
 import { Kaapi } from '@kaapi/kaapi';
-import { validatorZod, ZodDocHelper, zodDocsConfig } from '@kaapi/validator-zod';
+import { validatorZod, ZodDocHelper } from '@kaapi/validator-zod';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
@@ -27,7 +27,7 @@ const app = new Kaapi({
         },
     },
     docs: {
-        ...zodDocsConfig,
+        disabled: false,
         security: new BearerUtil('mySecurityScheme')
     },
     routes: {

@@ -1,4 +1,4 @@
-import { OpenAPI, OpenAPIHelperInterface, OpenAPIOptions, Postman, PostmanOptions, ProcessedRoute } from '@novice1/api-doc-generator';
+import { OpenAPI, OpenAPIHelperClass, OpenAPIHelperInterface, OpenAPIOptions, Postman, PostmanHelperClass, PostmanOptions, ProcessedRoute } from '@novice1/api-doc-generator';
 import { OpenAPIJoiHelper } from '@novice1/api-doc-generator/lib/generators/openapi/helpers/joiHelper';
 import { KaapiServerRoute } from '@kaapi/server';
 import { type RouteMeta } from '@novice1/routing';
@@ -241,9 +241,16 @@ export class KaapiOpenAPI extends OpenAPI implements KaapiDocGenerator {
     constructor(options?: OpenAPIOptions) {
         if (options?.helperClass) {
             OpenAPIMixHelper.helperClasses.add(options.helperClass)
-            options = { ...options, helperClass: OpenAPIMixHelper }
         }
-        super(options);
+        super({ ...options, helperClass: OpenAPIMixHelper });
+    }
+
+    addHelperClass(helperClass: OpenAPIHelperClass) {
+        OpenAPIMixHelper.helperClasses.add(helperClass)
+    }
+
+    removeHelperClass(helperClass: OpenAPIHelperClass) {
+        OpenAPIMixHelper.helperClasses.delete(helperClass)
     }
 
     addRoutes<Refs extends ReqRef = ReqRefDefaults>(serverRoutes: KaapiServerRoute<Refs>[] | KaapiServerRoute<Refs>): ProcessedRoute[] {
@@ -260,9 +267,16 @@ export class KaapiPostman extends Postman implements KaapiDocGenerator {
     constructor(options?: PostmanOptions) {
         if (options?.helperClass) {
             PostmanMixHelper.helperClasses.add(options.helperClass)
-            options = { ...options, helperClass: PostmanMixHelper }
         }
-        super(options);
+        super({ ...options, helperClass: PostmanMixHelper });
+    }
+
+    addHelperClass(helperClass: PostmanHelperClass) {
+        PostmanMixHelper.helperClasses.add(helperClass)
+    }
+
+    removeHelperClass(helperClass: PostmanHelperClass) {
+        PostmanMixHelper.helperClasses.delete(helperClass)
     }
 
     addRoutes<Refs extends ReqRef = ReqRefDefaults>(serverRoutes: KaapiServerRoute<Refs>[] | KaapiServerRoute<Refs>): ProcessedRoute[] {

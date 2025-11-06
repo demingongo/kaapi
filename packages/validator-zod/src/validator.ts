@@ -213,6 +213,13 @@ export const validatorZod: KaapiPlugin = {
                 });
                 server.decorate('server', 'zod', validator)
             },
-        })
+        });
+
+        if (t.openapi) {
+            t.openapi.addHelperClass(zodDocsConfig.openAPIOptions.helperClass);
+        }
+        if (t.postman) {
+            t.postman.addHelperClass(zodDocsConfig.postmanOptions.helperClass);
+        }
     },
 }
