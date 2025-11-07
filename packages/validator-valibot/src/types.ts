@@ -20,7 +20,7 @@ export type ValidatorValibotOptions<TSchema extends NonEmptyValibotSchema> = Con
 
 export type ValidatorValibotSchema = {
     payload?: ValibotSchema;
-    query?: NonEmptyValibotSchema;
+    query?: ValibotSchema;
     params?: ValibotSchema;
     headers?: ValibotSchema;
     state?: ValibotSchema;

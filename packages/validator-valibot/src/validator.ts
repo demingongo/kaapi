@@ -1,9 +1,9 @@
 import Boom from '@hapi/boom';
-import { objectAsync, type ObjectEntriesAsync, parseAsync } from 'valibot'
+import { objectAsync, type ObjectEntriesAsync, parseAsync, ValiError } from 'valibot'
 import type { KaapiServerRoute, HandlerDecorations, Lifecycle, KaapiPlugin, Request, ResponseToolkit } from '@kaapi/kaapi';
 import type { ValibotlessReqRef, ValibotlessReqRefDefaults, ValidatorValibot, ValidatorValibotReqRef, ValidatorValibotSchema } from './types';
-import pkg from '../package.json';
 import { OpenAPIValibotHelper, PostmanValibotHelper } from './doc-helpers';
+import pkg from '../package.json';
 
 const { parse = { payload: true, query: true, params: true, headers: true, state: true } } = {};
 export const supportedProps = ['payload', 'query', 'params', 'headers', 'state'] as const;
@@ -46,7 +46,7 @@ export const validatorValibot: KaapiPlugin = {
                             if (!serverRoute.options.plugins?.kaapi?.docs?.helperSchemaProperty) // docs have not helperSchemaProperty
                                 serverRoute.options.plugins.kaapi.docs = { ...serverRoute.options.plugins.kaapi.docs, helperSchemaProperty: 'valibot' }
                             if (!serverRoute.options.plugins?.kaapi?.docs?.openAPIHelperClass) // docs have not openAPIHelperClass
-                                serverRoute.options.plugins.kaapi.docs = { ...serverRoute.options.plugins.kaapi.docs, /*openAPIHelperClass: ZodDocHelper*/ }
+                                serverRoute.options.plugins.kaapi.docs = { ...serverRoute.options.plugins.kaapi.docs, openAPIHelperClass: OpenAPIValibotHelper }
                         }
                     }
                     t.route(
@@ -108,47 +108,23 @@ export const validatorValibot: KaapiPlugin = {
                         const issuePaths = new Set<string>();
                         let message: string;
 
-                        // Check if the error is a Zod validation error
-                        /*
-                        if (err instanceof Object &&
-                            'name' in err &&
-                            (err.name === 'ZodError' || err.name === '$ZodError') &&
-                            'issues' in err &&
-                            Array.isArray(err.issues)) {
-                            const zodIssues = err.issues;
-                            if (zodIssues.length !== 0) {
-                                // Build a single error message string from all Zod issues
-                                message = zodIssues
-                                    .map((issue: $ZodIssue) => {
-                                        // Track which property caused the issue
-                                        if (Array.isArray(issue.path) && issue.path.length !== 0) {
-                                            const key = issue.path[0]
-                                            if (typeof key === 'symbol') {
-                                                if (key.description) {
-                                                    issuePaths.add(key.description)
-                                                }
-                                            } else {
-                                                issuePaths.add(String(key))
-                                            }
-                                        }
-                                        // Map the issue to a human-readable string
-                                        return mapIssue(issue)
-                                    })
-                                    .join('; ');
-                            } else {
-                                // Fallback if no issues array exists (rare)
-                                message = 'message' in err && typeof err.message === 'string' ? err.message : '';
+                        // Check if the error is instance of ValiError
+                        if (err instanceof ValiError && err.issues.length) {
+                            const firstIssue = err.issues[0];
+                            message = firstIssue.message;
+                            // Track which property caused the issue
+                            if (Array.isArray(firstIssue.path) && firstIssue.path.length) {
+                                let errorPath = '';
+                                for (const p of firstIssue.path) {
+                                    if (p && typeof p.key === 'string') {
+                                        errorPath += `.${p.key}`;
+                                    }
+                                }
+                                if (errorPath.length) {
+                                    message += ` at "${errorPath.substring(1)}"`;
+                                }
                             }
                         } else if (err instanceof Error) {
-                            // If it’s a regular Error, use its message
-                            message = err.message
-                        } else {
-                            // Unknown error type
-                            message = 'Unknown error'
-                        }
-                        */
-                        console.log(err)
-                        if (err instanceof Error) {
                             // If it’s a regular Error, use its message
                             message = err.message
                         } else {

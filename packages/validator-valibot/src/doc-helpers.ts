@@ -1,10 +1,10 @@
-/**
- * TODO: rework so it does not depend on @valibot/to-json-schema that is not flawless
- */
-
 import type { BaseHelperInterface } from '@novice1/api-doc-generator/lib/helpers/baseHelper';
 import { type JSONSchema7, toJsonSchema } from '@valibot/to-json-schema';
-import type { AnySchema } from 'valibot';
+import {
+    object,
+    type ObjectEntries,
+    type AnySchema
+} from 'valibot';
 import type { NonEmptyValibotSchema } from './types';
 import type { OpenAPIHelperInterface, PostmanHelperInterface } from '@novice1/api-doc-generator';
 import type {
@@ -15,7 +15,7 @@ import type {
     ReferenceObject,
     XMLObject
 } from '@novice1/api-doc-generator/lib/generators/openapi/definitions';
-import { KaapiOpenAPIHelperInterface } from '@kaapi/kaapi';
+import type { KaapiOpenAPIHelperInterface } from '@kaapi/kaapi';
 
 /**
  * Valibot helper for \@novice1/api-doc-generator
@@ -35,7 +35,7 @@ export abstract class BaseValibotHelper implements BaseHelperInterface {
                 this._valibotSchema = schema as NonEmptyValibotSchema
             }
             try {
-                const s = toJsonSchema(schema as AnySchema)
+                const s = toJsonSchema(schema as AnySchema, { errorMode: 'ignore' })
                 this._schema = s
                 this._valibotSchema = schema as NonEmptyValibotSchema
             } catch (_e) {
@@ -197,18 +197,20 @@ export class OpenAPIValibotHelper extends BaseValibotHelper implements OpenAPIHe
     }
 
     getFilesChildren(): Record<string, unknown> {
-        const r: Record<string, typeof this._valibotSchema> = {};
+        const r: Record<string, ObjectEntries[string]> = {};
         const schema = this._schema
-        if ('properties' in schema && typeof schema.properties === 'object' && schema.properties) {
-            const properties: Record<string, unknown> = schema.properties as Record<string, unknown>
+        const vSchema = this._valibotSchema
+        if (vSchema && 'entries' in vSchema && typeof vSchema.entries === 'object' && vSchema.entries) {
+            const properties: Record<string, unknown> = vSchema.entries as Record<string, unknown>
             for (const p in properties) {
                 const isRequired: boolean = 'required' in schema && Array.isArray(schema.required) && schema.required.includes(p)
                 const ch = new OpenAPIValibotHelper({ value: properties[p] }, isRequired)
                 if (ch.isValid() && ch.isFile())
-                    r[p] = ch.getRawSchema()
+                    r[p] = ch.getRawSchema() as ObjectEntries[string]
             }
         }
-        return r;
+        const files = object(r)
+        return files as unknown as Record<string, unknown>;
     }
 
 
@@ -225,8 +227,9 @@ export class OpenAPIValibotHelper extends BaseValibotHelper implements OpenAPIHe
     getChildren(): Record<string, OpenAPIValibotHelper> {
         const r: Record<string, OpenAPIValibotHelper> = {};
         const schema = this._schema
-        if ('properties' in schema && typeof schema.properties === 'object' && schema.properties) {
-            const properties: Record<string, unknown> = schema.properties as Record<string, unknown>
+        const vSchema = this._valibotSchema
+        if (vSchema && 'entries' in vSchema && typeof vSchema.entries === 'object' && vSchema.entries) {
+            const properties: Record<string, unknown> = vSchema.entries as Record<string, unknown>
             for (const p in properties) {
                 const isRequired: boolean = 'required' in schema && Array.isArray(schema.required) && schema.required.includes(p)
                 r[p] = new OpenAPIValibotHelper({ value: properties[p] }, isRequired)

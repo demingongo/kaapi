@@ -5,7 +5,7 @@ import inert from '@hapi/inert';
 import Joi from 'joi'
 import { BearerUtil } from '@novice1/api-doc-generator';
 import { Kaapi } from '@kaapi/kaapi';
-import { validatorValibot } from '@kaapi/validator-valibot';
+import { OpenAPIValibotHelper, validatorValibot } from '@kaapi/validator-valibot';
 //import fs from 'node:fs/promises';
 import path from 'node:path';
 
@@ -245,7 +245,7 @@ async function start() {
                     kaapi: {
                         docs: {
                             helperSchemaProperty: 'valibot',
-                            //openAPIHelperClass: ZodDocHelper
+                            openAPIHelperClass: OpenAPIValibotHelper
                         }
                     }
                 }
@@ -286,7 +286,7 @@ async function start() {
         }
     })
 
-    app.refreshDocs()
+    //app.refreshDocs()
 
     await app.listen()
 }
@@ -313,9 +313,10 @@ console.log(
     )
 )
 */
-
+/*
 console.log(
     object({
         name: optional(pipe(string(), trim(), nonEmpty(), maxLength(10), description('The name')), 'World')
     })
 )
+*/
