@@ -196,6 +196,7 @@ export class OpenAPIValibotHelper extends BaseValibotHelper implements OpenAPIHe
         return this._valibotSchema
     }
 
+    // @TODO: does not work when 'optional'. Do like for Zod helper and get Most Inner Type?
     getFilesChildren(): Record<string, unknown> {
         const r: Record<string, ObjectEntries[string]> = {};
         const schema = this._schema

@@ -174,7 +174,7 @@ async function start() {
 
     app.base().valibot({
         payload: object({
-            file: looseObject({
+            file: optional(pipe(looseObject({
                 _data: instance(Buffer),
                 hapi: looseObject({
                     filename: string(),
@@ -182,7 +182,7 @@ async function start() {
                         'content-type': picklist(['image/jpeg', 'image/jpg', 'image/png'] as const)
                     })
                 })
-            })
+            }), description('The file itself (image)')))
         })
     }).route({
         method: 'POST',
@@ -197,7 +197,7 @@ async function start() {
                 maxBytes: 1024 * 3_000
             }
         }
-    }, (req, h) => h.response(req.payload.file._data).type(req.payload.file.hapi.headers['content-type']));
+    }, () => 'ok')//(req, h) => h.response(req.payload.file._data).type(req.payload.file.hapi.headers['content-type']));
 
     // custom handler (inert)
     app.base().valibot({
