@@ -13,6 +13,10 @@
             
 - @kaapi/server: `auth: true` should not set up startegy but only `mode: 'required'`. Strategy should be explicitly defined. @done
 
+- @kaapi/validator-valibot
+    - doc helpers
+        - cannot depend on to-json-schema (Error: The "trim" action cannot be converted to JSON Schema., ....), must depend on valibot object
+
 - @kaapi/validator-zod @done
     - Test coverage (c8) @done
         - Plugin registration @done

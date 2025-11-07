@@ -1,5 +1,5 @@
 import { description, instance, looseObject, maxLength, maxValue, metadata, nonEmpty, number, object, optional, picklist, pipe, string, trim } from 'valibot'
-import { toJsonSchema } from '@valibot/to-json-schema';
+//import { toJsonSchema } from '@valibot/to-json-schema';
 import Boom from '@hapi/boom'
 import inert from '@hapi/inert';
 import Joi from 'joi'
@@ -293,8 +293,29 @@ async function start() {
 
 start()
 
+/*
 app.log(toJsonSchema(schema.query))
 app.log(instance(Buffer))
 app.log(toJsonSchema(object({
-    filename: pipe(string(), description('The name of the file'))
+    filename: pipe(string(), description('The name of the file'), metadata({
+        unit: '°C',
+        deprecated: true
+    }))
 })))
+
+console.log(
+    toJsonSchema(
+        pipe(string(), description('The name of the file'), metadata({
+            unit: '°C',
+            deprecated: true,
+            examples: ['user@example.com', 'admin@site.com']
+        }))
+    )
+)
+*/
+
+console.log(
+    object({
+        name: optional(pipe(string(), trim(), nonEmpty(), maxLength(10), description('The name')), 'World')
+    })
+)

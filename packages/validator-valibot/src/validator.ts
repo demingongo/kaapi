@@ -1,8 +1,9 @@
 import Boom from '@hapi/boom';
-import { objectAsync, ObjectEntriesAsync, parseAsync } from 'valibot'
-import { KaapiServerRoute, HandlerDecorations, Lifecycle, KaapiPlugin, Request, ResponseToolkit } from '@kaapi/kaapi';
-import { ValibotlessReqRef, ValibotlessReqRefDefaults, ValidatorValibot, ValidatorValibotReqRef, ValidatorValibotSchema } from './types';
+import { objectAsync, type ObjectEntriesAsync, parseAsync } from 'valibot'
+import type { KaapiServerRoute, HandlerDecorations, Lifecycle, KaapiPlugin, Request, ResponseToolkit } from '@kaapi/kaapi';
+import type { ValibotlessReqRef, ValibotlessReqRefDefaults, ValidatorValibot, ValidatorValibotReqRef, ValidatorValibotSchema } from './types';
 import pkg from '../package.json';
+import { OpenAPIValibotHelper, PostmanValibotHelper } from './doc-helpers';
 
 const { parse = { payload: true, query: true, params: true, headers: true, state: true } } = {};
 export const supportedProps = ['payload', 'query', 'params', 'headers', 'state'] as const;
@@ -182,11 +183,11 @@ export const validatorValibot: KaapiPlugin = {
             },
         });
 
-        //if (t.openapi) {
-        //    t.openapi.addHelperClass(zodDocsConfig.openAPIOptions.helperClass);
-        //}
-        //if (t.postman) {
-        //    t.postman.addHelperClass(zodDocsConfig.postmanOptions.helperClass);
-        //}
+        if (t.openapi) {
+            t.openapi.addHelperClass(OpenAPIValibotHelper);
+        }
+        if (t.postman) {
+            t.postman.addHelperClass(PostmanValibotHelper);
+        }
     },
 }
