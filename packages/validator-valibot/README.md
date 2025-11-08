@@ -141,7 +141,16 @@ This sets `abortEarly` to `true` for all Valibot-validated routes, and logs vali
 ```ts
 app.base().valibot({
   query: object({
-    name: optional(pipe(string(), trim(), nonEmpty(), maxLength(10), description('Optional name to personalize the greeting response')), 'World')
+    name: optional(pipe(string(), trim(), nonEmpty(), maxLength(10), description('Optional name to personalize the greeting response')), 'World'),
+    age: optional(
+      pipe(
+        string(), 
+        transform((input) => typeof input === 'string' ? Number(input) : input), 
+        number(), 
+        integer(), 
+        minValue(1)
+      )
+    )
   }),
   options: {
     abortEarly: false

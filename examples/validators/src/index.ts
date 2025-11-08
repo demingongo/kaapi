@@ -1,4 +1,4 @@
-import { description, instance, looseObject, maxLength, maxValue, metadata, nonEmpty, number, object, optional, picklist, pipe, string, trim } from 'valibot'
+import { description, instance, integer, looseObject, maxLength, maxValue, metadata, minValue, nonEmpty, number, object, optional, picklist, pipe, string, transform, trim } from 'valibot'
 //import { toJsonSchema } from '@valibot/to-json-schema';
 import Boom from '@hapi/boom'
 import inert from '@hapi/inert';
@@ -93,7 +93,8 @@ async function start() {
     // with handler in the route config (Hapi's way)
     app.base().valibot({
         query: object({
-            name: optional(pipe(string(), trim(), nonEmpty(), maxLength(10), description('The name')), 'World')
+            name: optional(pipe(string(), trim(), nonEmpty(), maxLength(10), description('The name')), 'World'),
+            age: optional(pipe(string(), transform((input) => typeof input === 'string' ? Number(input) : input), number(), integer(), minValue(1)))
         }),
         state: optional(looseObject({
             session: optional(string())
