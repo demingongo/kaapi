@@ -9,7 +9,6 @@
   "functions": 90,
   "lines": 90,
   "exclude": [
-    "test",
-    "lib/utils.js"
+    "test"
   ]
 }
