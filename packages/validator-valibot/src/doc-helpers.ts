@@ -65,6 +65,19 @@ export abstract class BaseValibotHelper implements BaseHelperInterface {
         return this.#getAllMeta()[v];
     }
 
+    protected hasOptionalWrapper(): boolean {
+        let r = this._valibotSchema
+
+        let result = false
+
+        while (!result && r && 'wrapped' in r) {
+            result = r.kind === 'schema' && r.type === 'optional'
+            r = r.wrapped
+        }
+
+        return result
+    }
+
     isValid(): boolean {
         return !!(this._valibotSchema && this._schema.$schema)
     }
@@ -91,7 +104,7 @@ export abstract class BaseValibotHelper implements BaseHelperInterface {
         return r;
     }
     isRequired(): boolean {
-        return this._isRequired
+        return this._isRequired || (this.getType() === 'object' && !this.hasOptionalWrapper())
     }
     isUnique(): boolean {
         return !!('uniqueItems' in this._schema && this._schema.uniqueItems)

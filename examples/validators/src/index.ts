@@ -1,12 +1,11 @@
-import { description, instance, integer, looseObject, maxLength, maxValue, metadata, minValue, nonEmpty, number, object, optional, picklist, pipe, string, transform, trim } from 'valibot'
-//import { toJsonSchema } from '@valibot/to-json-schema';
+import { description, instance, integer, literal, looseObject, maxLength, maxValue, metadata, minValue, nonEmpty, number, object, optional, picklist, pipe, string, transform, trim, union } from 'valibot'
 import Boom from '@hapi/boom'
 import inert from '@hapi/inert';
 import Joi from 'joi'
 import { BearerUtil } from '@novice1/api-doc-generator';
 import { Kaapi } from '@kaapi/kaapi';
 import { OpenAPIValibotHelper, validatorValibot } from '@kaapi/validator-valibot';
-//import fs from 'node:fs/promises';
+import fs from 'node:fs/promises';
 import path from 'node:path';
 
 const app = new Kaapi({
@@ -93,6 +92,10 @@ async function start() {
     // with handler in the route config (Hapi's way)
     app.base().valibot({
         query: object({
+            user: union([
+                literal('authenticated'),
+                literal('anonymous')
+            ]),
             name: optional(pipe(string(), trim(), nonEmpty(), maxLength(10), description('The name')), 'World'),
             age: optional(pipe(string(), transform((input) => typeof input === 'string' ? Number(input) : input), number(), integer(), minValue(1)))
         }),
@@ -122,22 +125,19 @@ async function start() {
                 }
             },
         },
-        handler: ({ query: { name } }) => `Hello mello ${name}`
+        handler: ({ query: { name, user } }) => `Hello ${user} ${name}`
     })
 
     // file upload
-    /*
-    app.base().zod({
-        payload: z.object({
-            username: z.string().meta({
-                description: 'The username'
-            }),
-            picture: z.looseObject({
-                _data: z.instanceof(Buffer),
-                hapi: z.looseObject({
-                    filename: z.string(),
-                    headers: z.looseObject({
-                        'content-type': z.string()
+    app.base().valibot({
+        payload: object({
+            username: pipe(string(), description('The username')),
+            picture: looseObject({
+                _data: instance(Buffer),
+                hapi: looseObject({
+                    filename: string(),
+                    headers: looseObject({
+                        'content-type': string()
                     })
                 })
             })
@@ -171,7 +171,6 @@ async function start() {
 
         return 'ok'
     });
-    */
 
     app.base().valibot({
         payload: object({
@@ -203,7 +202,7 @@ async function start() {
                 maxBytes: 1024 * 3_000
             }
         }
-    }, () => 'ok')//(req, h) => h.response(req.payload.file._data).type(req.payload.file.hapi.headers['content-type']));
+    }, ({ payload: { file } }, h) => file ? h.response(file._data).type(file.hapi.headers['content-type']) : 'ok');
 
     // custom handler (inert)
     app.base().valibot({
@@ -298,64 +297,3 @@ async function start() {
 }
 
 start()
-
-/*
-app.log(toJsonSchema(schema.query))
-app.log(instance(Buffer))
-app.log(toJsonSchema(object({
-    filename: pipe(string(), description('The name of the file'), metadata({
-        unit: '°C',
-        deprecated: true
-    }))
-})))
-
-console.log(
-    toJsonSchema(
-        pipe(string(), description('The name of the file'), metadata({
-            unit: '°C',
-            deprecated: true,
-            examples: ['user@example.com', 'admin@site.com']
-        }))
-    )
-)
-*/
-/*
-console.log(
-    object({
-        name: optional(pipe(string(), trim(), nonEmpty(), maxLength(10), description('The name')), 'World')
-    })
-)
-*/
-/*
-console.log(optional(pipe(looseObject({
-    _data: instance(Buffer),
-    hapi: looseObject({
-        filename: string(),
-        headers: looseObject({
-            'content-type': picklist(['image/jpeg', 'image/jpg', 'image/png'] as const)
-        })
-    })
-}))))
-*/
-/*
-console.log(
-    toJsonSchema(
-        object({
-            file: optional(
-                pipe(
-                    looseObject({
-                        _data: instance(Buffer),
-                        hapi: looseObject({
-                            filename: string(),
-                            headers: looseObject({
-                                'content-type': picklist(['image/jpeg', 'image/jpg', 'image/png'] as const)
-                            })
-                        })
-                    }),
-                    description('The file itself (image)')
-                )
-            )
-        })
-        , { errorMode: 'ignore' })
-)
-*/
