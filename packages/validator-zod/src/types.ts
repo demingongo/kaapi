@@ -1,4 +1,4 @@
-import type { ReqRefDefaults, ReqRef, KaapiServerRoute, HandlerDecorations, Lifecycle, Server } from '@kaapi/kaapi'
+import type { ReqRefDefaults, ReqRef, KaapiServerRoute, HandlerDecorations, Lifecycle, Server, MergeRefs } from '@kaapi/kaapi'
 import { z, type ZodType } from 'zod'
 import type { ParseContext, $ZodIssue } from 'zod/v4/core'
 
@@ -20,11 +20,14 @@ export type ValidatorZodSchema = {
 export type ZodlessReqRefDefaults = Omit<ReqRefDefaults, 'Query' | 'Headers' | 'Params' | 'Payload'>;
 export type ZodlessReqRef = Omit<ReqRef, 'Query' | 'Headers' | 'Params' | 'Payload'>;
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type output<T, D = unknown> = T extends { _zod: { output: any; }; } ? z.infer<T> : D;
+
 export interface ValidatorZodReqRef<RS extends ValidatorZodSchema = ValidatorZodSchema> {
-    Query: z.infer<RS['query']>,
-    Headers: z.infer<RS['headers']>
-    Params: z.infer<RS['params']>
-    Payload: z.infer<RS['payload']>
+    Query: output<RS['query'], MergeRefs<ZodlessReqRefDefaults>['Query']>,
+    Headers: output<RS['headers'], MergeRefs<ZodlessReqRefDefaults>['Headers']>
+    Params: output<RS['params'], MergeRefs<ZodlessReqRefDefaults>['Params']>
+    Payload: output<RS['payload'], MergeRefs<ZodlessReqRefDefaults>['Payload']>
 }
 
 export type ValidatorZod = <V extends ValidatorZodSchema>(schema: V) => {

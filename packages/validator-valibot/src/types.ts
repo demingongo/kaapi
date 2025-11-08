@@ -4,7 +4,8 @@ import type {
     KaapiServerRoute,
     HandlerDecorations,
     Lifecycle,
-    Server
+    Server,
+    MergeRefs
 } from '@kaapi/kaapi'
 import type {
     Config,
@@ -31,13 +32,13 @@ export type ValidatorValibotSchema = {
 export type ValibotlessReqRefDefaults = Omit<ReqRefDefaults, 'Query' | 'Headers' | 'Params' | 'Payload'>;
 export type ValibotlessReqRef = Omit<ReqRef, 'Query' | 'Headers' | 'Params' | 'Payload'>;
 
-export type output<T> = T extends NonEmptyValibotSchema ? InferOutput<T> : unknown;
+export type output<T, D = unknown> = T extends NonEmptyValibotSchema ? InferOutput<T> : D;
 
 export interface ValidatorValibotReqRef<RS extends ValidatorValibotSchema = ValidatorValibotSchema> {
-    Query: output<RS['query']>,
-    Headers: output<RS['headers']>
-    Params: output<RS['params']>
-    Payload: output<RS['payload']>
+    Query: output<RS['query'], MergeRefs<ValibotlessReqRefDefaults>['Query']>,
+    Headers: output<RS['headers'], MergeRefs<ValibotlessReqRefDefaults>['Headers']>
+    Params: output<RS['params'], MergeRefs<ValibotlessReqRefDefaults>['Params']>
+    Payload: output<RS['payload'], MergeRefs<ValibotlessReqRefDefaults>['Payload']>
 }
 
 export type ValidatorValibot = <V extends ValidatorValibotSchema>(schema: V) => {

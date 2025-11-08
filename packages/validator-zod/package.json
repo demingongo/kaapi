@@ -1,6 +1,6 @@
 {
   "name": "@kaapi/validator-zod",
-  "version": "0.0.17",
+  "version": "0.0.18",
   "private": false,
   "description": "Zod-powered request validation and documentation plugin for Kaapi.",
   "main": "lib/index.js",
@@ -16,6 +16,13 @@
     "test": "kaukau --require ts-node/register --config kaukau.config.mjs",
     "coverage": "c8 npm test"
   },
+  "keywords": [
+    "kaapi",
+    "hapi",
+    "zod",
+    "typescript",
+    "validation"
+  ],
   "author": "demingongo",
   "repository": {
     "type": "git",

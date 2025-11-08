@@ -1,6 +1,6 @@
 {
   "name": "@kaapi/kafka-messaging",
-  "version": "0.0.17",
+  "version": "0.0.18",
   "private": false,
   "description": "Kafka-based messaging for kaapi",
   "main": "lib/index.js",
@@ -8,6 +8,12 @@
     "lint": "eslint .",
     "build": "tsc"
   },
+  "keywords": [
+    "kaapi",
+    "messaging",
+    "kafka",
+    "typescript"
+  ],
   "author": "demingongo",
   "repository": {
     "type": "git",

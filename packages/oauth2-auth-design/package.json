@@ -1,6 +1,6 @@
 {
   "name": "@kaapi/oauth2-auth-design",
-  "version": "0.0.17",
+  "version": "0.0.18",
   "private": false,
   "description": "OAuth2 auth design for kaapi",
   "main": "lib/index.js",
@@ -14,6 +14,17 @@
       "default": "./lib/cli.js"
     }
   },
+  "keywords": [
+    "kaapi",
+    "oauth2",
+    "oidc",
+    "authentication",
+    "authorization",
+    "openid-connect",
+    "security",
+    "access-token",
+    "jwt"
+  ],
   "scripts": {
     "lint": "eslint .",
     "build": "tsc && node ./scripts/buildDT.mjs",

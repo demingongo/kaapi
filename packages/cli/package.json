@@ -1,6 +1,6 @@
 {
   "name": "@kaapi/cli",
-  "version": "0.0.17",
+  "version": "0.0.18",
   "description": "CLI for kaapi",
   "main": "dist/definitions.js",
   "exports": {
