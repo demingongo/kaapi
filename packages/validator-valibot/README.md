@@ -3,7 +3,7 @@
 ![npm](https://img.shields.io/npm/v/@kaapi/validator-valibot?style=flat-square)
 ![license](https://img.shields.io/npm/l/@kaapi/validator-valibot?style=flat-square)
 
-**Zod-powered validation plugin for [Kaapi](https://www.npmjs.com/package/@kaapi/kaapi)**. Validate request `params`, `payload`, `query`, `headers`, and `state` using [Zod 4](https://www.npmjs.com/package/valibot) schemas. Includes built-in documentation helpers for seamless API docs generation.
+**Valibot-powered validation plugin for [Kaapi](https://www.npmjs.com/package/@kaapi/kaapi)**. Validate request `params`, `payload`, `query`, `headers`, and `state` using [Valibot](https://www.npmjs.com/package/valibot) schemas. Includes built-in documentation helpers for seamless API docs generation.
 
 ---
 
@@ -15,7 +15,7 @@ npm install @kaapi/validator-valibot
 
 ### 📦 Peer Dependency
 
-Requires Zod v4:
+Requires Valibot:
 
 ```bash
 npm install valibot@^1.1.0
@@ -28,9 +28,8 @@ npm install valibot@^1.1.0
 ### 🔌 Register the Plugin
 
 ```ts
-import { z } from 'zod/v4'
 import { Kaapi } from '@kaapi/kaapi'
-import { validatorZod } from '@kaapi/validator-valibot'
+import { validatorValibot } from '@kaapi/validator-valibot'
 
 const app = new Kaapi({
   port: 3000,
@@ -40,7 +39,7 @@ const app = new Kaapi({
   }
 });
 
-await app.extend(validatorZod); // register the plugin
+await app.extend(validatorValibot); // register the plugin
 ```
 
 ---
@@ -48,12 +47,12 @@ await app.extend(validatorZod); // register the plugin
 ### 📐 Define a Schema
 
 ```ts
-import { z } from 'zod/v4'
-import { ValidatorZodSchema } from '@kaapi/validator-valibot'
+import { object, string } from 'valibot'
+import { ValidatorValibotSchema } from '@kaapi/validator-valibot'
 
-const routeSchema: ValidatorZodSchema = {
-  payload: z.object({
-    name: z.string()
+const routeSchema: ValidatorValibotSchema = {
+  payload: object({
+    name: string()
   })
 }
 ```
@@ -87,13 +86,14 @@ app.valibot(routeSchema).route({
 
 ### 🔧 `options`
 
-Customize Zod parsing behavior:
+Customize Valibot parsing behavior:
 
 | Property      | Type                      | Default     | Description                                                                 |
 |---------------|---------------------------|-------------|-----------------------------------------------------------------------------|
-| `error`       | `errors.$ZodErrorMap<T>` | `undefined` | Custom error map for localization or formatting                            |
-| `reportInput` | `boolean`                | `false`     | When `true`, includes original input in error issues (useful for debugging)             |
-| `jitless`     | `boolean`                | `false`     | When `true`, disables JIT optimizations for environments where `eval` is restricted (e.g., Cloudflare Workers). |
+| `abortEarly`  | `boolean`                 | `undefined` | Whether it should be aborted early                                          |
+| `abortPipeEarly`  | `boolean`                 | `undefined` | Whether a pipe should be aborted early                                          |
+| `lang`        | `string`                 | `undefined` | The selected language                                                        |
+| `message`        | `ErrorMessage<TIssue>`                 | `undefined` | The error message                                                        |
 
 ---
 
@@ -112,7 +112,7 @@ Control how validation failures are handled:
 
 ### 🧪 Example with Overrides
 
-You can override Zod validation behavior **globally** for all routes, or **per route** as needed.
+You can override Valibot validation behavior **globally** for all routes, or **per route** as needed.
 
 #### 🔁 Global Override (All Routes)
 
@@ -123,7 +123,7 @@ const app = new Kaapi({
     plugins: {
       valibot: {
         options: {
-          reportInput: true
+          abortEarly: true
         },
         failAction: 'log'
       }
@@ -131,22 +131,20 @@ const app = new Kaapi({
   }
 });
 
-await app.extend(validatorZod);
+await app.extend(validatorValibot);
 ```
 
-This sets `reportInput` to `true` for all Zod-validated routes, and logs validation errors before throwing them.
+This sets `abortEarly` to `true` for all Valibot-validated routes, and logs validation errors before throwing them.
 
 #### 🔂 Per-Route Override
 
 ```ts
 app.base().valibot({
-  query: z.object({
-    name: z.string().trim().nonempty().max(10).meta({
-      description: 'Optional name to personalize the greeting response'
-    }).optional().default('World')
+  query: object({
+    name: optional(pipe(string(), trim(), nonEmpty(), maxLength(10), description('Optional name to personalize the greeting response')), 'World')
   }),
   options: {
-    reportInput: false
+    abortEarly: false
   },
   failAction: async (request, h, err) => {
     if (Boom.isBoom(err)) {
@@ -168,20 +166,23 @@ app.base().valibot({
 
 ## 📤 File Upload Example
 
-Multipart file uploads with Zod validation is supported. Here's how to validate an uploaded image file and stream it back in the response:
+Multipart file uploads with Valibot validation is supported. Here's how to validate an uploaded image file and stream it back in the response:
 
 ```ts
 app.base().valibot({
-  payload: z.object({
-    file: z.looseObject({
-      _data: z.instanceof(Buffer),
-      hapi: z.looseObject({
-        filename: z.string(),
-        headers: z.looseObject({
-          'content-type': z.enum(['image/jpeg', 'image/jpg', 'image/png'])
+  payload: object({
+    file: pipe(
+      looseObject({
+        _data: instance(Buffer),
+        hapi: looseObject({
+          filename: string(),
+          headers: looseObject({
+            'content-type': picklist(['image/jpeg', 'image/jpg', 'image/png'] as const)
+          })
         })
-      })
-    })
+      }),
+      description('The image to upload')
+    )
   })
 }).route({
   method: 'POST',
@@ -204,8 +205,8 @@ app.base().valibot({
 
 ### 🧾 Notes
 
-- `z.looseObject` is used to accommodate the structure of multipart file metadata.
-- The `_data: z.instanceof(Buffer)` field is automatically interpreted as a binary field by the documentation generator.
+- `looseObject` is used to accommodate the structure of multipart file metadata.
+- The `_data: instanceof(Buffer)` field is automatically interpreted as a binary field by the documentation generator.
 - This ensures correct OpenAPI and Postman documentation is generated, with the file field shown as a binary upload.
 - The route streams the uploaded image back with its original content type.
 
@@ -215,7 +216,7 @@ app.base().valibot({
 
 Prefer `Joi` or migrating gradually? No problem.
 
-You can still use `app.route(...)` with Joi-based validation while adopting Zod via `app.base().valibot(...).route(...)`. This dual-mode support ensures **graceful evolution**, allowing traditional and modern routes to coexist without breaking changes.
+You can still use `app.route(...)` with Joi-based validation while adopting Valibot via `app.base().valibot(...).route(...)`. This dual-mode support ensures **graceful evolution**, allowing traditional and modern routes to coexist without breaking changes.
 
 ---
 
