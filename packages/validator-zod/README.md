@@ -63,7 +63,7 @@ const routeSchema: ValidatorZodSchema = {
 ### 🧭 Create a Route
 
 ```ts
-app.zod(routeSchema).route(
+app.base().zod(routeSchema).route(
   {
     method: 'POST',
     path: '/items'
@@ -73,7 +73,7 @@ app.zod(routeSchema).route(
 
 // or using inline handler
 /*
-app.zod(routeSchema).route({
+app.base().zod(routeSchema).route({
   method: 'POST',
   path: '/items',
   handler: req => ({ id: Date.now(), name: req.payload.name })

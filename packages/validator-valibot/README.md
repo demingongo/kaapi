@@ -62,7 +62,7 @@ const routeSchema: ValidatorValibotSchema = {
 ### 🧭 Create a Route
 
 ```ts
-app.valibot(routeSchema).route(
+app.base().valibot(routeSchema).route(
   {
     method: 'POST',
     path: '/items'
@@ -72,7 +72,7 @@ app.valibot(routeSchema).route(
 
 // or using inline handler
 /*
-app.valibot(routeSchema).route({
+app.base().valibot(routeSchema).route({
   method: 'POST',
   path: '/items',
   handler: req => ({ id: Date.now(), name: req.payload.name })
