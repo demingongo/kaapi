@@ -186,6 +186,7 @@ export abstract class BaseValibotHelper implements BaseHelperInterface {
  * Valibot helper for \@novice1/api-doc-generator
  */
 export class OpenAPIValibotHelper extends BaseValibotHelper implements OpenAPIHelperInterface, KaapiOpenAPIHelperInterface {
+
     isFile(): boolean | undefined {
         const children = this.getChildren()
         const schema = children._data?.getRawSchema()
@@ -196,11 +197,20 @@ export class OpenAPIValibotHelper extends BaseValibotHelper implements OpenAPIHe
         return this._valibotSchema
     }
 
-    // @TODO: does not work when 'optional'. Do like for Zod helper and get Most Inner Type?
+    getMostInnerRawSchema() {
+        let r = this._valibotSchema
+
+        while (r && 'wrapped' in r) {
+            r = r.wrapped
+        }
+
+        return r
+    }
+
     getFilesChildren(): Record<string, unknown> {
         const r: Record<string, ObjectEntries[string]> = {};
         const schema = this._schema
-        const vSchema = this._valibotSchema
+        const vSchema = this.getMostInnerRawSchema()
         if (vSchema && 'entries' in vSchema && typeof vSchema.entries === 'object' && vSchema.entries) {
             const properties: Record<string, unknown> = vSchema.entries as Record<string, unknown>
             for (const p in properties) {
@@ -228,7 +238,7 @@ export class OpenAPIValibotHelper extends BaseValibotHelper implements OpenAPIHe
     getChildren(): Record<string, OpenAPIValibotHelper> {
         const r: Record<string, OpenAPIValibotHelper> = {};
         const schema = this._schema
-        const vSchema = this._valibotSchema
+        const vSchema = this.getMostInnerRawSchema()
         if (vSchema && 'entries' in vSchema && typeof vSchema.entries === 'object' && vSchema.entries) {
             const properties: Record<string, unknown> = vSchema.entries as Record<string, unknown>
             for (const p in properties) {

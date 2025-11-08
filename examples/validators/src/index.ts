@@ -174,15 +174,20 @@ async function start() {
 
     app.base().valibot({
         payload: object({
-            file: optional(pipe(looseObject({
-                _data: instance(Buffer),
-                hapi: looseObject({
-                    filename: string(),
-                    headers: looseObject({
-                        'content-type': picklist(['image/jpeg', 'image/jpg', 'image/png'] as const)
-                    })
-                })
-            }), description('The file itself (image)')))
+            file: optional(
+                pipe(
+                    looseObject({
+                        _data: instance(Buffer),
+                        hapi: looseObject({
+                            filename: string(),
+                            headers: looseObject({
+                                'content-type': picklist(['image/jpeg', 'image/jpg', 'image/png'] as const)
+                            })
+                        })
+                    }),
+                    description('The file itself (image)')
+                )
+            )
         })
     }).route({
         method: 'POST',
@@ -318,5 +323,38 @@ console.log(
     object({
         name: optional(pipe(string(), trim(), nonEmpty(), maxLength(10), description('The name')), 'World')
     })
+)
+*/
+/*
+console.log(optional(pipe(looseObject({
+    _data: instance(Buffer),
+    hapi: looseObject({
+        filename: string(),
+        headers: looseObject({
+            'content-type': picklist(['image/jpeg', 'image/jpg', 'image/png'] as const)
+        })
+    })
+}))))
+*/
+/*
+console.log(
+    toJsonSchema(
+        object({
+            file: optional(
+                pipe(
+                    looseObject({
+                        _data: instance(Buffer),
+                        hapi: looseObject({
+                            filename: string(),
+                            headers: looseObject({
+                                'content-type': picklist(['image/jpeg', 'image/jpg', 'image/png'] as const)
+                            })
+                        })
+                    }),
+                    description('The file itself (image)')
+                )
+            )
+        })
+        , { errorMode: 'ignore' })
 )
 */
