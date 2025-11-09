@@ -38,14 +38,6 @@ describe('ValidatorArk Schema Validation', () => {
                             return val;
                         })
                         .to('number.integer >= 1'),
-                    /*v.pipe(
-                    v.string(),
-                    v.transform((input) => typeof input === 'string' ? Number(input) : input),
-                    v.number(),
-                    v.integer(),
-                    v.minValue(1)
-                )
-                */
                 }),
                 headers: type({ 'x-auth-token': 'string.uuid' }),
             })

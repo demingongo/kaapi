@@ -1,7 +1,7 @@
 // test: Edge cases
 import { Kaapi } from '@kaapi/kaapi';
 import { validatorArk } from '@kaapi/validator-arktype';
-import { JsonSchema, type } from 'arktype';
+import { type } from 'arktype';
 import { expect } from 'chai';
 
 describe('ValidatorArk Edge Cases', () => {
@@ -150,50 +150,12 @@ describe('ValidatorArk Edge Cases', () => {
 
         expect(res.statusCode).to.equal(200);
         expect(res.result).to.equal('User: anonymous');
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        console.log((app.openapi.result().paths['/union'] as any).get);
-
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         expect((app.openapi.result().paths['/union'] as any).get.parameters[0].schema).to.have.deep.property('enum', [
-            'authenticated',
             'anonymous',
+            'authenticated',
         ]);
     });
-
-    console.log(
-        type({
-            user: "'authenticated' | 'anonymous'",
-        }).toJsonSchema({
-            fallback: (v) => {
-                let r: JsonSchema & { _instanceof?: string } = {};
-                let _instanceof = '';
-                if (v && 'proto' in v && v.proto && typeof v.proto === 'function' && 'name' in v.proto) {
-                    r.type = 'object';
-                    r._instanceof = `${v.proto.name}`;
-                    _instanceof = `${v.proto.name}`;
-                }
-                if (v.base) {
-                    r = { ...r, ...v.base };
-                    if ('out' in v && v.out) {
-                        if ('anyOf' in r && 'type' in v.out) {
-                            const description = r.anyOf[0]?.description;
-                            r = { ...v.out };
-                            if (description) {
-                                r.description = description;
-                            }
-                            if (_instanceof) {
-                                r._instanceof = _instanceof;
-                            }
-                        } else {
-                            r = { ...r, ...v.out };
-                        }
-                    }
-                }
-                return r;
-            },
-        })
-    );
 
     it('should apply transformations', async () => {
         app.base()
