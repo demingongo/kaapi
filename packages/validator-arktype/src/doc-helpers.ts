@@ -5,12 +5,26 @@ import type { Type, JsonSchema } from 'arktype';
 function transformValue(value?: Type | object | unknown) {
     let r: unknown = value;
     if (value && typeof value === 'function' && 'toJsonSchema' in value && typeof value.toJsonSchema === 'function') {
-        r = value.toJsonSchema({
-            fallback: (v: Record<string, unknown>) => {
-                const r: JsonSchema & { _instanceof?: string } = {};
+        r = (value as Type).toJsonSchema({
+            fallback: (v) => {
+                let r: JsonSchema & { _instanceof?: string } = {};
                 if (v && 'proto' in v && v.proto && typeof v.proto === 'function' && 'name' in v.proto) {
                     r.type = 'object';
                     r._instanceof = `${v.proto.name}`;
+                }
+                if (v.base) {
+                    r = { ...r, ...v.base };
+                    if ('out' in v && v.out) {
+                        if ('anyOf' in r && 'type' in v.out) {
+                            const description = r.anyOf[0]?.description;
+                            r = { ...v.out };
+                            if (description) {
+                                r.description = description;
+                            }
+                        } else {
+                            r = { ...r, ...v.out };
+                        }
+                    }
                 }
                 return r;
             },

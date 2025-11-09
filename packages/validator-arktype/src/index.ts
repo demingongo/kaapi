@@ -1,3 +1,3 @@
-export * from './types';
-export * from './doc-helpers';
-export * from './validator';
+export * from './types.js';
+export * from './doc-helpers.js';
+export * from './validator.js';

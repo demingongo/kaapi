@@ -16,11 +16,11 @@
     "check": "tsc --noEmit",
     "check:deps": "depcruise src --validate",
     "ci": "npm run verify",
-    "coverage": "c8 node --loader ts-node/esm --experimental-specifier-resolution=node --no-warnings ./node_modules/kaukau/bin/kaukau --config kaukau.config.mjs",
+    "coverage": "c8 node --loader ts-node/esm --experimental-specifier-resolution=node --no-warnings ../../node_modules/mocha/bin/mocha test/**/*.spec.ts",
     "format": "prettier --write ./",
     "format:check": "prettier --check ./",
     "lint": "eslint .",
-    "test": "node --loader ts-node/esm --experimental-specifier-resolution=node --no-warnings ./node_modules/kaukau/bin/kaukau --config kaukau.config.mjs",
+    "test": "node --loader ts-node/esm --experimental-specifier-resolution=node --no-warnings ../../node_modules/mocha/bin/mocha test/**/*.spec.ts",
     "type-coverage": "type-coverage --at-least 90 --detail",
     "verify": "npm run lint && npm run format:check && npm run check && npm run check:deps && npm run type-coverage && npm run test:kaukau && npm run coverage"
   },

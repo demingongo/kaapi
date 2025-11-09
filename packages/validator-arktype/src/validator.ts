@@ -1,12 +1,12 @@
-import pkg from '../package.json';
-import { OpenAPIArkHelper, PostmanArkHelper } from './doc-helpers';
+import pkg from '../package.json' with { type: 'json' };
+import { OpenAPIArkHelper, PostmanArkHelper } from './doc-helpers.js';
 import type {
     ArklessReqRef,
     ArklessReqRefDefaults,
     ValidatorArk,
     ValidatorArkReqRef,
     ValidatorArkSchema,
-} from './types';
+} from './types.js';
 import Boom from '@hapi/boom';
 import type {
     KaapiServerRoute,
@@ -140,8 +140,8 @@ export const validatorArk: KaapiPlugin = {
                             if (Array.isArray(firstIssue.path) && firstIssue.path.length) {
                                 let errorPath = '';
                                 for (const p of firstIssue.path) {
-                                    if (p && typeof p.key === 'string') {
-                                        errorPath += `.${p.key}`;
+                                    if (p && typeof p === 'string') {
+                                        errorPath += `.${p}`;
                                     }
                                 }
                                 if (errorPath.length) {

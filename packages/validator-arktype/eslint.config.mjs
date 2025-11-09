@@ -53,7 +53,6 @@ export default defineConfig([
                 {
                     argsIgnorePattern: '^_',
                     caughtErrorsIgnorePattern: '^_',
-                    varsIgnorePattern: '^_',
                 },
             ],
             'import/no-cycle': ['error', { maxDepth: Infinity }],
@@ -65,6 +64,13 @@ export default defineConfig([
                     project: './tsconfig.json',
                 },
             },
+        },
+    },
+    {
+        files: ['test/**/*.ts'],
+
+        rules: {
+            '@typescript-eslint/no-unused-expressions': 'off',
         },
     },
     {
@@ -94,7 +100,6 @@ export default defineConfig([
                 {
                     argsIgnorePattern: '^_',
                     caughtErrorsIgnorePattern: '^_',
-                    varsIgnorePattern: '^_',
                 },
             ],
         },
@@ -124,7 +129,6 @@ export default defineConfig([
                 {
                     argsIgnorePattern: '^_',
                     caughtErrorsIgnorePattern: '^_',
-                    varsIgnorePattern: '^_',
                 },
             ],
         },
