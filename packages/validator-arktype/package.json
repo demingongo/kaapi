@@ -8,11 +8,11 @@
   "exports": {
     ".": {
       "types": "./lib/index.d.ts",
-      "default": "./lib/index.js"
+      "import": "./lib/index.js"
     }
   },
   "scripts": {
-    "build": "tsup src --format esm --outDir lib --clean --metafile",
+    "build": "tsup src !src/**/*.d.ts --format esm --outDir lib --clean --metafile --dts --sourcemap && node ./scripts/buildDT.mjs",
     "check": "tsc --noEmit",
     "check:deps": "depcruise src --validate",
     "ci": "npm run verify",

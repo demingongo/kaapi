@@ -1,9 +1,11 @@
 # 🧪 @kaapi/validator-arktype
 
+![ESM Only](https://img.shields.io/badge/ESM-only-blue?style=flat-square)
 ![npm](https://img.shields.io/npm/v/@kaapi/validator-arktype?style=flat-square)
 ![license](https://img.shields.io/npm/l/@kaapi/validator-arktype?style=flat-square)
 
 **ArkType-powered validation plugin for [Kaapi](https://www.npmjs.com/package/@kaapi/kaapi)**. Validate request `params`, `payload`, `query`, `headers`, and `state` using [ArkType](https://www.npmjs.com/package/arktype) schemas. Includes built-in documentation helpers for seamless API docs generation.
+> ⚠️ This library is ESM‑only. It requires an environment that supports ESM imports.
 
 ---
 

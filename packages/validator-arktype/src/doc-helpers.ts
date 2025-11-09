@@ -60,7 +60,6 @@ export class OpenAPIArkHelper extends OpenAPIJsonHelper implements KaapiOpenAPIH
                 }
             }
         }
-        console.log('getFilesChildren()', r);
         return r;
     }
 }
