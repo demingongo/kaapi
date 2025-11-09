@@ -1,10 +1,7 @@
 // test: Plugin registration
 import { Kaapi } from '@kaapi/kaapi';
 import { validatorArk } from '@kaapi/validator-arktype';
-import {
-    //JsonSchema,
-    type,
-} from 'arktype';
+import { type } from 'arktype';
 import { expect } from 'chai';
 
 describe('ValidatorArk Plugin Registration', () => {
@@ -45,87 +42,6 @@ describe('ValidatorArk Plugin Registration', () => {
                 path: '/test',
                 handler: ({ query: { entity, number } }) => `${number} ${entity}`,
             });
-
-        /*
-        const tmp = type({
-            age: type(["string | number", '@', 'my age']).pipe((val) => {
-                // If it's a string, try to parse
-                if (typeof val === "string") {
-                    const parsed = Number(val)
-                    if (!Number.isNaN(parsed)) {
-                        return parsed
-                    }
-                }
-                return val
-            }).to('number.integer >= 1')
-        })
-
-        console.log((tmp({ age: '-5' }) as type.errors).issues[0].message)
-
-        console.log(
-            (tmp.toJsonSchema({
-                fallback: (v) => {
-                    //console.log(v)
-                    let r: JsonSchema & { _instanceof?: string } = {};
-                    if (v && 'proto' in v && v.proto && typeof v.proto === 'function' && 'name' in v.proto) {
-                        r.type = 'object';
-                        r._instanceof = `${v.proto.name}`;
-                    }
-                    if (v.base) {
-                        r = { ...r, ...v.base };
-                        if ('out' in v && v.out) {
-                            if ('anyOf' in r && 'type' in v.out) {
-                                const description = r.anyOf[0]?.description
-                                r = { ...v.out }
-                                if (description) {
-                                    r.description = description
-                                }
-                            } else {
-                                r = { ...r, ...v.out }
-                            }
-                        }
-                    }
-                    return r;
-                }
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            }) as any).properties
-        )
-        */
-
-        /*
-        console.log(
-            type({
-                number: 'number.integer <= 100',
-                'entity': type(['string', '@', 'Some description']).pipe(v => v?.trim() ?? '').to('0 < string <= 10').default('punch')
-                //type(['string | undefined', '@', 'Some description']).pipe(v => v?.trim() ?? 'punch').to('0 < string <= 10')
-            }).onUndeclaredKey('delete')
-                .toJsonSchema({
-                    fallback: (v) => {
-                        console.log(v)
-                        if (v.base && 'out' in v) {
-                            return { ...v.base, ...v.out }
-                        }
-                        return v.base
-                    }
-                })
-        )
-        */
-
-        /*
-        console.log(
-            type({
-                number: 'number.integer <= 100',
-                'entity?': type(['string', '@', 'Some description']).pipe(v => v?.trim() ?? 'punch').to('0 < string <= 10')
-                //type(['string | undefined', '@', 'Some description']).pipe(v => v?.trim() ?? 'punch').to('0 < string <= 10')
-            }).onUndeclaredKey('delete')
-                .toJsonSchema({
-                    fallback: (v) => {
-                        console.log(v)
-                        return {}
-                    }
-                })
-        )
-        */
 
         const openapi = app.openapi.result();
 

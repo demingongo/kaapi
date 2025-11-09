@@ -8,7 +8,7 @@ function transformValue(value?: Type | object | unknown) {
         r = (value as Type).toJsonSchema({
             fallback: (v) => {
                 let r: JsonSchema & { _instanceof?: string } = {};
-                let _instanceof = ''
+                let _instanceof = '';
                 if (v && 'proto' in v && v.proto && typeof v.proto === 'function' && 'name' in v.proto) {
                     r.type = 'object';
                     r._instanceof = `${v.proto.name}`;
@@ -24,7 +24,7 @@ function transformValue(value?: Type | object | unknown) {
                                 r.description = description;
                             }
                             if (_instanceof) {
-                                r._instanceof = _instanceof
+                                r._instanceof = _instanceof;
                             }
                         } else {
                             r = { ...r, ...v.out };
