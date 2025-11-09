@@ -8,9 +8,11 @@ function transformValue(value?: Type | object | unknown) {
         r = (value as Type).toJsonSchema({
             fallback: (v) => {
                 let r: JsonSchema & { _instanceof?: string } = {};
+                let _instanceof = ''
                 if (v && 'proto' in v && v.proto && typeof v.proto === 'function' && 'name' in v.proto) {
                     r.type = 'object';
                     r._instanceof = `${v.proto.name}`;
+                    _instanceof = `${v.proto.name}`;
                 }
                 if (v.base) {
                     r = { ...r, ...v.base };
@@ -20,6 +22,9 @@ function transformValue(value?: Type | object | unknown) {
                             r = { ...v.out };
                             if (description) {
                                 r.description = description;
+                            }
+                            if (_instanceof) {
+                                r._instanceof = _instanceof
                             }
                         } else {
                             r = { ...r, ...v.out };

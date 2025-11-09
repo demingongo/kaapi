@@ -136,18 +136,6 @@ export const validatorArk: KaapiPlugin = {
                         if (err instanceof type.errors && err.issues.length) {
                             const firstIssue = err.issues[0];
                             message = firstIssue.message;
-                            // Track which property caused the issue
-                            if (Array.isArray(firstIssue.path) && firstIssue.path.length) {
-                                let errorPath = '';
-                                for (const p of firstIssue.path) {
-                                    if (p && typeof p === 'string') {
-                                        errorPath += `.${p}`;
-                                    }
-                                }
-                                if (errorPath.length) {
-                                    message += ` at "${errorPath.substring(1)}"`;
-                                }
-                            }
                         } else if (err instanceof Error) {
                             // If it’s a regular Error, use its message
                             message = err.message;
