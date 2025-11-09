@@ -1,9 +1,22 @@
-import Boom from '@hapi/boom';
-import { objectAsync, type ObjectEntriesAsync, parseAsync, ValiError } from 'valibot'
-import type { KaapiServerRoute, HandlerDecorations, Lifecycle, KaapiPlugin, Request, ResponseToolkit } from '@kaapi/kaapi';
-import type { ValibotlessReqRef, ValibotlessReqRefDefaults, ValidatorValibot, ValidatorValibotReqRef, ValidatorValibotSchema } from './types';
-import { OpenAPIValibotHelper, PostmanValibotHelper } from './doc-helpers';
 import pkg from '../package.json';
+import { OpenAPIArkHelper, PostmanArkHelper } from './doc-helpers';
+import type {
+    ArklessReqRef,
+    ArklessReqRefDefaults,
+    ValidatorArk,
+    ValidatorArkReqRef,
+    ValidatorArkSchema,
+} from './types';
+import Boom from '@hapi/boom';
+import type {
+    KaapiServerRoute,
+    HandlerDecorations,
+    Lifecycle,
+    KaapiPlugin,
+    Request,
+    ResponseToolkit,
+} from '@kaapi/kaapi';
+import { type, type Type } from 'arktype';
 
 const { parse = { payload: true, query: true, params: true, headers: true, state: true } } = {};
 export const supportedProps = ['payload', 'query', 'params', 'headers', 'state'] as const;
@@ -18,62 +31,70 @@ const normalizeBooleans = (obj: Record<string, unknown>) => {
         }
     }
     return obj;
-}
+};
 
-export const validatorValibot: KaapiPlugin = {
+export const validatorArk: KaapiPlugin = {
     async integrate(t) {
-        const validator: ValidatorValibot = <V extends ValidatorValibotSchema>(schema: V) => {
+        const validator: ValidatorArk = <V extends ValidatorArkSchema>(schema: V) => {
             return {
-                route<R extends ValibotlessReqRef = ValibotlessReqRefDefaults>(
-                    serverRoute: KaapiServerRoute<ValidatorValibotReqRef<V> & R>,
-                    handler?: HandlerDecorations | Lifecycle.Method<ValidatorValibotReqRef<V> & R, Lifecycle.ReturnValue<ValidatorValibotReqRef<V> & R>>
+                route<R extends ArklessReqRef = ArklessReqRefDefaults>(
+                    serverRoute: KaapiServerRoute<ValidatorArkReqRef<V> & R>,
+                    handler?:
+                        | HandlerDecorations
+                        | Lifecycle.Method<ValidatorArkReqRef<V> & R, Lifecycle.ReturnValue<ValidatorArkReqRef<V> & R>>
                 ) {
                     if (!serverRoute.options) {
-                        serverRoute.options = {}
+                        serverRoute.options = {};
                     }
                     if (typeof serverRoute.options === 'object') {
                         // validate
                         if (!serverRoute.options.plugins) {
-                            serverRoute.options.plugins = {}
+                            serverRoute.options.plugins = {};
                         }
-                        serverRoute.options.plugins.valibot = schema
+                        serverRoute.options.plugins.ark = schema;
 
                         // docs
-                        serverRoute.options.plugins.kaapi = serverRoute.options.plugins.kaapi || {}
-                        if (serverRoute.options.plugins.kaapi.docs != false && // docs not disabled
+                        serverRoute.options.plugins.kaapi = serverRoute.options.plugins.kaapi || {};
+                        if (
+                            serverRoute.options.plugins.kaapi.docs != false && // docs not disabled
                             !serverRoute.options.plugins.kaapi.docs?.disabled // docs not disabled
                         ) {
-                            if (!serverRoute.options.plugins?.kaapi?.docs?.helperSchemaProperty) // docs have not helperSchemaProperty
-                                serverRoute.options.plugins.kaapi.docs = { ...serverRoute.options.plugins.kaapi.docs, helperSchemaProperty: 'valibot' }
-                            if (!serverRoute.options.plugins?.kaapi?.docs?.openAPIHelperClass) // docs have not openAPIHelperClass
-                                serverRoute.options.plugins.kaapi.docs = { ...serverRoute.options.plugins.kaapi.docs, openAPIHelperClass: OpenAPIValibotHelper }
+                            if (!serverRoute.options.plugins?.kaapi?.docs?.helperSchemaProperty)
+                                // docs have not helperSchemaProperty
+                                serverRoute.options.plugins.kaapi.docs = {
+                                    ...serverRoute.options.plugins.kaapi.docs,
+                                    helperSchemaProperty: 'ark',
+                                };
+                            if (!serverRoute.options.plugins?.kaapi?.docs?.openAPIHelperClass)
+                                // docs have not openAPIHelperClass
+                                serverRoute.options.plugins.kaapi.docs = {
+                                    ...serverRoute.options.plugins.kaapi.docs,
+                                    openAPIHelperClass: OpenAPIArkHelper,
+                                };
                         }
                     }
-                    t.route(
-                        serverRoute,
-                        handler
-                    )
-                    return t.server
-                }
+                    t.route(serverRoute, handler);
+                    return t.server;
+                },
             };
         };
 
         await t.server.register({
-            name: 'kaapi-validator-valibot',
+            name: 'kaapi-validator-arktype',
             version: pkg.version,
             register: async function (server) {
                 server.ext('onPreHandler', async (request: Request, h: ResponseToolkit) => {
-                    const routeValidation = request?.route?.settings?.plugins?.valibot as ValidatorValibotSchema | undefined;
+                    const routeValidation = request?.route?.settings?.plugins?.ark as ValidatorArkSchema | undefined;
                     try {
-                        // Initialize empty objects to hold the parsed data and corresponding Valibot schemas
+                        // Initialize empty objects to hold the parsed data and corresponding ArkType schemas
                         const data: Record<string, unknown> = {};
-                        const dataSchema: ObjectEntriesAsync = {};
+                        const dataSchema: Record<string, Type> = {};
 
                         // Loop through all supported properties for this route
                         for (const prop of supportedProps) {
                             // Check if validation exists for this property and there is a parser defined
                             if (routeValidation?.[prop] && parse[prop]) {
-                                // Add the Valibot schema for this property to the dataSchema
+                                // Add the ArkType schema for this property to the dataSchema
                                 dataSchema[prop] = routeValidation[prop];
                                 // Prepare the value for parsing:
                                 // - For query params, normalize boolean strings to actual booleans
@@ -92,11 +113,14 @@ export const validatorValibot: KaapiPlugin = {
                             }
                         }
 
-                        // If we have any props to validate, parse them using Valibot
+                        // If we have any props to validate, parse them using ArkType
                         if (hasProps) {
-                            // Create a Valibot object from the collected schema and parse asynchronously
-                            // Options can come from routeValidation.options
-                            const parsedProps = await parseAsync(objectAsync(dataSchema), data, routeValidation?.options);
+                            // Create an ArkType object from the collected schema and parse
+                            const parsedProps = type(dataSchema)(data);
+                            if (parsedProps instanceof type.errors) {
+                                // throw ArkErrors
+                                throw parsedProps;
+                            }
                             // Merge the parsed and validated properties back into the request object
                             Object.assign(request, parsedProps);
                         }
@@ -109,7 +133,7 @@ export const validatorValibot: KaapiPlugin = {
                         let message: string;
 
                         // Check if the error is instance of ValiError
-                        if (err instanceof ValiError && err.issues.length) {
+                        if (err instanceof type.errors && err.issues.length) {
                             const firstIssue = err.issues[0];
                             message = firstIssue.message;
                             // Track which property caused the issue
@@ -126,10 +150,10 @@ export const validatorValibot: KaapiPlugin = {
                             }
                         } else if (err instanceof Error) {
                             // If it’s a regular Error, use its message
-                            message = err.message
+                            message = err.message;
                         } else {
                             // Unknown error type
-                            message = 'Unknown error'
+                            message = 'Unknown error';
                         }
 
                         // Create a Boom badRequest response with the error message
@@ -137,17 +161,17 @@ export const validatorValibot: KaapiPlugin = {
 
                         // Attach the raw validation error object for debugging/logging
                         response.data = {
-                            validationError: err
-                        }
+                            validationError: err,
+                        };
 
                         // Handle custom failAction if it’s a function
                         if (typeof routeValidation?.failAction === 'function') {
-                            return routeValidation.failAction(request, h, response)
+                            return routeValidation.failAction(request, h, response);
                         }
 
                         // If failAction is 'log', log the validation error with the request
                         if (routeValidation?.failAction === 'log') {
-                            request.log(['validation', 'error', 'valibot', ...issuePaths], response);
+                            request.log(['validation', 'error', 'arktype', ...issuePaths], response);
                             // Note: unlike Hapi's failAction 'log', 'log' here still returns a Boom response
                         }
 
@@ -155,15 +179,15 @@ export const validatorValibot: KaapiPlugin = {
                         return response;
                     }
                 });
-                server.decorate('server', 'valibot', validator)
+                server.decorate('server', 'ark', validator);
             },
         });
 
         if (t.openapi) {
-            t.openapi.addHelperClass(OpenAPIValibotHelper);
+            t.openapi.addHelperClass(OpenAPIArkHelper);
         }
         if (t.postman) {
-            t.postman.addHelperClass(PostmanValibotHelper);
+            t.postman.addHelperClass(PostmanArkHelper);
         }
     },
-}
+};

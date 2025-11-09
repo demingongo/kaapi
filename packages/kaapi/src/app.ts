@@ -5,7 +5,7 @@ import { IMessaging, IMessagingSender, IMessagingSubscribeConfig } from './servi
 import qs from 'qs'
 import winston from 'winston';
 import { createDocsRouter, DocsConfig, DocsUIOptions } from './services/docs/docs';
-import { KaapiOpenAPI, KaapiPostman } from './services/docs/generators';
+import { formatRequestRoute, formatRoutes, KaapiOpenAPI, KaapiPostman } from './services/docs/generators';
 import { HandlerDecorations, Lifecycle, ReqRef, ReqRefDefaults, Server } from '@hapi/hapi';
 import { KaapiPlugin, KaapiTools } from './services/plugins/plugin';
 
@@ -259,8 +259,9 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
     route<Refs extends ReqRef = ReqRefDefaults>(
         serverRoute: KaapiServerRoute<Refs>,
         handler?: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>) {
-        this.docs.openapi.addRoutes(serverRoute)
-        this.docs.postman.addRoutes(serverRoute)
+        const routesMeta = formatRoutes(serverRoute)
+        this.docs.openapi.add(routesMeta)
+        this.docs.postman.add(routesMeta)
         return super.route(serverRoute, handler)
     }
 
@@ -272,8 +273,9 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
 
         this.kaapiServer.base.table().forEach(
             v => {
-                this.docs.openapi.addRequestRoute(v);
-                this.docs.postman.addRequestRoute(v);
+                const routesMeta = formatRequestRoute(v)
+                this.docs.openapi.add(routesMeta);
+                this.docs.postman.add(routesMeta);
             }
         )
     }
@@ -297,8 +299,9 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
         const tool: KaapiTools = {
             log: this.log,
             route<Refs extends ReqRef = ReqRefDefaults>(serverRoute: KaapiServerRoute<Refs>, handler?: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>) {
-                getDocs().openapi.addRoutes(serverRoute)
-                getDocs().postman.addRoutes(serverRoute)
+                const routesMeta = formatRoutes(serverRoute)
+                getDocs().openapi.add(routesMeta)
+                getDocs().postman.add(routesMeta)
                 getCurrentApp().server().route(serverRoute, handler)
                 return this
             },

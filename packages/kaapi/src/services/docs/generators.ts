@@ -49,7 +49,7 @@ class CustomHelper extends OpenAPIJoiHelper implements KaapiOpenAPIHelperInterfa
     }
 }
 
-function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(serverRoutes: KaapiServerRoute<Refs>[] | KaapiServerRoute<Refs>): RouteMeta[] {
+export function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(serverRoutes: KaapiServerRoute<Refs>[] | KaapiServerRoute<Refs>): RouteMeta[] {
 
     let sRoutes: KaapiServerRoute<Refs>[] = [];
 
@@ -110,7 +110,9 @@ function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(serverRoutes: KaapiS
                         sRoute.options?.validate
 
                     let files: Record<string, unknown> | undefined = undefined
-                    if (sRoute.options?.payload && typeof routeOptionsValidate?.payload === 'object') {
+                    if (sRoute.options?.payload && (
+                        typeof routeOptionsValidate?.payload === 'object' || typeof routeOptionsValidate?.payload === 'function'
+                    )) {
                         const helperClass = (typeof sRoute.options.plugins?.kaapi?.docs === 'object' && sRoute.options.plugins.kaapi.docs.openAPIHelperClass) ?
                             sRoute.options.plugins.kaapi.docs.openAPIHelperClass :
                             CustomHelper;
@@ -144,7 +146,7 @@ function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(serverRoutes: KaapiS
     return routes
 }
 
-function formatRequestRoute<Refs extends ReqRef = ReqRefDefaults>(reqRoute: RequestRoute<Refs>): RouteMeta[] {
+export function formatRequestRoute<Refs extends ReqRef = ReqRefDefaults>(reqRoute: RequestRoute<Refs>): RouteMeta[] {
 
     const sRoute: RequestRoute<Refs> = reqRoute;
 
@@ -196,7 +198,9 @@ function formatRequestRoute<Refs extends ReqRef = ReqRefDefaults>(reqRoute: Requ
                     sRoute.settings?.validate
 
                 let files: Record<string, unknown> | undefined = undefined
-                if (sRoute.settings?.payload && typeof routeOptionsValidate?.payload === 'object') {
+                if (sRoute.settings?.payload && (
+                    typeof routeOptionsValidate?.payload === 'object' || typeof routeOptionsValidate?.payload === 'function'
+                )) {
                     const helperClass = (typeof sRoute.settings.plugins?.kaapi?.docs === 'object' && sRoute.settings.plugins.kaapi.docs.openAPIHelperClass) ?
                         sRoute.settings.plugins.kaapi.docs.openAPIHelperClass :
                         CustomHelper;
