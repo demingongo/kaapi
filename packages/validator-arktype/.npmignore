@@ -8,3 +8,5 @@ fixtures
 test
 .c8rc.json
 kaukau.config.mjs
+.dependency-cruiser.cjs
+.prettierignore
