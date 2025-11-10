@@ -37,8 +37,8 @@
             - Confirm schema metadata is reflected in generated docs @done
 
 - @kaapi/kaapi
-    - api-doc-helper: 
-        - authorize array of helper classes in the config for DelegatingHelper to do its job
+    - api-doc-helper: @done
+        - authorize array of helper classes in the config for DelegatingHelper to do its job --> new method in KaapiTools instead @done
     - zod validator @done
         - kapi app should have something like app.extensions() --> using app.base() decorators instead @done
         - extend() should give access to a method to expose callable API to extensions() --> using server.decorate (utilities) or server.method (reusable logic with caching) instead @done
