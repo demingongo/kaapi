@@ -79,7 +79,7 @@ export abstract class BaseValibotHelper implements BaseHelperInterface {
     }
 
     isValid(): boolean {
-        return !!(this._valibotSchema && this._schema.$schema)
+        return !!(this._valibotSchema && this._schema.$schema && Object.keys(this._schema).length > 1)
     }
     getType(): string {
         let r = ''

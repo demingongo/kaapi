@@ -11,11 +11,11 @@ export abstract class DelegatingHelper<T> {
         fallbackHelpers: Set<new (args: { isRoot?: boolean; value: unknown }) => T>,
         isValid: (helper: T) => boolean
     ) {
-        this.helper = new defaultHelper(args);
+        this.helper = new defaultHelper({ ...args });
 
         if (!isValid(this.helper)) {
             for (const HelperClass of fallbackHelpers) {
-                const candidate = new HelperClass(args);
+                const candidate = new HelperClass({ ...args });
                 if (isValid(candidate)) {
                     this.helper = candidate;
                     break;
@@ -30,6 +30,12 @@ export class OpenAPIMixHelper extends DelegatingHelper<OpenAPIHelperInterface> i
 
     constructor(args: { isRoot?: boolean; value: unknown }) {
         super(args, OpenAPIJoiHelper, OpenAPIMixHelper.helperClasses, h => h.isValid());
+        /*
+        console.log('==>', Object.getPrototypeOf(this.helper).constructor.name)
+        if (Object.getPrototypeOf(this.helper).constructor.name === '_OpenAPIArkHelper') {
+            console.log('===>', args)
+        }
+        */
     }
 
     getFirstItem() { return this.helper.getFirstItem(); }
