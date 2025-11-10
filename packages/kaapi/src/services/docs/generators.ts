@@ -125,7 +125,7 @@ export function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(serverRoutes:
                         }
                     }
 
-                    route.parameters = routeOptionsValidate ? { ...routeOptionsValidate, body: routeOptionsValidate.payload, files: files } : undefined
+                    route.parameters = routeOptionsValidate ? { ...routeOptionsValidate, body: routeOptionsValidate.payload, files: files } : {}
                     if (route.parameters && sRoute.options?.payload?.allow) {
                         route.parameters.consumes = Array.isArray(sRoute.options.payload.allow) ? sRoute.options.payload.allow : [sRoute.options.payload.allow];
                     }
@@ -213,7 +213,7 @@ export function formatRequestRoute<Refs extends ReqRef = ReqRefDefaults>(reqRout
                     }
                 }
 
-                route.parameters = routeOptionsValidate ? { ...routeOptionsValidate, body: routeOptionsValidate.payload, files: files } : undefined
+                route.parameters = routeOptionsValidate ? { ...routeOptionsValidate, body: routeOptionsValidate.payload, files: files } : {}
                 if (route.parameters && sRoute.settings?.payload?.allow) {
                     route.parameters.consumes = Array.isArray(sRoute.settings.payload.allow) ? sRoute.settings.payload.allow : [sRoute.settings.payload.allow];
                 }
