@@ -177,9 +177,18 @@ importers:
       '@kaapi/oauth2-auth-design':
         specifier: workspace:^
         version: link:../../packages/oauth2-auth-design
+      '@kaapi/validator-arktype':
+        specifier: workspace:^
+        version: link:../../packages/validator-arktype
+      '@kaapi/validator-valibot':
+        specifier: workspace:^
+        version: link:../../packages/validator-valibot
       '@novice1/api-doc-generator':
         specifier: ^1.0.2
         version: 1.0.2
+      arktype:
+        specifier: ^2.1.25
+        version: 2.1.25
       joi:
         specifier: ^18.0.1
         version: 18.0.1
@@ -691,6 +700,9 @@ importers:
       '@kaapi/kaapi':
         specifier: workspace:^
         version: link:../../packages/kaapi
+      '@kaapi/validator-arktype':
+        specifier: workspace:^
+        version: link:../../packages/validator-arktype
       '@kaapi/validator-valibot':
         specifier: workspace:^
         version: link:../../packages/validator-valibot
@@ -700,6 +712,9 @@ importers:
       '@valibot/to-json-schema':
         specifier: ^1.3.0
         version: 1.3.0(valibot@1.1.0(typescript@5.9.3))
+      arktype:
+        specifier: ^2.1.25
+        version: 2.1.25
       joi:
         specifier: ^18.0.1
         version: 18.0.1

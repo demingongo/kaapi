@@ -1,4 +1,4 @@
-import { ValidatorArkSchema, ValidatorArk } from './types';
+import { ValidatorArkSchema, ValidatorArk } from './types.js';
 
 declare module '@kaapi/kaapi' {
     interface PluginSpecificConfiguration {
@@ -10,4 +10,4 @@ declare module '@kaapi/kaapi' {
     }
 }
 
-export {};
+export { };

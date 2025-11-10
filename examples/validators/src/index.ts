@@ -5,8 +5,10 @@ import Joi from 'joi'
 import { BearerUtil } from '@novice1/api-doc-generator';
 import { Kaapi } from '@kaapi/kaapi';
 import { OpenAPIValibotHelper, validatorValibot } from '@kaapi/validator-valibot';
+import { validatorArk } from '@kaapi/validator-arktype';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { type } from 'arktype';
 
 const app = new Kaapi({
     port: 3000,
@@ -28,6 +30,7 @@ const app = new Kaapi({
     },
     docs: {
         disabled: false,
+        title: 'Validators (valibot)',
         security: new BearerUtil('mySecurityScheme')
     },
     routes: {
@@ -58,7 +61,7 @@ const schema = {
 
 async function start() {
 
-    await app.extend([validatorValibot, {
+    await app.extend([validatorValibot, validatorArk, {
         async integrate(t) {
             await t.server.register(inert)
         },
@@ -289,6 +292,16 @@ async function start() {
         if (tags.validation) {
             console.log(event);
         }
+    })
+
+    app.base().ark({
+        query: type({
+            bbl: 'string = "dreezy"'
+        })
+    }).route({
+        method: 'GET',
+        path: '/arktype',
+        handler: ({ query: { bbl } }) => `ok ${bbl}`
     })
 
     //app.refreshDocs()

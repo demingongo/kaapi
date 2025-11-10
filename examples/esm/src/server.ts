@@ -4,6 +4,8 @@ import logger from './drafts/logger';
 import { customAuthDesign } from './plugins/customAuthDesign';
 import { Kaapi } from '@kaapi/kaapi';
 import { randomBytes } from 'node:crypto';
+import { validatorArk } from '@kaapi/validator-arktype';
+import { validatorValibot } from '@kaapi/validator-valibot';
 
 export const app = new Kaapi({
     port: 3000,
@@ -49,7 +51,7 @@ app.base().ext('onPreHandler', (request, h) => {
     return h.continue;
 });
 
-await app.base().register(await import('@hapi/vision'));
+await app.extend([validatorArk, validatorValibot])
 
 await app.base().register(await import('@hapi/vision'));
 
