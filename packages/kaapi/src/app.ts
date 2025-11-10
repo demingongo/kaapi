@@ -259,8 +259,8 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
     route<Refs extends ReqRef = ReqRefDefaults>(
         serverRoute: KaapiServerRoute<Refs>,
         handler?: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>) {
-        const routesMeta = formatRoutes(serverRoute)
-        this.docs.openapi.add(routesMeta)
+        const { routes: routesMeta, extensions } = formatRoutes(serverRoute)
+        this.docs.openapi.addCustom(routesMeta, extensions)
         this.docs.postman.add(routesMeta)
         return super.route(serverRoute, handler)
     }
@@ -273,8 +273,8 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
 
         this.kaapiServer.base.table().forEach(
             v => {
-                const routesMeta = formatRequestRoute(v)
-                this.docs.openapi.add(routesMeta);
+                const { routes: routesMeta, extensions } = formatRequestRoute(v)
+                this.docs.openapi.addCustom(routesMeta, extensions);
                 this.docs.postman.add(routesMeta);
             }
         )
@@ -299,8 +299,8 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
         const tool: KaapiTools = {
             log: this.log,
             route<Refs extends ReqRef = ReqRefDefaults>(serverRoute: KaapiServerRoute<Refs>, handler?: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>) {
-                const routesMeta = formatRoutes(serverRoute)
-                getDocs().openapi.add(routesMeta)
+                const { routes: routesMeta, extensions } = formatRoutes(serverRoute)
+                getDocs().openapi.addCustom(routesMeta, extensions)
                 getDocs().postman.add(routesMeta)
                 getCurrentApp().server().route(serverRoute, handler)
                 return this

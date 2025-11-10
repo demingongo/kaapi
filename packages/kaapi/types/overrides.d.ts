@@ -21,6 +21,7 @@ declare module '@hapi/hapi' {
         story?: string;
         openAPIHelperClass?: KaapiOpenAPIHelperClass;
         helperSchemaProperty?: string;
+        openApiSchemaExtension?: object;
       } | false
     };
     [x: string]: unknown;

@@ -1,10 +1,11 @@
-import { OpenAPI, OpenAPIHelperClass, OpenAPIHelperInterface, OpenAPIOptions, Postman, PostmanHelperClass, PostmanOptions, ProcessedRoute } from '@novice1/api-doc-generator';
+import { OpenAPI, OpenAPIHelperClass, OpenAPIHelperInterface, OpenAPIOptions, OpenAPIResult, Postman, PostmanHelperClass, PostmanOptions, ProcessedRoute } from '@novice1/api-doc-generator';
 import { OpenAPIJoiHelper } from '@novice1/api-doc-generator/lib/generators/openapi/helpers/joiHelper';
 import { KaapiServerRoute } from '@kaapi/server';
 import { type RouteMeta } from '@novice1/routing';
 import { ReqRef, ReqRefDefaults, RequestRoute, RouteOptionsValidate } from '@hapi/hapi';
 import { JoiSchema } from '@novice1/api-doc-generator/lib/helpers/joiHelper';
 import { OpenAPIMixHelper, PostmanMixHelper } from './api-doc-mix-helpers';
+import { deepExtend } from './deep-extend';
 
 // declared in overrides.d.ts
 export interface KaapiOpenAPIHelperInterface extends OpenAPIHelperInterface {
@@ -49,7 +50,9 @@ class CustomHelper extends OpenAPIJoiHelper implements KaapiOpenAPIHelperInterfa
     }
 }
 
-export function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(serverRoutes: KaapiServerRoute<Refs>[] | KaapiServerRoute<Refs>): RouteMeta[] {
+export type OpenApiSchemaExtension = { path: string, method: string; definition: object }
+
+export function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(serverRoutes: KaapiServerRoute<Refs>[] | KaapiServerRoute<Refs>): { routes: RouteMeta[], extensions?: OpenApiSchemaExtension[] } {
 
     let sRoutes: KaapiServerRoute<Refs>[] = [];
 
@@ -60,6 +63,7 @@ export function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(serverRoutes:
     }
 
     const routes: RouteMeta[] = []
+    const extensions: OpenApiSchemaExtension[] = []
 
     sRoutes.forEach(sRoute => {
         // only string paths
@@ -133,6 +137,13 @@ export function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(serverRoutes:
                         if (sRoute.options.plugins.kaapi.docs.story) {
                             route.parameters.story = sRoute.options.plugins.kaapi?.docs.story
                         }
+                        if (sRoute.options.plugins.kaapi.docs.openApiSchemaExtension) {
+                            extensions.push({
+                                path: path,
+                                method: method.toLowerCase(),
+                                definition: sRoute.options.plugins.kaapi.docs.openApiSchemaExtension
+                            })
+                        }
                     }
                 }
 
@@ -143,29 +154,30 @@ export function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(serverRoutes:
         routes.push(...formattedRoutes)
     })
 
-    return routes
+    return { routes, extensions }
 }
 
-export function formatRequestRoute<Refs extends ReqRef = ReqRefDefaults>(reqRoute: RequestRoute<Refs>): RouteMeta[] {
+export function formatRequestRoute<Refs extends ReqRef = ReqRefDefaults>(reqRoute: RequestRoute<Refs>): { routes: RouteMeta[], extensions?: OpenApiSchemaExtension[] } {
 
     const sRoute: RequestRoute<Refs> = reqRoute;
 
     const routes: RouteMeta[] = []
+    const extensions: OpenApiSchemaExtension[] = []
 
     // only string paths
-    if (typeof sRoute.path != 'string') return routes
+    if (typeof sRoute.path != 'string') return { routes }
 
-    if (!sRoute.path) return routes
+    if (!sRoute.path) return { routes }
 
     const path = sRoute.path
 
     // require methods
-    if (!sRoute.method) return routes
+    if (!sRoute.method) return { routes }
 
     if (sRoute.settings &&
         typeof sRoute.settings === 'object' &&
         (sRoute.settings.plugins?.kaapi?.docs === false || sRoute.settings.plugins?.kaapi?.docs?.disabled)) {
-        return routes
+        return { routes }
     }
 
 
@@ -221,6 +233,13 @@ export function formatRequestRoute<Refs extends ReqRef = ReqRefDefaults>(reqRout
                     if (sRoute.settings.plugins.kaapi.docs.story) {
                         route.parameters.story = sRoute.settings.plugins.kaapi.docs.story
                     }
+                    if (sRoute.settings.plugins.kaapi.docs.openApiSchemaExtension) {
+                        extensions.push({
+                            path: path,
+                            method: method.toLowerCase(),
+                            definition: sRoute.settings.plugins.kaapi.docs.openApiSchemaExtension
+                        })
+                    }
                 }
             }
 
@@ -231,7 +250,7 @@ export function formatRequestRoute<Refs extends ReqRef = ReqRefDefaults>(reqRout
     routes.push(...formattedRoutes)
 
 
-    return routes
+    return { routes, extensions }
 }
 
 export interface KaapiDocGenerator {
@@ -242,11 +261,50 @@ export interface KaapiDocGenerator {
 
 export class KaapiOpenAPI extends OpenAPI implements KaapiDocGenerator {
 
+    protected routeExtensions: object = {}
+
     constructor(options?: OpenAPIOptions) {
         if (options?.helperClass) {
             OpenAPIMixHelper.helperClasses.add(options.helperClass)
         }
         super({ ...options, helperClass: OpenAPIMixHelper });
+    }
+
+    /**
+     * @override
+     */
+    removeAll(): ProcessedRoute[] {
+        this.routeExtensions = {}
+        return super.removeAll()
+    }
+
+    /**
+     * @override
+     */
+    result(): OpenAPIResult {
+        let result = super.result()
+        if (Object.keys(this.routeExtensions).length) {
+            result = deepExtend({}, result)
+            result = deepExtend(result, { paths: this.routeExtensions })
+        }
+        return result
+    }
+
+    extendRoute(path: string, method: string, definition: object) {
+        this.routeExtensions = deepExtend(this.routeExtensions, {
+            [path]: {
+                [method.toLowerCase()]: definition
+            }
+        })
+    }
+
+    addCustom(routes: RouteMeta[], extensions?: OpenApiSchemaExtension[]): ProcessedRoute[] {
+        if (extensions) {
+            for (const o of extensions) {
+                this.extendRoute(o.path, o.method, o.definition)
+            }
+        }
+        return super.add(routes)
     }
 
     addHelperClass(helperClass: OpenAPIHelperClass) {
@@ -258,11 +316,13 @@ export class KaapiOpenAPI extends OpenAPI implements KaapiDocGenerator {
     }
 
     addRoutes<Refs extends ReqRef = ReqRefDefaults>(serverRoutes: KaapiServerRoute<Refs>[] | KaapiServerRoute<Refs>): ProcessedRoute[] {
-        return super.add(formatRoutes(serverRoutes))
+        const { routes } = formatRoutes(serverRoutes)
+        return super.add(routes)
     }
 
     addRequestRoute<Refs extends ReqRef = ReqRefDefaults>(reqRoute: RequestRoute<Refs>): ProcessedRoute[] {
-        return super.add(formatRequestRoute(reqRoute))
+        const { routes } = formatRequestRoute(reqRoute)
+        return super.add(routes)
     }
 }
 
@@ -284,10 +344,12 @@ export class KaapiPostman extends Postman implements KaapiDocGenerator {
     }
 
     addRoutes<Refs extends ReqRef = ReqRefDefaults>(serverRoutes: KaapiServerRoute<Refs>[] | KaapiServerRoute<Refs>): ProcessedRoute[] {
-        return super.add(formatRoutes(serverRoutes))
+        const { routes } = formatRoutes(serverRoutes)
+        return super.add(routes)
     }
 
     addRequestRoute<Refs extends ReqRef = ReqRefDefaults>(reqRoute: RequestRoute<Refs>): ProcessedRoute[] {
-        return super.add(formatRequestRoute(reqRoute))
+        const { routes } = formatRequestRoute(reqRoute)
+        return super.add(routes)
     }
 }

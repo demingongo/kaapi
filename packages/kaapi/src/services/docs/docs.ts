@@ -74,7 +74,7 @@ export function createDocsRouter<Refs extends ReqRef = ReqRefDefaults>(
         (req, h) => {
             if (req.url.pathname == path) {
                 const html = ui.generateHTML(
-                    openapi.result(), 
+                    openapi.result(),
                     options?.swagger,
                     options?.swagger?.swaggerOptions,
                     options?.swagger?.customCss,
@@ -84,9 +84,9 @@ export function createDocsRouter<Refs extends ReqRef = ReqRefDefaults>(
                 )
                 return h.response(html).header('Content-Type', 'text/html');
             } else if (req.url.pathname == `${path}${path.endsWith('/') ? '' : '/'}schema`) {
-                if (req.query && 
-                    typeof req.query === 'object' && 
-                    'format' in req.query && 
+                if (req.query &&
+                    typeof req.query === 'object' &&
+                    'format' in req.query &&
                     req.query.format == 'postman') {
                     return postman.result()
                 }

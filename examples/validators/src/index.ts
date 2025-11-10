@@ -12,6 +12,8 @@ import { validatorArk } from '@kaapi/validator-arktype';
 import { validatorValibot } from '@kaapi/validator-valibot';
 import { validatorZod } from '@kaapi/validator-zod';
 import Stream from 'node:stream';
+import busboy from 'busboy'
+import fs from 'node:fs';
 
 const app = new Kaapi({
     port: 3000,
@@ -211,6 +213,86 @@ async function start() {
             }
         }
     }, ({ payload: { file } }, h) => h.response(file._data).type(file.hapi.headers['content-type']));
+
+    app.route(
+        {
+            method: 'POST',
+            path: '/upload-image-busboy',
+            options: {
+                tags: ['busboy'],
+                description: 'Upload an image',
+                payload: {
+                    output: 'stream',
+                    parse: false,
+                    allow: 'multipart/form-data',
+                    multipart: { output: 'stream' },
+                    maxBytes: 1024 * 3000, // 3MB
+                },
+                plugins: {
+                    kaapi: {
+                        docs: {
+                            story: '**Real stream handling with busboy**',
+                            // it definitly looks ugly but it is necessary for the sake of the documentation while fine graining the the control with no validator
+                            openApiSchemaExtension: {
+                                requestBody: {
+                                    content: {
+                                        'multipart/form-data': {
+                                            schema: {
+                                                type: 'object',
+                                                properties: {
+                                                    username: {
+                                                        type: 'string',
+                                                        description: 'The name of the user',
+                                                        format: 'email'
+                                                    },
+                                                    file: {
+                                                        type: 'string',
+                                                        description: 'The image to upload',
+                                                        format: 'binary'
+                                                    }
+                                                },
+                                                required: [
+                                                    'file'
+                                                ]
+                                            }
+                                        }
+                                    },
+                                    required: true
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+        },
+        async (request, h) => {
+            const bb = busboy({ headers: request.headers });
+
+            let savedFilename = ''
+
+            const promise = new Promise<void>((resolve, _reject) => {
+                bb.on('file', (fieldname, file, info) => {
+                    const { filename, encoding, mimeType } = info;
+                    console.log(`File [${fieldname}]: filename: %j, encoding: %j, mimeType: %j`, filename, encoding, mimeType);
+                    savedFilename = filename
+                    file.pipe(fs.createWriteStream(`./uploads/${filename}`));
+                });
+                bb.on('field', (name, val, _info) => {
+                    console.log(`Field [${name}]: value: %j`, val);
+                });
+                bb.on('close', () => {
+                    console.log('Done parsing form!');
+                    resolve()
+                });
+            })
+
+            request.raw.req.pipe(bb);
+
+            await promise;
+
+            return h.file(savedFilename)
+        }
+    );
 
     //app.refreshDocs()
 
