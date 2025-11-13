@@ -112,6 +112,7 @@ export function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(
                 if (typeof sRoute.options != 'function') {
                     route.tags = sRoute.options?.tags
                     route.description = sRoute.options?.description
+                    route.name = route.description
 
                     const pluginKaapiDocs = typeof sRoute.options?.plugins?.kaapi?.docs === 'object' ? sRoute.options.plugins.kaapi.docs : {}
                     const schemaProp = pluginKaapiDocs.helperSchemaProperty
@@ -251,6 +252,7 @@ export function formatRequestRoute<Refs extends ReqRef = ReqRefDefaults>(
             if (typeof sRoute.settings != 'function') {
                 route.tags = sRoute.settings?.tags
                 route.description = sRoute.settings?.description
+                route.name = route.description
 
                 const pluginKaapiDocs = typeof sRoute.settings?.plugins?.kaapi?.docs === 'object' ? sRoute.settings.plugins.kaapi.docs : {}
                 const schemaProp = pluginKaapiDocs.helperSchemaProperty

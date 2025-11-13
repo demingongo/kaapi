@@ -154,7 +154,7 @@ const authDesign = OIDCAuthorizationCodeBuilder.create()
 const app = new Kaapi({
     port: 3000,
     host: 'localhost',
-    docs: { path: '/docs/api', host: { url: 'http://localhost:3000' } },
+    docs: { path: '/docs/api', host: { url: 'http://localhost:3000' }, title: 'examples-auth-designs' },
 });
 
 // Extend app with grouped auth strategies
@@ -175,10 +175,10 @@ app.extend(authDesign).then(
             method: 'GET',
             path: '/greetings',
             auth: true,
-            options: { auth: { access: { entity: 'user', scope: ['read'] } } },
+            options: { auth: { access: { entity: 'user', scope: ['read'] } }, description: 'Greetings', notes: ['gbbb'] },
         }, req => `Hello ${req.auth.credentials.user?.id} in ${req.auth.credentials.user?.clientId}`);
 
-        app.refreshDocs()
+        //app.refreshDocs()
 
     },
     app.log.error

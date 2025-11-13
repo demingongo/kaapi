@@ -37,6 +37,7 @@
             - Confirm schema metadata is reflected in generated docs @done
 
 - @kaapi/kaapi
+    - documentation name, description, notes, plugin...story,... TOO MUCH. Need to define what is what for OpenAPI and for Postman.
     - security by route (strategy and scopes) in routeMeta (docs) @done
         - => limited to max one access config by route and default config should be set before registering route or else refreshDocs is necessary @done
     - api-doc-helper: @done
