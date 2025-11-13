@@ -35,7 +35,7 @@
     "@hapi/inert": "^7.1.0",
     "@kaapi/kaapi": "workspace:^",
     "@kaapi/validator-zod": "workspace:^",
-    "@novice1/api-doc-generator": "^1.0.2",
+    "@novice1/api-doc-generator": "^1.1.1",
     "@novice1/api-doc-zod-helper": "^0.1.8",
     "joi": "^18.0.1",
     "tslib": "^2.8.1",
