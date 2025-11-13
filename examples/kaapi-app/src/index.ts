@@ -237,21 +237,15 @@ app.route<{ Params: { filename?: string } }>({
     path: '/public/{filename*}',
     options: {
         description: 'get public file',
+        notes: [
+            '_Notes:_',
+            '- __Not recommended because the documentation does not understand paths with "*".__'
+        ],
         tags: ['Index'],
         validate: {
             params: Joi.object({
                 filename: Joi.string().description('The name of the file').required()
             })
-        },
-        plugins: {
-            kaapi: {
-                docs: {
-                    story: `_Notes:_
-
-- __Not recommended because the documentation does not understand paths with "*".__
-                    `
-                }
-            }
         }
     }
 }, ({ params: { filename } }, h) => {

@@ -137,13 +137,18 @@ export function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(
                     }
 
                     route.parameters = routeOptionsValidate ? { ...routeOptionsValidate, body: routeOptionsValidate.payload, files: files } : {}
+                    if (sRoute.options?.notes) {
+                        route.parameters.descriptionType = 'text/markdown'
+                        if (Array.isArray(sRoute.options.notes)) {
+                            route.parameters.story = sRoute.options.notes.join('\n\n')
+                        } else {
+                            route.parameters.story = sRoute.options.notes
+                        }
+                    }
                     if (sRoute.options?.payload?.allow) {
                         route.parameters.consumes = Array.isArray(sRoute.options.payload.allow) ? sRoute.options.payload.allow : [sRoute.options.payload.allow];
                     }
                     if (typeof sRoute.options?.plugins?.kaapi?.docs === 'object') {
-                        if (sRoute.options.plugins.kaapi.docs.story) {
-                            route.parameters.story = sRoute.options.plugins.kaapi?.docs.story
-                        }
                         if (sRoute.options.plugins.kaapi.docs.openApiSchemaExtension) {
                             extensions.push({
                                 path: path,
@@ -277,13 +282,18 @@ export function formatRequestRoute<Refs extends ReqRef = ReqRefDefaults>(
                 }
 
                 route.parameters = routeOptionsValidate ? { ...routeOptionsValidate, body: routeOptionsValidate.payload, files: files } : {}
+                if (sRoute.settings?.notes) {
+                    route.parameters.descriptionType = 'text/markdown'
+                    if (Array.isArray(sRoute.settings.notes)) {
+                        route.parameters.story = sRoute.settings.notes.join('\n\n')
+                    } else {
+                        route.parameters.story = sRoute.settings.notes
+                    }
+                }
                 if (route.parameters && sRoute.settings?.payload?.allow) {
                     route.parameters.consumes = Array.isArray(sRoute.settings.payload.allow) ? sRoute.settings.payload.allow : [sRoute.settings.payload.allow];
                 }
                 if (route.parameters && typeof sRoute.settings.plugins?.kaapi?.docs === 'object') {
-                    if (sRoute.settings.plugins.kaapi.docs.story) {
-                        route.parameters.story = sRoute.settings.plugins.kaapi.docs.story
-                    }
                     if (sRoute.settings.plugins.kaapi.docs.openApiSchemaExtension) {
                         extensions.push({
                             path: path,

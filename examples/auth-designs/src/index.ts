@@ -173,9 +173,16 @@ app.extend(authDesign).then(
         // === Restricted Route Example ===
         app.route<{ AuthUser: { id: string, clientId: string } }>({
             method: 'GET',
-            path: '/greetings',
+            path: '/greetings/{id}',
             auth: true,
-            options: { auth: { access: { entity: 'user', scope: ['read'] } }, description: 'Greetings', notes: ['gbbb'] },
+            options: {
+                auth: { access: { entity: 'user', scope: ['read'] } },
+                description: 'Greetings',
+                notes: [
+                    '_Notes:_',
+                    '__Not recommended because the documentation does not understand paths with "*".__'
+                ]
+            },
         }, req => `Hello ${req.auth.credentials.user?.id} in ${req.auth.credentials.user?.clientId}`);
 
         //app.refreshDocs()

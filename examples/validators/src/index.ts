@@ -221,6 +221,7 @@ async function start() {
             options: {
                 tags: ['busboy'],
                 description: 'Upload an image',
+                notes: '**Real stream handling with busboy**',
                 payload: {
                     output: 'stream',
                     parse: false,
@@ -231,7 +232,6 @@ async function start() {
                 plugins: {
                     kaapi: {
                         docs: {
-                            story: '**Real stream handling with busboy**',
                             // it definitly looks ugly but it is necessary for the sake of the documentation while fine graining the the control with no validator
                             openApiSchemaExtension: {
                                 requestBody: {

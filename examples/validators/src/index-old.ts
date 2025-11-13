@@ -220,17 +220,11 @@ async function start() {
         auth: false,
         options: {
             description: 'get uploaded file',
-            tags: ['Index'],
-            plugins: {
-                kaapi: {
-                    docs: {
-                        story: `_Notes:_
-
-- __Not recommended because the documentation does not understand paths with "*".__
-                    `
-                    }
-                }
-            }
+            notes: [
+                '_Notes:_',
+                '- __Not recommended because the documentation does not understand paths with "*".__'
+            ],
+            tags: ['Index']
         }
     }, {
         directory: {
