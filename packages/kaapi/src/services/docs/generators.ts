@@ -1,11 +1,13 @@
-import { OpenAPI, OpenAPIHelperClass, OpenAPIHelperInterface, OpenAPIOptions, OpenAPIResult, Postman, PostmanHelperClass, PostmanOptions, ProcessedRoute } from '@novice1/api-doc-generator';
+import { ContextAuthUtil, GroupContextAuthUtil, OpenAPI, OpenAPIHelperClass, OpenAPIHelperInterface, OpenAPIOptions, OpenAPIResult, Postman, PostmanHelperClass, PostmanOptions, ProcessedRoute } from '@novice1/api-doc-generator';
 import { OpenAPIJoiHelper } from '@novice1/api-doc-generator/lib/generators/openapi/helpers/joiHelper';
 import { KaapiServerRoute } from '@kaapi/server';
 import { type RouteMeta } from '@novice1/routing';
-import { ReqRef, ReqRefDefaults, RequestRoute, RouteOptionsValidate } from '@hapi/hapi';
+import { AccessSetting, ReqRef, ReqRefDefaults, RequestRoute, RouteOptionsAccessObject, RouteOptionsAccessScope, RouteOptionsValidate, ServerAuthConfig } from '@hapi/hapi';
 import { JoiSchema } from '@novice1/api-doc-generator/lib/helpers/joiHelper';
 import { OpenAPIMixHelper, PostmanMixHelper } from './api-doc-mix-helpers';
 import { deepExtend } from './deep-extend';
+import { BaseAuthUtil, BaseOpenAPIAuthUtil } from '@novice1/api-doc-generator/lib/utils/auth/baseAuthUtils';
+import { ReferenceObject, SecuritySchemeObject } from '@novice1/api-doc-generator/lib/generators/openapi/definitions';
 
 // declared in overrides.d.ts
 export interface KaapiOpenAPIHelperInterface extends OpenAPIHelperInterface {
@@ -52,7 +54,11 @@ class CustomHelper extends OpenAPIJoiHelper implements KaapiOpenAPIHelperInterfa
 
 export type OpenApiSchemaExtension = { path: string, method: string; definition: object }
 
-export function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(serverRoutes: KaapiServerRoute<Refs>[] | KaapiServerRoute<Refs>): { routes: RouteMeta[], extensions?: OpenApiSchemaExtension[] } {
+export function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(
+    serverRoutes: KaapiServerRoute<Refs>[] | KaapiServerRoute<Refs>,
+    securitySchemes?: Map<string, BaseAuthUtil>,
+    authConfigDefault?: ServerAuthConfig
+): { routes: RouteMeta[], extensions?: OpenApiSchemaExtension[] } {
 
     let sRoutes: KaapiServerRoute<Refs>[] = [];
 
@@ -130,10 +136,10 @@ export function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(serverRoutes:
                     }
 
                     route.parameters = routeOptionsValidate ? { ...routeOptionsValidate, body: routeOptionsValidate.payload, files: files } : {}
-                    if (route.parameters && sRoute.options?.payload?.allow) {
+                    if (sRoute.options?.payload?.allow) {
                         route.parameters.consumes = Array.isArray(sRoute.options.payload.allow) ? sRoute.options.payload.allow : [sRoute.options.payload.allow];
                     }
-                    if (route.parameters && typeof sRoute.options?.plugins?.kaapi?.docs === 'object') {
+                    if (typeof sRoute.options?.plugins?.kaapi?.docs === 'object') {
                         if (sRoute.options.plugins.kaapi.docs.story) {
                             route.parameters.story = sRoute.options.plugins.kaapi?.docs.story
                         }
@@ -143,6 +149,45 @@ export function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(serverRoutes:
                                 method: method.toLowerCase(),
                                 definition: sRoute.options.plugins.kaapi.docs.openApiSchemaExtension
                             })
+                        }
+                    }
+                    // route security
+                    if (sRoute.options?.auth && typeof sRoute.options.auth === 'object' && securitySchemes) {
+                        let strategies: string[] = sRoute.options.auth.strategy ?
+                            [sRoute.options.auth.strategy] :
+                            (sRoute.options.auth.strategies?.length ? sRoute.options.auth.strategies : []);
+
+                        if (!strategies.length && authConfigDefault) {
+                            strategies = authConfigDefault.strategy ?
+                                [authConfigDefault.strategy] :
+                                (authConfigDefault.strategies?.length ? authConfigDefault.strategies : []);
+                        }
+
+                        if (strategies.length && securitySchemes) {
+                            const schemes = strategies
+                                .filter(s => securitySchemes.has(s))
+                                .map(s => securitySchemes.get(s)!);
+                            if (schemes.length) {
+                                let hapiScopes: RouteOptionsAccessScope = sRoute.options.auth.scope ||
+                                    (sRoute.options.auth.access && 'scope' in sRoute.options.auth.access ? sRoute.options.auth.access.scope : false);
+                                if (!hapiScopes) {
+                                    const accessSettings: RouteOptionsAccessObject[] = sRoute.options.auth.access ?
+                                        (Array.isArray(sRoute.options.auth.access) ? sRoute.options.auth.access : [sRoute.options.auth.access]) : [];
+                                    if (accessSettings.length === 1) {
+                                        const accessObject = accessSettings[0]
+                                        if ('scope' in accessObject) {
+                                            hapiScopes = accessObject.scope
+                                        }
+                                    }
+                                }
+                                const routeScopes = typeof hapiScopes === 'string' ?
+                                    [hapiScopes] :
+                                    (Array.isArray(hapiScopes) ? hapiScopes : undefined);
+                                const security = new GroupContextAuthUtil(
+                                    schemes.map(v => routeScopes?.length ? new ContextAuthUtil(v, routeScopes) : v)
+                                );
+                                route.parameters.security = security
+                            }
                         }
                     }
                 }
@@ -157,7 +202,11 @@ export function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(serverRoutes:
     return { routes, extensions }
 }
 
-export function formatRequestRoute<Refs extends ReqRef = ReqRefDefaults>(reqRoute: RequestRoute<Refs>): { routes: RouteMeta[], extensions?: OpenApiSchemaExtension[] } {
+export function formatRequestRoute<Refs extends ReqRef = ReqRefDefaults>(
+    reqRoute: RequestRoute<Refs>,
+    securitySchemes?: Map<string, BaseAuthUtil>,
+    authConfigDefault?: ServerAuthConfig
+): { routes: RouteMeta[], extensions?: OpenApiSchemaExtension[] } {
 
     const sRoute: RequestRoute<Refs> = reqRoute;
 
@@ -241,6 +290,35 @@ export function formatRequestRoute<Refs extends ReqRef = ReqRefDefaults>(reqRout
                         })
                     }
                 }
+                // route security
+                if (sRoute.settings?.auth && typeof sRoute.settings.auth === 'object' && securitySchemes) {
+                    let strategies: string[] = sRoute.settings.auth.strategies;
+
+                    if (!strategies.length && authConfigDefault) {
+                        strategies = authConfigDefault.strategy ?
+                            [authConfigDefault.strategy] :
+                            (authConfigDefault.strategies?.length ? authConfigDefault.strategies : []);
+                    }
+
+                    if (strategies.length && securitySchemes) {
+                        const schemes = strategies
+                            .filter(s => securitySchemes.has(s))
+                            .map(s => securitySchemes.get(s)!);
+                        if (schemes.length) {
+                            let routeScopes: string[] | undefined = []
+                            const accessSettings: AccessSetting[] = sRoute.settings.auth.access || [];
+                            if (accessSettings.length === 1) {
+                                if (typeof accessSettings[0].scope === 'object') {
+                                    routeScopes = accessSettings[0].scope.selection
+                                }
+                            }
+                            const security = new GroupContextAuthUtil(
+                                schemes.map(v => routeScopes?.length ? new ContextAuthUtil(v, routeScopes) : v)
+                            );
+                            route.parameters.security = security
+                        }
+                    }
+                }
             }
 
             return route;
@@ -263,11 +341,42 @@ export class KaapiOpenAPI extends OpenAPI implements KaapiDocGenerator {
 
     protected routeExtensions: object = {}
 
+    /**
+     * Used when formatting routes (security by route).
+     * 
+     * Useful for Postman collection. 
+     * As Postman is more of a testing tool than specs definition, it seems logical to keep it here
+     * (Postman generator does not have "addSecurityScheme" like method).
+     */
+    protected securitySchemeUtils: Record<string, BaseAuthUtil> = {}
+
     constructor(options?: OpenAPIOptions) {
         if (options?.helperClass) {
             OpenAPIMixHelper.helperClasses.add(options.helperClass)
         }
         super({ ...options, helperClass: OpenAPIMixHelper });
+    }
+
+    /**
+     * @override
+     */
+    addSecurityScheme(
+        name: BaseOpenAPIAuthUtil | BaseAuthUtil | string,
+        schema?: ReferenceObject | SecuritySchemeObject
+    ): this {
+        if (typeof name === 'string') {
+            if (schema)
+                super.addSecurityScheme(name, schema)
+        } else {
+            super.addSecurityScheme(name)
+            if (name instanceof BaseAuthUtil) {
+                // keep it to use when formatting routes (security by route)
+                // mostly useful for Postman but as Postman cannot contain all specs
+                // we keep it here
+                this.securitySchemeUtils[Object.keys(name.toOpenAPI())[0]] = name;
+            }
+        }
+        return this
     }
 
     /**
@@ -307,6 +416,14 @@ export class KaapiOpenAPI extends OpenAPI implements KaapiDocGenerator {
         return super.add(routes)
     }
 
+    getSecuritySchemeUtils(): Map<string, BaseAuthUtil> {
+        return new Map<string, BaseAuthUtil>(Object.entries(this.securitySchemeUtils))
+    }
+
+    getSecuritySchemeUtil(name: string): BaseAuthUtil | undefined {
+        return this.securitySchemeUtils[name]
+    }
+
     addHelperClass(helperClass: OpenAPIHelperClass) {
         OpenAPIMixHelper.helperClasses.add(helperClass)
     }
@@ -316,12 +433,12 @@ export class KaapiOpenAPI extends OpenAPI implements KaapiDocGenerator {
     }
 
     addRoutes<Refs extends ReqRef = ReqRefDefaults>(serverRoutes: KaapiServerRoute<Refs>[] | KaapiServerRoute<Refs>): ProcessedRoute[] {
-        const { routes } = formatRoutes(serverRoutes)
+        const { routes } = formatRoutes(serverRoutes, this.getSecuritySchemeUtils())
         return super.add(routes)
     }
 
     addRequestRoute<Refs extends ReqRef = ReqRefDefaults>(reqRoute: RequestRoute<Refs>): ProcessedRoute[] {
-        const { routes } = formatRequestRoute(reqRoute)
+        const { routes } = formatRequestRoute(reqRoute, this.getSecuritySchemeUtils())
         return super.add(routes)
     }
 }

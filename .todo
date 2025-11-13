@@ -37,6 +37,8 @@
             - Confirm schema metadata is reflected in generated docs @done
 
 - @kaapi/kaapi
+    - security by route (strategy and scopes) in routeMeta (docs) @done
+        - => limited to max one access config by route and default config should be set before registering route or else refreshDocs is necessary @done
     - api-doc-helper: @done
         - authorize array of helper classes in the config for DelegatingHelper to do its job --> new method in KaapiTools instead @done
     - zod validator @done
