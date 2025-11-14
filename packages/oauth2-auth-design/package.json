@@ -1,6 +1,6 @@
 {
   "name": "@kaapi/oauth2-auth-design",
-  "version": "0.0.22",
+  "version": "0.0.23",
   "private": false,
   "description": "OAuth2 auth design for kaapi",
   "main": "lib/index.js",
@@ -44,7 +44,7 @@
     "@hapi/hoek": "^11.0.7",
     "@kaapi/cli": "workspace:^",
     "@kaapi/kaapi": "workspace:^",
-    "@novice1/api-doc-generator": "^1.1.1",
+    "@novice1/api-doc-generator": "^1.1.2",
     "html-entities": "^2.6.0",
     "jose": "^6.0.13",
     "jwk-to-pem": "^2.0.7",

@@ -14,6 +14,7 @@ import { validatorZod } from '@kaapi/validator-zod';
 import Stream from 'node:stream';
 import busboy from 'busboy'
 import fs from 'node:fs';
+import { SchemaObject3_1 } from '@novice1/api-doc-generator/lib/generators/openapi/definitions';
 
 const app = new Kaapi({
     port: 3000,
@@ -214,6 +215,24 @@ async function start() {
         }
     }, ({ payload: { file } }, h) => h.response(file._data).type(file.hapi.headers['content-type']));
 
+    const fileFieldSchema: SchemaObject3_1 = {
+        type: 'object',
+        properties: {
+            username: {
+                type: 'string',
+                description: 'The name of the user',
+                format: 'email'
+            },
+            file: {
+                type: 'string',
+                description: 'The image to upload',
+                contentMediaType: 'application/octet-stream'
+            }
+        },
+        required: [
+            'file'
+        ],
+    }
     app.route(
         {
             method: 'POST',
@@ -237,24 +256,7 @@ async function start() {
                                 requestBody: {
                                     content: {
                                         'multipart/form-data': {
-                                            schema: {
-                                                type: 'object',
-                                                properties: {
-                                                    username: {
-                                                        type: 'string',
-                                                        description: 'The name of the user',
-                                                        format: 'email'
-                                                    },
-                                                    file: {
-                                                        type: 'string',
-                                                        description: 'The image to upload',
-                                                        format: 'binary'
-                                                    }
-                                                },
-                                                required: [
-                                                    'file'
-                                                ]
-                                            }
+                                            schema: fileFieldSchema
                                         }
                                     },
                                     required: true

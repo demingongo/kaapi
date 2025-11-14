@@ -1,6 +1,6 @@
 {
   "name": "@kaapi/kaapi",
-  "version": "0.0.22",
+  "version": "0.0.23",
   "private": false,
   "description": "TypeScript-based framework",
   "main": "lib/index.js",
@@ -31,7 +31,7 @@
     "@hapi/hoek": "^11.0.7",
     "@hapi/inert": "^7.1.0",
     "@kaapi/server": "workspace:^",
-    "@novice1/api-doc-generator": "^1.1.1",
+    "@novice1/api-doc-generator": "^1.1.2",
     "@novice1/routing": "^2.0.2",
     "qs": "^6.14.0",
     "swagger-ui-dist": "^5.27.1",
