@@ -241,7 +241,7 @@ describe('ValidatorZod Edge Cases', () => {
                                 },
                                 picture: {
                                     type: 'string',
-                                    format: 'binary'
+                                    contentMediaType: 'application/octet-stream'
                                 }
                             },
                             required: ['username', 'picture']
