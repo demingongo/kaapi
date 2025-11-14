@@ -40,9 +40,9 @@ export type AuthCode = InMemoryData & {
     clientId: string;
     user: string;
     expiresAt: number;
-    scope?: string;
-    codeChallenge?: string;
-    nonce?: string;
+    scope?: string | undefined;
+    codeChallenge?: string | undefined;
+    nonce?: string | undefined;
 }
 
 export class InMemoryUsers extends InMemoryCollection<User> {
