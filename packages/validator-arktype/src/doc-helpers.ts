@@ -1,6 +1,6 @@
 import type { KaapiOpenAPIHelperInterface } from '@kaapi/kaapi';
 import { OpenAPIJsonHelper, PostmanJsonHelper } from '@novice1/api-doc-json-helper';
-import type { Type, JsonSchema } from 'arktype';
+import { type, Type, type JsonSchema } from 'arktype';
 
 function transformValue(value?: Type | object | unknown) {
     let r: unknown = value;
@@ -40,6 +40,7 @@ function transformValue(value?: Type | object | unknown) {
 }
 
 export class OpenAPIArkHelper extends OpenAPIJsonHelper implements KaapiOpenAPIHelperInterface {
+    protected _originalSchema?: Type
     constructor(
         params: {
             value?: Type | object | unknown;
@@ -48,6 +49,9 @@ export class OpenAPIArkHelper extends OpenAPIJsonHelper implements KaapiOpenAPIH
         isRequired?: boolean
     ) {
         super({ ...params, value: transformValue(params.value) }, isRequired);
+        if (params.value instanceof Type) {
+            this._originalSchema = params.value
+        }
     }
     isValid(): boolean {
         return !!(
@@ -113,12 +117,34 @@ export class OpenAPIArkHelper extends OpenAPIJsonHelper implements KaapiOpenAPIH
         const schema = this._schema;
         if ('properties' in schema && typeof schema.properties === 'object' && schema.properties) {
             const properties: Record<string, unknown> = schema.properties as Record<string, unknown>;
-            for (const p in properties) {
-                const isRequired: boolean =
-                    'required' in schema && Array.isArray(schema.required) && schema.required.includes(p);
-                const ch = new OpenAPIArkHelper({ value: properties[p] }, isRequired);
-                if (ch.isFile()) {
-                    r[p] = properties[p];
+            if (this._originalSchema) {
+                const betterR: Record<string, Type> = {}
+                for (const p in properties) {
+                    const isRequired: boolean =
+                        'required' in schema && Array.isArray(schema.required) && schema.required.includes(p);
+                    const ch = new OpenAPIArkHelper({ value: properties[p] }, isRequired);
+                    if (ch.isFile()) {
+                        const propOriginalSchema = (this._originalSchema as Type<Record<string, unknown>>)?.props?.find(v => v.key === p)
+                        if (propOriginalSchema) {
+                            let key = p;
+                            if (!isRequired) {
+                                key = `${p}?` // set it as optional
+                            }
+                            betterR[key] = propOriginalSchema.value
+                        }
+                    }
+                }
+                if (Object.keys(betterR).length) {
+                    return type<unknown, Type<typeof betterR>>(betterR) as unknown as Record<string, unknown>
+                }
+            } else {
+                for (const p in properties) {
+                    const isRequired: boolean =
+                        'required' in schema && Array.isArray(schema.required) && schema.required.includes(p);
+                    const ch = new OpenAPIArkHelper({ value: properties[p] }, isRequired);
+                    if (ch.isFile()) {
+                        r[p] = properties[p];
+                    }
                 }
             }
         }

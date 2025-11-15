@@ -85,7 +85,7 @@ async function start() {
                             'content-type': '\'image/jpeg\' | \'image/jpg\' | \'image/png\'',
                         },
                     }),
-                }),
+                }, '@', 'The file if nothing else'),
             }),
         })
         .route(
