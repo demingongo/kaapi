@@ -112,6 +112,22 @@ export class OpenAPIArkHelper extends OpenAPIJsonHelper implements KaapiOpenAPIH
         }
         return r;
     }
+    isRequired(): boolean {
+        let r = super.isRequired()
+        if (!r && this._originalSchema) {
+            const schema = this._schema;
+            if ('required' in schema &&
+                Array.isArray(schema.required) &&
+                'properties' in schema &&
+                typeof schema.properties === 'object' &&
+                schema.properties &&
+                schema.required.length === Object.keys(schema.properties).length
+            ) {
+                r = true
+            }
+        }
+        return r;
+    }
     getFilesChildren(): Record<string, unknown> {
         const r: Record<string, unknown> = {};
         const schema = this._schema;
