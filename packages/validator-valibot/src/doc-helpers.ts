@@ -104,7 +104,7 @@ export abstract class BaseValibotHelper implements BaseHelperInterface {
         return r;
     }
     isRequired(): boolean {
-        return this._isRequired || (this.getType() === 'object' && !this.hasOptionalWrapper())
+        return this._isRequired || (/*this.getType() === 'object' &&*/ !this.hasOptionalWrapper())
     }
     isUnique(): boolean {
         return !!('uniqueItems' in this._schema && this._schema.uniqueItems)
@@ -193,6 +193,16 @@ export abstract class BaseValibotHelper implements BaseHelperInterface {
         }
         return ''
     }
+
+    getMostInnerRawSchema() {
+        let r = this._valibotSchema
+
+        while (r && 'wrapped' in r) {
+            r = r.wrapped
+        }
+
+        return r
+    }
 }
 
 /**
@@ -208,16 +218,6 @@ export class OpenAPIValibotHelper extends BaseValibotHelper implements OpenAPIHe
 
     getRawSchema() {
         return this._valibotSchema
-    }
-
-    getMostInnerRawSchema() {
-        let r = this._valibotSchema
-
-        while (r && 'wrapped' in r) {
-            r = r.wrapped
-        }
-
-        return r
     }
 
     getFilesChildren(): Record<string, unknown> {
@@ -370,8 +370,9 @@ export class PostmanValibotHelper extends BaseValibotHelper implements PostmanHe
     getChildren(): Record<string, PostmanValibotHelper> {
         const r: Record<string, PostmanValibotHelper> = {};
         const schema = this._schema
-        if ('properties' in schema && typeof schema.properties === 'object' && schema.properties) {
-            const properties: Record<string, unknown> = schema.properties as Record<string, unknown>
+        const vSchema = this.getMostInnerRawSchema()
+        if (vSchema && 'entries' in vSchema && typeof vSchema.entries === 'object' && vSchema.entries) {
+            const properties: Record<string, unknown> = vSchema.entries as Record<string, unknown>
             for (const p in properties) {
                 const isRequired: boolean = 'required' in schema && Array.isArray(schema.required) && schema.required.includes(p)
                 r[p] = new PostmanValibotHelper({ value: properties[p] }, isRequired)

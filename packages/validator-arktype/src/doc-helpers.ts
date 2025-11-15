@@ -140,6 +140,7 @@ export class PostmanArkHelper extends PostmanJsonHelper {
         return !!(
             this._schema &&
             typeof this._schema === 'object' &&
+            !('~standard' in this._schema) &&
             (('type' in this._schema && typeof this._schema.type === 'string') ||
                 ('oneOf' in this._schema && Array.isArray(this._schema.oneOf)) ||
                 ('anyOf' in this._schema && Array.isArray(this._schema.anyOf)) ||

@@ -203,7 +203,7 @@ async function start() {
                             }).unknown(true)
                         }).unknown(true)
                     }).unknown(true).required().tag('files') // 👈 tag required for docs
-                })
+                }).required()
             },
             payload: {
                 output: 'stream',
