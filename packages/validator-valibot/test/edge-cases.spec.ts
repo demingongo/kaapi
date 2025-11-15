@@ -239,8 +239,6 @@ describe('ValidatorValibot Edge Cases', () => {
         }, () => 'ok');
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        console.log((app.openapi.result().paths['/upload'] as any).post.requestBody)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         expect((app.openapi.result().paths['/upload'] as any).post.requestBody)
             .to.deep.include({
                 content: {
