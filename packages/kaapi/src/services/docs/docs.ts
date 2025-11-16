@@ -9,9 +9,9 @@ import {
 import { Folder } from '@novice1/api-doc-generator/lib/generators/postman/definitions'
 import { BaseAuthUtil } from '@novice1/api-doc-generator/lib/utils/auth/baseAuthUtils'
 import { BaseResponseUtil } from '@novice1/api-doc-generator/lib/utils/responses/baseResponseUtils'
-import { OpenAPIOptions, Postman, PostmanOptions } from '@novice1/api-doc-generator'
+import { OpenAPIOptions, PostmanOptions } from '@novice1/api-doc-generator'
 import { SwaggerUiGenerator, SwaggerUiOptions } from './swagger-ui-generator'
-import { KaapiOpenAPI } from './generators'
+import { KaapiOpenAPI, KaapiPostman } from './generators'
 import { HandlerDecorations, Lifecycle, ReqRef, ReqRefDefaults } from '@hapi/hapi'
 import { KaapiServerRoute } from '@kaapi/server'
 import Boom from '@hapi/boom'
@@ -55,7 +55,7 @@ export interface DocsConfig {
 
 export function createDocsRouter<Refs extends ReqRef = ReqRefDefaults>(
     path: string,
-    { openapi, postman }: { openapi: KaapiOpenAPI, postman: Postman },
+    { openapi, postman }: { openapi: KaapiOpenAPI, postman: KaapiPostman },
     options?: DocsUIOptions): [
         route: KaapiServerRoute<Refs>,
         handler: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>

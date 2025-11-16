@@ -183,7 +183,7 @@ export interface JwksRotatorOptions {
 
 export class JwksRotator {
     private readonly keyGenerator: KeyGenerator;
-    private readonly rotatorKeyStore: JwksRotationTimestampStore ;
+    private readonly rotatorKeyStore: JwksRotationTimestampStore;
     private readonly rotationIntervalMs: number;
     private readonly logger: JwksRotatorOptions['logger']
 

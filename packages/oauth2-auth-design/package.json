@@ -44,7 +44,7 @@
     "@hapi/hoek": "^11.0.7",
     "@kaapi/cli": "workspace:^",
     "@kaapi/kaapi": "workspace:^",
-    "@novice1/api-doc-generator": "^1.1.3",
+    "@novice1/api-doc-generator": "^1.2.0",
     "html-entities": "^2.6.0",
     "jose": "^6.0.13",
     "jwk-to-pem": "^2.0.7",

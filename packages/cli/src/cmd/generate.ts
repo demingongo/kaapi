@@ -53,7 +53,7 @@ ${optionsString}
         defaultHelp += `
   Available generators:
 `
-        for(const g of fileGenerators) {
+        for (const g of fileGenerators) {
             defaultHelp += `    ${g.name}
 `
         }
@@ -192,7 +192,7 @@ export default (async function generate(argv, { cancel, config, error, cwd, acti
         fileGenerator = generators.filter(g => g.name == fileGeneratorName)[0]
         if (fileGenerator && argv.help) {
             console.log(createHelpMessage(action, generators, fileGenerator, cleanupOptionsDefinition(fileGenerator.options)))
-            return 
+            return
         }
 
         if (!(await doContinue(cwd))) return cancel()

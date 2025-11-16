@@ -11,8 +11,8 @@ import {
 import { InMemoryReplayStore, ReplayDetector } from './replay-store';
 
 export type TokenTypeValidationResponse = {
-    isValid?: boolean
-    message?: string
+    isValid?: boolean | undefined
+    message?: string | undefined
 }
 
 export type TokenTypeValidation<

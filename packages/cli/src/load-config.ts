@@ -17,7 +17,7 @@ export async function loadKaapiConfig(silent?: boolean): Promise<Config> {
     }
 
     if (!configPath) {
-        if(!silent) prompts.log.warn('No kaapi config file found.');
+        if (!silent) prompts.log.warn('No kaapi config file found.');
         return {}
     }
 
@@ -27,7 +27,7 @@ export async function loadKaapiConfig(silent?: boolean): Promise<Config> {
     const configModule = await import(configModuleUrl);
     const config = configModule.default || configModule;
 
-    if(!silent) prompts.log.info(`Loaded kaapi config: ${configPath}`)
+    if (!silent) prompts.log.info(`Loaded kaapi config: ${configPath}`)
 
     return config;
 }

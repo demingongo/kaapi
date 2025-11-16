@@ -17,17 +17,17 @@ export interface OAuth2JwtPayload extends JWTPayload {
     /**
      *  Must be present if a nonce was included in the original request (used to prevent replay attacks)
      */
-    nonce?: string
+    nonce?: string | undefined
     /**
      * Time when the user actually authenticated. Required if the max_age parameter was used in the auth request
      */
-    auth_time?: number
+    auth_time?: number | undefined
 }
 
 export async function createIdToken(
     authority: JwtAuthority,
     payload: OAuth2JwtPayload,
-    ttl?: number
+    ttl?: number | undefined
 ): Promise<{
     token: string;
     kid: string;
@@ -44,7 +44,7 @@ export async function createIdToken(
 export async function createJwtAccessToken(
     authority: JwtAuthority,
     payload: JWTPayload,
-    ttl?: number
+    ttl?: number | undefined
 ): Promise<{
     token: string;
     kid: string;

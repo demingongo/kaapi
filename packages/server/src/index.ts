@@ -12,25 +12,25 @@ export interface KaapiServerRoute<Refs extends Hapi.ReqRef = Hapi.ReqRefDefaults
 }
 
 export type KaapiAuthOptions = {
-    tokenType?: string;
+    tokenType?: string | undefined;
     validate?: (
         request: Hapi.Request<Hapi.ReqRefDefaults>,
         token: string,
         h: Hapi.ResponseToolkit<Hapi.ReqRefDefaults>
     ) => Promise<
-        | {
-              isValid?: boolean;
-              artifacts?: unknown;
-              credentials?: Hapi.AuthCredentials;
-              message?: string;
-              scheme?: string;
-          }
+        {
+            isValid?: boolean | undefined;
+            artifacts?: unknown | undefined;
+            credentials?: Hapi.AuthCredentials | undefined;
+            message?: string | undefined;
+            scheme?: string | undefined;
+        }
         | Hapi.Auth
-    >;
+    > | undefined;
 };
 
 export interface KaapiServerOptions extends Hapi.ServerOptions {
-    auth?: KaapiAuthOptions;
+    auth?: KaapiAuthOptions | undefined;
 }
 
 export class KaapiServer<A = Hapi.ServerApplicationState> {
@@ -109,7 +109,7 @@ export class KaapiServer<A = Hapi.ServerApplicationState> {
 
     route<Refs extends Hapi.ReqRef = Hapi.ReqRefDefaults>(
         serverRoute: KaapiServerRoute<Refs>,
-        handler?: Hapi.HandlerDecorations | Hapi.Lifecycle.Method<Refs, Hapi.Lifecycle.ReturnValue<Refs>>
+        handler?: Hapi.HandlerDecorations | Hapi.Lifecycle.Method<Refs, Hapi.Lifecycle.ReturnValue<Refs>> | undefined
     ): this {
         // Set defaults
         if (!serverRoute.method) serverRoute.method = '*';
