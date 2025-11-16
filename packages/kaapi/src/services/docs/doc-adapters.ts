@@ -18,7 +18,7 @@ import { BaseResponseUtil } from '@novice1/api-doc-generator/lib/utils/responses
 
 // -------------------- TYPES --------------------
 
-export type SchemaModel = SchemaObject3_1 & {
+export type SchemaModel = Omit<SchemaObject3_1, 'allOf' | 'anyOf' | 'oneOf' | 'not' | 'items' | 'properties' | 'additionalProperties'> & {
     allOf?: Array<SchemaModel | ISchemaAdapter>;
     anyOf?: Array<SchemaModel | ISchemaAdapter>;
     oneOf?: Array<SchemaModel | ISchemaAdapter>;
@@ -30,8 +30,8 @@ export type SchemaModel = SchemaObject3_1 & {
 
 export interface ISchemaAdapter {
     ref(): ReferenceObject
-    toObject(): SchemaModel
-    toJSON(): SchemaModel
+    toObject(): SchemaObject3_1
+    toJSON(): SchemaObject3_1
 }
 
 export type MediaTypeModel = Omit<MediaTypeObject, 'schema' | 'examples'> & {
@@ -136,22 +136,27 @@ export class SchemaAdapter implements ISchemaAdapter {
         }
     }
 
-    private _convertOneShape(v: SchemaModel | ReferenceObject | ISchemaAdapter): SchemaModel | ReferenceObject {
-        return 'ref' in v && typeof v.ref == 'function' ? v.ref() : { ...(v as SchemaModel | ReferenceObject) }
+    private _convertOneShape(v: SchemaModel | ISchemaAdapter): SchemaObject3_1 | ReferenceObject {
+        if ('ref' in v && typeof v.ref == 'function') {
+            return v.ref()
+        } else {
+            return new SchemaAdapter('tmp', v as SchemaModel).toObject()
+        }
     }
 
-    private _convertManyShapes(v: Array<SchemaModel | ReferenceObject | ISchemaAdapter>): Array<SchemaModel | ReferenceObject> {
-        const r: Array<SchemaModel | ReferenceObject> = []
+    private _convertManyShapes(v: Array<SchemaModel | ISchemaAdapter>): Array<SchemaObject3_1 | ReferenceObject> {
+        const r: Array<SchemaObject3_1 | ReferenceObject> = []
         for (const element of v) {
             r.push(this._convertOneShape(element))
         }
         return r
     }
 
-    private _convertObjectOfShapes(v: Record<string, SchemaModel | ReferenceObject | ISchemaAdapter>): Record<string, SchemaModel | ReferenceObject> {
-        const r: Record<string, SchemaModel | ReferenceObject> = {}
+    private _convertObjectOfShapes(v: Record<string, SchemaModel | ISchemaAdapter>): Record<string, SchemaObject3_1 | ReferenceObject> {
+        const r: Record<string, SchemaObject3_1 | ReferenceObject> = {}
         for (const k in v) {
-            r[k] = (this._convertOneShape(v[k]))
+            const vk = v[k]
+            r[k] = (this._convertOneShape(vk))
         }
         return r
     }
@@ -161,8 +166,17 @@ export class SchemaAdapter implements ISchemaAdapter {
     }
 
     setSchema(schema: SchemaModel): this {
-        const { allOf, anyOf, oneOf, not, items, properties, ...value } = schema
-        const valueToKeep: SchemaModel = value
+        this.schema = schema;
+        return this
+    }
+
+    ref(): ReferenceObject {
+        return { $ref: `#/components/schemas/${this.name}` }
+    }
+
+    toObject(): SchemaObject3_1 {
+        const { allOf, anyOf, oneOf, not, items, properties, additionalProperties, ...value } = this.schema
+        const valueToKeep: SchemaObject3_1 = value
         if (allOf) {
             valueToKeep.allOf = this._convertManyShapes(allOf)
         }
@@ -181,24 +195,25 @@ export class SchemaAdapter implements ISchemaAdapter {
         if (properties) {
             valueToKeep.properties = this._convertObjectOfShapes(properties)
         }
-        this.schema = deepExtend({}, value);
-        return this
+        if (typeof additionalProperties !== 'undefined') {
+            if (typeof additionalProperties === 'boolean') {
+                valueToKeep.additionalProperties = additionalProperties
+            } else {
+                valueToKeep.additionalProperties = this._convertOneShape(additionalProperties)
+            }
+        }
+        return { ...valueToKeep };
     }
 
-    ref(): ReferenceObject {
-        return { $ref: `#/components/schemas/${this.name}` }
-    }
-
-    toObject(): SchemaModel {
-        return deepExtend({}, this.schema);
-    }
-
-    toJSON(): SchemaModel {
+    toJSON(): SchemaObject3_1 {
         return this.toObject()
     }
 }
 
 export class MediaTypeAdapter extends MediaTypeUtil {
+
+    protected schema?: SchemaModel | SchemaAdapter
+
     constructor(mediaType?: MediaTypeModel) {
         if (mediaType) {
             const { examples, schema, ...rest } = mediaType
@@ -232,13 +247,29 @@ export class MediaTypeAdapter extends MediaTypeUtil {
         return this
     }
 
-    setSchema(schema: ReferenceObject | SchemaModel | SchemaAdapter, noRef?: boolean): this {
-        const value: ReferenceObject | SchemaModel = schema instanceof SchemaAdapter ?
+    toObject(): MediaTypeObject {
+        const withSchema: { schema?: SchemaObject3_1 | ReferenceObject } = {};
+        if (typeof this.schema !== 'undefined') {
+            if (this.schema instanceof SchemaAdapter) {
+                withSchema.schema = this.schema.ref()
+            } else {
+                withSchema.schema = new SchemaAdapter('tmp', this.schema).toObject()
+            }
+        }
+        const copy: MediaTypeObject = deepExtend(super.toObject(), withSchema);
+        return copy;
+    }
+
+    setSchema(schema: SchemaModel | SchemaAdapter, noRef?: boolean): this {
+        const value: SchemaModel = schema instanceof SchemaAdapter ?
             noRef ? schema.toObject() : schema.ref() : schema;
-        super.setSchema(value)
+        this.schema = value
         return this
     }
 }
+
+// @todo: refactor classes below
+
 
 export class ResponseAdapter extends ResponseUtil {
     toOpenAPIRefPreferred(): Record<string, ResponseObject | ReferenceObject>;
@@ -376,7 +407,7 @@ export class RequestBodyAdapter {
         if (mediaType instanceof MediaTypeAdapter) {
             this.content[contentType] = mediaType.toObject();
         } else {
-            this.content[contentType] = mediaType;
+            this.content[contentType] = new MediaTypeAdapter(mediaType).toObject();
         }
         return this;
     }
