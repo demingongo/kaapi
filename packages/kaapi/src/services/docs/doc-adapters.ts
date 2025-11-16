@@ -39,8 +39,8 @@ export type MediaTypeModel = Omit<MediaTypeObject, 'schema' | 'examples'> & {
     schema?: SchemaModel | ReferenceObject | SchemaAdapter;
 }
 
-export interface OpenAPIRequestBodyModel {
-    content: Record<string, MediaTypeModel>;
+export interface OpenAPIRequestBodyObject {
+    content: Record<string, MediaTypeObject>;
     description?: string;
     required?: boolean;
 }
@@ -214,6 +214,8 @@ export class MediaTypeAdapter extends MediaTypeUtil {
 
     protected schema?: SchemaModel | SchemaAdapter
 
+    protected examples?: Record<string, ExampleObject | ReferenceObject | ExampleAdapter>
+
     constructor(mediaType?: MediaTypeModel) {
         if (mediaType) {
             const { examples, schema, ...rest } = mediaType
@@ -229,26 +231,13 @@ export class MediaTypeAdapter extends MediaTypeUtil {
         }
     }
 
-    setExamples(examples: Record<string, ExampleObject | ReferenceObject | ExampleAdapter>, noRef?: boolean): this {
-        const value: Record<string, ExampleObject | ReferenceObject> = {}
-        for (const key in examples) {
-            const example = examples[key]
-            if (example instanceof ExampleAdapter) {
-                if (noRef) {
-                    value[key] = example.toObject()
-                } else {
-                    value[key] = example.ref()
-                }
-            } else {
-                value[key] = example
-            }
-        }
-        super.setExamples(value)
+    setExamples(examples: Record<string, ExampleObject | ReferenceObject | ExampleAdapter>): this {
+        this.examples = examples
         return this
     }
 
-    toObject(): MediaTypeObject {
-        const withSchema: { schema?: SchemaObject3_1 | ReferenceObject } = {};
+    toObject(noRef?: boolean): MediaTypeObject {
+        const withSchema: { schema?: SchemaObject3_1 | ReferenceObject, examples?: Record<string, ExampleObject | ReferenceObject> } = {};
         if (typeof this.schema !== 'undefined') {
             if (this.schema instanceof SchemaAdapter) {
                 withSchema.schema = this.schema.ref()
@@ -256,20 +245,180 @@ export class MediaTypeAdapter extends MediaTypeUtil {
                 withSchema.schema = new SchemaAdapter('tmp', this.schema).toObject()
             }
         }
+        if (typeof this.examples !== 'undefined') {
+            withSchema.examples = {}
+            for (const key in this.examples) {
+                const example = this.examples[key]
+                if (example instanceof ExampleAdapter) {
+                    if (noRef) {
+                        withSchema.examples[key] = example.toObject()
+                    } else {
+                        withSchema.examples[key] = example.ref()
+                    }
+                } else {
+                    withSchema.examples[key] = example
+                }
+            }
+        }
         const copy: MediaTypeObject = deepExtend(super.toObject(), withSchema);
         return copy;
     }
 
-    setSchema(schema: SchemaModel | SchemaAdapter, noRef?: boolean): this {
-        const value: SchemaModel = schema instanceof SchemaAdapter ?
-            noRef ? schema.toObject() : schema.ref() : schema;
-        this.schema = value
+    toModel(): MediaTypeModel {
+        return { ...super.toObject(), schema: this.schema, examples: this.examples };
+    }
+
+    setSchema(schema: SchemaModel | SchemaAdapter): this {
+        this.schema = schema
         return this
     }
 }
 
-// @todo: refactor classes below
+export class RequestBodyAdapter {
+    protected name: string;
+    protected content: Record<string, MediaTypeModel> = {};
+    protected description?: string;
+    protected required?: boolean;
+    protected requestBodyRef?: string;
 
+    constructor(name?: string) {
+        this.name = name || this.constructor.name;
+    }
+
+    /**
+     *
+     * @param description A short description of the response.
+     * CommonMark syntax MAY be used for rich text representation.
+     */
+    setDescription(description: string): this {
+        this.description = description;
+        return this;
+    }
+
+    setName(name: string): this {
+        this.name = name;
+        return this;
+    }
+
+    setRequired(isRequired: boolean): this {
+        this.required = isRequired;
+        return this;
+    }
+
+    setRef(requestBodyRef: string): this {
+        this.requestBodyRef = requestBodyRef;
+        return this;
+    }
+
+    getDescription(): string | undefined {
+        return this.description;
+    }
+
+    getName(): string {
+        return this.name;
+    }
+
+    isRequired(): boolean {
+        return !!this.required;
+    }
+
+    addMediaType(contentType: string, mediaType: MediaTypeModel | MediaTypeAdapter = {}): this {
+        this.content = this.content || {};
+        if (mediaType instanceof MediaTypeAdapter) {
+            this.content[contentType] = mediaType.toModel();
+        } else {
+            this.content[contentType] = mediaType;
+        }
+        return this;
+    }
+
+    ref(): ReferenceObject {
+        return { $ref: this.requestBodyRef || `#/components/requestBodies/${this.name}` }
+    }
+
+    toPostman(): PostmanRequestBodyModel {
+        const result: PostmanRequestBodyModel = {}
+        for (const contentType in this.content) {
+            const mediaTypeModel = this.content[contentType]
+            const contentSchema = mediaTypeModel.schema
+            result.mode = 'raw'
+            if (contentType === 'multipart/form-data') {
+                result.mode = 'form-data'
+                result.formdata = []
+                if (contentSchema) {
+                    if (contentSchema instanceof SchemaAdapter) {
+                        const rawSchema = contentSchema.toObject()
+                        if (rawSchema.properties) {
+                            for (const key in rawSchema.properties) {
+                                const propSchema = rawSchema.properties[key]
+                                if ('$ref' in propSchema) {
+                                    result.formdata.push({
+                                        key,
+                                        type: 'text'
+                                    })
+                                } else {
+                                    const fieldType = propSchema.contentMediaType ? 'file' : 'text'
+                                    result.formdata.push({
+                                        key,
+                                        type: fieldType,
+                                        description: propSchema.description,
+                                        src: fieldType === 'file' ? [] : undefined,
+                                        disabled: rawSchema.required?.includes(key) ? false : true
+                                    })
+                                }
+                            }
+                        }
+                    }
+                }
+            } else if (!contentSchema || Object.keys(contentSchema).length === 0) {
+                result.mode = 'file'
+                result.disabled = false
+            } else {
+                // create raw value
+                if (typeof mediaTypeModel.example !== 'undefined') {
+                    result.raw = `${mediaTypeModel.example}`;
+                }
+                if (typeof mediaTypeModel.examples !== 'undefined' && Object.keys(mediaTypeModel.examples).length !== 0) {
+                    for (const key in mediaTypeModel.examples) {
+                        const example = mediaTypeModel.examples[key];
+                        if (example instanceof ExampleAdapter) {
+                            result.raw = `${example.getValue()}`;
+                            break;
+                        } else if (example && 'value' in example && typeof example.value !== 'undefined') {
+                            result.raw = `${example.value}`;
+                            break;
+                        }
+                    }
+                }
+            }
+            break;
+        }
+        return result
+    }
+
+    toOpenAPI(): OpenAPIRequestBodyObject {
+        const content: OpenAPIRequestBodyObject['content'] = {}
+        for (const contentType in this.content) {
+            const mediaTypeModel = this.content[contentType]
+            content[contentType] = new MediaTypeAdapter(mediaTypeModel).toObject()
+        }
+        const result: OpenAPIRequestBodyObject = {
+            content
+        }
+
+        if (this.description) {
+            result.description = this.description
+        }
+
+        if (this.isRequired()) {
+            result.required = true
+        }
+
+        return result
+    }
+}
+
+// @todo: refactor classes below
 
 export class ResponseAdapter extends ResponseUtil {
     toOpenAPIRefPreferred(): Record<string, ResponseObject | ReferenceObject>;
@@ -351,88 +500,5 @@ export class GroupResponseShape extends GroupResponseUtil {
             }
         });
         return r;
-    }
-}
-
-export class RequestBodyAdapter {
-    protected name: string;
-    protected content: Record<string, MediaTypeModel> = {};
-    protected description?: string;
-    protected required?: boolean;
-    protected requestBodyRef?: string;
-
-    constructor(name?: string) {
-        this.name = name || this.constructor.name;
-    }
-
-    /**
-     *
-     * @param description A short description of the response.
-     * CommonMark syntax MAY be used for rich text representation.
-     */
-    setDescription(description: string): this {
-        this.description = description;
-        return this;
-    }
-
-    setName(name: string): this {
-        this.name = name;
-        return this;
-    }
-
-    setRequired(isRequired: boolean): this {
-        this.required = isRequired;
-        return this;
-    }
-
-    setRef(requestBodyRef: string): this {
-        this.requestBodyRef = requestBodyRef;
-        return this;
-    }
-
-    getDescription(): string | undefined {
-        return this.description;
-    }
-
-    getName(): string {
-        return this.name;
-    }
-
-    isRequired(): boolean {
-        return !!this.required;
-    }
-
-    addMediaType(contentType: string, mediaType: MediaTypeModel | MediaTypeAdapter = {}): this {
-        this.content = this.content || {};
-        if (mediaType instanceof MediaTypeAdapter) {
-            this.content[contentType] = mediaType.toObject();
-        } else {
-            this.content[contentType] = new MediaTypeAdapter(mediaType).toObject();
-        }
-        return this;
-    }
-
-    ref(): ReferenceObject {
-        return { $ref: this.requestBodyRef || `#/components/requestBodies/${this.name}` }
-    }
-
-    toPostman(): PostmanRequestBodyModel {
-        return {}
-    }
-
-    toOpenAPI(): OpenAPIRequestBodyModel {
-        const result: OpenAPIRequestBodyModel = {
-            content: { ...this.content }
-        }
-
-        if (this.description) {
-            result.description = this.description
-        }
-
-        if (this.isRequired()) {
-            result.required = true
-        }
-
-        return result
     }
 }
