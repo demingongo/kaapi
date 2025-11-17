@@ -1,17 +1,6 @@
 import '@hapi/hapi'
-import { OpenAPIHelperInterface } from '@novice1/api-doc-generator'
-
-interface KaapiOpenAPIHelperInterface extends OpenAPIHelperInterface {
-  isFile(): boolean | undefined;
-  getFilesChildren(): Record<string, unknown>;
-}
-
-type KaapiOpenAPIHelperClass = {
-  new(args: {
-    isRoot?: boolean;
-    value: unknown;
-  }): KaapiOpenAPIHelperInterface;
-}
+import type { RequestBodyAdapter } from './services/docs/doc-adapters'
+import type { KaapiOpenAPIHelperClass } from './services/docs/generators'
 
 declare module '@hapi/hapi' {
   interface PluginSpecificConfiguration {
@@ -21,6 +10,9 @@ declare module '@hapi/hapi' {
         openAPIHelperClass?: KaapiOpenAPIHelperClass;
         helperSchemaProperty?: string;
         openApiSchemaExtension?: object;
+        adapters?: {
+          requestBody?: RequestBodyAdapter
+        }
       } | false
     };
     [x: string]: unknown;

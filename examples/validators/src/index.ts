@@ -3,7 +3,7 @@
 import inert from '@hapi/inert';
 import Joi from 'joi'
 import { BearerUtil } from '@novice1/api-doc-generator';
-import { Kaapi } from '@kaapi/kaapi';
+import { Kaapi, MediaTypeAdapter, RequestBodyAdapter, SchemaAdapter } from '@kaapi/kaapi';
 import path from 'node:path';
 import { type } from 'arktype';
 import * as v from 'valibot';
@@ -14,7 +14,6 @@ import { validatorZod } from '@kaapi/validator-zod';
 import Stream from 'node:stream';
 import busboy from 'busboy'
 import fs from 'node:fs';
-import { SchemaObject3_1 } from '@novice1/api-doc-generator/lib/generators/openapi/definitions';
 
 const app = new Kaapi({
     port: 3000,
@@ -37,7 +36,7 @@ const app = new Kaapi({
     docs: {
         disabled: false,
         title: 'Validators (valibot)',
-        security: new BearerUtil('mySecurityScheme')
+        security: new BearerUtil('mySecurityScheme'),
     },
     routes: {
         auth: {
@@ -215,24 +214,51 @@ async function start() {
         }
     }, ({ payload: { file } }, h) => h.response(file._data).type(file.hapi.headers['content-type']));
 
-    const fileFieldSchema: SchemaObject3_1 = {
-        type: 'object',
-        properties: {
-            username: {
-                type: 'string',
-                description: 'The name of the user',
-                format: 'email'
-            },
-            file: {
-                type: 'string',
-                description: 'The image to upload',
-                contentMediaType: 'application/octet-stream'
+    const requestBody = new RequestBodyAdapter()
+        .setRequired(true)
+        .addMediaType('multipart/form-data', new MediaTypeAdapter(
+            {
+                schema: new SchemaAdapter('UploadImageBusboy', {
+                    type: 'object',
+                    properties: {
+                        username: {
+                            type: 'string',
+                            description: 'The name of the user',
+                            format: 'email'
+                        },
+                        file: {
+                            type: 'string',
+                            description: 'The image to upload',
+                            contentMediaType: 'application/octet-stream'
+                        }
+                    },
+                    required: [
+                        'file'
+                    ],
+                }).toObject()
             }
+        ));
+
+    /*
+const fileFieldSchema: SchemaObject3_1 = {
+    type: 'object',
+    properties: {
+        username: {
+            type: 'string',
+            description: 'The name of the user',
+            format: 'email'
         },
-        required: [
-            'file'
-        ],
-    }
+        file: {
+            type: 'string',
+            description: 'The image to upload',
+            contentMediaType: 'application/octet-stream'
+        }
+    },
+    required: [
+        'file'
+    ],
+}
+*/
     app.route(
         {
             method: 'POST',
@@ -254,13 +280,19 @@ async function start() {
                             // it definitly looks ugly but it is necessary for the sake of the documentation while fine graining the the control with no validator
                             openApiSchemaExtension: {
                                 requestBody: {
+                                    ...requestBody.toOpenAPI()
+                                    /*
                                     content: {
                                         'multipart/form-data': {
                                             schema: fileFieldSchema
                                         }
                                     },
                                     required: true
+                                    */
                                 }
+                            },
+                            adapters: {
+                                requestBody
                             }
                         }
                     }
