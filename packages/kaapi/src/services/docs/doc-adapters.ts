@@ -418,8 +418,6 @@ export class RequestBodyAdapter {
     }
 }
 
-// @todo: refactor classes below
-
 export class ResponseAdapter extends ResponseUtil {
     toOpenAPIRefPreferred(): Record<string, ResponseObject | ReferenceObject>;
     toOpenAPIRefPreferred(ctxt: IOpenAPIResponseContext): Record<string, ResponseObject | ReferenceObject>;
@@ -458,7 +456,11 @@ export class ResponseAdapter extends ResponseUtil {
                 }
             }
         }
-        return super.toOpenAPI(ctxt)
+        return this.toOpenAPI(ctxt)
+    }
+
+    createContextResponseAdapter(): ContextResponseAdapter {
+        return new ContextResponseAdapter(this)
     }
 }
 
@@ -485,7 +487,7 @@ export class ContextResponseAdapter extends ContextResponseUtil {
     }
 }
 
-export class GroupResponseShape extends GroupResponseUtil {
+export class GroupResponseAdapter extends GroupResponseUtil {
     constructor(responseUtils: BaseResponseUtil[]) {
         super(responseUtils);
         this.responseUtils = responseUtils;
@@ -501,4 +503,10 @@ export class GroupResponseShape extends GroupResponseUtil {
         });
         return r;
     }
+}
+
+export function groupResponses(
+    ...adapters: BaseResponseUtil[]
+) {
+    return new GroupResponseAdapter(adapters)
 }
