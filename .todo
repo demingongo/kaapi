@@ -39,7 +39,7 @@
 
 - @kaapi/kaapi
     - documentation:
-        - adapters:
+        - modifiers:
             - property "noRef" (or something) and getter ("hasRef()") to know if ref() should be called or toObject(). Very useful to not create unnecessary components.  
         - remove plugin...story and use options.notes instead. @done
         - handle the case where options is a function (options(server: Server))

@@ -12,7 +12,7 @@ export {
 } from 'winston'
 export * from '@hapi/hapi'
 export * from '@kaapi/server'
-export * from './services/docs/doc-adapters'
+export * from './services/docs/docs-modifiers'
 export * from './services/docs/generators'
 export * from './services/docs/utils'
 export * from './services/plugins/plugin'

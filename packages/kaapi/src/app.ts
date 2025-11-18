@@ -259,12 +259,12 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
     route<Refs extends ReqRef = ReqRefDefaults>(
         serverRoute: KaapiServerRoute<Refs>,
         handler?: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>) {
-        const { routes: routesMeta, extensions } = formatRoutes(
+        const { routes: routesMeta, modifiers } = formatRoutes(
             serverRoute,
             this.docs.openapi.getSecuritySchemeUtils(),
             this.base().auth.settings.default
         );
-        this.docs.openapi.addCustom(routesMeta, extensions)
+        this.docs.openapi.addCustom(routesMeta, modifiers)
         this.docs.postman.add(routesMeta)
         return super.route(serverRoute, handler)
     }
@@ -279,12 +279,12 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
         const authConfigDefault = this.base().auth.settings.default;
         this.kaapiServer.base.table().forEach(
             v => {
-                const { routes: routesMeta, extensions } = formatRequestRoute(
+                const { routes: routesMeta, modifiers } = formatRequestRoute(
                     v,
                     securitySchemeUtils,
                     authConfigDefault
                 );
-                this.docs.openapi.addCustom(routesMeta, extensions);
+                this.docs.openapi.addCustom(routesMeta, modifiers);
                 this.docs.postman.add(routesMeta);
             }
         )
@@ -309,12 +309,12 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
         const tool: KaapiTools = {
             log: this.log,
             route<Refs extends ReqRef = ReqRefDefaults>(serverRoute: KaapiServerRoute<Refs>, handler?: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>) {
-                const { routes: routesMeta, extensions } = formatRoutes(
+                const { routes: routesMeta, modifiers } = formatRoutes(
                     serverRoute,
                     getDocs().openapi.getSecuritySchemeUtils(),
                     getCurrentApp().base().auth.settings.default
                 );
-                getDocs().openapi.addCustom(routesMeta, extensions)
+                getDocs().openapi.addCustom(routesMeta, modifiers)
                 getDocs().postman.add(routesMeta)
                 getCurrentApp().server().route(serverRoute, handler)
                 return this

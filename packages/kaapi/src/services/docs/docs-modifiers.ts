@@ -19,23 +19,23 @@ import { BaseResponseUtil } from '@novice1/api-doc-generator/lib/utils/responses
 // -------------------- TYPES --------------------
 
 export type SchemaModel = Omit<SchemaObject3_1, 'allOf' | 'anyOf' | 'oneOf' | 'not' | 'items' | 'properties' | 'additionalProperties'> & {
-    allOf?: Array<SchemaModel | ISchemaAdapter>;
-    anyOf?: Array<SchemaModel | ISchemaAdapter>;
-    oneOf?: Array<SchemaModel | ISchemaAdapter>;
-    not?: SchemaModel | ISchemaAdapter;
-    items?: SchemaModel | ISchemaAdapter;
-    properties?: Record<string, SchemaModel | ISchemaAdapter>;
-    additionalProperties?: boolean | SchemaModel | ISchemaAdapter;
+    allOf?: Array<SchemaModel | ISchemaModifier>;
+    anyOf?: Array<SchemaModel | ISchemaModifier>;
+    oneOf?: Array<SchemaModel | ISchemaModifier>;
+    not?: SchemaModel | ISchemaModifier;
+    items?: SchemaModel | ISchemaModifier;
+    properties?: Record<string, SchemaModel | ISchemaModifier>;
+    additionalProperties?: boolean | SchemaModel | ISchemaModifier;
 }
 
-export interface ISchemaAdapter {
+export interface ISchemaModifier {
     ref(): ReferenceObject
     toObject(): SchemaObject3_1
 }
 
 export type MediaTypeModel = Omit<MediaTypeObject, 'schema' | 'examples'> & {
-    examples?: Record<string, ExampleObject | ReferenceObject | ExampleAdapter>
-    schema?: SchemaModel | ReferenceObject | SchemaAdapter;
+    examples?: Record<string, ExampleObject | ReferenceObject | ExampleModifier>
+    schema?: SchemaModel | ReferenceObject | SchemaModifier;
 }
 
 export interface OpenAPIRequestBodyObject {
@@ -48,7 +48,7 @@ export type PostmanRequestBodyModel = RequestBodyObject
 
 // -------------------- CLASSES --------------------
 
-export class ExampleAdapter {
+export class ExampleModifier {
 
     protected name: string
     protected value: unknown
@@ -124,7 +124,7 @@ export class ExampleAdapter {
     }
 }
 
-export class SchemaAdapter implements ISchemaAdapter {
+export class SchemaModifier implements ISchemaModifier {
     protected name: string
     protected schema: SchemaModel = {}
 
@@ -135,15 +135,15 @@ export class SchemaAdapter implements ISchemaAdapter {
         }
     }
 
-    #convertOne(v: SchemaModel | ISchemaAdapter): SchemaObject3_1 | ReferenceObject {
+    #convertOne(v: SchemaModel | ISchemaModifier): SchemaObject3_1 | ReferenceObject {
         if ('ref' in v && typeof v.ref == 'function') {
             return v.ref()
         } else {
-            return new SchemaAdapter('tmp', v as SchemaModel).toObject()
+            return new SchemaModifier('tmp', v as SchemaModel).toObject()
         }
     }
 
-    #convertMany(v: Array<SchemaModel | ISchemaAdapter>): Array<SchemaObject3_1 | ReferenceObject> {
+    #convertMany(v: Array<SchemaModel | ISchemaModifier>): Array<SchemaObject3_1 | ReferenceObject> {
         const r: Array<SchemaObject3_1 | ReferenceObject> = []
         for (const element of v) {
             r.push(this.#convertOne(element))
@@ -151,7 +151,7 @@ export class SchemaAdapter implements ISchemaAdapter {
         return r
     }
 
-    #convertObjectOf(v: Record<string, SchemaModel | ISchemaAdapter>): Record<string, SchemaObject3_1 | ReferenceObject> {
+    #convertObjectOf(v: Record<string, SchemaModel | ISchemaModifier>): Record<string, SchemaObject3_1 | ReferenceObject> {
         const r: Record<string, SchemaObject3_1 | ReferenceObject> = {}
         for (const k in v) {
             const vk = v[k]
@@ -209,11 +209,11 @@ export class SchemaAdapter implements ISchemaAdapter {
     }
 }
 
-export class MediaTypeAdapter extends MediaTypeUtil {
+export class MediaTypeModifier extends MediaTypeUtil {
 
-    protected schema?: SchemaModel | SchemaAdapter
+    protected schema?: SchemaModel | SchemaModifier
 
-    protected examples?: Record<string, ExampleObject | ReferenceObject | ExampleAdapter>
+    protected examples?: Record<string, ExampleObject | ReferenceObject | ExampleModifier>
 
     constructor(mediaType?: MediaTypeModel) {
         if (mediaType) {
@@ -230,12 +230,12 @@ export class MediaTypeAdapter extends MediaTypeUtil {
         }
     }
 
-    setExamples(examples: Record<string, ExampleObject | ReferenceObject | ExampleAdapter>): this {
+    setExamples(examples: Record<string, ExampleObject | ReferenceObject | ExampleModifier>): this {
         this.examples = examples
         return this
     }
 
-    setSchema(schema: SchemaModel | SchemaAdapter): this {
+    setSchema(schema: SchemaModel | SchemaModifier): this {
         this.schema = schema
         return this
     }
@@ -243,17 +243,17 @@ export class MediaTypeAdapter extends MediaTypeUtil {
     toObject(noRef?: boolean): MediaTypeObject {
         const withSchema: { schema?: SchemaObject3_1 | ReferenceObject, examples?: Record<string, ExampleObject | ReferenceObject> } = {};
         if (typeof this.schema !== 'undefined') {
-            if (this.schema instanceof SchemaAdapter) {
+            if (this.schema instanceof SchemaModifier) {
                 withSchema.schema = this.schema.ref()
             } else {
-                withSchema.schema = new SchemaAdapter('tmp', this.schema).toObject()
+                withSchema.schema = new SchemaModifier('tmp', this.schema).toObject()
             }
         }
         if (typeof this.examples !== 'undefined') {
             withSchema.examples = {}
             for (const key in this.examples) {
                 const example = this.examples[key]
-                if (example instanceof ExampleAdapter) {
+                if (example instanceof ExampleModifier) {
                     if (noRef) {
                         withSchema.examples[key] = example.toObject()
                     } else {
@@ -273,9 +273,9 @@ export class MediaTypeAdapter extends MediaTypeUtil {
     }
 }
 
-export class RequestBodyAdapter {
+export class RequestBodyDocsModifier {
     protected name: string;
-    protected content: Record<string, MediaTypeAdapter> = {};
+    protected content: Record<string, MediaTypeModifier> = {};
     protected description?: string;
     protected required?: boolean;
     protected requestBodyRef?: string;
@@ -321,12 +321,12 @@ export class RequestBodyAdapter {
         return !!this.required;
     }
 
-    addMediaType(contentType: string, mediaType: MediaTypeModel | MediaTypeAdapter = {}): this {
+    addMediaType(contentType: string, mediaType: MediaTypeModel | MediaTypeModifier = {}): this {
         this.content = this.content || {};
-        if (mediaType instanceof MediaTypeAdapter) {
+        if (mediaType instanceof MediaTypeModifier) {
             this.content[contentType] = mediaType;
         } else {
-            this.content[contentType] = new MediaTypeAdapter(mediaType);
+            this.content[contentType] = new MediaTypeModifier(mediaType);
         }
         return this;
     }
@@ -345,7 +345,7 @@ export class RequestBodyAdapter {
                 result.mode = 'form-data'
                 result.formdata = []
                 if (contentSchema) {
-                    if (contentSchema instanceof SchemaAdapter) {
+                    if (contentSchema instanceof SchemaModifier) {
                         const rawSchema = contentSchema.toObject()
                         if (rawSchema.properties) {
                             for (const key in rawSchema.properties) {
@@ -380,7 +380,7 @@ export class RequestBodyAdapter {
                 if (typeof mediaTypeModel.examples !== 'undefined' && Object.keys(mediaTypeModel.examples).length !== 0) {
                     for (const key in mediaTypeModel.examples) {
                         const example = mediaTypeModel.examples[key];
-                        if (example instanceof ExampleAdapter) {
+                        if (example instanceof ExampleModifier) {
                             result.raw = `${example.getValue()}`;
                             break;
                         } else if (example && 'value' in example && typeof example.value !== 'undefined') {
@@ -398,8 +398,8 @@ export class RequestBodyAdapter {
     toOpenAPI(): OpenAPIRequestBodyObject {
         const content: OpenAPIRequestBodyObject['content'] = {}
         for (const contentType in this.content) {
-            const adapter = this.content[contentType]
-            content[contentType] = adapter.toObject()
+            const modifier = this.content[contentType]
+            content[contentType] = modifier.toObject()
         }
         const result: OpenAPIRequestBodyObject = {
             content
@@ -420,7 +420,7 @@ export class RequestBodyAdapter {
 /**
  * Set a name (setName) or a ref (setRef) for it to be used as a reference.
  */
-export class ResponseAdapter extends ResponseUtil {
+export class ResponseDocsModifier extends ResponseUtil {
     constructor(name?: string) {
         super(name);
         if (!name)
@@ -466,12 +466,12 @@ export class ResponseAdapter extends ResponseUtil {
         return this.toOpenAPI(ctxt)
     }
 
-    withContext(): ContextResponseAdapter {
-        return new ContextResponseAdapter(this)
+    withContext(): ContextResponseDocsModifier {
+        return new ContextResponseDocsModifier(this)
     }
 }
 
-export class ContextResponseAdapter extends ContextResponseUtil {
+export class ContextResponseDocsModifier extends ContextResponseUtil {
     toOpenAPI(): Record<string, ResponseObject | ReferenceObject> {
         const ctxt: IOpenAPIResponseContext = {};
         if (this.code) {
@@ -486,7 +486,7 @@ export class ContextResponseAdapter extends ContextResponseUtil {
         if (this.default) {
             ctxt.default = this.default;
         }
-        if (this.responseUtil instanceof ResponseAdapter) {
+        if (this.responseUtil instanceof ResponseDocsModifier) {
             return this.responseUtil.toOpenAPIRefPreferred(ctxt);
         } else {
             return this.responseUtil.toOpenAPI(ctxt);
@@ -494,7 +494,7 @@ export class ContextResponseAdapter extends ContextResponseUtil {
     }
 }
 
-export class GroupResponseAdapter extends GroupResponseUtil {
+export class GroupResponseDocsModifier extends GroupResponseUtil {
     constructor(responseUtils: BaseResponseUtil[]) {
         super(responseUtils);
         this.responseUtils = responseUtils;
@@ -502,7 +502,7 @@ export class GroupResponseAdapter extends GroupResponseUtil {
     toOpenAPIRefPreferred(): Record<string, ResponseObject | ReferenceObject> {
         let r: Record<string, ResponseObject | ReferenceObject> = {};
         this.responseUtils.forEach(builder => {
-            if (builder instanceof ResponseAdapter) {
+            if (builder instanceof ResponseDocsModifier) {
                 r = { ...r, ...builder.toOpenAPIRefPreferred() };
             } else {
                 r = { ...r, ...builder.toOpenAPI() };
@@ -513,7 +513,7 @@ export class GroupResponseAdapter extends GroupResponseUtil {
 }
 
 export function groupResponses(
-    ...adapters: BaseResponseUtil[]
+    ...modifiers: BaseResponseUtil[]
 ) {
-    return new GroupResponseAdapter(adapters)
+    return new GroupResponseDocsModifier(modifiers)
 }

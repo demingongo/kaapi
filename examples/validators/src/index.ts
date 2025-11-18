@@ -3,7 +3,7 @@
 import inert from '@hapi/inert';
 import Joi from 'joi'
 import { BearerUtil } from '@novice1/api-doc-generator';
-import { Kaapi, MediaTypeAdapter, RequestBodyAdapter, ResponseAdapter, SchemaAdapter } from '@kaapi/kaapi';
+import { groupResponses, Kaapi, MediaTypeModifier, RequestBodyDocsModifier, ResponseDocsModifier, SchemaModifier } from '@kaapi/kaapi';
 import path from 'node:path';
 import { type } from 'arktype';
 import * as v from 'valibot';
@@ -282,12 +282,12 @@ const fileFieldSchema: SchemaObject3_1 = {
                                 }
                             },
                             */
-                            adapters: {
-                                requestBody: new RequestBodyAdapter()
+                            modifiers: {
+                                requestBody: new RequestBodyDocsModifier()
                                     .setRequired(true)
-                                    .addMediaType('multipart/form-data', new MediaTypeAdapter(
+                                    .addMediaType('multipart/form-data', new MediaTypeModifier(
                                         {
-                                            schema: new SchemaAdapter('UploadImageBusboy', {
+                                            schema: new SchemaModifier('UploadImageBusboy', {
                                                 type: 'object',
                                                 properties: {
                                                     username: {
@@ -307,10 +307,15 @@ const fileFieldSchema: SchemaObject3_1 = {
                                             }).toObject()
                                         }
                                     )),
-                                responses: new ResponseAdapter()
-                                    .setCode(200)
-                                    .setDefault(true)
-                                    .setDescription('The file itself')
+                                responses: groupResponses(
+                                    new ResponseDocsModifier()
+                                        .setCode(200)
+                                        .setDefault(true)
+                                        .setDescription('The file itself'),
+                                    new ResponseDocsModifier()
+                                        .setCode(400)
+                                        .setDescription('Bad Request')
+                                )
                             }
                         }
                     }
