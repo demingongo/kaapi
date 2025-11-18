@@ -562,8 +562,10 @@ export class KaapiPostman extends Postman implements KaapiDocGenerator {
      */
     result(): PostmanCollection {
         let result = super.result()
-        if (Object.keys(this.routeExtensions.tagged).length) {
+        if (Object.keys(this.routeExtensions.tagged).length || Object.keys(this.routeExtensions.notTagged).length) {
             result = deepExtend({}, result)
+        }
+        if (Object.keys(this.routeExtensions.tagged).length) {
             for (const tag in this.routeExtensions.tagged) {
                 const folder = result.item.find(f => f.name === tag)
                 if (tag === folder?.name) {
@@ -614,8 +616,51 @@ export class KaapiPostman extends Postman implements KaapiDocGenerator {
                     }
                 }
             }
-            //result = deepExtend({}, result)
-            //result = deepExtend(result, { paths: this.routeExtensions })
+        }
+        if (Object.keys(this.routeExtensions.notTagged).length) {
+            const extByPath = this.routeExtensions.notTagged
+            itemLoop: for (const item of result.item) {
+                if ('request' in item &&
+                    item.request.url?.path &&
+                    item.request.method
+                ) {
+                    const requestPath = (typeof item.request.url?.path === 'string' ?
+                        item.request.url?.path : item.request.url?.path?.join('/'));
+                    if (requestPath) {
+                        const extByMethod = extByPath[`/${requestPath}`];
+                        if (extByMethod && extByMethod[item.request.method]) {
+                            const def = extByMethod[item.request.method];
+                            if (def.name && def.name != item.name) {
+                                continue itemLoop;
+                            }
+                            if (def.definition.header.length) {
+                                item.request.header = item.request.header || [];
+                                if (Array.isArray(item.request.header)) {
+                                    const mergedMap = new Map();
+
+                                    // Add all source items first
+                                    item.request.header.forEach(item => mergedMap.set(item.key, item));
+
+                                    // Merge with updates
+                                    def.definition.header.forEach(item => {
+                                        if (mergedMap.has(item.key)) {
+                                            // Merge properties: source + update (update overrides conflicts)
+                                            mergedMap.set(item.key, { ...mergedMap.get(item.key), ...item });
+                                        } else {
+                                            mergedMap.set(item.key, item);
+                                        }
+                                    });
+
+                                    item.request.header = Array.from(mergedMap.values());
+                                } else {
+                                    // is a string
+                                }
+                            }
+                            item.request.body = deepExtend(item.request.body || {}, def.definition.body)
+                        }
+                    }
+                }
+            }
         }
         return result
     }
