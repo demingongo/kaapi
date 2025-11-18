@@ -1,5 +1,5 @@
 import '@hapi/hapi'
-import type { RequestBodyDocsModifier } from './services/docs/docs-modifiers'
+import type { RequestBodyDocsModifier } from './services/docs/modifiers'
 import type { KaapiOpenAPIHelperClass } from './services/docs/generators'
 import { BaseResponseUtil } from '@novice1/api-doc-generator/lib/utils/responses/baseResponseUtils';
 

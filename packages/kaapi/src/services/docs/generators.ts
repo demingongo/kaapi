@@ -8,7 +8,7 @@ import { OpenAPIMixHelper, PostmanMixHelper } from './api-doc-mix-helpers';
 import { deepExtend } from './deep-extend';
 import { BaseAuthUtil, BaseOpenAPIAuthUtil } from '@novice1/api-doc-generator/lib/utils/auth/baseAuthUtils';
 import { ReferenceObject, SecuritySchemeObject } from '@novice1/api-doc-generator/lib/generators/openapi/definitions';
-import { RequestBodyDocsModifier, ResponseDocsModifier } from './docs-modifiers';
+import { RequestBodyDocsModifier, ResponseDocsModifier } from './modifiers';
 import { BaseResponseUtil } from '@novice1/api-doc-generator/lib/utils/responses/baseResponseUtils';
 
 // declared in overrides.d.ts
