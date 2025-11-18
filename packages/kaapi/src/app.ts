@@ -181,14 +181,14 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
                 .catch(err => {
                     this.log.error('Error while extending (app.extend)', err)
                 }).finally(() => {
-                    this._createDocsRouter()
+                    this.#createDocsRouter()
                 })
         } else {
-            this._createDocsRouter()
+            this.#createDocsRouter()
         }
     }
 
-    private _createDocsRouter() {
+    #createDocsRouter() {
         if (!this.#docsDisabled) {
             const [route, handler] = createDocsRouter(
                 this.#docsPath,
@@ -199,7 +199,7 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
         }
     }
 
-    private _createServer(): KaapiServer {
+    #createServer(): KaapiServer {
         return new KaapiServer({
             query: {
                 parser: (query) => qs.parse(query)
@@ -208,7 +208,7 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
         })
     }
 
-    private async _startServer() {
+    async #startServer() {
         await this.kaapiServer?.base.start()
         this.#serverStarted = true
         this.log.verbose('📢  Server listening on %s', this.kaapiServer?.base.info.uri);
@@ -220,7 +220,7 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
      */
     server(): KaapiServer {
         if (!this.kaapiServer) {
-            this.kaapiServer = this._createServer();
+            this.kaapiServer = this.#createServer();
         }
         return this.kaapiServer
     }
@@ -239,7 +239,7 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
     async listen(): Promise<KaapiServer> {
         const server = this.server()
         if (!this.#serverStarted) {
-            await this._startServer()
+            await this.#startServer()
         }
         return server
     }

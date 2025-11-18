@@ -31,7 +31,6 @@ export type SchemaModel = Omit<SchemaObject3_1, 'allOf' | 'anyOf' | 'oneOf' | 'n
 export interface ISchemaAdapter {
     ref(): ReferenceObject
     toObject(): SchemaObject3_1
-    toJSON(): SchemaObject3_1
 }
 
 export type MediaTypeModel = Omit<MediaTypeObject, 'schema' | 'examples'> & {
@@ -136,7 +135,7 @@ export class SchemaAdapter implements ISchemaAdapter {
         }
     }
 
-    private _convertOneShape(v: SchemaModel | ISchemaAdapter): SchemaObject3_1 | ReferenceObject {
+    #convertOne(v: SchemaModel | ISchemaAdapter): SchemaObject3_1 | ReferenceObject {
         if ('ref' in v && typeof v.ref == 'function') {
             return v.ref()
         } else {
@@ -144,19 +143,19 @@ export class SchemaAdapter implements ISchemaAdapter {
         }
     }
 
-    private _convertManyShapes(v: Array<SchemaModel | ISchemaAdapter>): Array<SchemaObject3_1 | ReferenceObject> {
+    #convertMany(v: Array<SchemaModel | ISchemaAdapter>): Array<SchemaObject3_1 | ReferenceObject> {
         const r: Array<SchemaObject3_1 | ReferenceObject> = []
         for (const element of v) {
-            r.push(this._convertOneShape(element))
+            r.push(this.#convertOne(element))
         }
         return r
     }
 
-    private _convertObjectOfShapes(v: Record<string, SchemaModel | ISchemaAdapter>): Record<string, SchemaObject3_1 | ReferenceObject> {
+    #convertObjectOf(v: Record<string, SchemaModel | ISchemaAdapter>): Record<string, SchemaObject3_1 | ReferenceObject> {
         const r: Record<string, SchemaObject3_1 | ReferenceObject> = {}
         for (const k in v) {
             const vk = v[k]
-            r[k] = (this._convertOneShape(vk))
+            r[k] = (this.#convertOne(vk))
         }
         return r
     }
@@ -178,28 +177,28 @@ export class SchemaAdapter implements ISchemaAdapter {
         const { allOf, anyOf, oneOf, not, items, properties, additionalProperties, ...value } = this.schema
         const valueToKeep: SchemaObject3_1 = value
         if (allOf) {
-            valueToKeep.allOf = this._convertManyShapes(allOf)
+            valueToKeep.allOf = this.#convertMany(allOf)
         }
         if (anyOf) {
-            valueToKeep.anyOf = this._convertManyShapes(anyOf)
+            valueToKeep.anyOf = this.#convertMany(anyOf)
         }
         if (oneOf) {
-            valueToKeep.oneOf = this._convertManyShapes(oneOf)
+            valueToKeep.oneOf = this.#convertMany(oneOf)
         }
         if (not) {
-            valueToKeep.not = this._convertOneShape(not)
+            valueToKeep.not = this.#convertOne(not)
         }
         if (items) {
-            valueToKeep.items = this._convertOneShape(items)
+            valueToKeep.items = this.#convertOne(items)
         }
         if (properties) {
-            valueToKeep.properties = this._convertObjectOfShapes(properties)
+            valueToKeep.properties = this.#convertObjectOf(properties)
         }
         if (typeof additionalProperties !== 'undefined') {
             if (typeof additionalProperties === 'boolean') {
                 valueToKeep.additionalProperties = additionalProperties
             } else {
-                valueToKeep.additionalProperties = this._convertOneShape(additionalProperties)
+                valueToKeep.additionalProperties = this.#convertOne(additionalProperties)
             }
         }
         return { ...valueToKeep };
@@ -236,6 +235,11 @@ export class MediaTypeAdapter extends MediaTypeUtil {
         return this
     }
 
+    setSchema(schema: SchemaModel | SchemaAdapter): this {
+        this.schema = schema
+        return this
+    }
+
     toObject(noRef?: boolean): MediaTypeObject {
         const withSchema: { schema?: SchemaObject3_1 | ReferenceObject, examples?: Record<string, ExampleObject | ReferenceObject> } = {};
         if (typeof this.schema !== 'undefined') {
@@ -267,16 +271,11 @@ export class MediaTypeAdapter extends MediaTypeUtil {
     toModel(): MediaTypeModel {
         return { ...super.toObject(), schema: this.schema, examples: this.examples };
     }
-
-    setSchema(schema: SchemaModel | SchemaAdapter): this {
-        this.schema = schema
-        return this
-    }
 }
 
 export class RequestBodyAdapter {
     protected name: string;
-    protected content: Record<string, MediaTypeModel> = {};
+    protected content: Record<string, MediaTypeAdapter> = {};
     protected description?: string;
     protected required?: boolean;
     protected requestBodyRef?: string;
@@ -325,9 +324,9 @@ export class RequestBodyAdapter {
     addMediaType(contentType: string, mediaType: MediaTypeModel | MediaTypeAdapter = {}): this {
         this.content = this.content || {};
         if (mediaType instanceof MediaTypeAdapter) {
-            this.content[contentType] = mediaType.toModel();
-        } else {
             this.content[contentType] = mediaType;
+        } else {
+            this.content[contentType] = new MediaTypeAdapter(mediaType);
         }
         return this;
     }
@@ -339,7 +338,7 @@ export class RequestBodyAdapter {
     toPostman(): PostmanRequestBodyModel {
         const result: PostmanRequestBodyModel = {}
         for (const contentType in this.content) {
-            const mediaTypeModel = this.content[contentType]
+            const mediaTypeModel = this.content[contentType].toModel()
             const contentSchema = mediaTypeModel.schema
             result.mode = 'raw'
             if (contentType === 'multipart/form-data') {
@@ -399,8 +398,8 @@ export class RequestBodyAdapter {
     toOpenAPI(): OpenAPIRequestBodyObject {
         const content: OpenAPIRequestBodyObject['content'] = {}
         for (const contentType in this.content) {
-            const mediaTypeModel = this.content[contentType]
-            content[contentType] = new MediaTypeAdapter(mediaTypeModel).toObject()
+            const adapter = this.content[contentType]
+            content[contentType] = adapter.toObject()
         }
         const result: OpenAPIRequestBodyObject = {
             content
@@ -418,6 +417,9 @@ export class RequestBodyAdapter {
     }
 }
 
+/**
+ * Set a name (setName) or a ref (setRef) for it to be used as a reference.
+ */
 export class ResponseAdapter extends ResponseUtil {
     toOpenAPIRefPreferred(): Record<string, ResponseObject | ReferenceObject>;
     toOpenAPIRefPreferred(ctxt: IOpenAPIResponseContext): Record<string, ResponseObject | ReferenceObject>;
@@ -459,7 +461,7 @@ export class ResponseAdapter extends ResponseUtil {
         return this.toOpenAPI(ctxt)
     }
 
-    createContextResponseAdapter(): ContextResponseAdapter {
+    withContext(): ContextResponseAdapter {
         return new ContextResponseAdapter(this)
     }
 }
