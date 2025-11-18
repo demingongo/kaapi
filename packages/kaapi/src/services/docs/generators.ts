@@ -1,4 +1,4 @@
-import { ContextAuthUtil, GroupContextAuthUtil, OpenAPI, OpenAPIHelperClass, OpenAPIHelperInterface, OpenAPIOptions, OpenAPIResult, Postman, PostmanHelperClass, PostmanOptions, ProcessedRoute } from '@novice1/api-doc-generator';
+import { ContextAuthUtil, GroupContextAuthUtil, OpenAPI, OpenAPIHelperClass, OpenAPIHelperInterface, OpenAPIOptions, OpenAPIResult, Postman, PostmanCollection, PostmanHelperClass, PostmanOptions, ProcessedRoute } from '@novice1/api-doc-generator';
 import { OpenAPIJoiHelper } from '@novice1/api-doc-generator/lib/generators/openapi/helpers/joiHelper';
 import { KaapiServerRoute } from '@kaapi/server';
 import { type RouteMeta } from '@novice1/routing';
@@ -8,7 +8,7 @@ import { OpenAPIMixHelper, PostmanMixHelper } from './api-doc-mix-helpers';
 import { deepExtend } from './deep-extend';
 import { BaseAuthUtil, BaseOpenAPIAuthUtil } from '@novice1/api-doc-generator/lib/utils/auth/baseAuthUtils';
 import { ReferenceObject, SecuritySchemeObject } from '@novice1/api-doc-generator/lib/generators/openapi/definitions';
-import { RequestBodyDocsModifier, ResponseDocsModifier } from './modifiers';
+import { PostmanRequestBodyModel, RequestBodyDocsModifier, ResponseDocsModifier } from './modifiers';
 import { BaseResponseUtil } from '@novice1/api-doc-generator/lib/utils/responses/baseResponseUtils';
 
 // declared in overrides.d.ts
@@ -54,7 +54,13 @@ class CustomHelper extends OpenAPIJoiHelper implements KaapiOpenAPIHelperInterfa
     }
 }
 
-export type RouteModifier = { path: string, method: string; definition: object }
+export type RouteModifier = {
+    path: string;
+    method: string;
+    definition: object;
+    name?: string | undefined;
+    tags?: string[] | undefined;
+}
 
 export function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(
     serverRoutes: KaapiServerRoute<Refs>[] | KaapiServerRoute<Refs>,
@@ -155,7 +161,9 @@ export function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(
                             modifiers.push({
                                 path: path,
                                 method: method.toLowerCase(),
-                                definition: pluginKaapiDocs.modifiers.requestBody
+                                definition: pluginKaapiDocs.modifiers.requestBody,
+                                name: route.name,
+                                tags: route.tags
                             })
                         } else {
                             throw TypeError(`Expected instance of RequestBodyDocsModifier (at ${method} ${path})`)
@@ -166,7 +174,9 @@ export function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(
                             modifiers.push({
                                 path: path,
                                 method: method.toLowerCase(),
-                                definition: pluginKaapiDocs.modifiers.responses
+                                definition: pluginKaapiDocs.modifiers.responses,
+                                name: route.name,
+                                tags: route.tags
                             })
                         } else {
                             throw TypeError(`Expected instance of BaseResponseUtil (at ${method} ${path})`)
@@ -313,7 +323,9 @@ export function formatRequestRoute<Refs extends ReqRef = ReqRefDefaults>(
                         modifiers.push({
                             path: path,
                             method: method.toLowerCase(),
-                            definition: pluginKaapiDocs.modifiers.requestBody
+                            definition: pluginKaapiDocs.modifiers.requestBody,
+                            name: route.name,
+                            tags: route.tags
                         })
                     } else {
                         throw TypeError(`Expected instance of RequestBodyDocsModifier (at ${method} ${path})`)
@@ -324,7 +336,9 @@ export function formatRequestRoute<Refs extends ReqRef = ReqRefDefaults>(
                         modifiers.push({
                             path: path,
                             method: method.toLowerCase(),
-                            definition: pluginKaapiDocs.modifiers.responses
+                            definition: pluginKaapiDocs.modifiers.responses,
+                            name: route.name,
+                            tags: route.tags
                         })
                     } else {
                         throw TypeError(`Expected instance of BaseResponseUtil (at ${method} ${path})`)
@@ -509,13 +523,131 @@ export class KaapiOpenAPI extends OpenAPI implements KaapiDocGenerator {
     }
 }
 
+type ExtensionsByMethod = Record<string, {
+    name?: string | undefined;
+    definition: PostmanRequestBodyModel;
+}>
+type ExtensionsByPath = Record<string, ExtensionsByMethod>
+
 export class KaapiPostman extends Postman implements KaapiDocGenerator {
+
+    protected routeExtensions: {
+        tagged: Record<string, ExtensionsByPath>;
+        notTagged: ExtensionsByPath;
+    } = {
+            tagged: {},
+            notTagged: {}
+        }
 
     constructor(options?: PostmanOptions) {
         if (options?.helperClass) {
             PostmanMixHelper.helperClasses.add(options.helperClass)
         }
         super({ ...options, helperClass: PostmanMixHelper });
+    }
+
+    /**
+     * @override
+     */
+    removeAll(): ProcessedRoute[] {
+        this.routeExtensions = {
+            tagged: {},
+            notTagged: {}
+        }
+        return super.removeAll()
+    }
+
+    /**
+     * @override
+     */
+    result(): PostmanCollection {
+        let result = super.result()
+        if (Object.keys(this.routeExtensions.tagged).length) {
+            result = deepExtend({}, result)
+            for (const tag in this.routeExtensions.tagged) {
+                const folder = result.item.find(f => f.name === tag)
+                if (tag === folder?.name) {
+                    if ('item' in folder) {
+                        const extByPath = this.routeExtensions.tagged[tag]
+                        itemLoop: for (const item of folder.item) {
+                            if ('request' in item &&
+                                item.request.url?.path &&
+                                item.request.method
+                            ) {
+                                const requestPath = (typeof item.request.url?.path === 'string' ?
+                                    item.request.url?.path : item.request.url?.path?.join('/'));
+                                if (requestPath) {
+                                    const extByMethod = extByPath[`/${requestPath}`];
+                                    if (extByMethod && extByMethod[item.request.method]) {
+                                        const def = extByMethod[item.request.method];
+                                        if (def.name && def.name != item.name) {
+                                            continue itemLoop;
+                                        }
+                                        if (def.definition.header.length) {
+                                            item.request.header = item.request.header || [];
+                                            if (Array.isArray(item.request.header)) {
+                                                const mergedMap = new Map();
+
+                                                // Add all source items first
+                                                item.request.header.forEach(item => mergedMap.set(item.key, item));
+
+                                                // Merge with updates
+                                                def.definition.header.forEach(item => {
+                                                    if (mergedMap.has(item.key)) {
+                                                        // Merge properties: source + update (update overrides conflicts)
+                                                        mergedMap.set(item.key, { ...mergedMap.get(item.key), ...item });
+                                                    } else {
+                                                        mergedMap.set(item.key, item);
+                                                    }
+                                                });
+
+                                                item.request.header = Array.from(mergedMap.values());
+                                            } else {
+                                                // is a string
+                                            }
+                                        }
+                                        item.request.body = deepExtend(item.request.body || {}, def.definition.body)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            //result = deepExtend({}, result)
+            //result = deepExtend(result, { paths: this.routeExtensions })
+        }
+        return result
+    }
+
+    modifyRoute(path: string, method: string, definition: RequestBodyDocsModifier, name?: string, tags?: string[] | undefined) {
+        if (name && definition instanceof RequestBodyDocsModifier) {
+            const v: ExtensionsByPath = {
+                [path.replace(/{([^}]+)}/g, ':$1').replace(/\*/g, '')]: {
+                    [method.toUpperCase()]: {
+                        name,
+                        definition: definition.toPostman()
+                    }
+                }
+            }
+            if (tags?.length) {
+                for (const tag of tags) {
+                    this.routeExtensions.tagged[tag] = deepExtend(this.routeExtensions.tagged[tag], v)
+                }
+            } else {
+                this.routeExtensions.notTagged = deepExtend(this.routeExtensions.notTagged, v)
+            }
+        }
+    }
+
+    addCustom(routes: RouteMeta[], modifiers?: RouteModifier[]): ProcessedRoute[] {
+        if (modifiers) {
+            for (const o of modifiers) {
+                if (o.name && o.definition instanceof RequestBodyDocsModifier)
+                    this.modifyRoute(o.path, o.method, o.definition, o.name, o.tags)
+            }
+        }
+        return super.add(routes)
     }
 
     addHelperClass(helperClass: PostmanHelperClass) {

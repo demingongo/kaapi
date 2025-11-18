@@ -350,11 +350,14 @@ export class RequestBodyDocsModifier {
             const contentSchema = mediaTypeModel.schema
             result.mode = 'raw'
             if (contentType === 'multipart/form-data') {
-                result.mode = 'form-data'
+                result.mode = 'formdata'
                 result.formdata = []
                 if (contentSchema) {
-                    if (contentSchema instanceof SchemaModifier) {
-                        const rawSchema = contentSchema.toObject()
+                    const rawSchema: SchemaObject3_1 | undefined = contentSchema instanceof SchemaModifier ?
+                        contentSchema.toObject() : (
+                            !('$ref' in contentSchema) ? new SchemaModifier('tmp', contentSchema).toObject() : undefined
+                        )
+                    if (rawSchema) {
                         if (rawSchema.properties) {
                             for (const key in rawSchema.properties) {
                                 const propSchema = rawSchema.properties[key]

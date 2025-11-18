@@ -265,7 +265,7 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
             this.base().auth.settings.default
         );
         this.docs.openapi.addCustom(routesMeta, modifiers)
-        this.docs.postman.add(routesMeta)
+        this.docs.postman.addCustom(routesMeta, modifiers)
         return super.route(serverRoute, handler)
     }
 
@@ -285,7 +285,7 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
                     authConfigDefault
                 );
                 this.docs.openapi.addCustom(routesMeta, modifiers);
-                this.docs.postman.add(routesMeta);
+                this.docs.postman.addCustom(routesMeta, modifiers);
             }
         )
     }
@@ -314,8 +314,8 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
                     getDocs().openapi.getSecuritySchemeUtils(),
                     getCurrentApp().base().auth.settings.default
                 );
-                getDocs().openapi.addCustom(routesMeta, modifiers)
-                getDocs().postman.add(routesMeta)
+                getDocs().openapi.addCustom(routesMeta, modifiers);
+                getDocs().postman.addCustom(routesMeta, modifiers);
                 getCurrentApp().server().route(serverRoute, handler)
                 return this
             },

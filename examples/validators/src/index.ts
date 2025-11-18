@@ -37,6 +37,16 @@ const app = new Kaapi({
         disabled: false,
         title: 'Validators (valibot)',
         security: new BearerUtil('mySecurityScheme'),
+        host: {
+            url: '{baseUrl}',
+            variables: {
+                baseUrl: {
+                    default: 'http://localhost:3000',
+                    description: 'Base url',
+                    enum: ['http://localhost:3000'],
+                },
+            },
+        }
     },
     routes: {
         auth: {
