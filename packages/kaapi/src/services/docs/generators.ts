@@ -8,6 +8,8 @@ import { OpenAPIMixHelper, PostmanMixHelper } from './api-doc-mix-helpers';
 import { deepExtend } from './deep-extend';
 import { BaseAuthUtil, BaseOpenAPIAuthUtil } from '@novice1/api-doc-generator/lib/utils/auth/baseAuthUtils';
 import { ReferenceObject, SecuritySchemeObject } from '@novice1/api-doc-generator/lib/generators/openapi/definitions';
+import { RequestBodyAdapter, ResponseAdapter } from './doc-adapters';
+import { BaseResponseUtil } from '@novice1/api-doc-generator/lib/utils/responses/baseResponseUtils';
 
 // declared in overrides.d.ts
 export interface KaapiOpenAPIHelperInterface extends OpenAPIHelperInterface {
@@ -52,13 +54,13 @@ class CustomHelper extends OpenAPIJoiHelper implements KaapiOpenAPIHelperInterfa
     }
 }
 
-export type OpenApiSchemaExtension = { path: string, method: string; definition: object }
+export type RouteAdapter = { path: string, method: string; definition: object }
 
 export function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(
     serverRoutes: KaapiServerRoute<Refs>[] | KaapiServerRoute<Refs>,
     securitySchemes?: Map<string, BaseAuthUtil>,
     authConfigDefault?: ServerAuthConfig
-): { routes: RouteMeta[], extensions?: OpenApiSchemaExtension[] } {
+): { routes: RouteMeta[], extensions?: RouteAdapter[] } {
 
     let sRoutes: KaapiServerRoute<Refs>[] = [];
 
@@ -69,7 +71,7 @@ export function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(
     }
 
     const routes: RouteMeta[] = []
-    const extensions: OpenApiSchemaExtension[] = []
+    const extensions: RouteAdapter[] = []
 
     sRoutes.forEach(sRoute => {
         // only string paths
@@ -148,12 +150,27 @@ export function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(
                     if (sRoute.options?.payload?.allow) {
                         route.parameters.consumes = Array.isArray(sRoute.options.payload.allow) ? sRoute.options.payload.allow : [sRoute.options.payload.allow];
                     }
-                    if (pluginKaapiDocs.openApiSchemaExtension) {
-                        extensions.push({
-                            path: path,
-                            method: method.toLowerCase(),
-                            definition: pluginKaapiDocs.openApiSchemaExtension
-                        })
+                    if (pluginKaapiDocs.adapters?.requestBody) {
+                        if (pluginKaapiDocs.adapters.requestBody instanceof RequestBodyAdapter) {
+                            extensions.push({
+                                path: path,
+                                method: method.toLowerCase(),
+                                definition: pluginKaapiDocs.adapters.requestBody
+                            })
+                        } else {
+                            throw TypeError(`Expected instance of RequestBodyAdapter (at ${method} ${path})`)
+                        }
+                    }
+                    if (pluginKaapiDocs.adapters?.responses) {
+                        if (pluginKaapiDocs.adapters.responses instanceof BaseResponseUtil) {
+                            extensions.push({
+                                path: path,
+                                method: method.toLowerCase(),
+                                definition: pluginKaapiDocs.adapters.responses
+                            })
+                        } else {
+                            throw TypeError(`Expected instance of BaseResponseUtil (at ${method} ${path})`)
+                        }
                     }
                     // route security
                     if (sRoute.options?.auth && typeof sRoute.options.auth === 'object' && securitySchemes) {
@@ -210,12 +227,12 @@ export function formatRequestRoute<Refs extends ReqRef = ReqRefDefaults>(
     reqRoute: RequestRoute<Refs>,
     securitySchemes?: Map<string, BaseAuthUtil>,
     authConfigDefault?: ServerAuthConfig
-): { routes: RouteMeta[], extensions?: OpenApiSchemaExtension[] } {
+): { routes: RouteMeta[], extensions?: RouteAdapter[] } {
 
     const sRoute: RequestRoute<Refs> = reqRoute;
 
     const routes: RouteMeta[] = []
-    const extensions: OpenApiSchemaExtension[] = []
+    const extensions: RouteAdapter[] = []
 
     // only string paths
     if (typeof sRoute.path != 'string') return { routes }
@@ -291,12 +308,27 @@ export function formatRequestRoute<Refs extends ReqRef = ReqRefDefaults>(
                 if (route.parameters && sRoute.settings?.payload?.allow) {
                     route.parameters.consumes = Array.isArray(sRoute.settings.payload.allow) ? sRoute.settings.payload.allow : [sRoute.settings.payload.allow];
                 }
-                if (pluginKaapiDocs.openApiSchemaExtension) {
-                    extensions.push({
-                        path: path,
-                        method: method.toLowerCase(),
-                        definition: pluginKaapiDocs.openApiSchemaExtension
-                    })
+                if (pluginKaapiDocs.adapters?.requestBody) {
+                    if (pluginKaapiDocs.adapters.requestBody instanceof RequestBodyAdapter) {
+                        extensions.push({
+                            path: path,
+                            method: method.toLowerCase(),
+                            definition: pluginKaapiDocs.adapters.requestBody
+                        })
+                    } else {
+                        throw TypeError(`Expected instance of RequestBodyAdapter (at ${method} ${path})`)
+                    }
+                }
+                if (pluginKaapiDocs.adapters?.responses) {
+                    if (pluginKaapiDocs.adapters.responses instanceof BaseResponseUtil) {
+                        extensions.push({
+                            path: path,
+                            method: method.toLowerCase(),
+                            definition: pluginKaapiDocs.adapters.responses
+                        })
+                    } else {
+                        throw TypeError(`Expected instance of BaseResponseUtil (at ${method} ${path})`)
+                    }
                 }
                 // route security
                 if (sRoute.settings?.auth && typeof sRoute.settings.auth === 'object' && securitySchemes) {
@@ -408,14 +440,32 @@ export class KaapiOpenAPI extends OpenAPI implements KaapiDocGenerator {
     }
 
     extendRoute(path: string, method: string, definition: object) {
-        this.routeExtensions = deepExtend(this.routeExtensions, {
-            [path]: {
-                [method.toLowerCase()]: definition
-            }
-        })
+        if (definition instanceof ResponseAdapter) {
+            this.routeExtensions = deepExtend(this.routeExtensions, {
+                [path]: {
+                    [method.toLowerCase()]: {
+                        responses: definition.toOpenAPIRefPreferred()
+                    }
+                }
+            })
+        } else if (definition instanceof RequestBodyAdapter) {
+            this.routeExtensions = deepExtend(this.routeExtensions, {
+                [path]: {
+                    [method.toLowerCase()]: {
+                        requestBody: definition.toOpenAPI()
+                    }
+                }
+            })
+        } else {
+            this.routeExtensions = deepExtend(this.routeExtensions, {
+                [path]: {
+                    [method.toLowerCase()]: definition
+                }
+            })
+        }
     }
 
-    addCustom(routes: RouteMeta[], extensions?: OpenApiSchemaExtension[]): ProcessedRoute[] {
+    addCustom(routes: RouteMeta[], extensions?: RouteAdapter[]): ProcessedRoute[] {
         if (extensions) {
             for (const o of extensions) {
                 this.extendRoute(o.path, o.method, o.definition)

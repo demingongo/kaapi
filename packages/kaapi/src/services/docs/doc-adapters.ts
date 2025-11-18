@@ -421,6 +421,11 @@ export class RequestBodyAdapter {
  * Set a name (setName) or a ref (setRef) for it to be used as a reference.
  */
 export class ResponseAdapter extends ResponseUtil {
+    constructor(name?: string) {
+        super(name);
+        if (!name)
+            this.setName('')
+    }
     toOpenAPIRefPreferred(): Record<string, ResponseObject | ReferenceObject>;
     toOpenAPIRefPreferred(ctxt: IOpenAPIResponseContext): Record<string, ResponseObject | ReferenceObject>;
     toOpenAPIRefPreferred(ctxt: IOpenAPIResponseContext = {}): Record<string, ResponseObject | ReferenceObject> {

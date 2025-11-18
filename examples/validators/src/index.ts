@@ -3,7 +3,7 @@
 import inert from '@hapi/inert';
 import Joi from 'joi'
 import { BearerUtil } from '@novice1/api-doc-generator';
-import { Kaapi, MediaTypeAdapter, RequestBodyAdapter, SchemaAdapter } from '@kaapi/kaapi';
+import { Kaapi, MediaTypeAdapter, RequestBodyAdapter, ResponseAdapter, SchemaAdapter } from '@kaapi/kaapi';
 import path from 'node:path';
 import { type } from 'arktype';
 import * as v from 'valibot';
@@ -214,31 +214,6 @@ async function start() {
         }
     }, ({ payload: { file } }, h) => h.response(file._data).type(file.hapi.headers['content-type']));
 
-    const requestBody = new RequestBodyAdapter()
-        .setRequired(true)
-        .addMediaType('multipart/form-data', new MediaTypeAdapter(
-            {
-                schema: new SchemaAdapter('UploadImageBusboy', {
-                    type: 'object',
-                    properties: {
-                        username: {
-                            type: 'string',
-                            description: 'The name of the user',
-                            format: 'email'
-                        },
-                        file: {
-                            type: 'string',
-                            description: 'The image to upload',
-                            contentMediaType: 'application/octet-stream'
-                        }
-                    },
-                    required: [
-                        'file'
-                    ],
-                }).toObject()
-            }
-        ));
-
     /*
 const fileFieldSchema: SchemaObject3_1 = {
     type: 'object',
@@ -278,21 +253,64 @@ const fileFieldSchema: SchemaObject3_1 = {
                     kaapi: {
                         docs: {
                             // it definitly looks ugly but it is necessary for the sake of the documentation while fine graining the the control with no validator
+                            /*
                             openApiSchemaExtension: {
                                 requestBody: {
-                                    ...requestBody.toOpenAPI()
-                                    /*
                                     content: {
                                         'multipart/form-data': {
-                                            schema: fileFieldSchema
+                                            schema: {
+                                                type: 'object',
+                                                properties: {
+                                                    username: {
+                                                        type: 'string',
+                                                        description: 'The name of the user',
+                                                        format: 'email'
+                                                    },
+                                                    file: {
+                                                        type: 'string',
+                                                        description: 'The image to upload',
+                                                        contentMediaType: 'application/octet-stream'
+                                                    }
+                                                },
+                                                required: [
+                                                    'file'
+                                                ],
+                                            }
                                         }
                                     },
                                     required: true
-                                    */
                                 }
                             },
+                            */
                             adapters: {
-                                requestBody
+                                requestBody: new RequestBodyAdapter()
+                                    .setRequired(true)
+                                    .addMediaType('multipart/form-data', new MediaTypeAdapter(
+                                        {
+                                            schema: new SchemaAdapter('UploadImageBusboy', {
+                                                type: 'object',
+                                                properties: {
+                                                    username: {
+                                                        type: 'string',
+                                                        description: 'The name of the user',
+                                                        format: 'email'
+                                                    },
+                                                    file: {
+                                                        type: 'string',
+                                                        description: 'The image to upload',
+                                                        contentMediaType: 'application/octet-stream'
+                                                    }
+                                                },
+                                                required: [
+                                                    'file'
+                                                ],
+                                            }).toObject()
+                                        }
+                                    )),
+                                responses: new ResponseAdapter()
+                                    .setCode(200)
+                                    .setDefault(true)
+                                    .setDescription('The file itself')
                             }
                         }
                     }
