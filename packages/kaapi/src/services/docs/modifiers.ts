@@ -13,7 +13,7 @@ import {
     MediaTypeObject,
     ResponseObject
 } from '@novice1/api-doc-generator/lib/generators/openapi/definitions'
-import { RequestBodyObject } from '@novice1/api-doc-generator/lib/generators/postman/definitions'
+import { HeaderObject, RequestBodyObject } from '@novice1/api-doc-generator/lib/generators/postman/definitions'
 import { BaseResponseUtil } from '@novice1/api-doc-generator/lib/utils/responses/baseResponseUtils'
 
 // -------------------- TYPES --------------------
@@ -44,7 +44,10 @@ export interface OpenAPIRequestBodyObject {
     required?: boolean;
 }
 
-export type PostmanRequestBodyModel = RequestBodyObject
+export type PostmanRequestBodyModel = {
+    body: RequestBodyObject;
+    header: HeaderObject[];
+}
 
 // -------------------- CLASSES --------------------
 
@@ -336,8 +339,13 @@ export class RequestBodyDocsModifier {
     }
 
     toPostman(): PostmanRequestBodyModel {
-        const result: PostmanRequestBodyModel = {}
+        const result: PostmanRequestBodyModel['body'] = {}
+        const header: PostmanRequestBodyModel['header'] = []
         for (const contentType in this.content) {
+            header.push({
+                key: 'Content-Type',
+                value: contentType
+            });
             const mediaTypeModel = this.content[contentType].toModel()
             const contentSchema = mediaTypeModel.schema
             result.mode = 'raw'
@@ -392,7 +400,7 @@ export class RequestBodyDocsModifier {
             }
             break;
         }
-        return result
+        return { header, body: result }
     }
 
     toOpenAPI(): OpenAPIRequestBodyObject {
