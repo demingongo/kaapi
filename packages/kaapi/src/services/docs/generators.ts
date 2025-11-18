@@ -124,8 +124,8 @@ export function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(
                     if (sRoute.options?.payload && (
                         typeof routeOptionsValidate?.payload === 'object' || typeof routeOptionsValidate?.payload === 'function'
                     )) {
-                        const helperClass = (typeof sRoute.options.plugins?.kaapi?.docs === 'object' && sRoute.options.plugins.kaapi.docs.openAPIHelperClass) ?
-                            sRoute.options.plugins.kaapi.docs.openAPIHelperClass :
+                        const helperClass = (pluginKaapiDocs.openAPIHelperClass) ?
+                            pluginKaapiDocs.openAPIHelperClass :
                             CustomHelper;
                         const helper = new helperClass({ value: routeOptionsValidate.payload })
                         if (helper.isValid() && helper.getType() === 'object') {
@@ -148,14 +148,12 @@ export function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(
                     if (sRoute.options?.payload?.allow) {
                         route.parameters.consumes = Array.isArray(sRoute.options.payload.allow) ? sRoute.options.payload.allow : [sRoute.options.payload.allow];
                     }
-                    if (typeof sRoute.options?.plugins?.kaapi?.docs === 'object') {
-                        if (sRoute.options.plugins.kaapi.docs.openApiSchemaExtension) {
-                            extensions.push({
-                                path: path,
-                                method: method.toLowerCase(),
-                                definition: sRoute.options.plugins.kaapi.docs.openApiSchemaExtension
-                            })
-                        }
+                    if (pluginKaapiDocs.openApiSchemaExtension) {
+                        extensions.push({
+                            path: path,
+                            method: method.toLowerCase(),
+                            definition: pluginKaapiDocs.openApiSchemaExtension
+                        })
                     }
                     // route security
                     if (sRoute.options?.auth && typeof sRoute.options.auth === 'object' && securitySchemes) {
@@ -269,8 +267,8 @@ export function formatRequestRoute<Refs extends ReqRef = ReqRefDefaults>(
                 if (sRoute.settings?.payload && (
                     typeof routeOptionsValidate?.payload === 'object' || typeof routeOptionsValidate?.payload === 'function'
                 )) {
-                    const helperClass = (typeof sRoute.settings.plugins?.kaapi?.docs === 'object' && sRoute.settings.plugins.kaapi.docs.openAPIHelperClass) ?
-                        sRoute.settings.plugins.kaapi.docs.openAPIHelperClass :
+                    const helperClass = (pluginKaapiDocs.openAPIHelperClass) ?
+                        pluginKaapiDocs.openAPIHelperClass :
                         CustomHelper;
                     const helper = new helperClass({ value: routeOptionsValidate.payload })
                     if (helper.isValid() && helper.getType() === 'object') {
@@ -293,14 +291,12 @@ export function formatRequestRoute<Refs extends ReqRef = ReqRefDefaults>(
                 if (route.parameters && sRoute.settings?.payload?.allow) {
                     route.parameters.consumes = Array.isArray(sRoute.settings.payload.allow) ? sRoute.settings.payload.allow : [sRoute.settings.payload.allow];
                 }
-                if (route.parameters && typeof sRoute.settings.plugins?.kaapi?.docs === 'object') {
-                    if (sRoute.settings.plugins.kaapi.docs.openApiSchemaExtension) {
-                        extensions.push({
-                            path: path,
-                            method: method.toLowerCase(),
-                            definition: sRoute.settings.plugins.kaapi.docs.openApiSchemaExtension
-                        })
-                    }
+                if (pluginKaapiDocs.openApiSchemaExtension) {
+                    extensions.push({
+                        path: path,
+                        method: method.toLowerCase(),
+                        definition: pluginKaapiDocs.openApiSchemaExtension
+                    })
                 }
                 // route security
                 if (sRoute.settings?.auth && typeof sRoute.settings.auth === 'object' && securitySchemes) {

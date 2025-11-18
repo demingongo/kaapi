@@ -15,6 +15,7 @@
 
 - @kaapi/validator-valibot
     - doc helpers
+    - wrapping function in case "route.options" is a function (do it for all validators)
         - cannot depend on to-json-schema (Error: The "trim" action cannot be converted to JSON Schema., ....), must depend on valibot object @done
 
 - @kaapi/validator-zod @done
