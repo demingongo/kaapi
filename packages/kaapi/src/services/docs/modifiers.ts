@@ -276,6 +276,36 @@ export class MediaTypeModifier extends MediaTypeUtil {
     }
 }
 
+function isContentFileSchema(schema: SchemaModel | ReferenceObject | SchemaModifier): boolean {
+    let r = false;
+    let nbProps = 0;
+
+    if ('type' in schema) {
+        if (schema.type !== 'string') {
+            return r
+        }
+        nbProps++;
+    }
+    if ('contentMediaType' in schema) {
+        nbProps++;
+    }
+    if ('contentEncoding' in schema) {
+        nbProps++;
+    }
+    if ('$ref' in schema) {
+        nbProps++;
+    }
+    if ('$schema' in schema) {
+        nbProps++;
+    }
+
+    if (nbProps === Object.keys(schema).length) {
+        r = true
+    }
+
+    return r;
+}
+
 export class RequestBodyDocsModifier {
     protected name: string;
     protected content: Record<string, MediaTypeModifier> = {};
@@ -380,8 +410,11 @@ export class RequestBodyDocsModifier {
                         }
                     }
                 }
-            } else if (!contentSchema || Object.keys(contentSchema).length === 0) {
+            } else if (!contentSchema || isContentFileSchema(contentSchema)) {
                 result.mode = 'file'
+                result.file = {
+                    src: ''
+                }
                 result.disabled = false
             } else {
                 // create raw value

@@ -11,9 +11,10 @@ import { z } from 'zod'
 import { validatorArk } from '@kaapi/validator-arktype';
 import { validatorValibot } from '@kaapi/validator-valibot';
 import { validatorZod } from '@kaapi/validator-zod';
-import Stream from 'node:stream';
+import Stream, { PassThrough } from 'node:stream';
 import busboy from 'busboy'
 import fs from 'node:fs';
+import Boom from '@hapi/boom';
 
 const app = new Kaapi({
     port: 3000,
@@ -186,7 +187,7 @@ async function start() {
     app.route<{
         Payload: {
             file: {
-                _data: Stream,
+                _data: Buffer,
                 hapi: {
                     filename: string,
                     headers: {
@@ -358,6 +359,98 @@ const fileFieldSchema: SchemaObject3_1 = {
             await promise;
 
             return h.file(savedFilename)
+        }
+    );
+
+    const VALID_TYPES: string[] = ['image/jpeg', 'image/jpg', 'image/png'] as const;
+
+    app.route<{
+        Payload: Stream.Readable
+    }>(
+        {
+            method: 'POST',
+            path: '/upload-single-file',
+            options: {
+                tags: ['single file'],
+                description: 'Upload an image',
+                notes: '**Single file upload with docs modifiers**',
+                payload: {
+                    output: 'stream',
+                    parse: false,
+                    allow: VALID_TYPES, // This will validate the content-type header
+                    multipart: false,
+                    maxBytes: 1024 * 2000, // 2MB
+                },
+                plugins: {
+                    kaapi: {
+                        docs: {
+                            modifiers: {
+                                requestBody: new RequestBodyDocsModifier()
+                                    .setRequired(true)
+                                    .addMediaType(VALID_TYPES[0], {
+                                        schema: {
+                                            type: 'string'
+                                        }
+                                    })
+                                    .addMediaType(VALID_TYPES[1], {
+                                        schema: {
+                                            type: 'string'
+                                        }
+                                    })
+                                    .addMediaType(VALID_TYPES[2], {
+                                        schema: {
+                                            type: 'string'
+                                        }
+                                    })
+                            },
+                        },
+                    },
+                },
+            },
+        },
+        async (request, h) => {
+            const contentType = request.headers['content-type'];
+            const pass = new PassThrough();
+
+            const validatorPromise = new Promise((resolve, reject) => {
+                // Collect first few bytes for validation
+                let buffer = Buffer.alloc(0);
+                let validated = false;
+
+                request.payload.on('data', chunk => {
+
+                    if (!validated) {
+                        buffer = Buffer.concat([buffer, chunk]);
+
+                        if (buffer.length >= 8) {
+                            const header = buffer.subarray(0, 8);
+
+                            // PNG/JPG check (really validate the file type)
+                            const pngSig = Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+                            const jpegSig = Buffer.from([0xFF, 0xD8]);
+
+                            if (header.equals(pngSig) || header.subarray(0, 2).equals(jpegSig)) {
+                                validated = true;
+                                resolve(h.response(pass)
+                                    .type(contentType));
+                            } else {
+                                request.payload.unpipe(pass);
+                                // Drain the rest of the stream so client doesn't hang
+                                request.payload.resume();
+                                return reject(Boom.badRequest('Invalid file type'));
+                            }
+                        }
+                    }
+                    pass.write(chunk);
+                });
+
+                request.payload.on('end', () => {
+                    console.log('Done parsing payload!');
+                    pass.end()
+                })
+            });
+
+            return await validatorPromise
         }
     );
 
