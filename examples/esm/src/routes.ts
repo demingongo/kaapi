@@ -1,6 +1,7 @@
 // routes.ts
 import { app } from './server';
 import Boom from '@hapi/boom';
+import { RequestBodyDocsModifier } from '@kaapi/kaapi';
 import Joi from 'joi';
 
 // 404
@@ -44,3 +45,115 @@ app.route(
         return url;
     }
 );
+
+app.route({
+    path: '/xml',
+    method: 'POST',
+    options: {
+        description: 'Post xml',
+        plugins: {
+            kaapi: {
+                docs: {
+                    modifiers: {
+                        requestBody: new RequestBodyDocsModifier()
+                            .addMediaType(
+                                'application/xml',
+                                {
+                                    schema: {
+                                        type: 'object',
+                                        properties: {
+                                            id: {
+                                                type: 'integer',
+                                                format: 'int32'
+                                            },
+                                            name: {
+                                                type: 'string',
+                                                xml: {
+                                                    namespace: 'http://example.com/schema/sample',
+                                                    prefix: 'sample'
+                                                }
+                                            },
+                                            animals: {
+                                                type: 'array',
+                                                uniqueItems: false,
+                                                items: {
+                                                    type: 'string',
+                                                    xml: {
+                                                        name: 'animal'
+                                                    }
+                                                }
+                                            },
+
+                                            safe: {
+                                                type: 'boolean'
+                                            },
+                                        },
+                                        xml: {
+                                            name: 'element'
+                                        }
+                                    }
+                                }
+                            )
+                    }
+                }
+            }
+        }
+    },
+    handler: () => 'ok'
+})
+
+app.route({
+    path: '/json',
+    method: 'POST',
+    options: {
+        description: 'Post json',
+        plugins: {
+            kaapi: {
+                docs: {
+                    modifiers: {
+                        requestBody: new RequestBodyDocsModifier()
+                            .addMediaType(
+                                'application/json',
+                                {
+                                    schema: {
+                                        type: 'object',
+                                        properties: {
+                                            id: {
+                                                type: 'integer',
+                                                format: 'int32'
+                                            },
+                                            name: {
+                                                type: 'string',
+                                                xml: {
+                                                    namespace: 'http://example.com/schema/sample',
+                                                    prefix: 'sample'
+                                                }
+                                            },
+                                            animals: {
+                                                type: 'array',
+                                                uniqueItems: false,
+                                                items: {
+                                                    type: 'string',
+                                                    xml: {
+                                                        name: 'animal'
+                                                    }
+                                                }
+                                            },
+
+                                            safe: {
+                                                type: 'boolean'
+                                            },
+                                        },
+                                        xml: {
+                                            name: 'element'
+                                        }
+                                    }
+                                }
+                            )
+                    }
+                }
+            }
+        }
+    },
+    handler: () => 'ok'
+})

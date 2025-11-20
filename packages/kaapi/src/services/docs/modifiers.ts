@@ -375,6 +375,12 @@ function createJsontoxmlSample(name: string, schema: SchemaObject3_1 | Reference
                     text = `${itemSchema.default}`
                 } else if (itemSchema.examples?.length) {
                     text = `${itemSchema.examples[0]}`
+                } else if (itemSchema.type === 'number' || itemSchema.type === 'integer') {
+                    text = `${itemSchema.minimum ? itemSchema.minimum : (itemSchema.exclusiveMinimum ? itemSchema.exclusiveMinimum : 0)}`;
+                } else if (itemSchema.type === 'boolean') {
+                    text = 'true';
+                } else if (itemSchema.type === 'string') {
+                    text = `${itemSchema.format || itemSchema.type}`;
                 } else if (itemSchema.format) {
                     text = `(${itemSchema.format})`
                 } else if (itemType) {
@@ -392,6 +398,12 @@ function createJsontoxmlSample(name: string, schema: SchemaObject3_1 | Reference
                 text = `${schema.default}`
             } else if (schema.examples?.length) {
                 text = `${schema.examples[0]}`
+            } else if (schema.type === 'number' || schema.type === 'integer') {
+                text = `${schema.minimum ? schema.minimum : (schema.exclusiveMinimum ? schema.exclusiveMinimum : 0)}`;
+            } else if (schema.type === 'boolean') {
+                text = 'true';
+            } else if (schema.type === 'string') {
+                text = `${schema.format || schema.type}`;
             } else if (schema.format) {
                 text = `(${schema.format})`
             } else if (schema.type) {
@@ -445,7 +457,7 @@ function createRawSample(schema: SchemaObject3_1 | ReferenceObject, deepLevel = 
             const arr: unknown[] = [];
             if (schema.items) {
                 const itemSample = createRawSample(schema.items, deepLevel + 1);
-                if (itemSample) {
+                if (typeof itemSample !== 'undefined') {
                     arr.push(itemSample);
                 }
             }
@@ -453,7 +465,7 @@ function createRawSample(schema: SchemaObject3_1 | ReferenceObject, deepLevel = 
         } else if (schema.type === 'number' || schema.type === 'integer') {
             sample = schema.minimum ? schema.minimum : (schema.exclusiveMinimum ? schema.exclusiveMinimum : 0);
         } else if (schema.type === 'boolean') {
-            sample = false
+            sample = true
         } else if (schema.format) {
             sample = `<${schema.format}>`
         } else if (schema.type === 'string') {
@@ -581,6 +593,7 @@ export class RequestBodyDocsModifier {
                 if (typeof mediaTypeModel.example !== 'undefined') {
                     result.raw = `${mediaTypeModel.example}`;
                 }
+                // if there are examples
                 if (typeof mediaTypeModel.examples !== 'undefined' && Object.keys(mediaTypeModel.examples).length !== 0) {
                     for (const key in mediaTypeModel.examples) {
                         const example = mediaTypeModel.examples[key];
@@ -592,31 +605,31 @@ export class RequestBodyDocsModifier {
                             break;
                         }
                     }
-                    // if no raw content was set
-                    if (!result.raw) {
-                        const rawSchema: SchemaObject3_1 | undefined = contentSchema instanceof SchemaModifier ?
-                            contentSchema.toObject() : (
-                                !('$ref' in contentSchema) ? new SchemaModifier('tmp', contentSchema).toObject() : undefined
-                            )
-                        if (rawSchema) {
-                            if (contentType === 'application/xml') {
-                                // xml
-                                const json: JsontoxmlSample = createElementJsontoxmlSample(
-                                    'element',
-                                    rawSchema
-                                );
-                                if ('properties' in rawSchema && rawSchema.properties) {
-                                    formatJsontoxmlSample(json, rawSchema.properties)
-                                }
-                                result.raw = jsontoxml([json], {
-                                    xmlHeader: true,
-                                    indent: ' '
-                                });
-                            } else {
-                                const sample = createRawSample(rawSchema)
-                                if (typeof sample !== 'undefined') {
-                                    result.raw = JSON.stringify(sample, null, '\t');
-                                }
+                }
+                // if no raw content was set
+                if (!result.raw) {
+                    const rawSchema: SchemaObject3_1 | undefined = contentSchema instanceof SchemaModifier ?
+                        contentSchema.toObject() : (
+                            !('$ref' in contentSchema) ? new SchemaModifier('tmp', contentSchema).toObject() : undefined
+                        )
+                    if (rawSchema) {
+                        if (contentType === 'application/xml') {
+                            // xml
+                            const json: JsontoxmlSample = createElementJsontoxmlSample(
+                                'element',
+                                rawSchema
+                            );
+                            if ('properties' in rawSchema && rawSchema.properties) {
+                                formatJsontoxmlSample(json, rawSchema.properties)
+                            }
+                            result.raw = jsontoxml([json], {
+                                xmlHeader: true,
+                                indent: ' '
+                            });
+                        } else {
+                            const sample = createRawSample(rawSchema)
+                            if (typeof sample !== 'undefined') {
+                                result.raw = JSON.stringify(sample, null, '\t');
                             }
                         }
                     }
