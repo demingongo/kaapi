@@ -816,6 +816,9 @@ importers:
       '@novice1/routing':
         specifier: ^2.0.2
         version: 2.0.2
+      jsontoxml:
+        specifier: ^1.0.1
+        version: 1.0.1
       qs:
         specifier: ^6.14.0
         version: 6.14.0
@@ -829,6 +832,9 @@ importers:
         specifier: ^3.17.0
         version: 3.18.3
     devDependencies:
+      '@types/jsontoxml':
+        specifier: ^1.0.6
+        version: 1.0.6
       '@types/qs':
         specifier: ^6.14.0
         version: 6.14.0
@@ -2181,6 +2187,9 @@ packages:
 
   '@types/json5@0.0.29':
     resolution: {integrity: sha512-dRLjCWHYg4oaA77cxO64oO+7JwCwnIzkZPdrrC71jQmQtlhM556pwKo5bUzqvZndkVbeFLIIi+9TC40JNF5hNQ==}
+
+  '@types/jsontoxml@1.0.6':
+    resolution: {integrity: sha512-SoeEpHuqdZcpLxZr5uzpB6A/ICmzBOfluwMm59Bm6vDuiSRSv4M/z8hvS+YCRw4ZyGO5BhJ5oeJnrurSigg3Vw==}
 
   '@types/jwk-to-pem@2.0.3':
     resolution: {integrity: sha512-I/WFyFgk5GrNbkpmt14auGO3yFK1Wt4jXzkLuI+fDBNtO5ZI2rbymyGd6bKzfSBEuyRdM64ZUwxU1+eDcPSOEQ==}
@@ -7537,6 +7546,8 @@ snapshots:
   '@types/json-schema@7.0.15': {}
 
   '@types/json5@0.0.29': {}
+
+  '@types/jsontoxml@1.0.6': {}
 
   '@types/jwk-to-pem@2.0.3': {}
 

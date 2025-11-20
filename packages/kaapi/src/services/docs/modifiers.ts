@@ -1,4 +1,5 @@
 import { deepExtend } from './deep-extend'
+import jsontoxml from 'jsontoxml'
 import {
     ContextResponseUtil,
     GroupResponseUtil,
@@ -11,7 +12,8 @@ import {
 import {
     ExampleObject,
     MediaTypeObject,
-    ResponseObject
+    ResponseObject,
+    XMLObject
 } from '@novice1/api-doc-generator/lib/generators/openapi/definitions'
 import { HeaderObject, RequestBodyObject } from '@novice1/api-doc-generator/lib/generators/postman/definitions'
 import { BaseResponseUtil } from '@novice1/api-doc-generator/lib/utils/responses/baseResponseUtils'
@@ -306,6 +308,164 @@ function isContentFileSchema(schema: SchemaModel | ReferenceObject | SchemaModif
     return r;
 }
 
+interface JsontoxmlSample {
+    name: string;
+    text?: string;
+    attrs?: Record<string, string>;
+    children?: JsontoxmlSample[];
+}
+
+function createElementJsontoxmlSample(name: string, schema: SchemaObject3_1 | ReferenceObject): JsontoxmlSample {
+    const res: JsontoxmlSample = {
+        name
+    };
+    if ('xml' in schema) {
+        let prefix = '';
+        const xml: XMLObject | undefined = schema.xml as (XMLObject | undefined);
+        if (xml?.name) {
+            res.name = xml.name;
+        }
+        if (xml?.prefix) {
+            prefix = xml.prefix;
+        }
+        if (xml?.namespace) {
+            const xmlns = prefix ? `xmlns:${prefix}` : `xmlns:${res.name}`;
+            res.attrs = {
+                [xmlns]: xml.namespace
+            };
+        }
+        if (prefix) {
+            res.name = `${prefix}:${res.name}`;
+        }
+    }
+    return res
+}
+
+function formatJsontoxmlSample(json: JsontoxmlSample, properties: Record<string, SchemaObject3_1 | ReferenceObject>) {
+    for (const propName in properties) {
+        const propSchema = properties[propName];
+        const jsonChild = createJsontoxmlSample(propName, propSchema);
+        if ('xml' in propSchema) {
+            const xmlObject = propSchema.xml as (XMLObject | undefined);
+            if (xmlObject?.attribute) {
+                json.attrs = json.attrs || {};
+                json.attrs[propName] = jsonChild.text || '';
+            } else {
+                json.children = json.children || [];
+                json.children.push(jsonChild);
+            }
+        } else {
+            json.children = json.children || [];
+            json.children.push(jsonChild);
+        }
+    }
+}
+
+function createJsontoxmlSample(name: string, schema: SchemaObject3_1 | ReferenceObject): JsontoxmlSample {
+    const res: JsontoxmlSample = createElementJsontoxmlSample(name, schema);
+
+    if ('type' in schema) {
+        if (schema.type === 'array') {
+            // no overdo: do not support anyOf or oneOf here
+            if (schema.items && 'type' in schema.items && typeof schema.items.type === 'string') {
+                let text: string | undefined;
+                const itemType = schema.items.type
+                const itemSchema = schema.items
+                if (typeof itemSchema.default !== 'undefined') {
+                    text = `${itemSchema.default}`
+                } else if (itemSchema.examples?.length) {
+                    text = `${itemSchema.examples[0]}`
+                } else if (itemSchema.format) {
+                    text = `(${itemSchema.format})`
+                } else if (itemType) {
+                    text = `(${itemType})`
+                }
+                if (text) {
+                    res.text = text;
+                }
+            }
+        } else if (schema.type === 'object' && schema.properties && Object.keys(schema.properties).length) {
+            formatJsontoxmlSample(res, schema.properties)
+        } else {
+            let text: string | undefined;
+            if (typeof schema.default !== 'undefined') {
+                text = `${schema.default}`
+            } else if (schema.examples?.length) {
+                text = `${schema.examples[0]}`
+            } else if (schema.format) {
+                text = `(${schema.format})`
+            } else if (schema.type) {
+                text = `(${schema.type})`
+            }
+            if (text) {
+                res.text = text;
+            }
+        }
+    }
+    return res
+}
+
+function createRawSample(schema: SchemaObject3_1 | ReferenceObject, deepLevel = 0): unknown {
+    let sample: unknown;
+    if (deepLevel > 9 || !Object.keys(schema).length) {
+        return;
+    }
+    if ('$ref' in schema && Object.keys(schema).length === 1) {
+        return
+    }
+
+    if ('default' in schema && typeof schema.default !== 'undefined') {
+        // default value
+        sample = schema.default
+    } else if ('enum' in schema && Array.isArray(schema.enum) && schema.enum.length) {
+        // default value
+        sample = schema.enum[0]
+    } else if ('examples' in schema && Array.isArray(schema.examples) && schema.examples.length) {
+        // first example value
+        sample = schema.examples[0]
+    } else if ('anyOf' in schema && Array.isArray(schema.anyOf) && schema.anyOf.length) {
+        // first example value
+        sample = createRawSample(schema.anyOf[0], deepLevel + 1)
+    } else if ('oneOf' in schema && Array.isArray(schema.oneOf) && schema.oneOf.length) {
+        // first example value
+        sample = createRawSample(schema.oneOf[0], deepLevel + 1)
+    } else if ('type' in schema) {
+        if (schema.type === 'object') {
+            const obj: Record<string, unknown> = {};
+            if (schema.properties) {
+                const props = schema.properties
+                Object.keys(props).forEach(
+                    name => {
+                        obj[name] = createRawSample(props[name], deepLevel + 1);
+                    }
+                );
+            }
+            sample = obj;
+        } else if (schema.type === 'array') {
+            const arr: unknown[] = [];
+            if (schema.items) {
+                const itemSample = createRawSample(schema.items, deepLevel + 1);
+                if (itemSample) {
+                    arr.push(itemSample);
+                }
+            }
+            sample = arr;
+        } else if (schema.type === 'number' || schema.type === 'integer') {
+            sample = schema.minimum ? schema.minimum : (schema.exclusiveMinimum ? schema.exclusiveMinimum : 0);
+        } else if (schema.type === 'boolean') {
+            sample = false
+        } else if (schema.format) {
+            sample = `<${schema.format}>`
+        } else if (schema.type === 'string') {
+            sample = ''
+        } else {
+            sample = `<${schema.type}>`
+        }
+    }
+
+    return sample;
+}
+
 export class RequestBodyDocsModifier {
     protected name: string;
     protected content: Record<string, MediaTypeModifier> = {};
@@ -430,6 +590,34 @@ export class RequestBodyDocsModifier {
                         } else if (example && 'value' in example && typeof example.value !== 'undefined') {
                             result.raw = `${example.value}`;
                             break;
+                        }
+                    }
+                    // if no raw content was set
+                    if (!result.raw) {
+                        const rawSchema: SchemaObject3_1 | undefined = contentSchema instanceof SchemaModifier ?
+                            contentSchema.toObject() : (
+                                !('$ref' in contentSchema) ? new SchemaModifier('tmp', contentSchema).toObject() : undefined
+                            )
+                        if (rawSchema) {
+                            if (contentType === 'application/xml') {
+                                // xml
+                                const json: JsontoxmlSample = createElementJsontoxmlSample(
+                                    'element',
+                                    rawSchema
+                                );
+                                if ('properties' in rawSchema && rawSchema.properties) {
+                                    formatJsontoxmlSample(json, rawSchema.properties)
+                                }
+                                result.raw = jsontoxml([json], {
+                                    xmlHeader: true,
+                                    indent: ' '
+                                });
+                            } else {
+                                const sample = createRawSample(rawSchema)
+                                if (typeof sample !== 'undefined') {
+                                    result.raw = JSON.stringify(sample, null, '\t');
+                                }
+                            }
                         }
                     }
                 }
