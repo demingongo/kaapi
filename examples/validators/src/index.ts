@@ -3,7 +3,13 @@
 import inert from '@hapi/inert';
 import Joi from 'joi'
 import { BearerUtil } from '@novice1/api-doc-generator';
-import { groupResponses, Kaapi, MediaTypeModifier, RequestBodyDocsModifier, ResponseDocsModifier, SchemaModifier } from '@kaapi/kaapi';
+import {
+    groupResponses,
+    Kaapi,
+    MediaTypeModifier,
+    RequestBodyDocsModifier,
+    ResponseDocsModifier, SchemaModifier
+} from '@kaapi/kaapi';
 import path from 'node:path';
 import { type } from 'arktype';
 import * as v from 'valibot';
@@ -166,16 +172,21 @@ async function start() {
     }).route({
         method: 'POST',
         path: '/upload-image-zod',
-        options: {
-            tags: ['zod'],
-            description: 'Upload an image',
-            payload: {
-                output: 'stream',
-                parse: true,
-                allow: 'multipart/form-data',
-                multipart: { output: 'stream' },
-                maxBytes: 1024 * 3_000
-            }
+        options: () => {
+            console.log('loading optionssssss')
+            return ({
+                tags: ['zod'],
+                description: 'Upload an image',
+                payload: {
+                    output: 'stream',
+                    parse: true,
+                    allow: 'multipart/form-data',
+                    multipart: { output: 'stream' },
+                    maxBytes: 1024 * 3_000
+                }, plugins: {
+
+                }
+            })
         }
     }, (req, h) =>
         h.response(req.payload.file._data)
@@ -293,7 +304,7 @@ const fileFieldSchema: SchemaObject3_1 = {
                                 }
                             },
                             */
-                            modifiers: {
+                            modifiers: () => ({
                                 requestBody: new RequestBodyDocsModifier()
                                     .setRequired(true)
                                     .addMediaType('multipart/form-data', new MediaTypeModifier(
@@ -327,7 +338,8 @@ const fileFieldSchema: SchemaObject3_1 = {
                                         .setCode(400)
                                         .setDescription('Bad Request')
                                 )
-                            }
+
+                            })
                         }
                     }
                 }
@@ -370,7 +382,7 @@ const fileFieldSchema: SchemaObject3_1 = {
         {
             method: 'POST',
             path: '/upload-single-file',
-            options: {
+            options: () => ({
                 tags: ['single file'],
                 description: 'Upload an image',
                 notes: '**Single file upload with docs modifiers**',
@@ -384,7 +396,7 @@ const fileFieldSchema: SchemaObject3_1 = {
                 plugins: {
                     kaapi: {
                         docs: {
-                            modifiers: {
+                            modifiers: () => ({
                                 requestBody: new RequestBodyDocsModifier()
                                     .setRequired(true)
                                     .addMediaType(VALID_TYPES[0], {
@@ -402,11 +414,11 @@ const fileFieldSchema: SchemaObject3_1 = {
                                             type: 'string'
                                         }
                                     })
-                            },
+                            }),
                         },
                     },
                 },
-            },
+            }),
         },
         async (request, h) => {
             const contentType = request.headers['content-type'];
@@ -454,7 +466,7 @@ const fileFieldSchema: SchemaObject3_1 = {
         }
     );
 
-    //app.refreshDocs()
+    setTimeout(() => app.refreshDocs(), 2000)
 
     await app.listen()
 }

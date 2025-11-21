@@ -13,7 +13,10 @@ declare module '@hapi/hapi' {
         modifiers?: {
           requestBody?: RequestBodyDocsModifier;
           responses?: BaseResponseUtil
-        }
+        } | (() => {
+          requestBody?: RequestBodyDocsModifier;
+          responses?: BaseResponseUtil
+        })
       } | false
     };
     [x: string]: unknown;

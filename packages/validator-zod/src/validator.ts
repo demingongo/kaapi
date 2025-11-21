@@ -1,7 +1,7 @@
 import Boom from '@hapi/boom';
 import { z } from 'zod/v4';
 import { $ZodIssue } from 'zod/v4/core';
-import { KaapiServerRoute, HandlerDecorations, Lifecycle, KaapiPlugin, Request, ResponseToolkit, KaapiOpenAPIHelperInterface } from '@kaapi/kaapi';
+import { KaapiServerRoute, HandlerDecorations, Lifecycle, KaapiPlugin, Request, ResponseToolkit, KaapiOpenAPIHelperInterface, RouteOptions } from '@kaapi/kaapi';
 import { OpenAPIZodHelper, PostmanZodHelper } from '@novice1/api-doc-zod-helper';
 import type { ValidatorZod, ValidatorZodReqRef, ValidatorZodSchema, ZodlessReqRef, ZodlessReqRefDefaults, ZodSchema } from './types';
 import { mapIssue } from './utils';
@@ -62,6 +62,29 @@ export const zodDocsConfig = {
     }
 }
 
+function mergeOptions<V extends ValidatorZodSchema, R extends ZodlessReqRef>(
+    options: RouteOptions<ValidatorZodReqRef<V> & R>,
+    schema: V
+) {
+    // validator
+    if (!options.plugins) {
+        options.plugins = {}
+    }
+    options.plugins.zod = schema
+
+    // docs
+    options.plugins.kaapi = options.plugins.kaapi || {}
+    if (options.plugins.kaapi.docs != false && // docs not disabled
+        !options.plugins.kaapi.docs?.disabled // docs not disabled
+    ) {
+        if (!options.plugins?.kaapi?.docs?.helperSchemaProperty) // docs have not helperSchemaProperty
+            options.plugins.kaapi.docs = { ...options.plugins.kaapi.docs, helperSchemaProperty: 'zod' }
+        if (!options.plugins?.kaapi?.docs?.openAPIHelperClass) // docs have not openAPIHelperClass
+            options.plugins.kaapi.docs = { ...options.plugins.kaapi.docs, openAPIHelperClass: ZodDocHelper }
+    }
+    return options
+}
+
 export const validatorZod: KaapiPlugin = {
     async integrate(t) {
         const validator: ValidatorZod = <V extends ValidatorZodSchema>(schema: V) => {
@@ -74,21 +97,12 @@ export const validatorZod: KaapiPlugin = {
                         serverRoute.options = {}
                     }
                     if (typeof serverRoute.options === 'object') {
-                        // validate
-                        if (!serverRoute.options.plugins) {
-                            serverRoute.options.plugins = {}
-                        }
-                        serverRoute.options.plugins.zod = schema
-
-                        // docs
-                        serverRoute.options.plugins.kaapi = serverRoute.options.plugins.kaapi || {}
-                        if (serverRoute.options.plugins.kaapi.docs != false && // docs not disabled
-                            !serverRoute.options.plugins.kaapi.docs?.disabled // docs not disabled
-                        ) {
-                            if (!serverRoute.options.plugins?.kaapi?.docs?.helperSchemaProperty) // docs have not helperSchemaProperty
-                                serverRoute.options.plugins.kaapi.docs = { ...serverRoute.options.plugins.kaapi.docs, helperSchemaProperty: 'zod' }
-                            if (!serverRoute.options.plugins?.kaapi?.docs?.openAPIHelperClass) // docs have not openAPIHelperClass
-                                serverRoute.options.plugins.kaapi.docs = { ...serverRoute.options.plugins.kaapi.docs, openAPIHelperClass: ZodDocHelper }
+                        mergeOptions(serverRoute.options, schema)
+                    } else if (typeof serverRoute.options === 'function') {
+                        const fn = serverRoute.options.bind(serverRoute);
+                        serverRoute.options = (server) => {
+                            const options = fn(server)
+                            return mergeOptions(options, schema)
                         }
                     }
                     t.route(

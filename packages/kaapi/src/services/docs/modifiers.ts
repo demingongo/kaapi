@@ -221,17 +221,19 @@ export class MediaTypeModifier extends MediaTypeUtil {
     protected examples?: Record<string, ExampleObject | ReferenceObject | ExampleModifier>
 
     constructor(mediaType?: MediaTypeModel) {
+        super({})
         if (mediaType) {
-            const { examples, schema, ...rest } = mediaType
-            super(rest)
+            const { examples, schema, encoding, example } = mediaType
+            if (encoding)
+                this.setEncoding(encoding)
+            if (example)
+                this.setExample(example)
             if (examples) {
                 this.setExamples(examples)
             }
             if (schema) {
                 this.setSchema(schema)
             }
-        } else {
-            super()
         }
     }
 

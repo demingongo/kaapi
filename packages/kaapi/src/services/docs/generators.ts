@@ -156,12 +156,21 @@ export function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(
                     if (sRoute.options?.payload?.allow) {
                         route.parameters.consumes = Array.isArray(sRoute.options.payload.allow) ? sRoute.options.payload.allow : [sRoute.options.payload.allow];
                     }
-                    if (pluginKaapiDocs.modifiers?.requestBody) {
-                        if (pluginKaapiDocs.modifiers.requestBody instanceof RequestBodyDocsModifier) {
+                    let docsModifiers: {
+                        requestBody?: RequestBodyDocsModifier | undefined;
+                        responses?: BaseResponseUtil;
+                    } | undefined = undefined;
+                    if (typeof pluginKaapiDocs.modifiers === 'function') {
+                        docsModifiers = pluginKaapiDocs.modifiers()
+                    } else {
+                        docsModifiers = pluginKaapiDocs.modifiers
+                    }
+                    if (docsModifiers?.requestBody) {
+                        if (docsModifiers.requestBody instanceof RequestBodyDocsModifier) {
                             modifiers.push({
                                 path: path,
                                 method: method.toLowerCase(),
-                                definition: pluginKaapiDocs.modifiers.requestBody,
+                                definition: docsModifiers.requestBody,
                                 name: route.name,
                                 tags: route.tags
                             })
@@ -169,12 +178,12 @@ export function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(
                             throw TypeError(`Expected instance of RequestBodyDocsModifier (at ${method} ${path})`)
                         }
                     }
-                    if (pluginKaapiDocs.modifiers?.responses) {
-                        if (pluginKaapiDocs.modifiers.responses instanceof BaseResponseUtil) {
+                    if (docsModifiers?.responses) {
+                        if (docsModifiers.responses instanceof BaseResponseUtil) {
                             modifiers.push({
                                 path: path,
                                 method: method.toLowerCase(),
-                                definition: pluginKaapiDocs.modifiers.responses,
+                                definition: docsModifiers.responses,
                                 name: route.name,
                                 tags: route.tags
                             })
@@ -318,12 +327,21 @@ export function formatRequestRoute<Refs extends ReqRef = ReqRefDefaults>(
                 if (route.parameters && sRoute.settings?.payload?.allow) {
                     route.parameters.consumes = Array.isArray(sRoute.settings.payload.allow) ? sRoute.settings.payload.allow : [sRoute.settings.payload.allow];
                 }
-                if (pluginKaapiDocs.modifiers?.requestBody) {
-                    if (pluginKaapiDocs.modifiers.requestBody instanceof RequestBodyDocsModifier) {
+                let docsModifiers: {
+                    requestBody?: RequestBodyDocsModifier | undefined;
+                    responses?: BaseResponseUtil;
+                } | undefined = undefined;
+                if (typeof pluginKaapiDocs.modifiers === 'function') {
+                    docsModifiers = pluginKaapiDocs.modifiers()
+                } else {
+                    docsModifiers = pluginKaapiDocs.modifiers
+                }
+                if (docsModifiers?.requestBody) {
+                    if (docsModifiers.requestBody instanceof RequestBodyDocsModifier) {
                         modifiers.push({
                             path: path,
                             method: method.toLowerCase(),
-                            definition: pluginKaapiDocs.modifiers.requestBody,
+                            definition: docsModifiers.requestBody,
                             name: route.name,
                             tags: route.tags
                         })
@@ -331,12 +349,12 @@ export function formatRequestRoute<Refs extends ReqRef = ReqRefDefaults>(
                         throw TypeError(`Expected instance of RequestBodyDocsModifier (at ${method} ${path})`)
                     }
                 }
-                if (pluginKaapiDocs.modifiers?.responses) {
-                    if (pluginKaapiDocs.modifiers.responses instanceof BaseResponseUtil) {
+                if (docsModifiers?.responses) {
+                    if (docsModifiers.responses instanceof BaseResponseUtil) {
                         modifiers.push({
                             path: path,
                             method: method.toLowerCase(),
-                            definition: pluginKaapiDocs.modifiers.responses,
+                            definition: docsModifiers.responses,
                             name: route.name,
                             tags: route.tags
                         })
