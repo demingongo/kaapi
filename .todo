@@ -14,8 +14,8 @@
 - @kaapi/server: `auth: true` should not set up startegy but only `mode: 'required'`. Strategy should be explicitly defined. @done
 
 - @kaapi/validator-valibot
-    - doc helpers
-    - wrapping function in case "route.options" is a function (do it for all validators)
+    - doc helpers (wip for life)
+    - wrapping function in case "route.options" is a function (do it for all validators) @done
         - cannot depend on to-json-schema (Error: The "trim" action cannot be converted to JSON Schema., ....), must depend on valibot object @done
 
 - @kaapi/validator-zod @done
@@ -40,9 +40,9 @@
 - @kaapi/kaapi
     - documentation:
         - modifiers:
-            - URGENT: it should always be a factory (() => modifiers) and NEVER a direct instance. Hapi serializes objects in config so private props get lost.
+            - URGENT: it should always be a factory (() => modifiers) and NEVER a direct instance. Hapi serializes objects in config so private props get lost. @done
         - remove plugin...story and use options.notes instead. @done
-        - handle the case where options is a function (options(server: Server))
+        - handle the case where options is a function (options(server: Server)) - solution: call refreshDocs() @done
         - cache result (openapi, postman)?
     - security by route (strategy and scopes) in routeMeta (docs) @done
         - => limited to max one access config by route and default config should be set before registering route or else refreshDocs is necessary @done

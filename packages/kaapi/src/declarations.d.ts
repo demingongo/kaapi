@@ -10,10 +10,7 @@ declare module '@hapi/hapi' {
         disabled?: boolean;
         openAPIHelperClass?: KaapiOpenAPIHelperClass;
         helperSchemaProperty?: string;
-        modifiers?: {
-          requestBody?: RequestBodyDocsModifier;
-          responses?: BaseResponseUtil
-        } | (() => {
+        modifiers?: (() => {
           requestBody?: RequestBodyDocsModifier;
           responses?: BaseResponseUtil
         })

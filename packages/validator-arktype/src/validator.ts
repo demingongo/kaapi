@@ -15,6 +15,7 @@ import type {
     KaapiPlugin,
     Request,
     ResponseToolkit,
+    RouteOptions,
 } from '@kaapi/kaapi';
 import { type, type Type } from 'arktype';
 
@@ -33,6 +34,38 @@ const normalizeBooleans = (obj: Record<string, unknown>) => {
     return obj;
 };
 
+function mergeOptions<V extends ValidatorArkSchema, R extends ArklessReqRef>(
+    options: RouteOptions<ValidatorArkReqRef<V> & R>,
+    schema: V
+) {
+    // validator
+    if (!options.plugins) {
+        options.plugins = {};
+    }
+    options.plugins.ark = schema;
+
+    // docs
+    options.plugins.kaapi = options.plugins.kaapi || {};
+    if (
+        options.plugins.kaapi.docs != false && // docs not disabled
+        !options.plugins.kaapi.docs?.disabled // docs not disabled
+    ) {
+        if (!options.plugins?.kaapi?.docs?.helperSchemaProperty)
+            // docs have not helperSchemaProperty
+            options.plugins.kaapi.docs = {
+                ...options.plugins.kaapi.docs,
+                helperSchemaProperty: 'ark',
+            };
+        if (!options.plugins?.kaapi?.docs?.openAPIHelperClass)
+            // docs have not openAPIHelperClass
+            options.plugins.kaapi.docs = {
+                ...options.plugins.kaapi.docs,
+                openAPIHelperClass: OpenAPIArkHelper,
+            };
+    }
+    return options
+}
+
 export const validatorArk: KaapiPlugin = {
     async integrate(t) {
         const validator: ValidatorArk = <V extends ValidatorArkSchema>(schema: V) => {
@@ -47,30 +80,12 @@ export const validatorArk: KaapiPlugin = {
                         serverRoute.options = {};
                     }
                     if (typeof serverRoute.options === 'object') {
-                        // validate
-                        if (!serverRoute.options.plugins) {
-                            serverRoute.options.plugins = {};
-                        }
-                        serverRoute.options.plugins.ark = schema;
-
-                        // docs
-                        serverRoute.options.plugins.kaapi = serverRoute.options.plugins.kaapi || {};
-                        if (
-                            serverRoute.options.plugins.kaapi.docs != false && // docs not disabled
-                            !serverRoute.options.plugins.kaapi.docs?.disabled // docs not disabled
-                        ) {
-                            if (!serverRoute.options.plugins?.kaapi?.docs?.helperSchemaProperty)
-                                // docs have not helperSchemaProperty
-                                serverRoute.options.plugins.kaapi.docs = {
-                                    ...serverRoute.options.plugins.kaapi.docs,
-                                    helperSchemaProperty: 'ark',
-                                };
-                            if (!serverRoute.options.plugins?.kaapi?.docs?.openAPIHelperClass)
-                                // docs have not openAPIHelperClass
-                                serverRoute.options.plugins.kaapi.docs = {
-                                    ...serverRoute.options.plugins.kaapi.docs,
-                                    openAPIHelperClass: OpenAPIArkHelper,
-                                };
+                        mergeOptions(serverRoute.options, schema)
+                    } else if (typeof serverRoute.options === 'function') {
+                        const fn = serverRoute.options.bind(serverRoute);
+                        serverRoute.options = (server) => {
+                            const options = fn(server)
+                            return mergeOptions(options, schema)
                         }
                     }
                     t.route(serverRoute, handler);

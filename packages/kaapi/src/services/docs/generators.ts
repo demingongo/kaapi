@@ -162,8 +162,6 @@ export function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(
                     } | undefined = undefined;
                     if (typeof pluginKaapiDocs.modifiers === 'function') {
                         docsModifiers = pluginKaapiDocs.modifiers()
-                    } else {
-                        docsModifiers = pluginKaapiDocs.modifiers
                     }
                     if (docsModifiers?.requestBody) {
                         if (docsModifiers.requestBody instanceof RequestBodyDocsModifier) {
@@ -333,8 +331,6 @@ export function formatRequestRoute<Refs extends ReqRef = ReqRefDefaults>(
                 } | undefined = undefined;
                 if (typeof pluginKaapiDocs.modifiers === 'function') {
                     docsModifiers = pluginKaapiDocs.modifiers()
-                } else {
-                    docsModifiers = pluginKaapiDocs.modifiers
                 }
                 if (docsModifiers?.requestBody) {
                     if (docsModifiers.requestBody instanceof RequestBodyDocsModifier) {

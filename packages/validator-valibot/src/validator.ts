@@ -1,6 +1,6 @@
 import Boom from '@hapi/boom';
 import { objectAsync, type ObjectEntriesAsync, parseAsync, ValiError } from 'valibot'
-import type { KaapiServerRoute, HandlerDecorations, Lifecycle, KaapiPlugin, Request, ResponseToolkit } from '@kaapi/kaapi';
+import type { KaapiServerRoute, HandlerDecorations, Lifecycle, KaapiPlugin, Request, ResponseToolkit, RouteOptions } from '@kaapi/kaapi';
 import type { ValibotlessReqRef, ValibotlessReqRefDefaults, ValidatorValibot, ValidatorValibotReqRef, ValidatorValibotSchema } from './types';
 import { OpenAPIValibotHelper, PostmanValibotHelper } from './doc-helpers';
 import pkg from '../package.json';
@@ -20,6 +20,29 @@ const normalizeBooleans = (obj: Record<string, unknown>) => {
     return obj;
 }
 
+function mergeOptions<V extends ValidatorValibotSchema, R extends ValibotlessReqRef>(
+    options: RouteOptions<ValidatorValibotReqRef<V> & R>,
+    schema: V
+) {
+    // validator
+    if (!options.plugins) {
+        options.plugins = {}
+    }
+    options.plugins.valibot = schema
+
+    // docs
+    options.plugins.kaapi = options.plugins.kaapi || {}
+    if (options.plugins.kaapi.docs != false && // docs not disabled
+        !options.plugins.kaapi.docs?.disabled // docs not disabled
+    ) {
+        if (!options.plugins?.kaapi?.docs?.helperSchemaProperty) // docs have not helperSchemaProperty
+            options.plugins.kaapi.docs = { ...options.plugins.kaapi.docs, helperSchemaProperty: 'valibot' }
+        if (!options.plugins?.kaapi?.docs?.openAPIHelperClass) // docs have not openAPIHelperClass
+            options.plugins.kaapi.docs = { ...options.plugins.kaapi.docs, openAPIHelperClass: OpenAPIValibotHelper }
+    }
+    return options
+}
+
 export const validatorValibot: KaapiPlugin = {
     async integrate(t) {
         const validator: ValidatorValibot = <V extends ValidatorValibotSchema>(schema: V) => {
@@ -32,21 +55,12 @@ export const validatorValibot: KaapiPlugin = {
                         serverRoute.options = {}
                     }
                     if (typeof serverRoute.options === 'object') {
-                        // validate
-                        if (!serverRoute.options.plugins) {
-                            serverRoute.options.plugins = {}
-                        }
-                        serverRoute.options.plugins.valibot = schema
-
-                        // docs
-                        serverRoute.options.plugins.kaapi = serverRoute.options.plugins.kaapi || {}
-                        if (serverRoute.options.plugins.kaapi.docs != false && // docs not disabled
-                            !serverRoute.options.plugins.kaapi.docs?.disabled // docs not disabled
-                        ) {
-                            if (!serverRoute.options.plugins?.kaapi?.docs?.helperSchemaProperty) // docs have not helperSchemaProperty
-                                serverRoute.options.plugins.kaapi.docs = { ...serverRoute.options.plugins.kaapi.docs, helperSchemaProperty: 'valibot' }
-                            if (!serverRoute.options.plugins?.kaapi?.docs?.openAPIHelperClass) // docs have not openAPIHelperClass
-                                serverRoute.options.plugins.kaapi.docs = { ...serverRoute.options.plugins.kaapi.docs, openAPIHelperClass: OpenAPIValibotHelper }
+                        mergeOptions(serverRoute.options, schema)
+                    } else if (typeof serverRoute.options === 'function') {
+                        const fn = serverRoute.options.bind(serverRoute);
+                        serverRoute.options = (server) => {
+                            const options = fn(server)
+                            return mergeOptions(options, schema)
                         }
                     }
                     t.route(
