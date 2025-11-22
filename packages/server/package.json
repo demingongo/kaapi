@@ -1,6 +1,6 @@
 {
   "name": "@kaapi/server",
-  "version": "0.0.25",
+  "version": "0.0.26",
   "private": false,
   "description": "kaapi server",
   "main": "lib/index.js",

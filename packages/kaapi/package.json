@@ -1,6 +1,6 @@
 {
   "name": "@kaapi/kaapi",
-  "version": "0.0.25",
+  "version": "0.0.26",
   "private": false,
   "description": "TypeScript-based framework",
   "main": "lib/index.js",
@@ -34,8 +34,8 @@
     "@kaapi/server": "workspace:^",
     "@novice1/api-doc-generator": "^1.2.0",
     "@novice1/routing": "^2.0.2",
-    "qs": "^6.14.0",
     "jsontoxml": "^1.0.1",
+    "qs": "^6.14.0",
     "swagger-ui-dist": "^5.27.1",
     "tslib": "^2.8.1",
     "winston": "^3.17.0"

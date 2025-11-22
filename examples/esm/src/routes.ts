@@ -54,7 +54,7 @@ app.route({
         plugins: {
             kaapi: {
                 docs: {
-                    modifiers: {
+                    modifiers: () => ({
                         requestBody: new RequestBodyDocsModifier()
                             .addMediaType(
                                 'application/xml',
@@ -94,7 +94,7 @@ app.route({
                                     }
                                 }
                             )
-                    }
+                    })
                 }
             }
         }
@@ -110,7 +110,7 @@ app.route({
         plugins: {
             kaapi: {
                 docs: {
-                    modifiers: {
+                    modifiers: () => ({
                         requestBody: new RequestBodyDocsModifier()
                             .addMediaType(
                                 'application/json',
@@ -150,7 +150,7 @@ app.route({
                                     }
                                 }
                             )
-                    }
+                    })
                 }
             }
         }
