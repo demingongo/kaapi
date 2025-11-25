@@ -1,4 +1,4 @@
-// example-simple.test.ts
+// example-simple.spec.ts
 
 import { Kaapi } from '@kaapi/kaapi';
 import { expect } from '@hapi/code';

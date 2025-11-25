@@ -1,4 +1,4 @@
-// example.test.ts
+// example.spec.ts
 
 import { Kaapi } from '@kaapi/kaapi';
 import { expect } from '@hapi/code';
@@ -104,7 +104,7 @@ describe('GET /docs/api/schema', () => {
 
         const payload = JSON.parse(res.payload)
         console.log(payload);
-        expect(payload.openapi).to.equal('3.0.0');
+        expect(payload.openapi).to.equal('3.1.1');
         expect(payload.info.version).to.equal('0.0.2');
         expect(payload.info.title).to.equal('examples-testing');
         expect(payload.info.license.name).to.equal('UNLICENSED');

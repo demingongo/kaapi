@@ -9,7 +9,7 @@
     "dev": "nodemon",
     "lint": "eslint .",
     "start": "node dist/index.js",
-    "test": "kaukau -r ts-node/register -f src --ext .spec.ts",
+    "test": "kaukau -r ts-node/register -f test --ext .spec.ts",
     "testmocha": "mocha --require ts-node/register test/**/*.ts",
     "test:e2e": "kaukau --require ts-node/register --config kaukau.config.mjs"
   },
