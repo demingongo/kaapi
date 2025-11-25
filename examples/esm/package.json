@@ -14,7 +14,7 @@
         "@kaapi/oauth2-auth-design": "workspace:^",
         "@kaapi/validator-arktype": "workspace:^",
         "@kaapi/validator-valibot": "workspace:^",
-        "@novice1/api-doc-generator": "^1.2.0",
+        "@novice1/api-doc-generator": "^1.2.1",
         "arktype": "^2.1.25",
         "joi": "^18.0.1",
         "pug": "^3.0.3",
