@@ -1,6 +1,6 @@
 {
   "name": "@kaapi/kafka-messaging",
-  "version": "0.0.28",
+  "version": "0.0.29",
   "private": false,
   "description": "Kafka-based messaging for kaapi",
   "main": "lib/index.js",

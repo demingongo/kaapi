@@ -73,7 +73,7 @@ export abstract class AuthDesign implements KaapiPlugin {
         const securityScheme = this.docs();
         if (securityScheme) {
             if (securityScheme instanceof OAuth2Util && !securityScheme.getHost() && t.postman?.getHost().length) {
-                securityScheme.setHost(t.postman.getHost()[0])
+                securityScheme.setHost(t.postman.getHostValue())
             }
             t.openapi?.addSecurityScheme(securityScheme)
                 .setDefaultSecurity(securityScheme);
@@ -91,7 +91,7 @@ export abstract class AuthDesign implements KaapiPlugin {
      * (e.g.: register a route, ...)
      */
     integrateHook(_t: KaapiTools): void | Promise<void> {
-        
+
     }
 
     /**
@@ -123,7 +123,7 @@ export abstract class AuthDesign implements KaapiPlugin {
  * ```
  */
 export class GroupAuthDesign extends AuthDesign {
-    
+
     protected designs: AuthDesign[]
 
     constructor(designs: AuthDesign[]) {
@@ -138,14 +138,14 @@ export class GroupAuthDesign extends AuthDesign {
         )
     }
     integrateStrategy(t: KaapiTools) {
-        for(const d of this.designs) {
+        for (const d of this.designs) {
             d.integrateStrategy(t)
         }
     }
     async integrateHook(t: KaapiTools): Promise<void> {
         await Promise.all(
             this.designs
-            .map(d => d.integrateHook(t))
+                .map(d => d.integrateHook(t))
         )
     }
 

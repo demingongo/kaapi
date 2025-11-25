@@ -127,7 +127,7 @@ export class MultipleFlows extends AuthDesign {
     integrateHook(t: KaapiTools): void | Promise<void> {
 
         const jwtAuthority = this.getJwtAuthority();
-        const host = t.postman?.getHost()[0] || ''
+        const host = t.postman?.getHostValue() || ''
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const routesOptions: RouteOptions<any> = {

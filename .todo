@@ -58,6 +58,7 @@
         - apikey (take it from the examples/auth-designs/src/plugins/bearerDesign.ts) @done
 
 - @kaapi/oauth2-auth-design
+    - FIX is postman host contains variables
     - oidc docs for OpenAPI should not be oauth2 but openid 
     - auth code authorizationRoute: a method to validate params at GET would be nice if we don't want to use the whole setGETResponseRenderer
     - auth code: response_mode - `query` or `form_post` for redirect

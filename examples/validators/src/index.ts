@@ -23,7 +23,7 @@ import fs from 'node:fs';
 import Boom from '@hapi/boom';
 
 const app = new Kaapi({
-    port: 3000,
+    port: 8000,
     host: 'localhost',
     loggerOptions: {
         level: 'debug'
@@ -173,7 +173,6 @@ async function start() {
         method: 'POST',
         path: '/upload-image-zod',
         options: () => {
-            console.log('loading optionssssss')
             return ({
                 tags: ['zod'],
                 description: 'Upload an image',

@@ -726,4 +726,20 @@ export class KaapiPostman extends Postman implements KaapiDocGenerator {
         const { routes } = formatRequestRoute(reqRoute)
         return super.add(routes)
     }
+
+    /**
+     * Gets the first host value (getHost()[0] replacing placeholders with values).
+     */
+    getHostValue(): string {
+        let host: string | undefined = this.getHost()[0];
+        if (!host) return ''
+        const variables = this.getVariableList()
+        if (variables?.length) {
+            host = host.replace(/{{(.*?)}}/g, (_, key) => {
+                const variable = variables.find(v => v.key === key.trim());
+                return variable ? `${variable.value}` : `{{${key}}}`; // keep placeholder if not found
+            })
+        }
+        return host
+    }
 }

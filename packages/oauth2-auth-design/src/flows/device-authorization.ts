@@ -199,8 +199,8 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
                         ttl: this.tokenTTL,
                         createJwtAccessToken: jwtAuthority ? (async (payload) => {
                             return await createJwtAccessToken(jwtAuthority, {
-                                aud: t.postman?.getHost()[0] || '',
-                                iss: t.postman?.getHost()[0] || '',
+                                aud: t.postman?.getHostValue() || '',
+                                iss: t.postman?.getHostValue() || '',
                                 sub: clientId,
                                 ...payload
                             }, this.tokenTTL)
@@ -208,7 +208,7 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
                         createIdToken: jwtAuthority && hasOpenIDScope() ? (async (payload) => {
                             return await createIdToken(jwtAuthority, {
                                 aud: clientId,
-                                iss: t.postman?.getHost()[0] || '',
+                                iss: t.postman?.getHostValue() || '',
                                 ...payload
                             }, this.tokenTTL)
                         }) : undefined
@@ -303,8 +303,8 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
                         ttl: this.tokenTTL,
                         createJwtAccessToken: jwtAuthority ? (async (payload) => {
                             return await createJwtAccessToken(jwtAuthority, {
-                                aud: t.postman?.getHost()[0] || '',
-                                iss: t.postman?.getHost()[0] || '',
+                                aud: t.postman?.getHostValue() || '',
+                                iss: t.postman?.getHostValue() || '',
                                 sub: clientId,
                                 scope,
                                 ...payload
@@ -313,7 +313,7 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
                         createIdToken: jwtAuthority && hasOpenIDScope() ? (async (payload) => {
                             return await createIdToken(jwtAuthority, {
                                 aud: clientId,
-                                iss: t.postman?.getHost()[0] || '',
+                                iss: t.postman?.getHostValue() || '',
                                 ...payload
                             }, this.tokenTTL)
                         }) : undefined,
@@ -457,7 +457,7 @@ export class OIDCDeviceAuthorization extends OAuth2DeviceAuthorization implement
 
     getDiscoveryConfiguration(t: KaapiTools) {
         const supported = this.getTokenEndpointAuthMethods();
-        const host = t.postman?.getHost()[0] || '';
+        const host = t.postman?.getHostValue() || '';
         const scopes = this.getScopes() || {};
 
         const wellKnownOpenIDConfig: Record<string, string | string[] | undefined> = {

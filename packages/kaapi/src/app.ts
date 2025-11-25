@@ -133,6 +133,17 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
                     }
                 )
             }
+        } else if (!docs?.disabled) {
+            // get host uri from base() application
+
+            const uri = this.base().info.uri
+
+            if (uri) {
+                this.docs.openapi.setServers({
+                    url: uri
+                });
+                this.docs.postman.setHost(uri);
+            }
         }
 
         if (docs?.security) {
