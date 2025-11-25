@@ -259,8 +259,8 @@ app.route<{ Params: { filename?: string } }>({
 
 app.publish('main', { message: 'coucou' })
 
-app.subscribe('main', (m: { message: string }, sender) => {
-    app.log(sender.id, ':', m.message)
+app.subscribe('main', (m: { message: string }, context) => {
+    app.log(context.id, ':', m.message)
 }, {
 
 })

@@ -1,8 +1,8 @@
 import { Admin, AdminConfig, Consumer, ConsumerConfig, IHeaders, ITopicConfig, Kafka, KafkaConfig, Producer, ProducerConfig, logLevel } from 'kafkajs'
-import { ILogger, IMessaging, IMessagingSender } from '@kaapi/kaapi'
+import { ILogger, IMessaging, IMessagingContext } from '@kaapi/kaapi'
 import { randomBytes } from 'crypto'
 
-export interface KafkaMessagingSender extends IMessagingSender {
+export interface KafkaMessagingContext extends IMessagingContext {
     offset?: string
 }
 
@@ -303,7 +303,7 @@ export class KafkaMessaging implements IMessaging {
     /**
      * Listen to a topic
      */
-    async subscribe<T = unknown>(topic: string, handler: (message: T, sender: KafkaMessagingSender) => Promise<void> | void, config?: KafkaMessagingSubscribeConfig) {
+    async subscribe<T = unknown>(topic: string, handler: (message: T, context: KafkaMessagingContext) => Promise<void> | void, config?: KafkaMessagingSubscribeConfig) {
         this.logger?.info(`👂  Subscribing KAFKA topic "${topic}"`);
 
         let consumerConfig: Partial<ConsumerConfig> | undefined;
@@ -355,23 +355,23 @@ export class KafkaMessaging implements IMessaging {
                 this.logger?.verbose(`📥  Received from KAFKA topic "${topic}" (${batch.messages.length} messages)`);
                 for (const message of batch.messages) {
                     try {
-                        const sender: KafkaMessagingSender = {};
+                        const context: KafkaMessagingContext = {};
 
                         try {
                             // unbufferize header values
                             Object.keys((message.headers || {})).forEach(key => {
                                 if (typeof message.headers?.[key]?.toString === 'function') {
-                                    sender[key] = message.headers?.[key]?.toString('utf8');
+                                    context[key] = message.headers?.[key]?.toString('utf8');
                                 }
                             });
-                            sender.timestamp = message.timestamp;
-                            sender.offset = message.offset;
+                            context.timestamp = message.timestamp;
+                            context.offset = message.offset;
                         } catch (e) {
                             this.logger?.error(`KafkaMessaging.subscribe('${topic}', …) error:`, e);
                         }
                         const res = handler(
                             JSON.parse(message.value?.toString?.() || ''),
-                            sender
+                            context
                         );
 
                         if (res) await res;

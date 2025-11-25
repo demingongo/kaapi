@@ -1,4 +1,4 @@
-export interface IMessagingSender {
+export interface IMessagingContext {
     id?: string
     name?: string
     timestamp?: string
@@ -12,11 +12,11 @@ export interface IPublishMethod {
 }
 
 export interface ISubscribeMethod {
-    <T = unknown>(topic: string, handler: (message: T, sender: IMessagingSender) => Promise<void> | void, conf?: IMessagingSubscribeConfig): Promise<void>
+    <T = unknown>(topic: string, handler: (message: T, context: IMessagingContext) => Promise<void> | void, conf?: IMessagingSubscribeConfig): Promise<void>
 }
 
 export interface IMessaging {
     publish<T = unknown>(topic: string, message: T): Promise<void>
-    subscribe<T = unknown>(topic: string, handler: (message: T, sender: IMessagingSender) => Promise<void> | void, conf?: IMessagingSubscribeConfig): Promise<void>
+    subscribe<T = unknown>(topic: string, handler: (message: T, context: IMessagingContext) => Promise<void> | void, conf?: IMessagingSubscribeConfig): Promise<void>
     shutdown?(): Promise<unknown>
 }

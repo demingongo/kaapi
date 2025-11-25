@@ -6,7 +6,7 @@ import {
 } from '@hapi/hapi';
 import { KaapiServerRoute, KaapiServer, KaapiServerOptions } from '@kaapi/server';
 import { ILogger } from './services/log';
-import { IMessaging, IMessagingSender, IMessagingSubscribeConfig, IPublishMethod, ISubscribeMethod } from './services/messaging';
+import { IMessaging, IMessagingContext, IMessagingSubscribeConfig, IPublishMethod, ISubscribeMethod } from './services/messaging';
 
 export interface IKaapiApp extends IMessaging {
     log: ILogger
@@ -21,9 +21,9 @@ export interface IKaapiApp extends IMessaging {
 export abstract class AbstractKaapiApp implements IKaapiApp {
     abstract log: ILogger
     abstract emit<T = unknown>(topic: string, message: T): Promise<void>
-    abstract on<T = unknown>(topic: string, handler: (message: T, sender: IMessagingSender) => void | Promise<void>, conf?: IMessagingSubscribeConfig | undefined): Promise<void>
+    abstract on<T = unknown>(topic: string, handler: (message: T, context: IMessagingContext) => void | Promise<void>, conf?: IMessagingSubscribeConfig | undefined): Promise<void>
     abstract publish<T = unknown>(topic: string, message: T): Promise<void>
-    abstract subscribe<T = unknown>(topic: string, handler: (message: T, sender: IMessagingSender) => void | Promise<void>, conf?: IMessagingSubscribeConfig | undefined): Promise<void>
+    abstract subscribe<T = unknown>(topic: string, handler: (message: T, context: IMessagingContext) => void | Promise<void>, conf?: IMessagingSubscribeConfig | undefined): Promise<void>
     abstract server(opts?: KaapiServerOptions): KaapiServer;
 
     protected version?: string

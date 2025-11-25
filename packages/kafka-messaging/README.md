@@ -101,17 +101,17 @@ await messaging.publish('my-topic', {
 `subscribe(topic, handler, config?)` subscribes to a Kafka topic and calls the provided handler on each message.
 
 ```ts
-await messaging.subscribe('my-topic', async (message, sender) => {
+await messaging.subscribe('my-topic', async (message, context) => {
     console.log('Received:', message);
-    console.log('From:', sender.name, sender.address);
-    console.log('Offset:', sender.offset);
+    console.log('From:', context.name, context.address);
+    console.log('Offset:', context.offset);
 }, {
     fromBeginning: true
 });
 ```
 
 * `topic`: The Kafka topic name
-* `handler`: `(message, sender) => void | Promise<void>`
+* `handler`: `(message, context) => void | Promise<void>`
 * `config?`: `KafkaMessagingSubscribeConfig` (extends `ConsumerConfig`)
     * `groupId?`: Kafka consumer group ID
     * `fromBeginning?`: boolean - Start consuming from beginning of topic
@@ -163,9 +163,9 @@ async function runExample(): Promise<void> {
     await app.publish('my-topic', { event: 'user.created', userId: 456 });
 
     // Subscribe to messages
-    await app.subscribe('my-topic', async (message, sender) => {
+    await app.subscribe('my-topic', async (message, context) => {
         console.log('Received:', message);
-        console.log('Offset:', sender.offset);
+        console.log('Offset:', context.offset);
     });
 
     /**
@@ -175,9 +175,9 @@ async function runExample(): Promise<void> {
     await messaging.publish('my-topic', { event: 'user.created', userId: 123 });
 
     // Subscribe to messages
-    await messaging.subscribe('my-topic', async (message, sender) => {
+    await messaging.subscribe('my-topic', async (message, context) => {
         console.log('Received:', message);
-        console.log('Offset:', sender.offset);
+        console.log('Offset:', context.offset);
     });
 }
 

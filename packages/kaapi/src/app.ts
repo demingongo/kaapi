@@ -1,7 +1,7 @@
 import { KaapiServer, KaapiServerOptions, KaapiServerRoute } from '@kaapi/server';
 import { IKaapiApp, AbstractKaapiApp } from './abstract-app';
 import { createLogger, ILogger } from './services/log';
-import { IMessaging, IMessagingSender, IMessagingSubscribeConfig } from './services/messaging';
+import { IMessaging, IMessagingContext, IMessagingSubscribeConfig } from './services/messaging';
 import qs from 'qs'
 import winston from 'winston';
 import { createDocsRouter, DocsConfig, DocsUIOptions } from './services/docs/docs';
@@ -293,13 +293,13 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
     async emit<T = unknown>(topic: string, message: T): Promise<void> {
         return await this.messaging?.publish(topic, message)
     }
-    async on<T = unknown>(topic: string, handler: (message: T, sender: IMessagingSender) => Promise<void> | void, conf?: IMessagingSubscribeConfig): Promise<void> {
+    async on<T = unknown>(topic: string, handler: (message: T, context: IMessagingContext) => Promise<void> | void, conf?: IMessagingSubscribeConfig): Promise<void> {
         return await this.messaging?.subscribe(topic, handler, conf)
     }
     async publish<T = unknown>(topic: string, message: T): Promise<void> {
         return await this.messaging?.publish(topic, message)
     }
-    async subscribe<T = unknown>(topic: string, handler: (message: T, sender: IMessagingSender) => Promise<void> | void, conf?: IMessagingSubscribeConfig): Promise<void> {
+    async subscribe<T = unknown>(topic: string, handler: (message: T, context: IMessagingContext) => Promise<void> | void, conf?: IMessagingSubscribeConfig): Promise<void> {
         return await this.messaging?.subscribe(topic, handler, conf)
     }
 

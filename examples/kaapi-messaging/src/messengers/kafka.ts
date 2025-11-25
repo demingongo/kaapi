@@ -1,5 +1,5 @@
 import { Kaapi, createLogger } from '@kaapi/kaapi'
-import { KafkaMessaging, KafkaMessagingSender, KafkaMessagingSubscribeConfig } from '@kaapi/kafka-messaging'
+import { KafkaMessaging, KafkaMessagingContext, KafkaMessagingSubscribeConfig } from '@kaapi/kafka-messaging'
 import { PartitionAssigners } from 'kafkajs'
 import winston from 'winston'
 
@@ -101,9 +101,9 @@ export async function startMessaging(app: Kaapi) {
     await createTopic(app)
 
     // subscribe
-    await app.subscribe<Message>(TOPIC, (message, sender: KafkaMessagingSender) => {
+    await app.subscribe<Message>(TOPIC, (message, context: KafkaMessagingContext) => {
         app.log.info('Message received:', message)
-        app.log.debug('Sender:', sender)
+        app.log.debug('Context:', context)
     }, SUBSCRIBE_CONFIG)
 
     // publish
