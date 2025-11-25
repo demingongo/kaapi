@@ -47,12 +47,12 @@ await app.extend(validatorValibot); // register the plugin
 ### 📐 Define a Schema
 
 ```ts
-import { object, string } from 'valibot'
+import * as v from 'valibot'
 import { ValidatorValibotSchema } from '@kaapi/validator-valibot'
 
 const routeSchema: ValidatorValibotSchema = {
-  payload: object({
-    name: string()
+  payload: v.object({
+    name: v.string()
   })
 }
 ```
@@ -140,15 +140,15 @@ This sets `abortEarly` to `true` for all Valibot-validated routes, and logs vali
 
 ```ts
 app.base().valibot({
-  query: object({
-    name: optional(pipe(string(), trim(), nonEmpty(), maxLength(10), description('Optional name to personalize the greeting response')), 'World'),
-    age: optional(
-      pipe(
-        string(), 
-        transform((input) => typeof input === 'string' ? Number(input) : input), 
-        number(), 
-        integer(), 
-        minValue(1)
+  query: v.object({
+    name: v.optional(v.pipe(v.string(), v.trim(), v.nonEmpty(), v.maxLength(10), v.description('Optional name to personalize the greeting response')), 'World'),
+    age: v.optional(
+      v.pipe(
+        v.string(), 
+        v.transform((input) => typeof input === 'string' ? Number(input) : input), 
+        v.number(), 
+        v.integer(), 
+        v.minValue(1)
       )
     )
   }),
@@ -179,18 +179,18 @@ Multipart file uploads with Valibot validation is supported. Here's how to valid
 
 ```ts
 app.base().valibot({
-  payload: object({
-    file: pipe(
-      looseObject({
-        _data: instance(Buffer),
-        hapi: looseObject({
-          filename: string(),
-          headers: looseObject({
-            'content-type': picklist(['image/jpeg', 'image/jpg', 'image/png'] as const)
+  payload: v.object({
+    file: v.pipe(
+      v.looseObject({
+        _data: v.instance(Buffer),
+        hapi: v.looseObject({
+          filename: v.string(),
+          headers: v.looseObject({
+            'content-type': v.picklist(['image/jpeg', 'image/jpg', 'image/png'] as const)
           })
         })
       }),
-      description('The image to upload')
+      v.description('The image to upload')
     )
   })
 }).route({

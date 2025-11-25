@@ -131,24 +131,18 @@ This logs validation errors before throwing them for all ArkType-validated route
 ```ts
 app.base()
     .ark({
-        query: z.object({
-            name: z
-                .string()
-                .trim()
-                .nonempty()
-                .max(10)
-                .meta({
-                    description: 'Optional name to personalize the greeting response',
-                })
-                .optional()
-                .default('World'),
+        query: type({
+            name: type(['string', '@', 'Optional name to personalize the greeting response'])
+                .pipe((v) => v?.trim() ?? '')
+                .to('0 < string <= 10')
+                .default('World')
         }),
         failAction: async (request, h, err) => {
             if (Boom.isBoom(err)) {
                 return h
                     .response({
                         ...err.output.payload,
-                        details: err.data.validationError.issues,
+                        details: err.data?.validationError?.issues,
                     })
                     .code(err.output.statusCode)
                     .takeover();
@@ -178,7 +172,7 @@ app.base()
                 hapi: type({
                     filename: 'string',
                     headers: {
-                        'content-type': "'image/jpeg' | 'image/jpg' | 'image/png'",
+                        'content-type': '\'image/jpeg\' | \'image/jpg\' | \'image/png\'',
                     },
                 }),
             }),
