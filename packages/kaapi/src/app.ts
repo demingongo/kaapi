@@ -8,6 +8,7 @@ import { createDocsRouter, DocsConfig, DocsUIOptions } from './services/docs/doc
 import { formatRequestRoute, formatRoutes, KaapiOpenAPI, KaapiPostman } from './services/docs/generators';
 import { HandlerDecorations, Lifecycle, ReqRef, ReqRefDefaults, Server } from '@hapi/hapi';
 import { KaapiPlugin, KaapiTools } from './services/plugins/plugin';
+import { SchemaObject3_1 } from '@novice1/api-doc-generator';
 
 export interface KaapiAppOptions extends KaapiServerOptions {
     logger?: ILogger,
@@ -157,7 +158,14 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
         }
 
         if (docs?.schemas) {
-            this.docs.openapi.setSchemas(docs.schemas);
+            if (Array.isArray(docs.schemas)) {
+                this.docs.openapi.setSchemas(docs.schemas.reduce((prev, mod) => {
+                    prev[mod.getName()] = mod.toObject()
+                    return prev
+                }, {} as Record<string, SchemaObject3_1>));
+            } else {
+                this.docs.openapi.setSchemas(docs.schemas);
+            }
         }
 
         if (docs?.responses) {

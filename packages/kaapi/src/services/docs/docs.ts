@@ -16,6 +16,7 @@ import { HandlerDecorations, Lifecycle, ReqRef, ReqRefDefaults } from '@hapi/hap
 import { KaapiServerRoute } from '@kaapi/server'
 import Boom from '@hapi/boom'
 import fs from 'node:fs'
+import { SchemaModifier } from './modifiers'
 
 const bootTime = Date.now();
 
@@ -44,7 +45,7 @@ export interface DocsConfig {
     version?: string
     host?: ServerObject
     examples?: Record<string, ReferenceObject | ExampleObject>
-    schemas?: Record<string, SchemaObject | ReferenceObject>
+    schemas?: SchemaModifier[] | Record<string, SchemaObject | ReferenceObject>
     responses?: BaseResponseUtil
     tags?: DocsTag[]
     ui?: DocsUIOptions
@@ -69,7 +70,16 @@ export function createDocsRouter<Refs extends ReqRef = ReqRefDefaults>(
     return [
         {
             path: `${prefix}/{any*}`,
-            method: '*'
+            method: '*',
+            options: {
+                plugins: {
+                    kaapi: {
+                        docs: {
+                            disabled: true
+                        }
+                    }
+                }
+            }
         },
         (req, h) => {
             if (req.url.pathname == path) {
