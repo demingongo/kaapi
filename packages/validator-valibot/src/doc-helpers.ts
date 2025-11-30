@@ -51,7 +51,9 @@ export abstract class BaseValibotHelper implements BaseHelperInterface {
         if (this.isValid() && this._valibotSchema && 'pipe' in this._valibotSchema &&
             Array.isArray(this._valibotSchema.pipe)) {
             const r = this._valibotSchema.pipe.find(v => v.type === 'metadata' && v.kind === 'metadata')
-            return r || {}
+            if (r && typeof r.metadata === 'object') {
+                return r.metadata || {}
+            }
         }
 
         return {}

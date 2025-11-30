@@ -6,6 +6,7 @@ plugins/
 kaapi.config.mjs
 fixtures
 test
+coverage/
 .c8rc.json
 kaukau.config.mjs
 .dependency-cruiser.cjs
