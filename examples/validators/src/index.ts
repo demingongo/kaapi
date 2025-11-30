@@ -48,9 +48,9 @@ const app = new Kaapi({
             url: '{baseUrl}',
             variables: {
                 baseUrl: {
-                    default: 'http://localhost:3000',
+                    default: 'http://localhost:8000',
                     description: 'Base url',
-                    enum: ['http://localhost:3000'],
+                    enum: ['http://localhost:8000'],
                 },
             },
         }
@@ -464,6 +464,53 @@ const fileFieldSchema: SchemaObject3_1 = {
             return await validatorPromise
         }
     );
+
+    const combinationPayloadSchema = type([
+        {
+            n: type(['number.integer | string', '@', { description: 'Number of total objects', examples: [5], format: 'integer' }])
+                .pipe((v) => Number(v))
+                .to('1 <= number.integer <= 50'),
+            r: type(['1 | 2 | 3 | string', '@', { description: 'Number of objects chosen at once', examples: [3], format: 'integer' }])
+                .pipe((v) => typeof v === 'string' ? (v ? Number(v) : NaN) : v)
+                .to('1 | 2 | 3')
+                .default(3),
+        },
+        '@',
+        'combination nCr inputs',
+    ]).pipe((payload) => {
+        return type({
+            n: type(`number >= ${payload.r}`, '@', '≥ r'),
+            r: 'number',
+        })(payload);
+    });
+
+
+    // route
+    app.base()
+        .ark({
+            payload: combinationPayloadSchema,
+        })
+        .route(
+            {
+                method: 'POST',
+                path: '/arktype/combination',
+                options: {
+                    description: 'Calculate the combination of n and r.',
+                    tags: ['arktype'],
+                    payload: {
+                        allow: ['application/json', 'application/x-www-form-urlencoded'],
+                    },
+                },
+            },
+            ({ payload: { n, r } }) => {
+                let result = 1;
+                if (n != r) {
+                    const sample = r < n - r ? n - r : r;
+                    result = sample;
+                }
+                return { inputs: { n, r: r }, result };
+            }
+        );
 
     setTimeout(() => app.refreshDocs(), 2000)
 

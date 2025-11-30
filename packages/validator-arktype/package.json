@@ -1,7 +1,7 @@
 {
   "name": "@kaapi/validator-arktype",
   "type": "module",
-  "version": "0.0.33",
+  "version": "0.0.34",
   "private": false,
   "description": "ArkType-powered request validation and documentation plugin for Kaapi.",
   "main": "lib/index.js",
@@ -41,7 +41,7 @@
   "dependencies": {
     "@hapi/boom": "^10.0.1",
     "@kaapi/kaapi": "workspace:^",
-    "@novice1/api-doc-json-helper": "^1.0.6",
+    "@novice1/api-doc-json-helper": "^1.0.8",
     "arktype": "^2.1.25",
     "tslib": "^2.8.1"
   },

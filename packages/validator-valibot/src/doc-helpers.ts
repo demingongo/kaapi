@@ -13,6 +13,7 @@ import type {
     EncodingObject,
     ExampleObject,
     ReferenceObject,
+    SchemaObject,
     XMLObject
 } from '@novice1/api-doc-generator/lib/generators/openapi/definitions';
 import type { KaapiOpenAPIHelperInterface } from '@kaapi/kaapi';
@@ -349,7 +350,17 @@ export class OpenAPIValibotHelper extends BaseValibotHelper implements OpenAPIHe
     getEncoding(): Record<string, EncodingObject> | undefined {
         return this.getMeta('encoding') as Record<string, EncodingObject> | undefined
     }
-
+    getAnyOf(): SchemaObject[] {
+        const r: SchemaObject[] = []
+        if ('anyOf' in this._schema && Array.isArray(this._schema.anyOf)) {
+            for (const p of this._schema.anyOf) {
+                if (p && typeof p === 'object') {
+                    r.push(p as SchemaObject)
+                }
+            }
+        }
+        return r;
+    }
 }
 
 /**
