@@ -1,6 +1,6 @@
 {
   "name": "@kaapi/kaapi",
-  "version": "0.0.31",
+  "version": "0.0.32",
   "private": false,
   "description": "TypeScript-based framework",
   "main": "lib/index.js",

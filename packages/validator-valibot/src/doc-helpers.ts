@@ -290,13 +290,11 @@ export class OpenAPIValibotHelper extends BaseValibotHelper implements OpenAPIHe
         return 'additionalProperties' in schema && (schema.additionalProperties as AdditionalProperties)
     }
     hasRef(): boolean {
-        const schema = this._schema
-        return !!('$ref' in schema && typeof schema.$ref === 'string') || !!('$id' in schema && typeof schema.$id === 'string')
+        return typeof this.getMeta('ref') === 'string'
     }
     getRef(): string | undefined {
-        const schema = this._schema
-        return '$ref' in schema && typeof schema.$ref === 'string' ? schema.$ref :
-            '$id' in schema && typeof schema.$id === 'string' ? schema.$id : undefined
+        const r = this.getMeta('ref')
+        return typeof r === 'string' ? r : undefined
     }
     hasDiscriminator(): boolean {
         const discriminator = this.getMeta('discriminator')
