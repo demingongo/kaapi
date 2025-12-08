@@ -55,8 +55,6 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
         return GrantType.authorizationCode
     }
 
-    protected pkce: boolean = false
-
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     protected authorizationRoute: IOAuth2ACAuthorizationRoute<any, any>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -80,18 +78,16 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
     }
 
     withPkce(): this {
-        this.pkce = true
         return super.noneAuthenticationMethod()
     }
 
     withoutPkce(): this {
-        this.pkce = false
         this._clientAuthMethods.none = undefined
         return this
     }
 
     isWithPkce(): boolean {
-        return this.pkce
+        return !!this._clientAuthMethods.none
     }
 
     noneAuthenticationMethod(): this {

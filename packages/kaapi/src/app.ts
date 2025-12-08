@@ -140,9 +140,10 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
             const uri = this.base().info.uri
 
             if (uri) {
-                this.docs.openapi.setServers({
-                    url: uri
-                });
+                // even empty, should work on swagger ui
+                //this.docs.openapi.setServers({
+                //    url: uri
+                //});
                 this.docs.postman.setHost(uri);
             }
         }
