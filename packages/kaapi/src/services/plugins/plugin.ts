@@ -75,7 +75,7 @@ export abstract class AuthDesign implements KaapiPlugin {
             if (securityScheme instanceof OAuth2Util && !securityScheme.getHost() && t.postman?.getHost().length) {
                 securityScheme.setHost(t.postman.getHostValue())
             }
-            t.openapi?.addSecurityScheme(securityScheme)
+            t.openapi?.addSecuritySchemeAliases(securityScheme, [...new Set([this.getStrategyName()].flatMap(v => v))])
                 .setDefaultSecurity(securityScheme);
             t.postman?.setDefaultSecurity(securityScheme);
             t.log.debug(`Auth Design "${this.constructor.name}" set security scheme (docs).`);

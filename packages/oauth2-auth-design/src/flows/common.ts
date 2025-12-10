@@ -77,10 +77,10 @@ export const DeviceFlowOAuth2ErrorCode = Object.freeze({
 } as const);
 
 export const AllOAuth2ErrorCode = Object.freeze({
-  ...StandardOAuth2ErrorCode,
-  ...ExtendedOAuth2ErrorCode,
-  ...OAuth2TokenErrorCode,
-  ...DeviceFlowOAuth2ErrorCode,
+    ...StandardOAuth2ErrorCode,
+    ...ExtendedOAuth2ErrorCode,
+    ...OAuth2TokenErrorCode,
+    ...DeviceFlowOAuth2ErrorCode,
 } as const);
 
 export type StandardOAuth2ErrorCodeType =
@@ -908,6 +908,8 @@ export interface OAuth2SingleAuthFlow {
     getDiscoveryConfiguration?(t: KaapiTools): Record<string, unknown>;
 
     registerAuthorizationEndpoint?(t: KaapiTools): void;
+
+    getScopes(): Record<string, string> | undefined
 }
 
 //#endregion OAuth2SingleAuthFlow

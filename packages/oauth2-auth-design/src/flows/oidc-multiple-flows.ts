@@ -115,7 +115,16 @@ export class MultipleFlows extends AuthDesign {
     }
 
     docs(): BaseAuthUtil | undefined {
-        return new OIDCAuthUtil(this.securitySchemeName)
+        const r = new OIDCAuthUtil(this.securitySchemeName);
+        for (const flow of this.flows) {
+            const scopes = flow.getScopes();
+            if (scopes) {
+                for (const scope in scopes) {
+                    r.addScope(scope, scopes[scope])
+                }
+            }
+        }
+        return r
     }
 
     integrateStrategy(t: KaapiTools): void {

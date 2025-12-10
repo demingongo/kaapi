@@ -436,13 +436,7 @@ export class KaapiOpenAPI extends OpenAPI implements KaapiDocGenerator {
             if (schema)
                 super.addSecurityScheme(name, schema)
         } else {
-            super.addSecurityScheme(name)
-            if (name instanceof BaseAuthUtil) {
-                // keep it to use when formatting routes (security by route)
-                // mostly useful for Postman but as Postman cannot contain all specs
-                // we keep it here
-                this.securitySchemeUtils[Object.keys(name.toOpenAPI())[0]] = name;
-            }
+            this.addSecuritySchemeAliases(name)
         }
         return this
     }
@@ -465,6 +459,35 @@ export class KaapiOpenAPI extends OpenAPI implements KaapiDocGenerator {
             result = deepExtend(result, { paths: this.routeExtensions })
         }
         return result
+    }
+
+    /**
+     * 
+     * throws error if alias already exists
+     */
+    addSecuritySchemeAliases(
+        helper: BaseOpenAPIAuthUtil | BaseAuthUtil,
+        aliases?: string[]
+    ): this {
+        super.addSecurityScheme(helper)
+        if (helper instanceof BaseAuthUtil) {
+            // keep it to use when formatting routes (security by route)
+            // mostly useful for Postman but as Postman cannot contain all specs
+            // we keep it here
+            const name = Object.keys(helper.toOpenAPI())[0];
+            this.securitySchemeUtils[name] = helper;
+            if (aliases?.length) {
+                for (const alias of aliases) {
+                    if (alias != name) {
+                        if (this.securitySchemeUtils[alias]) {
+                            throw new Error(`Security support alias "${alias}" already exists. Please choose a unique alias.`);
+                        }
+                        this.securitySchemeUtils[alias] = helper;
+                    }
+                }
+            }
+        }
+        return this
     }
 
     modifyRoute(path: string, method: string, definition: object) {
