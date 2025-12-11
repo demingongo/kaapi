@@ -25,6 +25,7 @@
         "@dotenvx/dotenvx": "^1.51.0",
         "@eslint/eslintrc": "^3.3.1",
         "@eslint/js": "^9.34.0",
+        "@kaapi/cli": "workspace:^",
         "@stylistic/eslint-plugin": "^5.2.3",
         "@trivago/prettier-plugin-sort-imports": "^5.2.2",
         "@types/chai": "^5.2.2",

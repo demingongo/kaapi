@@ -30,6 +30,7 @@ export interface FileGenerator {
     readonly name: string
     readonly type: FileGeneratorType
     readonly description?: string | undefined
+    readonly notes?: string[] | undefined
     readonly options?: Record<string, string> | undefined
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

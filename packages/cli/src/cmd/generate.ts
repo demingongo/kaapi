@@ -1,5 +1,6 @@
 import * as prompts from '@clack/prompts';
 import fs from 'node:fs/promises'
+import path from 'node:path'
 import { CmdAction, FileGenerator, FileGeneratorType, QuestionType } from '../definitions';
 import { pluginGenerator } from './generators/plugin';
 import { isKaapiProjectRoot, isValidFilename, kebabCase } from '../utils';
@@ -48,7 +49,7 @@ function createHelpMessage(action: string, fileGenerators: FileGenerator[], file
 
   Options:
 ${optionsString}
-`
+${Array.isArray(fileGenerator.notes) ? fileGenerator.notes.map(n => '  ' + n).join('\n') : ''}`
     } else {
         defaultHelp += `
   Available generators:
@@ -250,6 +251,8 @@ export default (async function generate(argv, { cancel, config, error, cwd, acti
         filename = kebabCase(filterType) + '.ts'
     }
 
+    prompts.log.info(`Imagining target: ${path.join(cwd, filename)}`)
+
     const r = await prompts.text({
         message: 'The name of the file?',
         defaultValue: `${filename}`,
@@ -263,7 +266,8 @@ export default (async function generate(argv, { cancel, config, error, cwd, acti
         return error(2, `Invalid filename: ${r}`)
     }
 
-    const target = `plugins/${filename}`
+    //const target = `plugins/${filename}`
+    const target = `${filename}`
     try {
         await fs.access(target)
         const isOk = await prompts.select({
@@ -285,11 +289,12 @@ export default (async function generate(argv, { cancel, config, error, cwd, acti
     const spinner = prompts.spinner({ indicator: 'dots' })
     spinner.start(`Creating ${target}`)
     try {
-        await fs.mkdir('plugins', { recursive: true })
+        //await fs.mkdir('plugins', { recursive: true })
     } catch (_err) {
         //
     }
     await fs.writeFile(`${target}`, content)
-    spinner.stop(`Created plugins/${filename}`)
+    //spinner.stop(`Created plugins/${filename}`)
+    spinner.stop(`Created ${filename}`)
 
 }) as CmdAction<{ type?: 'plugin' | 'auth-design', generator?: string, help?: boolean, [key: string]: unknown }>
