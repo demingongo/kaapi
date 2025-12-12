@@ -160,7 +160,7 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign implements OAuth2S
                         clientSecret: clientSecret,
                         grantType: req.payload.grant_type,
                         tokenType: tokenTypeInstance.prefix,
-                        ttl: this.tokenTTL,
+                        ttl: this.tokenTtl,
                         createJwtAccessToken: jwtAuthority ? (async (payload) => {
                             return await createJwtAccessToken(jwtAuthority, {
                                 aud: t.postman?.getHostValue() || '',
@@ -168,14 +168,14 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign implements OAuth2S
                                 sub: clientId,
                                 scope,
                                 ...payload
-                            }, this.tokenTTL)
+                            }, this.tokenTtl)
                         }) : undefined,
                         createIdToken: jwtAuthority && hasOpenIDScope() ? (async (payload) => {
                             return await createIdToken(jwtAuthority, {
                                 aud: clientId,
                                 iss: t.postman?.getHostValue() || '',
                                 ...payload
-                            }, this.tokenTTL)
+                            }, this.tokenTtl)
                         }) : undefined
                     }
                     if (scope) {
@@ -375,7 +375,7 @@ export class OAuth2ClientCredentialsBuilder implements OAuth2AuthDesignBuilder {
     protected params: OAuth2ClientCredentialsBuilderArg
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     protected tokenType?: TokenType<any>
-    protected tokenTTL?: number
+    protected tokenTtl?: number
     protected description?: string
     protected scopes?: Record<string, string>
     protected clientAuthMethods: Record<TokenEndpointAuthMethod, ClientAuthMethod | undefined> = {
@@ -401,7 +401,7 @@ export class OAuth2ClientCredentialsBuilder implements OAuth2AuthDesignBuilder {
     build(): OAuth2ClientCredentials {
         const result = new OAuth2ClientCredentials(this.params)
 
-        result.setTokenTTL(this.tokenTTL)
+        result.setTokenTtl(this.tokenTtl)
 
         if (typeof this.description !== 'undefined') {
             result.setDescription(this.description)
@@ -420,8 +420,16 @@ export class OAuth2ClientCredentialsBuilder implements OAuth2AuthDesignBuilder {
         return result
     }
 
+    /**
+     * @deprecated Use setTokenTtl instead
+     */
     setTokenTTL(ttlSeconds?: number): this {
-        this.tokenTTL = ttlSeconds
+        this.tokenTtl = ttlSeconds
+        return this
+    }
+
+    setTokenTtl(ttlSeconds?: number): this {
+        this.tokenTtl = ttlSeconds
         return this
     }
 
@@ -543,7 +551,7 @@ export class OIDCClientCredentialsBuilder extends OAuth2ClientCredentialsBuilder
 
         const result = new OIDCClientCredentials({ ...this.params, openidConfiguration: this.openidConfiguration })
 
-        result.setTokenTTL(this.tokenTTL)
+        result.setTokenTtl(this.tokenTtl)
 
         if (typeof this.description !== 'undefined') {
             result.setDescription(this.description)

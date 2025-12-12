@@ -230,21 +230,21 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
                         code: req.payload.code,
                         verifyCodeVerifier,
 
-                        ttl: this.tokenTTL,
+                        ttl: this.tokenTtl,
                         createJwtAccessToken: jwtAuthority ? (async (payload) => {
                             return await createJwtAccessToken(jwtAuthority, {
                                 aud: t.postman?.getHostValue() || '',
                                 iss: t.postman?.getHostValue() || '',
                                 sub: clientId,
                                 ...payload
-                            }, this.tokenTTL)
+                            }, this.tokenTtl)
                         }) : undefined,
                         createIdToken: jwtAuthority && hasOpenIDScope() ? (async (payload) => {
                             return await createIdToken(jwtAuthority, {
                                 aud: clientId,
                                 iss: t.postman?.getHostValue() || '',
                                 ...payload
-                            }, this.tokenTTL)
+                            }, this.tokenTtl)
                         }) : undefined
                     }
                     if (clientSecret) {
@@ -340,7 +340,7 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
                         grantType: `${req.payload.grant_type}`,
                         tokenType: tokenTypePrefix,
                         refreshToken: `${req.payload.refresh_token}`,
-                        ttl: this.tokenTTL,
+                        ttl: this.tokenTtl,
                         createJwtAccessToken: jwtAuthority ? (async (payload) => {
                             return await createJwtAccessToken(jwtAuthority, {
                                 aud: t.postman?.getHostValue() || '',
@@ -348,14 +348,14 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
                                 sub: clientId,
                                 scope,
                                 ...payload
-                            }, this.tokenTTL)
+                            }, this.tokenTtl)
                         }) : undefined,
                         createIdToken: jwtAuthority && hasOpenIDScope() ? (async (payload) => {
                             return await createIdToken(jwtAuthority, {
                                 aud: clientId,
                                 iss: t.postman?.getHostValue() || '',
                                 ...payload
-                            }, this.tokenTTL)
+                            }, this.tokenTtl)
                         }) : undefined,
                         verifyJwt: jwtAuthority ? (async (token) => {
                             return await verifyJwt(jwtAuthority, token)
@@ -602,7 +602,7 @@ export class OAuth2AuthorizationCodeBuilder implements OAuth2AuthDesignBuilder {
     protected params: OAuth2AuthorizationCodeBuilderArg
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     protected tokenType?: TokenType<any>
-    protected tokenTTL?: number
+    protected tokenTtl?: number
     protected description?: string
     protected scopes?: Record<string, string>
     protected clientAuthMethods: Record<TokenEndpointAuthMethod, ClientAuthMethod | undefined> = {
@@ -629,7 +629,7 @@ export class OAuth2AuthorizationCodeBuilder implements OAuth2AuthDesignBuilder {
     build(): OAuth2AuthorizationCode {
         const result = new OAuth2AuthorizationCode(this.params)
 
-        result.setTokenTTL(this.tokenTTL)
+        result.setTokenTtl(this.tokenTtl)
 
         if (typeof this.description !== 'undefined') {
             result.setDescription(this.description)
@@ -648,8 +648,16 @@ export class OAuth2AuthorizationCodeBuilder implements OAuth2AuthDesignBuilder {
         return result
     }
 
+    /**
+     * @deprecated Use setTokenTtl instead
+     */
     setTokenTTL(ttlSeconds?: number): this {
-        this.tokenTTL = ttlSeconds
+        this.tokenTtl = ttlSeconds
+        return this
+    }
+
+    setTokenTtl(ttlSeconds?: number): this {
+        this.tokenTtl = ttlSeconds
         return this
     }
 
@@ -788,7 +796,7 @@ export class OIDCAuthorizationCodeBuilder extends OAuth2AuthorizationCodeBuilder
 
         const result = new OIDCAuthorizationCode({ ...this.params, openidConfiguration: this.openidConfiguration })
 
-        result.setTokenTTL(this.tokenTTL)
+        result.setTokenTtl(this.tokenTtl)
 
         if (typeof this.description !== 'undefined') {
             result.setDescription(this.description)

@@ -489,7 +489,7 @@ export abstract class OAuth2AuthDesign extends AuthDesign {
     protected options: OAuth2AuthOptions
     protected description?: string
     protected scopes?: Record<string, string>
-    protected tokenTTL?: number;
+    protected tokenTtl?: number;
     protected logger?: ILogger;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -664,13 +664,28 @@ export abstract class OAuth2AuthDesign extends AuthDesign {
 
     //
 
+    /**
+     * @deprecated Use setTokenTtl instead
+     */
     setTokenTTL(ttlSeconds?: number): this {
-        this.tokenTTL = ttlSeconds
+        this.tokenTtl = ttlSeconds
         return this
     }
 
+    /**
+     * @deprecated Use getTokenTtl instead
+     */
     getTokenTTL(): number | undefined {
-        return this.tokenTTL
+        return this.tokenTtl
+    }
+
+    setTokenTtl(ttlSeconds?: number): this {
+        this.tokenTtl = ttlSeconds
+        return this
+    }
+
+    getTokenTtl(): number | undefined {
+        return this.tokenTtl
     }
 
     setDescription(description: string): this {

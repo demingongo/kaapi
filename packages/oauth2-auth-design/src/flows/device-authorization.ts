@@ -196,21 +196,21 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
                         tokenType: tokenTypeInstance.prefix,
                         deviceCode: req.payload.device_code,
 
-                        ttl: this.tokenTTL,
+                        ttl: this.tokenTtl,
                         createJwtAccessToken: jwtAuthority ? (async (payload) => {
                             return await createJwtAccessToken(jwtAuthority, {
                                 aud: t.postman?.getHostValue() || '',
                                 iss: t.postman?.getHostValue() || '',
                                 sub: clientId,
                                 ...payload
-                            }, this.tokenTTL)
+                            }, this.tokenTtl)
                         }) : undefined,
                         createIdToken: jwtAuthority && hasOpenIDScope() ? (async (payload) => {
                             return await createIdToken(jwtAuthority, {
                                 aud: clientId,
                                 iss: t.postman?.getHostValue() || '',
                                 ...payload
-                            }, this.tokenTTL)
+                            }, this.tokenTtl)
                         }) : undefined
                     }
                     if (clientSecret) {
@@ -300,7 +300,7 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
                         grantType: `${req.payload.grant_type}`,
                         tokenType: tokenTypePrefix,
                         refreshToken: `${req.payload.refresh_token}`,
-                        ttl: this.tokenTTL,
+                        ttl: this.tokenTtl,
                         createJwtAccessToken: jwtAuthority ? (async (payload) => {
                             return await createJwtAccessToken(jwtAuthority, {
                                 aud: t.postman?.getHostValue() || '',
@@ -308,14 +308,14 @@ export class OAuth2DeviceAuthorization extends OAuth2AuthDesign implements OAuth
                                 sub: clientId,
                                 scope,
                                 ...payload
-                            }, this.tokenTTL)
+                            }, this.tokenTtl)
                         }) : undefined,
                         createIdToken: jwtAuthority && hasOpenIDScope() ? (async (payload) => {
                             return await createIdToken(jwtAuthority, {
                                 aud: clientId,
                                 iss: t.postman?.getHostValue() || '',
                                 ...payload
-                            }, this.tokenTTL)
+                            }, this.tokenTtl)
                         }) : undefined,
                         verifyJwt: jwtAuthority ? (async (token) => {
                             return await verifyJwt(jwtAuthority, token)
@@ -565,7 +565,7 @@ export class OAuth2DeviceAuthorizationBuilder implements OAuth2AuthDesignBuilder
     protected params: OAuth2DeviceAuthorizationBuilderArg
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     protected tokenType?: TokenType<any>
-    protected tokenTTL?: number
+    protected tokenTtl?: number
     protected description?: string
     protected scopes?: Record<string, string>
     protected clientAuthMethods: Record<TokenEndpointAuthMethod, ClientAuthMethod | undefined> = {
@@ -592,7 +592,7 @@ export class OAuth2DeviceAuthorizationBuilder implements OAuth2AuthDesignBuilder
     build(): OAuth2DeviceAuthorization {
         const result = new OAuth2DeviceAuthorization(this.params)
 
-        result.setTokenTTL(this.tokenTTL)
+        result.setTokenTtl(this.tokenTtl)
 
         if (typeof this.description !== 'undefined') {
             result.setDescription(this.description)
@@ -611,8 +611,16 @@ export class OAuth2DeviceAuthorizationBuilder implements OAuth2AuthDesignBuilder
         return result
     }
 
+    /**
+     * @deprecated Use setTokenTtl instead
+     */
     setTokenTTL(ttlSeconds?: number): this {
-        this.tokenTTL = ttlSeconds
+        this.tokenTtl = ttlSeconds
+        return this
+    }
+
+    setTokenTtl(ttlSeconds?: number): this {
+        this.tokenTtl = ttlSeconds
         return this
     }
 
@@ -751,7 +759,7 @@ export class OIDCDeviceAuthorizationBuilder extends OAuth2DeviceAuthorizationBui
 
         const result = new OIDCDeviceAuthorization({ ...this.params, openidConfiguration: this.openidConfiguration })
 
-        result.setTokenTTL(this.tokenTTL)
+        result.setTokenTtl(this.tokenTtl)
 
         if (typeof this.description !== 'undefined') {
             result.setDescription(this.description)
