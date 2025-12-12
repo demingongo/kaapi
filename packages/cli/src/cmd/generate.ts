@@ -27,7 +27,7 @@ function createHelpMessage(action: string, fileGenerators: FileGenerator[], file
 
     let defaultHelp = `\
   
-  Usage: kaapi ${action} [OPTION]...
+  Usage: kaapi ${action} [OPTION]... [DIRECTORY]
 
   ${defaultDescription}
 
@@ -43,7 +43,7 @@ function createHelpMessage(action: string, fileGenerators: FileGenerator[], file
     if (fileGenerator) {
         defaultHelp = `\
   
-  Usage: kaapi ${action} --generator ${fileGenerator.name} [OPTION]...
+  Usage: kaapi ${action} --generator ${fileGenerator.name} [OPTION]... [DIRECTORY]
 
   ${fileGenerator.description || defaultDescription}
 
@@ -110,7 +110,9 @@ export default (async function generate(argv, { cancel, config, error, cwd, acti
     let fileGeneratorName: string = typeof argv.generator === 'string' ? argv.generator : '';
     let fileGenerator: FileGenerator | undefined;
 
-    const { _: _c, generator: _g, type: _t, help: _h, ...initOptions } = argv
+    const { _: args, generator: _g, type: _t, help: _h, ...initOptions } = argv
+
+    const dirPath = (args?.[1] || '').replace(/^\/+/, '');
 
     if (!generators.length) {
         return error(2, `No generator was found ${filterType ? `(type: ${filterType})` : ''}`)
@@ -251,8 +253,6 @@ export default (async function generate(argv, { cancel, config, error, cwd, acti
         filename = kebabCase(filterType) + '.ts'
     }
 
-    prompts.log.info(`Imagining target: ${path.join(cwd, filename)}`)
-
     const r = await prompts.text({
         message: 'The name of the file?',
         defaultValue: `${filename}`,
@@ -266,8 +266,7 @@ export default (async function generate(argv, { cancel, config, error, cwd, acti
         return error(2, `Invalid filename: ${r}`)
     }
 
-    //const target = `plugins/${filename}`
-    const target = `${filename}`
+    const target = path.join(dirPath, `${filename}`)
     try {
         await fs.access(target)
         const isOk = await prompts.select({
@@ -289,12 +288,12 @@ export default (async function generate(argv, { cancel, config, error, cwd, acti
     const spinner = prompts.spinner({ indicator: 'dots' })
     spinner.start(`Creating ${target}`)
     try {
-        //await fs.mkdir('plugins', { recursive: true })
+        if (dirPath)
+            await fs.mkdir(dirPath, { recursive: true })
     } catch (_err) {
         //
     }
     await fs.writeFile(`${target}`, content)
-    //spinner.stop(`Created plugins/${filename}`)
-    spinner.stop(`Created ${filename}`)
+    spinner.stop(`Created ${target}`)
 
 }) as CmdAction<{ type?: 'plugin' | 'auth-design', generator?: string, help?: boolean, [key: string]: unknown }>
