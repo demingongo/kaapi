@@ -1,7 +1,8 @@
-import { OAuth2FileGenerator } from '@kaapi/oauth2-auth-design/cli'
+import { OAuth2FlowGenerator, OAuth2UtilGenerator } from '@kaapi/oauth2-auth-design/cli'
 
 export default {
     generators: [
-        new OAuth2FileGenerator()
+        new OAuth2FlowGenerator(),
+        new OAuth2UtilGenerator()
     ]
 }

@@ -24,7 +24,7 @@ export type Question<Value extends Readonly<string | boolean | number> = Readonl
 }
 
 
-export type FileGeneratorType = 'plugin' | 'auth-design'
+export type FileGeneratorType = 'plugin' | 'auth-design' | 'others'
 
 export interface FileGenerator {
     readonly name: string

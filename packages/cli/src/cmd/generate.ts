@@ -7,7 +7,8 @@ import { isKaapiProjectRoot, isValidFilename, kebabCase } from '../utils';
 
 const FILE_TYPES: Record<FileGeneratorType, string> = {
     'auth-design': 'Auth Design',
-    plugin: 'Plugin'
+    plugin: 'Plugin',
+    others: 'Others'
 }
 
 function createHelpMessage(action: string, fileGenerators: FileGenerator[], fileGenerator?: FileGenerator, generatorOptions?: Record<string, string>): string {
@@ -135,7 +136,8 @@ export default (async function generate(argv, { cancel, config, error, cwd, acti
         } else {
             const availables: Record<FileGeneratorType, boolean> = {
                 'auth-design': false,
-                plugin: false
+                plugin: false,
+                others: false
             }
             let nbGeneratorTypes = 0
             let lastGeneratorType: FileGeneratorType | undefined = undefined
