@@ -1,7 +1,7 @@
 import { FileGenerator, FileGeneratorType, Question, QuestionType } from '@kaapi/cli/definitions'
 import { camelCase, kebabCase } from '@kaapi/cli/utils'
 
-enum TYPES_ENUM {
+enum TYPE_ENUM {
     dpopReplayDetector = 'dpop-replay-detector',
     jwksKeyStore = 'jwks-key-store',
     jwksRotationTimestampStore = 'jwks-rotation-timestamp-store'
@@ -13,17 +13,17 @@ const TYPE_OPTIONS: {
     hint: string;
 }[] = [
         {
-            value: TYPES_ENUM.dpopReplayDetector,
+            value: TYPE_ENUM.dpopReplayDetector,
             label: 'DPoP Replay Detector',
             hint: ''
         },
         {
-            value: TYPES_ENUM.jwksKeyStore,
+            value: TYPE_ENUM.jwksKeyStore,
             label: 'Jwks Key Store',
             hint: ''
         },
         {
-            value: TYPES_ENUM.jwksRotationTimestampStore,
+            value: TYPE_ENUM.jwksRotationTimestampStore,
             label: 'Jwks Rotation Timestamp Store',
             hint: ''
         },
@@ -79,11 +79,11 @@ export class OAuth2UtilGenerator implements FileGenerator {
     }
 
     getFileContent(): string {
-        if (this.#values.type === TYPES_ENUM.dpopReplayDetector)
+        if (this.#values.type === TYPE_ENUM.dpopReplayDetector)
             return this.#getDpopReplayDetectorContent()
-        else if (this.#values.type === TYPES_ENUM.jwksKeyStore)
+        else if (this.#values.type === TYPE_ENUM.jwksKeyStore)
             return this.#getJwksKeyStoreContent()
-        else if (this.#values.type === TYPES_ENUM.jwksRotationTimestampStore)
+        else if (this.#values.type === TYPE_ENUM.jwksRotationTimestampStore)
             return this.#getJwksRotationTimestampStoreContent()
         else
             return ''
