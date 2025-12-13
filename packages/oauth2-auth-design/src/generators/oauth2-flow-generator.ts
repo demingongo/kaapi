@@ -4,7 +4,7 @@ import { camelCase, kebabCase } from '@kaapi/cli/utils'
 enum FLOW_ENUM {
     oidcAuthCode = 'oidc-auth-code',
     oidcClientCredentials = 'oidc-client-credentials',
-    oidcDeviceFlow = 'oidc-device-flow'
+    oidcDeviceFlow = 'oidc-device-auth'
 }
 
 const FLOW_OPTIONS: {
@@ -24,7 +24,7 @@ const FLOW_OPTIONS: {
         },
         {
             value: FLOW_ENUM.oidcDeviceFlow,
-            label: 'OIDC Device Flow',
+            label: 'OIDC Device Authorization',
             hint: ''
         }
     ];
