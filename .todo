@@ -59,6 +59,7 @@
 
 - @kaapi/oauth2-auth-design
     - FIX if postman host contains variables @done
+    - OIDC multiple flow builder: setSecuritySchemeName @done
     - implement introspection_endpoint
     - oidc docs for OpenAPI should not be oauth2 but openid 
     - auth code authorizationRoute: a method to validate params at GET would be nice if we don't want to use the whole setGETResponseRenderer

@@ -27,12 +27,13 @@ export type SingleCodeFlow = AuthDesign & OAuth2SingleAuthFlow
 
 export interface MultipleFlowsArg {
     logger?: ILogger;
+    securitySchemeName?: string | undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    jwksRoute?: DefaultJWKSRoute<any>
-    openidConfiguration?: Record<string, unknown>
+    jwksRoute?: DefaultJWKSRoute<any>;
+    openidConfiguration?: Record<string, unknown>;
     jwksOptions: OAuth2JwksOptions;
-    tokenEndpoint: string
-    flows: SingleCodeFlow[]
+    tokenEndpoint: string;
+    flows: SingleCodeFlow[];
 }
 
 export class MultipleFlows extends AuthDesign {
@@ -61,6 +62,7 @@ export class MultipleFlows extends AuthDesign {
         jwksRoute,
         openidConfiguration,
         logger,
+        securitySchemeName,
         ...props
     }: MultipleFlowsArg) {
         super();
@@ -74,6 +76,10 @@ export class MultipleFlows extends AuthDesign {
         this.jwksPublicKeyTtl = props?.jwksOptions?.ttl
         this.jwksRotationIntervalMs = props?.jwksOptions?.rotation?.intervalMs
         this.jwksRotationTimestampStore = props?.jwksOptions?.rotation?.timestampStore
+
+        if (securitySchemeName) {
+            this.setSecuritySchemeName(securitySchemeName)
+        }
     }
 
     protected getJwtAuthority(): JwtAuthority | undefined {
@@ -330,6 +336,13 @@ export class MultipleFlowsBuilder implements OAuth2AuthDesignBuilder {
             paramsComplete.jwksOptions.keyStore = new InMemoryKeyStore()
         }
         return new MultipleFlowsBuilder(paramsComplete)
+    }
+
+    /**
+     * Name used in the documentation
+     */
+    setSecuritySchemeName(name: string) {
+        this.params.securitySchemeName = name
     }
 
     additionalConfiguration(openidConfiguration: Record<string, unknown>): this {
