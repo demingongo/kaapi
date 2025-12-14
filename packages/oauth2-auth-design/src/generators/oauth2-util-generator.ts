@@ -1,29 +1,29 @@
 import { FileGenerator, FileGeneratorType, Question, QuestionType } from '@kaapi/cli/definitions'
 import { camelCase, kebabCase } from '@kaapi/cli/utils'
 
-enum TYPE_ENUM {
+enum KIND_ENUM {
     dpopReplayDetector = 'dpop-replay-detector',
     jwksKeyStore = 'jwks-key-store',
     jwksRotationTimestampStore = 'jwks-rotation-timestamp-store'
 }
 
-const TYPE_OPTIONS: {
+const KIND_OPTIONS: {
     value: string;
     label: string;
     hint: string;
 }[] = [
         {
-            value: TYPE_ENUM.dpopReplayDetector,
+            value: KIND_ENUM.dpopReplayDetector,
             label: 'DPoP Replay Detector',
             hint: ''
         },
         {
-            value: TYPE_ENUM.jwksKeyStore,
+            value: KIND_ENUM.jwksKeyStore,
             label: 'Jwks Key Store',
             hint: ''
         },
         {
-            value: TYPE_ENUM.jwksRotationTimestampStore,
+            value: KIND_ENUM.jwksRotationTimestampStore,
             label: 'Jwks Rotation Timestamp Store',
             hint: ''
         },
@@ -45,45 +45,45 @@ export class OAuth2UtilGenerator implements FileGenerator {
 
     get notes(): string[] {
         return [
-            'Allowed values for --type:',
-            ...TYPE_OPTIONS.map(o => `  - ${o.value}`)
+            'Allowed values for --kind:',
+            ...KIND_OPTIONS.map(o => `  - ${o.value}`)
         ]
     }
 
     get options(): Record<string, string> {
         return {
             name: 'The name',
-            type: 'The type'
+            kind: 'The kind'
         }
     }
 
     #values = {
         name: '',
-        type: ''
+        kind: ''
     }
 
     init(options: Record<string, unknown>): void {
         if (typeof options['name'] == 'string') {
             this.#values.name = camelCase(options['name'])
         }
-        if (typeof options['type'] == 'string') {
-            if (!TYPE_OPTIONS.map(v => v.value).includes(options['type'])) {
-                throw new Error(`Invalid value for '--type'. Allowed values are: ${TYPE_OPTIONS.map(v => v.value).join(', ')}.`)
+        if (typeof options['kind'] == 'string') {
+            if (!KIND_OPTIONS.map(v => v.value).includes(options['kind'])) {
+                throw new Error(`Invalid value for '--kind'. Allowed values are: ${KIND_OPTIONS.map(v => v.value).join(', ')}.`)
             }
-            this.#values.type = options['type']
+            this.#values.kind = options['kind']
         }
     }
 
     isValid(): boolean {
-        return !!(this.#values.name && this.#values.type)
+        return !!(this.#values.name && this.#values.kind)
     }
 
     getFileContent(): string {
-        if (this.#values.type === TYPE_ENUM.dpopReplayDetector)
+        if (this.#values.kind === KIND_ENUM.dpopReplayDetector)
             return this.#getDpopReplayDetectorContent()
-        else if (this.#values.type === TYPE_ENUM.jwksKeyStore)
+        else if (this.#values.kind === KIND_ENUM.jwksKeyStore)
             return this.#getJwksKeyStoreContent()
-        else if (this.#values.type === TYPE_ENUM.jwksRotationTimestampStore)
+        else if (this.#values.kind === KIND_ENUM.jwksRotationTimestampStore)
             return this.#getJwksRotationTimestampStoreContent()
         else
             return ''
@@ -92,21 +92,21 @@ export class OAuth2UtilGenerator implements FileGenerator {
     getQuestions(): Question[] {
         const r: Question[] = []
 
-        if (!(this.#values.type && TYPE_OPTIONS.map(v => v.value).includes(this.#values.type))) {
+        if (!(this.#values.kind && KIND_OPTIONS.map(v => v.value).includes(this.#values.kind))) {
             r.push({
                 type: QuestionType.select,
                 options: {
-                    message: 'The type?',
-                    options: TYPE_OPTIONS
+                    message: 'The kind?',
+                    options: KIND_OPTIONS
                 },
                 setValue: (value) => {
-                    this.#values.type = `${value}`
+                    this.#values.kind = `${value}`
                 }
             })
         }
 
         if (!this.#values.name) {
-            const camelCasedType = camelCase(this.#values.type || 'custom-util')
+            const camelCasedType = camelCase(this.#values.kind || 'custom-util')
             r.push({
                 type: QuestionType.text,
                 options: {

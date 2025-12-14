@@ -8,7 +8,7 @@ export interface GeneratorFileGenerator extends FileGenerator {
 export const kaapiGeneratorGenerator: GeneratorFileGenerator = {
     name: 'kaapi-generator',
     type: 'others',
-    description: 'Creates a simple generator for kaapi.',
+    description: 'Creates a simple generator for @kaapi/cli.',
     options: {
         name: 'The name of the generator'
     },
