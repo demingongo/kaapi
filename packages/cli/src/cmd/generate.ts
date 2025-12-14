@@ -4,6 +4,7 @@ import path from 'node:path'
 import { CmdAction, FileGenerator, FileGeneratorType, QuestionType } from '../definitions';
 import { pluginGenerator } from './generators/plugin';
 import { isKaapiProjectRoot, isValidFilename, kebabCase } from '../utils';
+import { kaapiGeneratorGenerator } from './generators/generator';
 
 const FILE_TYPES: Record<FileGeneratorType, string> = {
     'auth-design': 'Auth Design',
@@ -101,6 +102,7 @@ async function doContinue(cwd: string): Promise<boolean> {
 export default (async function generate(argv, { cancel, config, error, cwd, action }) {
 
     let generators: FileGenerator[] = [
+        kaapiGeneratorGenerator,
         pluginGenerator
     ]
 
@@ -219,6 +221,9 @@ export default (async function generate(argv, { cancel, config, error, cwd, acti
     const questions = fileGenerator.getQuestions?.() || []
 
     for (const q of questions) {
+        if (typeof q.skip === 'function' && !!q.skip()) {
+            continue;
+        }
         if (q.type === QuestionType.text) {
             const r = await prompts.text(q.options)
             if (prompts.isCancel(r)) return cancel()

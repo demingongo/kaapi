@@ -11,16 +11,19 @@ export type Question<Value extends Readonly<string | boolean | number> = Readonl
     type: QuestionType.select | 'select'
     options: SelectOptions<Value>
     setValue(value: Value): void
+    skip?(): boolean
 } |
 {
     type: QuestionType.multiselect | 'multiselect'
     options: MultiSelectOptions<Value>
     setValue(value: Value[]): void
+    skip?(): boolean
 } |
 {
     type: QuestionType.text | 'text'
     options: TextOptions
     setValue(value: string): void
+    skip?(): boolean
 }
 
 
