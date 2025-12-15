@@ -214,6 +214,7 @@ export class DefaultOAuth2ACAuthorizationRoute<
 
             let error: AnyOAuth2ErrorCodeType = OAuth2ErrorCode.SERVER_ERROR
             let errorMessage = 'something went wrong'
+            let statusCode: 400 | 401 = 400
 
             if (
                 props.clientId &&
@@ -254,6 +255,7 @@ export class DefaultOAuth2ACAuthorizationRoute<
                 } else {
                     error = OAuth2ErrorCode.ACCESS_DENIED
                     errorMessage = 'wrong credentials'
+                    statusCode = 401
                 }
             } else {
                 error = OAuth2ErrorCode.INVALID_REQUEST
@@ -266,12 +268,12 @@ export class DefaultOAuth2ACAuthorizationRoute<
                     {
                         usernameField: this.#usernameField,
                         passwordField: this.#passwordField,
-                        statusCode: 400,
+                        statusCode: statusCode,
                         error: error,
                         errorMessage
                     },
                     props,
-                    req, h)).code(400)
+                    req, h)).code(statusCode)
         })
 
         // @TODO: generate id for user, store it in-memory, generate jwt code ?
