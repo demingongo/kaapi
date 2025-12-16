@@ -131,29 +131,6 @@ export class OAuth2ClientCredentials extends OAuth2AuthDesign implements OAuth2S
                 if (
                     req.payload.grant_type === 'client_credentials'
                 ) {
-                    let clientId: string,
-                        clientSecret: string,
-                        tmpClientId: string | undefined,
-                        tmpClientSecret: string | undefined;
-
-                    const authHeaderValue = req.raw.req.headers.authorization
-                    if (authHeaderValue) {
-                        // remove 'Basic ' and convert the base64 to string
-                        const value = Buffer.from(authHeaderValue.substring(5), 'base64').toString();
-                        // split client_id and client_secret from string
-                        [tmpClientId, tmpClientSecret] = value.split(':')
-                    }
-
-                    if (tmpClientId) {
-                        clientId = tmpClientId
-                    } else {
-                        return h.response({ error: OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Request was missing the \'client_id\' parameter.' }).code(400)
-                    }
-                    if (tmpClientSecret) {
-                        clientSecret = tmpClientSecret
-                    } else {
-                        return h.response({ error: OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Request was missing the \'client_secret\' parameter.' }).code(400)
-                    }
                     const scope = req.payload.scope && typeof req.payload.scope === 'string' ? req.payload.scope : undefined
                     const params: OAuth2ClientCredentialsTokenParams = {
                         clientId: clientId,
