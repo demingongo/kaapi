@@ -53,6 +53,15 @@ const app = new Kaapi({
                     enum: ['http://localhost:8000'],
                 },
             },
+        },
+        ui: {
+            swagger: {
+                customJsStr: `
+                setTimeout(() => {
+                if (document.documentElement.classList.contains("dark-mode")) { document.documentElement.classList.remove("dark-mode"); }
+                }, 10)
+                `
+            }
         }
     },
     routes: {
@@ -156,7 +165,7 @@ async function start() {
         }
     }, ({ payload: { file } }, h) => h.response(file._data).type(file.hapi.headers['content-type']));
 
-    // Zod validation
+    // Zod validation (route "options" as function will only have docs at refreshDocs)
     app.base().zod({
         payload: z.object({
             file: z.looseObject({
@@ -375,6 +384,7 @@ const fileFieldSchema: SchemaObject3_1 = {
 
     const VALID_TYPES: string[] = ['image/jpeg', 'image/jpg', 'image/png'] as const;
 
+    // (route "options" as function will only have docs at refreshDocs)
     app.route<{
         Payload: Stream.Readable
     }>(
@@ -512,6 +522,7 @@ const fileFieldSchema: SchemaObject3_1 = {
             }
         );
 
+    // (route "options" as function will only have docs at refreshDocs)
     setTimeout(() => app.refreshDocs(), 2000)
 
     await app.listen()

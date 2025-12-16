@@ -15,6 +15,7 @@ export const app = new Kaapi({
         level: 'debug',
     },
     docs: {
+        version: '1.0.4-esm',
         disabled: false,
         host: { url: 'http://localhost:3000' },
     },
