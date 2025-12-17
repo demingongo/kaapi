@@ -14,13 +14,23 @@ import {
     OAuth2TokenResponseBody,
     OAuth2TokenRoute,
     PathValue,
+    StandardOAuth2ErrorCode,
     TokenGenerator
 } from '../common'
 
 //#region Types
 
+/**
+ * | Situation                     | Error                   | Meaning           |
+ * | ----------------------------- | ----------------------- | ----------------- |
+ * | Authorization still pending   | `authorization_pending` | Keep polling      |
+ * | Polling too fast              | `slow_down`             | Increase interval |
+ * | Invalid / expired device code | `invalid_grant`         | Stop polling      |
+ * | User denied                   | `access_denied`         | Stop polling      |
+ * | Client misconfiguration       | `invalid_client`        | Client error      |
+ */
 export type OAuth2DeviceCodeTokenErrorBody = {
-    error: DeviceFlowOAuth2ErrorCodeType
+    error: DeviceFlowOAuth2ErrorCodeType | typeof StandardOAuth2ErrorCode.INVALID_GRANT | typeof StandardOAuth2ErrorCode.INVALID_CLIENT
     error_description?: string
     error_uri?: string
     [key: string]: unknown
