@@ -341,8 +341,9 @@ export class MultipleFlowsBuilder implements OAuth2AuthDesignBuilder {
     /**
      * Name used in the documentation
      */
-    setSecuritySchemeName(name: string) {
+    setSecuritySchemeName(name: string): this {
         this.params.securitySchemeName = name
+        return this
     }
 
     additionalConfiguration(openidConfiguration: Record<string, unknown>): this {
