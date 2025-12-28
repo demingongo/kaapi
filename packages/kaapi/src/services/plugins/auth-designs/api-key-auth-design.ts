@@ -95,7 +95,7 @@ export class APIKeyAuthDesign extends AuthDesign {
         return this
     }
 
-    docs(): ApiKeyUtil {
+    docs(): ApiKeyUtil | undefined {
         const docs = new ApiKeyUtil(this.strategyName)
             .setApiKeyLocation(this.apiKeyLocation)
             .setKey(this.key)

@@ -62,7 +62,7 @@ export class BearerAuthDesign extends AuthDesign {
         return this.description;
     }
 
-    docs(): BearerUtil {
+    docs(): BearerUtil | undefined {
         const docs = new BearerUtil(this.strategyName)
 
         if (this.description) {

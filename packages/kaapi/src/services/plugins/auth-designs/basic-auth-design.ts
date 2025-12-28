@@ -62,7 +62,7 @@ export class BasicAuthDesign extends AuthDesign {
         return this.description;
     }
 
-    docs(): BasicAuthUtil {
+    docs(): BasicAuthUtil | undefined {
         const docs = new BasicAuthUtil(this.strategyName)
 
         if (this.description) {
