@@ -2,9 +2,10 @@ import * as prompts from '@clack/prompts';
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { CmdAction, FileGenerator, FileGeneratorType, QuestionType } from '../definitions';
-import { pluginGenerator } from './generators/plugin';
 import { isKaapiProjectRoot, isValidFilename, kebabCase } from '../utils';
 import { kaapiGeneratorGenerator } from './generators/generator';
+import { pluginGenerator } from './generators/plugin';
+import { AuthDesignGenerator } from './generators/auth-design';
 
 const FILE_TYPES: Record<FileGeneratorType, string> = {
     'auth-design': 'Auth Design',
@@ -103,7 +104,8 @@ export default (async function generate(argv, { cancel, config, error, cwd, acti
 
     let generators: FileGenerator[] = [
         kaapiGeneratorGenerator,
-        pluginGenerator
+        pluginGenerator,
+        new AuthDesignGenerator()
     ]
 
     generators = generators.concat(config.generators?.map(g => g) || [])
