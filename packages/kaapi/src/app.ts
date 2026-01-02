@@ -1,5 +1,5 @@
-import { KaapiServer, KaapiServerOptions, KaapiServerRoute } from '@kaapi/server';
-import { IKaapiApp, AbstractKaapiApp } from './abstract-app';
+import { KaapiServer, KaapiServerOptions } from '@kaapi/server';
+import { IKaapiApp, AbstractKaapiApp, KaapiRoute } from './abstract-app';
 import { createLogger, ILogger } from './services/log';
 import { IMessaging, IMessagingContext, IMessagingSubscribeConfig } from './services/messaging';
 import qs from 'qs'
@@ -9,6 +9,7 @@ import { formatRequestRoute, formatRoutes, KaapiOpenAPI, KaapiPostman } from './
 import { HandlerDecorations, Lifecycle, ReqRef, ReqRefDefaults, Server } from '@hapi/hapi';
 import { KaapiPlugin, KaapiTools } from './services/plugins/plugin';
 import { SchemaObject3_1 } from '@novice1/api-doc-generator';
+import { deepExtend } from './services/docs/deep-extend';
 
 export interface KaapiAppOptions extends KaapiServerOptions {
     logger?: ILogger,
@@ -277,16 +278,46 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
     }
 
     route<Refs extends ReqRef = ReqRefDefaults>(
-        serverRoute: KaapiServerRoute<Refs>,
+        serverRoute: KaapiRoute<Refs>,
         handler?: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>) {
+        const { kaapi: kaapiPluginConfig, ...sRoute } = serverRoute
+        if (typeof kaapiPluginConfig !== 'undefined') {
+            if (!sRoute.options) {
+                sRoute.options = {}
+            }
+            if (typeof sRoute.options !== 'function') {
+                if (!sRoute.options.plugins) {
+                    sRoute.options.plugins = {}
+                }
+                if (sRoute.options.plugins.kaapi) {
+                    sRoute.options.plugins.kaapi = deepExtend(sRoute.options.plugins.kaapi, kaapiPluginConfig);
+                } else {
+                    sRoute.options.plugins.kaapi = kaapiPluginConfig
+                }
+            } else {
+                const fnOptions = sRoute.options.bind(sRoute)
+                sRoute.options = (server) => {
+                    const opts = fnOptions(server)
+                    if (!opts.plugins) {
+                        opts.plugins = {}
+                    }
+                    if (opts.plugins.kaapi) {
+                        opts.plugins.kaapi = deepExtend(opts.plugins.kaapi, kaapiPluginConfig);
+                    } else {
+                        opts.plugins.kaapi = kaapiPluginConfig
+                    }
+                    return opts
+                }
+            }
+        }
         const { routes: routesMeta, modifiers } = formatRoutes(
-            serverRoute,
+            sRoute,
             this.docs.openapi.getSecuritySchemeUtils(),
             this.base().auth.settings.default
         );
         this.docs.openapi.addCustom(routesMeta, modifiers)
         this.docs.postman.addCustom(routesMeta, modifiers)
-        return super.route(serverRoute, handler)
+        return super.route(sRoute, handler)
     }
 
     refreshDocs() {
@@ -328,15 +359,45 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
         const getDocs = () => this.docs
         const tool: KaapiTools = {
             log: this.log,
-            route<Refs extends ReqRef = ReqRefDefaults>(serverRoute: KaapiServerRoute<Refs>, handler?: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>) {
+            route<Refs extends ReqRef = ReqRefDefaults>(serverRoute: KaapiRoute<Refs>, handler?: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>) {
+                const { kaapi: kaapiPluginConfig, ...sRoute } = serverRoute
+                if (typeof kaapiPluginConfig !== 'undefined') {
+                    if (!sRoute.options) {
+                        sRoute.options = {}
+                    }
+                    if (typeof sRoute.options !== 'function') {
+                        if (!sRoute.options.plugins) {
+                            sRoute.options.plugins = {}
+                        }
+                        if (sRoute.options.plugins.kaapi) {
+                            sRoute.options.plugins.kaapi = deepExtend(sRoute.options.plugins.kaapi, kaapiPluginConfig);
+                        } else {
+                            sRoute.options.plugins.kaapi = kaapiPluginConfig
+                        }
+                    } else {
+                        const fnOptions = sRoute.options.bind(sRoute)
+                        sRoute.options = (server) => {
+                            const opts = fnOptions(server)
+                            if (!opts.plugins) {
+                                opts.plugins = {}
+                            }
+                            if (opts.plugins.kaapi) {
+                                opts.plugins.kaapi = deepExtend(opts.plugins.kaapi, kaapiPluginConfig);
+                            } else {
+                                opts.plugins.kaapi = kaapiPluginConfig
+                            }
+                            return opts
+                        }
+                    }
+                }
                 const { routes: routesMeta, modifiers } = formatRoutes(
-                    serverRoute,
+                    sRoute,
                     getDocs().openapi.getSecuritySchemeUtils(),
                     getCurrentApp().base().auth.settings.default
                 );
                 getDocs().openapi.addCustom(routesMeta, modifiers);
                 getDocs().postman.addCustom(routesMeta, modifiers);
-                getCurrentApp().server().route(serverRoute, handler)
+                getCurrentApp().server().route(sRoute, handler)
                 return this
             },
             scheme: this.base().auth.scheme.bind(this.base().auth),

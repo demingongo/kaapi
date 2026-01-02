@@ -5,8 +5,27 @@ import {
     ReqRefDefaults
 } from '@hapi/hapi';
 import { KaapiServerRoute, KaapiServer, KaapiServerOptions } from '@kaapi/server';
+import type { BaseResponseUtil } from '@novice1/api-doc-generator/lib/utils/responses/baseResponseUtils';
 import { ILogger } from './services/log';
 import { IMessaging, IMessagingContext, IMessagingSubscribeConfig, IPublishMethod, ISubscribeMethod } from './services/messaging';
+import type { RequestBodyDocsModifier } from './services/docs/modifiers'
+import type { KaapiOpenAPIHelperClass } from './services/docs/generators'
+
+export interface KaapiPluginConfiguration {
+    docs?: {
+        disabled?: boolean;
+        openAPIHelperClass?: KaapiOpenAPIHelperClass;
+        helperSchemaProperty?: string;
+        modifiers?: (() => {
+            requestBody?: RequestBodyDocsModifier;
+            responses?: BaseResponseUtil
+        })
+    } | false
+}
+
+export interface KaapiRoute<Refs extends ReqRef = ReqRefDefaults> extends KaapiServerRoute<Refs> {
+    kaapi?: KaapiPluginConfiguration;
+}
 
 export interface IKaapiApp extends IMessaging {
     log: ILogger
@@ -14,7 +33,7 @@ export interface IKaapiApp extends IMessaging {
     on: ISubscribeMethod
     server(): KaapiServer;
     route<Refs extends ReqRef = ReqRefDefaults>(
-        serverRoute: KaapiServerRoute<Refs>,
+        serverRoute: KaapiRoute<Refs>,
         handler?: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>): this
 }
 
@@ -31,7 +50,7 @@ export abstract class AbstractKaapiApp implements IKaapiApp {
     protected kaapiServer?: KaapiServer;
 
     route<Refs extends ReqRef = ReqRefDefaults>(
-        serverRoute: KaapiServerRoute<Refs>,
+        serverRoute: KaapiRoute<Refs>,
         handler?: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>) {
         this.server().route<Refs>(serverRoute, handler)
         return this
