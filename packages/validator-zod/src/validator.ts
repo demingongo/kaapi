@@ -3,7 +3,7 @@ import { z } from 'zod/v4';
 import { $ZodIssue } from 'zod/v4/core';
 import { KaapiServerRoute, HandlerDecorations, Lifecycle, KaapiPlugin, Request, ResponseToolkit, KaapiOpenAPIHelperInterface, RouteOptions } from '@kaapi/kaapi';
 import { OpenAPIZodHelper, PostmanZodHelper } from '@novice1/api-doc-zod-helper';
-import type { ValidatorZod, ValidatorZodReqRef, ValidatorZodSchema, ZodlessReqRef, ZodlessReqRefDefaults, ZodSchema } from './types';
+import type { ValidatorZod, ValidatorZodReqRef, ValidatorZodRouteBuilder, ValidatorZodSchema, ZodlessReqRef, ZodlessReqRefDefaults, ZodSchema } from './types';
 import { mapIssue } from './utils';
 import pkg from '../package.json';
 
@@ -85,30 +85,46 @@ function mergeOptions<V extends ValidatorZodSchema, R extends ZodlessReqRef>(
     return options
 }
 
+export const withSchema: ValidatorZodRouteBuilder = function withSchema<V extends ValidatorZodSchema>(schema: V) {
+    return {
+        route<R extends ZodlessReqRef = ZodlessReqRefDefaults>(
+            serverRoute: KaapiServerRoute<ValidatorZodReqRef<V> & R>,
+            handler?: HandlerDecorations | Lifecycle.Method<ValidatorZodReqRef<V> & R, Lifecycle.ReturnValue<ValidatorZodReqRef<V> & R>>
+        ) {
+            const { ...route } = serverRoute
+            if (!route.options) {
+                route.options = {}
+            }
+            if (typeof route.options === 'object') {
+                mergeOptions(route.options, schema)
+            } else if (typeof route.options === 'function') {
+                const fn = route.options.bind(route);
+                route.options = (server) => {
+                    const options = fn(server)
+                    return mergeOptions(options, schema)
+                }
+            }
+            if (handler) {
+                route.handler = handler
+            }
+            return route
+        }
+    }
+}
+
 export const validatorZod: KaapiPlugin = {
     async integrate(t) {
         const validator: ValidatorZod = <V extends ValidatorZodSchema>(schema: V) => {
+            const builder = withSchema(schema)
             return {
                 route<R extends ZodlessReqRef = ZodlessReqRefDefaults>(
                     serverRoute: KaapiServerRoute<ValidatorZodReqRef<V> & R>,
                     handler?: HandlerDecorations | Lifecycle.Method<ValidatorZodReqRef<V> & R, Lifecycle.ReturnValue<ValidatorZodReqRef<V> & R>>
                 ) {
-                    if (!serverRoute.options) {
-                        serverRoute.options = {}
-                    }
-                    if (typeof serverRoute.options === 'object') {
-                        mergeOptions(serverRoute.options, schema)
-                    } else if (typeof serverRoute.options === 'function') {
-                        const fn = serverRoute.options.bind(serverRoute);
-                        serverRoute.options = (server) => {
-                            const options = fn(server)
-                            return mergeOptions(options, schema)
-                        }
-                    }
-                    t.route(
+                    t.route(builder.route(
                         serverRoute,
                         handler
-                    )
+                    ))
                     return t.server
                 }
             };

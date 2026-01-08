@@ -36,3 +36,10 @@ export type ValidatorZod = <V extends ValidatorZodSchema>(schema: V) => {
         handler?: HandlerDecorations | Lifecycle.Method<ValidatorZodReqRef<V> & R, Lifecycle.ReturnValue<ValidatorZodReqRef<V> & R>>
     ): Server;
 }
+
+export type ValidatorZodRouteBuilder = <V extends ValidatorZodSchema>(schema: V) => {
+    route<R extends ZodlessReqRef = ZodlessReqRefDefaults>(
+        serverRoute: KaapiServerRoute<ValidatorZodReqRef<V> & R>,
+        handler?: HandlerDecorations | Lifecycle.Method<ValidatorZodReqRef<V> & R, Lifecycle.ReturnValue<ValidatorZodReqRef<V> & R>>
+    ): KaapiServerRoute<ValidatorZodReqRef<V> & R>;
+}
