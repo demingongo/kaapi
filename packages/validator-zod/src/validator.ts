@@ -85,7 +85,7 @@ function mergeOptions<V extends ValidatorZodSchema, R extends ZodlessReqRef>(
     return options
 }
 
-export const withSchema: ValidatorZodRouteBuilder = function withSchema<V extends ValidatorZodSchema>(schema: V) {
+export const withSchema = function withSchema<V extends ValidatorZodSchema>(schema: V): ValidatorZodRouteBuilder<V> {
     return {
         route<R extends ZodlessReqRef = ZodlessReqRefDefaults>(
             serverRoute: KaapiServerRoute<ValidatorZodReqRef<V> & R>,
