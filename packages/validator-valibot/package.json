@@ -1,6 +1,6 @@
 {
   "name": "@kaapi/validator-valibot",
-  "version": "0.0.39",
+  "version": "0.0.40",
   "private": false,
   "description": "Valibot-powered request validation and documentation plugin for Kaapi.",
   "main": "lib/index.js",

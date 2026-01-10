@@ -1,7 +1,7 @@
 {
   "name": "@kaapi/validator-arktype",
   "type": "module",
-  "version": "0.0.39",
+  "version": "0.0.40",
   "private": false,
   "description": "ArkType-powered request validation and documentation plugin for Kaapi.",
   "main": "lib/index.js",
