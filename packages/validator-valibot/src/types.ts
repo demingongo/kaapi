@@ -47,3 +47,10 @@ export type ValidatorValibot = <V extends ValidatorValibotSchema>(schema: V) => 
         handler?: HandlerDecorations | Lifecycle.Method<ValidatorValibotReqRef<V> & R, Lifecycle.ReturnValue<ValidatorValibotReqRef<V> & R>>
     ): Server;
 }
+
+export interface ValidatorValibotRouteBuilder<V extends ValidatorValibotSchema> {
+    route<R extends ValibotlessReqRef = ValibotlessReqRefDefaults>(
+        serverRoute: KaapiServerRoute<ValidatorValibotReqRef<V> & R>,
+        handler?: HandlerDecorations | Lifecycle.Method<ValidatorValibotReqRef<V> & R, Lifecycle.ReturnValue<ValidatorValibotReqRef<V> & R>>
+    ): KaapiServerRoute<ValidatorValibotReqRef<V> & R>;
+}

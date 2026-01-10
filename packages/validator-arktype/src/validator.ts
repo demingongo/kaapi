@@ -5,6 +5,7 @@ import type {
     ArklessReqRefDefaults,
     ValidatorArk,
     ValidatorArkReqRef,
+    ValidatorArkRouteBuilder,
     ValidatorArkSchema,
 } from './types.js';
 import Boom from '@hapi/boom';
@@ -66,9 +67,37 @@ function mergeOptions<V extends ValidatorArkSchema, R extends ArklessReqRef>(
     return options
 }
 
+export const withSchema = function withSchema<V extends ValidatorArkSchema>(schema: V): ValidatorArkRouteBuilder<V> {
+    return {
+        route<R extends ArklessReqRef = ArklessReqRefDefaults>(
+            serverRoute: KaapiServerRoute<ValidatorArkReqRef<V> & R>,
+            handler?: HandlerDecorations | Lifecycle.Method<ValidatorArkReqRef<V> & R, Lifecycle.ReturnValue<ValidatorArkReqRef<V> & R>>
+        ) {
+            const { ...route } = serverRoute
+            if (!route.options) {
+                route.options = {}
+            }
+            if (typeof route.options === 'object') {
+                mergeOptions(route.options, schema)
+            } else if (typeof route.options === 'function') {
+                const fn = route.options.bind(route);
+                route.options = (server) => {
+                    const options = fn(server)
+                    return mergeOptions(options, schema)
+                }
+            }
+            if (handler) {
+                route.handler = handler
+            }
+            return route
+        }
+    }
+}
+
 export const validatorArk: KaapiPlugin = {
     async integrate(t) {
         const validator: ValidatorArk = <V extends ValidatorArkSchema>(schema: V) => {
+            const builder = withSchema(schema)
             return {
                 route<R extends ArklessReqRef = ArklessReqRefDefaults>(
                     serverRoute: KaapiServerRoute<ValidatorArkReqRef<V> & R>,
@@ -76,19 +105,10 @@ export const validatorArk: KaapiPlugin = {
                         | HandlerDecorations
                         | Lifecycle.Method<ValidatorArkReqRef<V> & R, Lifecycle.ReturnValue<ValidatorArkReqRef<V> & R>>
                 ) {
-                    if (!serverRoute.options) {
-                        serverRoute.options = {};
-                    }
-                    if (typeof serverRoute.options === 'object') {
-                        mergeOptions(serverRoute.options, schema)
-                    } else if (typeof serverRoute.options === 'function') {
-                        const fn = serverRoute.options.bind(serverRoute);
-                        serverRoute.options = (server) => {
-                            const options = fn(server)
-                            return mergeOptions(options, schema)
-                        }
-                    }
-                    t.route(serverRoute, handler);
+                    t.route(builder.route(
+                        serverRoute,
+                        handler
+                    ));
                     return t.server;
                 },
             };

@@ -124,8 +124,8 @@ export const validatorZod: KaapiPlugin = {
                     t.route(builder.route(
                         serverRoute,
                         handler
-                    ))
-                    return t.server
+                    ));
+                    return t.server;
                 }
             };
         };

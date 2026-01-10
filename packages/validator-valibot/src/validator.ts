@@ -1,7 +1,7 @@
 import Boom from '@hapi/boom';
 import { objectAsync, type ObjectEntriesAsync, parseAsync, ValiError } from 'valibot'
 import type { KaapiServerRoute, HandlerDecorations, Lifecycle, KaapiPlugin, Request, ResponseToolkit, RouteOptions } from '@kaapi/kaapi';
-import type { ValibotlessReqRef, ValibotlessReqRefDefaults, ValidatorValibot, ValidatorValibotReqRef, ValidatorValibotSchema } from './types';
+import type { ValibotlessReqRef, ValibotlessReqRefDefaults, ValidatorValibot, ValidatorValibotReqRef, ValidatorValibotRouteBuilder, ValidatorValibotSchema } from './types';
 import { OpenAPIValibotHelper, PostmanValibotHelper } from './doc-helpers';
 import pkg from '../package.json';
 
@@ -43,31 +43,47 @@ function mergeOptions<V extends ValidatorValibotSchema, R extends ValibotlessReq
     return options
 }
 
+export const withSchema = function withSchema<V extends ValidatorValibotSchema>(schema: V): ValidatorValibotRouteBuilder<V> {
+    return {
+        route<R extends ValibotlessReqRef = ValibotlessReqRefDefaults>(
+            serverRoute: KaapiServerRoute<ValidatorValibotReqRef<V> & R>,
+            handler?: HandlerDecorations | Lifecycle.Method<ValidatorValibotReqRef<V> & R, Lifecycle.ReturnValue<ValidatorValibotReqRef<V> & R>>
+        ) {
+            const { ...route } = serverRoute
+            if (!route.options) {
+                route.options = {}
+            }
+            if (typeof route.options === 'object') {
+                mergeOptions(route.options, schema)
+            } else if (typeof route.options === 'function') {
+                const fn = route.options.bind(route);
+                route.options = (server) => {
+                    const options = fn(server)
+                    return mergeOptions(options, schema)
+                }
+            }
+            if (handler) {
+                route.handler = handler
+            }
+            return route
+        }
+    }
+}
+
 export const validatorValibot: KaapiPlugin = {
     async integrate(t) {
         const validator: ValidatorValibot = <V extends ValidatorValibotSchema>(schema: V) => {
+            const builder = withSchema(schema)
             return {
                 route<R extends ValibotlessReqRef = ValibotlessReqRefDefaults>(
                     serverRoute: KaapiServerRoute<ValidatorValibotReqRef<V> & R>,
                     handler?: HandlerDecorations | Lifecycle.Method<ValidatorValibotReqRef<V> & R, Lifecycle.ReturnValue<ValidatorValibotReqRef<V> & R>>
                 ) {
-                    if (!serverRoute.options) {
-                        serverRoute.options = {}
-                    }
-                    if (typeof serverRoute.options === 'object') {
-                        mergeOptions(serverRoute.options, schema)
-                    } else if (typeof serverRoute.options === 'function') {
-                        const fn = serverRoute.options.bind(serverRoute);
-                        serverRoute.options = (server) => {
-                            const options = fn(server)
-                            return mergeOptions(options, schema)
-                        }
-                    }
-                    t.route(
+                    t.route(builder.route(
                         serverRoute,
                         handler
-                    )
-                    return t.server
+                    ));
+                    return t.server;
                 }
             };
         };
