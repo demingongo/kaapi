@@ -23,17 +23,13 @@ export interface KaapiPluginConfiguration {
     } | false
 }
 
-export interface KaapiRoute<Refs extends ReqRef = ReqRefDefaults> extends KaapiServerRoute<Refs> {
-    kaapi?: KaapiPluginConfiguration;
-}
-
 export interface IKaapiApp extends IMessaging {
     log: ILogger
     emit: IPublishMethod
     on: ISubscribeMethod
     server(): KaapiServer;
     route<Refs extends ReqRef = ReqRefDefaults>(
-        serverRoute: KaapiRoute<Refs>,
+        serverRoute: KaapiServerRoute<Refs>,
         handler?: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>): this
 }
 
@@ -50,7 +46,7 @@ export abstract class AbstractKaapiApp implements IKaapiApp {
     protected kaapiServer?: KaapiServer;
 
     route<Refs extends ReqRef = ReqRefDefaults>(
-        serverRoute: KaapiRoute<Refs>,
+        serverRoute: KaapiServerRoute<Refs>,
         handler?: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>) {
         this.server().route<Refs>(serverRoute, handler)
         return this

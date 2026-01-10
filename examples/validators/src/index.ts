@@ -279,75 +279,77 @@ const fileFieldSchema: SchemaObject3_1 = {
                     multipart: { output: 'stream' },
                     maxBytes: 1024 * 3000, // 3MB
                 },
-            },
-            kaapi: {
-                docs: {
-                    // it definitly looks ugly but it is necessary for the sake of the documentation while fine graining the the control with no validator
-                    /*
-                    openApiSchemaExtension: {
-                        requestBody: {
-                            content: {
-                                'multipart/form-data': {
-                                    schema: {
-                                        type: 'object',
-                                        properties: {
-                                            username: {
-                                                type: 'string',
-                                                description: 'The name of the user',
-                                                format: 'email'
-                                            },
-                                            file: {
-                                                type: 'string',
-                                                description: 'The image to upload',
-                                                contentMediaType: 'application/octet-stream'
+                plugins: {
+                    kaapi: {
+                        docs: {
+                            // it definitly looks ugly but it is necessary for the sake of the documentation while fine graining the the control with no validator
+                            /*
+                            openApiSchemaExtension: {
+                                requestBody: {
+                                    content: {
+                                        'multipart/form-data': {
+                                            schema: {
+                                                type: 'object',
+                                                properties: {
+                                                    username: {
+                                                        type: 'string',
+                                                        description: 'The name of the user',
+                                                        format: 'email'
+                                                    },
+                                                    file: {
+                                                        type: 'string',
+                                                        description: 'The image to upload',
+                                                        contentMediaType: 'application/octet-stream'
+                                                    }
+                                                },
+                                                required: [
+                                                    'file'
+                                                ],
                                             }
-                                        },
-                                        required: [
-                                            'file'
-                                        ],
-                                    }
+                                        }
+                                    },
+                                    required: true
                                 }
                             },
-                            required: true
+                            */
+                            modifiers: () => ({
+                                requestBody: new RequestBodyDocsModifier()
+                                    .setRequired(true)
+                                    .addMediaType('multipart/form-data', new MediaTypeModifier(
+                                        {
+                                            schema: new SchemaModifier('UploadImageBusboy', {
+                                                type: 'object',
+                                                properties: {
+                                                    username: {
+                                                        type: 'string',
+                                                        description: 'The name of the user',
+                                                        format: 'email'
+                                                    },
+                                                    file: {
+                                                        type: 'string',
+                                                        description: 'The image to upload',
+                                                        contentMediaType: 'application/octet-stream'
+                                                    }
+                                                },
+                                                required: [
+                                                    'file'
+                                                ],
+                                            }).toObject()
+                                        }
+                                    )),
+                                responses: groupResponses(
+                                    new ResponseDocsModifier()
+                                        .setCode(200)
+                                        .setDefault(true)
+                                        .setDescription('The file itself'),
+                                    new ResponseDocsModifier()
+                                        .setCode(400)
+                                        .setDescription('Bad Request')
+                                )
+
+                            })
                         }
                     },
-                    */
-                    modifiers: () => ({
-                        requestBody: new RequestBodyDocsModifier()
-                            .setRequired(true)
-                            .addMediaType('multipart/form-data', new MediaTypeModifier(
-                                {
-                                    schema: new SchemaModifier('UploadImageBusboy', {
-                                        type: 'object',
-                                        properties: {
-                                            username: {
-                                                type: 'string',
-                                                description: 'The name of the user',
-                                                format: 'email'
-                                            },
-                                            file: {
-                                                type: 'string',
-                                                description: 'The image to upload',
-                                                contentMediaType: 'application/octet-stream'
-                                            }
-                                        },
-                                        required: [
-                                            'file'
-                                        ],
-                                    }).toObject()
-                                }
-                            )),
-                        responses: groupResponses(
-                            new ResponseDocsModifier()
-                                .setCode(200)
-                                .setDefault(true)
-                                .setDescription('The file itself'),
-                            new ResponseDocsModifier()
-                                .setCode(400)
-                                .setDescription('Bad Request')
-                        )
-
-                    })
                 }
             },
         },
