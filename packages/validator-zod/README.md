@@ -83,6 +83,35 @@ app.base().zod(routeSchema).route({
 
 ---
 
+### 🧱 Build Routes Separately with `withSchema`
+
+You can use `withSchema` to create validated routes without directly chaining from `app.base()`.
+This cleanly separates **route construction** from **app registration**.
+
+```ts
+import { withSchema } from '@kaapi/validator-zod'
+import { z } from 'zod/v4'
+
+const schema = {
+  payload: z.object({
+    name: z.string()
+  })
+}
+
+const route = withSchema(schema).route({
+  method: 'POST',
+  path: '/items',
+  handler: req => ({ id: Date.now(), name: req.payload.name })
+})
+
+// later, during app setup
+app.route(route)
+```
+
+This is the most flexible and convenient way to use `@kaapi/validator-zod` when building modular APIs.
+
+---
+
 ## ⚙️ Advanced Configuration
 
 ### 🔧 `options`

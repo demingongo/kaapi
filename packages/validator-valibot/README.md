@@ -82,6 +82,35 @@ app.base().valibot(routeSchema).route({
 
 ---
 
+### 🧱 Build Routes Separately with `withSchema`
+
+You can use `withSchema` to create validated routes without directly chaining from `app.base()`.
+This cleanly separates **route construction** from **app registration**.
+
+```ts
+import { withSchema } from '@kaapi/validator-valibot'
+import * as v from 'valibot'
+
+const schema = {
+  payload: v.object({
+    name: v.string()
+  })
+}
+
+const route = withSchema(schema).route({
+  method: 'POST',
+  path: '/items',
+  handler: req => ({ id: Date.now(), name: req.payload.name })
+})
+
+// later, during app setup
+app.route(route)
+```
+
+This is the most flexible and convenient way to use `@kaapi/validator-valibot` when building modular APIs.
+
+---
+
 ## ⚙️ Advanced Configuration
 
 ### 🔧 `options`
