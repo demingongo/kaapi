@@ -1,7 +1,7 @@
 // test: Schema validation
 import Boom from '@hapi/boom';
 import { Kaapi } from '@kaapi/kaapi';
-import { validatorArk } from '@kaapi/validator-arktype';
+import { validatorArk, withSchema } from '@kaapi/validator-arktype';
 import { type } from 'arktype';
 import { expect } from 'chai';
 
@@ -182,5 +182,62 @@ describe('ValidatorArk Schema Validation', () => {
         expect((res.result as any).issues[0].path.map((p: any) => p))
             .to.be.an('array')
             .with.ordered.members(['payload', 'name']);
+    });
+
+    it('should validate request using withSchema route builder', async () => {
+        const schema = {
+            payload: type({ name: 'string >= 3' }),
+            query: type({
+                'age?': type(['string | number', '@', 'my age'])
+                    .pipe((val) => {
+                        // If it's a string, try to parse
+                        if (typeof val === 'string') {
+                            const parsed = Number(val);
+                            if (!Number.isNaN(parsed)) {
+                                return parsed;
+                            }
+                        }
+                        return val;
+                    })
+                    .to('number.integer >= 1'),
+            })
+        };
+
+        const route = withSchema(schema).route({
+            method: 'POST',
+            path: '/with-schema',
+            handler: ({ payload, query }) => ({
+                name: payload.name,
+                age: query.age
+            })
+        });
+
+        app.route(route);
+
+        // valid request
+        const ok = await app.base().inject({
+            method: 'POST',
+            url: '/with-schema?age=30',
+            payload: { name: 'Alice' }
+        });
+
+        expect(ok.statusCode).to.equal(200);
+        expect(ok.result).to.deep.equal({
+            name: 'Alice',
+            age: 30
+        });
+
+        // invalid request
+        const fail = await app.base().inject({
+            method: 'POST',
+            url: '/with-schema?age=-1',
+            payload: { name: 'Al' }
+        });
+
+        expect(fail.statusCode).to.equal(400);
+        expect(fail.result).to.have.property('message');
+        expect('message' in fail.result! ? fail.result.message : undefined)
+            .to.be.a('string')
+            .that.matches(/^payload.name must be at least length 3 \(was 2\)$/i);
     });
 });

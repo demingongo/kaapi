@@ -2,7 +2,7 @@
 
 import { expect } from 'chai';
 import { Kaapi } from '@kaapi/kaapi';
-import { validatorZod } from '@kaapi/validator-zod';
+import { validatorZod, withSchema } from '@kaapi/validator-zod';
 import { z } from 'zod';
 import Boom from '@hapi/boom';
 
@@ -129,5 +129,53 @@ describe('ValidatorZod Schema Validation', () => {
         expect('issues' in res.result! ? res.result.issues : undefined).to.be.an('array').with.length.greaterThan(0);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         expect((res.result as any).issues[0].path).to.be.an('array').with.ordered.members(['payload', 'name']);
+    });
+
+    it('should validate request using withSchema route builder', async () => {
+        const schema = {
+            payload: z.object({
+                name: z.string().min(3)
+            }),
+            query: z.object({
+                age: z.coerce.number().int().positive()
+            })
+        };
+
+        const route = withSchema(schema).route({
+            method: 'POST',
+            path: '/with-schema',
+            handler: ({ payload, query }) => ({
+                name: payload.name,
+                age: query.age
+            })
+        });
+
+        app.route(route);
+
+        // valid request
+        const ok = await app.base().inject({
+            method: 'POST',
+            url: '/with-schema?age=30',
+            payload: { name: 'Alice' }
+        });
+
+        expect(ok.statusCode).to.equal(200);
+        expect(ok.result).to.deep.equal({
+            name: 'Alice',
+            age: 30
+        });
+
+        // invalid request
+        const fail = await app.base().inject({
+            method: 'POST',
+            url: '/with-schema?age=-1',
+            payload: { name: 'Al' }
+        });
+
+        expect(fail.statusCode).to.equal(400);
+        expect(fail.result).to.have.property('message');
+        expect('message' in fail.result! ? fail.result.message : undefined)
+            .to.be.a('string')
+            .that.matches(/^Too small.*"query.age"$/i);
     });
 });
