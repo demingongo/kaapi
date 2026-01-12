@@ -1,7 +1,18 @@
 import jose from 'node-jose'
-import jwktopem from 'jwk-to-pem'
 import { JWTPayload, jwtVerify, JWTHeaderParameters } from 'jose'
 import { ILogger } from '@kaapi/kaapi'
+
+export interface RSA {
+    kty: 'RSA';
+    e: string;
+    n: string;
+    d?: string | undefined;
+    p?: string | undefined;
+    q?: string | undefined;
+    dp?: string | undefined;
+    dq?: string | undefined;
+    qi?: string | undefined;
+}
 
 export interface JwksKeyStore {
     /**
@@ -115,10 +126,10 @@ export class JwtAuthority implements KeyGenerator {
         return this.getPublicKeys()
     }
 
-    async getPublicKey(kid: string): Promise<jwktopem.RSA | undefined> {
+    async getPublicKey(kid: string): Promise<RSA | undefined> {
         const keyStore = await this.#getPublicKeyStore()
         const key = keyStore.get(kid)
-        return key ? (key.toJSON() as jwktopem.RSA) : undefined
+        return key ? (key.toJSON() as RSA) : undefined
     }
 
     async generateKeyPair(): Promise<void> {
