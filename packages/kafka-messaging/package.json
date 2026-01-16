@@ -6,7 +6,8 @@
   "main": "lib/index.js",
   "scripts": {
     "lint": "eslint .",
-    "build": "tsc"
+    "build": "tsc",
+    "test": "kaukau --require ts-node/register --config kaukau.config.mjs"
   },
   "keywords": [
     "kaapi",
