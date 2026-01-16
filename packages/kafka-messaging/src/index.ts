@@ -8,6 +8,7 @@ import { randomBytes } from 'crypto'
 export interface KafkaMessagingContext extends IMessagingContext {
     /** The Kafka message offset */
     offset?: string
+    address?: string
 }
 
 /**
@@ -34,6 +35,16 @@ export interface KafkaMessagingSubscribeConfig extends Partial<ConsumerConfig> {
     fromBeginning?: boolean
     /** Callback invoked when the consumer is ready */
     onReady?(consumer: Consumer): void
+    /** 
+     * Custom consumer group ID. If not provided, defaults to `{name}.{topic}` 
+     * where `name` is the service name from KafkaMessagingConfig.
+     */
+    groupId?: string
+    /**
+     * Prefix for the auto-generated group ID. Only used when `groupId` is not provided.
+     * Defaults to the service `name` or 'group' if name is not set.
+     */
+    groupIdPrefix?: string
 }
 
 /**
@@ -463,14 +474,22 @@ export class KafkaMessaging implements IMessaging {
      * @param config.fromBeginning - Start consuming from the beginning of the topic
      * @param config.onReady - Callback invoked when the consumer is ready
      * @param config.groupId - Override the auto-generated consumer group ID
+     * @param config.groupIdPrefix - Prefix for auto-generated group ID (default: service name)
      * 
      * @example
      * ```ts
-     * await messaging.subscribe<UserEvent>('user-events', async (message, context) => {
-     *     console.log('Received:', message);
-     *     console.log('Offset:', context.offset);
-     *     console.log('From service:', context.name);
-     * }, { fromBeginning: true });
+     * // Using auto-generated group ID (e.g., "my-service.user-events")
+     * await messaging.subscribe('user-events', handler);
+     * 
+     * // Using custom group ID
+     * await messaging.subscribe('user-events', handler, { 
+     *     groupId: 'my-custom-consumer-group' 
+     * });
+     * 
+     * // Using custom prefix (e.g., "analytics.user-events")
+     * await messaging.subscribe('user-events', handler, { 
+     *     groupIdPrefix: 'analytics' 
+     * });
      * ```
      */
     async subscribe<T = unknown>(topic: string, handler: (message: T, context: KafkaMessagingContext) => Promise<void> | void, config?: KafkaMessagingSubscribeConfig) {
@@ -479,16 +498,23 @@ export class KafkaMessaging implements IMessaging {
         let consumerConfig: Partial<ConsumerConfig> | undefined;
         let fromBeginning: boolean | undefined;
         let onReady: ((consumer: Consumer) => void) | undefined;
+        let groupId: string | undefined;
+        let groupIdPrefix: string | undefined;
 
         if (config) {
-            const { fromBeginning: tmpFromBeginning, onReady: tmpOnReady, ...tmpConsumerConfig } = config
-            fromBeginning = tmpFromBeginning
-            onReady = tmpOnReady
-            consumerConfig = tmpConsumerConfig
+            const { fromBeginning: tmpFromBeginning, onReady: tmpOnReady, groupId: tmpGroupId, groupIdPrefix: tmpGroupIdPrefix, ...tmpConsumerConfig } = config
+            fromBeginning = tmpFromBeginning;
+            onReady = tmpOnReady;
+            groupId = tmpGroupId;
+            groupIdPrefix = tmpGroupIdPrefix;
+            consumerConfig = tmpConsumerConfig;
         }
 
+        // Determine the consumer group ID
+        const resolvedGroupId = groupId ?? `${groupIdPrefix ?? this.#name ?? 'group'}.${topic}`;
+
         // Get kafka consumer
-        const consumer = await this.createConsumer(`${this.#name || 'group'}---${topic}`, consumerConfig);
+        const consumer = await this.createConsumer(resolvedGroupId, consumerConfig);
 
         // If we don't have a consumer, abort
         if (!consumer) return this.logger?.error('❌  Could not get consumer');
