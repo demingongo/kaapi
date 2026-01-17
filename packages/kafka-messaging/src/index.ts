@@ -555,7 +555,11 @@ export class KafkaMessaging implements IMessaging {
         if (this.#address) baseHeaders.address = this.#address;
 
         const kafkaMessages = messages.map((msg) => ({
-            value: JSON.stringify(msg.value),
+            value: (
+                msg.value instanceof Buffer ?
+                    msg.value : typeof msg.value === 'string' ?
+                        msg.value : (msg.value === null ? null : JSON.stringify(msg.value))
+            ),
             key: msg.key,
             partition: msg.partition,
             timestamp: `${Date.now()}`,
@@ -614,7 +618,11 @@ export class KafkaMessaging implements IMessaging {
             const res = await producer.send({
                 topic,
                 messages: [{
-                    value: JSON.stringify(message),
+                    value: (
+                        message instanceof Buffer ?
+                            message : typeof message === 'string' ?
+                                message : (message === null ? null : JSON.stringify(message))
+                    ),
                     timestamp: `${Date.now()}`,
                     headers
                 }],
@@ -717,6 +725,7 @@ export class KafkaMessaging implements IMessaging {
                 this.logger?.verbose(`📥  Received from KAFKA topic "${topic}" (${batch.messages.length} messages)`);
                 for (const message of batch.messages) {
                     const context: KafkaMessagingContext = {};
+                    let value: Buffer | string | null = message.value;
                     try {
                         try {
                             // unbufferize header values
@@ -730,8 +739,18 @@ export class KafkaMessaging implements IMessaging {
                         } catch (e) {
                             this.logger?.error(`KafkaMessaging.subscribe('${topic}', …) error:`, e);
                         }
+
+                        const tmpValue: string | null = message.value?.toString?.() || null;
+                        if (tmpValue) {
+                            try {
+                                value = JSON.parse(tmpValue);
+                            } catch (_e) {
+                                // not important - keep original value
+                            }
+                        }
+
                         const res = handler(
-                            JSON.parse(message.value?.toString?.() || ''),
+                            value as T,
                             context
                         );
 
@@ -744,7 +763,7 @@ export class KafkaMessaging implements IMessaging {
                         // Call custom error handler if provided
                         if (onError) {
                             try {
-                                const errorResult = onError(e, JSON.parse(message.value?.toString?.() || ''), context);
+                                const errorResult = onError(e, value, context);
                                 if (errorResult) await errorResult;
                             } catch (onErrorError) {
                                 this.logger?.error(`KafkaMessaging.subscribe('${topic}', …) onError callback failed:`, onErrorError);

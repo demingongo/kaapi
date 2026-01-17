@@ -7,9 +7,10 @@
   "scripts": {
     "lint": "eslint .",
     "build": "tsc",
-    "test": "kaukau --require ts-node/register --config kaukau.config.mjs",
+    "test": "kaukau --require ts-node/register --config kaukau.config.mjs --ext mock.spec.ts",
     "test:integration": "kaukau --require ts-node/register --config kaukau.config.mjs --ext integration.spec.ts",
-    "test:mock": "kaukau --require ts-node/register --config kaukau.config.mjs --ext mock.spec.ts"
+    "test:mock": "kaukau --require ts-node/register --config kaukau.config.mjs --ext mock.spec.ts",
+    "test:all": "kaukau --require ts-node/register --config kaukau.config.mjs"
   },
   "keywords": [
     "kaapi",

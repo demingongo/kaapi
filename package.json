@@ -14,7 +14,8 @@
     "release:publish": "pnpm publish --recursive --tag latest",
     "release:test": "lerna run --no-private test --skip-nx-cache",
     "release:version": "lerna version --no-changelog --no-push --no-git-tag-version --no-private",
-    "test": "lerna run test"
+    "test": "lerna run test",
+    "test:integration": "lerna run test:integration"
   },
   "workspaces": [
     "examples/*",
