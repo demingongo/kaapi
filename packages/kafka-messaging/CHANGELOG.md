@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.0.40] - 2026-01-17
+## [0.0.41] - 2026-01-17
 
 ### Added
 - `publishBatch()` method for efficient multi-message publishing
@@ -44,4 +44,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `safeDisconnect()` with timeout protection
 - Integration with Kaapi's `ILogger`
 
-[Unreleased]: https://github.com/demingongo/kaapi/compare/e659e2f...HEAD
+[Unreleased]: https://github.com/demingongo/kaapi/compare/v0.0.41...HEAD
+[0.0.41]: https://github.com/demingongo/kaapi/commits/v0.0.41
