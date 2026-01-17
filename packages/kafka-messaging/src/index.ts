@@ -45,6 +45,12 @@ export interface KafkaMessagingSubscribeConfig extends Partial<ConsumerConfig> {
      * Defaults to the service `name` or 'group' if name is not set.
      */
     groupIdPrefix?: string
+    /**
+     * Whether to log partition offsets on subscribe. 
+     * Requires an admin client connection, adding some overhead.
+     * @default false
+     */
+    logOffsets?: boolean
 }
 
 /**
@@ -77,6 +83,10 @@ export class KafkaMessaging implements IMessaging {
     #admins: Set<Admin> = new Set();
 
     #producerPromise?: Promise<Producer | undefined>;
+
+    /** Shared admin instance for internal operations (lazy initialized) */
+    #sharedAdmin?: Admin;
+    #sharedAdminPromise?: Promise<Admin | undefined>;
 
     protected kafka?: Kafka;
     protected logger?: ILogger;
@@ -139,6 +149,32 @@ export class KafkaMessaging implements IMessaging {
     }
 
     /**
+     * Internal method to initialize the shared admin.
+     * @private
+     */
+    private async _initializeSharedAdmin(): Promise<Admin | undefined> {
+        if (this.#sharedAdmin) {
+            return this.#sharedAdmin;
+        }
+
+        const admin = await this.createAdmin();
+
+        if (!admin) return;
+
+        this.#sharedAdmin = admin;
+
+        admin.on(admin.events.DISCONNECT, () => {
+            if (this.#sharedAdmin === admin) {
+                this.#sharedAdmin = undefined;
+            }
+        });
+
+        this.logger?.debug('✔️  Shared admin connected');
+
+        return admin;
+    }
+
+    /**
      * Internal method to initialize the producer.
      * @private
      */
@@ -173,6 +209,34 @@ export class KafkaMessaging implements IMessaging {
             this.kafka = this._createInstance()
         }
         return this.kafka
+    }
+
+    /**
+     * Gets or creates a shared admin instance for internal operations.
+     * Uses lazy initialization to avoid unnecessary connections.
+     * 
+     * @returns A promise that resolves to the shared admin instance
+     */
+    protected async getSharedAdmin(): Promise<Admin | undefined> {
+        // Return existing admin if available and connected
+        if (this.#sharedAdmin) {
+            return this.#sharedAdmin;
+        }
+
+        // If an admin is already being created, wait for it
+        if (this.#sharedAdminPromise) {
+            return this.#sharedAdminPromise;
+        }
+
+        // Create the admin with a lock
+        this.#sharedAdminPromise = this._initializeSharedAdmin();
+
+        try {
+            const admin = await this.#sharedAdminPromise;
+            return admin;
+        } finally {
+            this.#sharedAdminPromise = undefined;
+        }
     }
 
     /**
@@ -276,6 +340,31 @@ export class KafkaMessaging implements IMessaging {
 
         await admin.disconnect();
         throw new Error(`Timeout: Topic "${topic}" did not become ready within ${timeoutMs}ms.`);
+    }
+
+    /**
+     * Fetches and logs partition offsets for a topic.
+     * Uses the shared admin instance to minimize connections.
+     * 
+     * @param topic - The topic to fetch offsets for
+     * @returns The partition offset information, or undefined if unavailable
+     */
+    async fetchTopicOffsets(topic: string): Promise<Array<{
+        partition: number;
+        offset: string;
+        high: string;
+        low: string;
+    }> | undefined> {
+        const admin = await this.getSharedAdmin();
+        if (!admin) return;
+
+        try {
+            const partitions = await admin.fetchTopicOffsets(topic);
+            return partitions;
+        } catch (error) {
+            this.logger?.error(`Failed to fetch offsets for topic "${topic}":`, error);
+            return undefined;
+        }
     }
 
     /**
@@ -490,6 +579,11 @@ export class KafkaMessaging implements IMessaging {
      * await messaging.subscribe('user-events', handler, { 
      *     groupIdPrefix: 'analytics' 
      * });
+     * 
+     * // With offset logging enabled
+     * await messaging.subscribe('user-events', handler, { 
+     *     logOffsets: true 
+     * });
      * ```
      */
     async subscribe<T = unknown>(topic: string, handler: (message: T, context: KafkaMessagingContext) => Promise<void> | void, config?: KafkaMessagingSubscribeConfig) {
@@ -500,13 +594,15 @@ export class KafkaMessaging implements IMessaging {
         let onReady: ((consumer: Consumer) => void) | undefined;
         let groupId: string | undefined;
         let groupIdPrefix: string | undefined;
+        let logOffsets = false;
 
         if (config) {
-            const { fromBeginning: tmpFromBeginning, onReady: tmpOnReady, groupId: tmpGroupId, groupIdPrefix: tmpGroupIdPrefix, ...tmpConsumerConfig } = config
+            const { fromBeginning: tmpFromBeginning, onReady: tmpOnReady, groupId: tmpGroupId, groupIdPrefix: tmpGroupIdPrefix, logOffsets: tmpLogOffsets, ...tmpConsumerConfig } = config
             fromBeginning = tmpFromBeginning;
             onReady = tmpOnReady;
             groupId = tmpGroupId;
             groupIdPrefix = tmpGroupIdPrefix;
+            logOffsets = tmpLogOffsets ?? false;
             consumerConfig = tmpConsumerConfig;
         }
 
@@ -525,20 +621,14 @@ export class KafkaMessaging implements IMessaging {
             fromBeginning
         });
 
-        const admin = await this.createAdmin();
-        if (admin) {
-            try {
-                const partitions = await admin.fetchTopicOffsets(topic);
-                if (partitions) {
-                    partitions.forEach((partition) => {
-                        this.logger?.info(`👂  Start "${topic}" partition: ${partition.partition} | offset: ${partition.offset} | high: ${partition.high} | low: ${partition.low}`);
-                    })
-                }
-            } catch (error) {
-                this.logger?.error(error)
+        // Only fetch offsets if explicitly requested (avoids admin overhead)
+        if (logOffsets) {
+            const partitions = await this.fetchTopicOffsets(topic);
+            if (partitions) {
+                partitions.forEach((partition) => {
+                    this.logger?.info(`👂  Start "${topic}" partition: ${partition.partition} | offset: ${partition.offset} | high: ${partition.high} | low: ${partition.low}`);
+                });
             }
-
-            await admin.disconnect();
         }
 
         await consumer.run({
