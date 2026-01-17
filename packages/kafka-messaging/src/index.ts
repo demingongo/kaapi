@@ -51,6 +51,15 @@ export interface KafkaMessagingSubscribeConfig extends Partial<ConsumerConfig> {
      * @default false
      */
     logOffsets?: boolean
+    /**
+     * Called when a message handler throws an error.
+     * Allows custom error handling (e.g., alerting, metrics, logging to external service).
+     * 
+     * @param error - The error thrown by the handler
+     * @param message - The parsed message that failed
+     * @param context - The message context (offset, headers, etc.)
+     */
+    onError?(error: unknown, message: unknown, context: KafkaMessagingContext): void | Promise<void>
 }
 
 /**
@@ -595,14 +604,16 @@ export class KafkaMessaging implements IMessaging {
         let groupId: string | undefined;
         let groupIdPrefix: string | undefined;
         let logOffsets = false;
+        let onError: ((error: unknown, message: unknown, context: KafkaMessagingContext) => void | Promise<void>) | undefined;
 
         if (config) {
-            const { fromBeginning: tmpFromBeginning, onReady: tmpOnReady, groupId: tmpGroupId, groupIdPrefix: tmpGroupIdPrefix, logOffsets: tmpLogOffsets, ...tmpConsumerConfig } = config
+            const { fromBeginning: tmpFromBeginning, onReady: tmpOnReady, groupId: tmpGroupId, groupIdPrefix: tmpGroupIdPrefix, logOffsets: tmpLogOffsets, onError: tmpOnError, ...tmpConsumerConfig } = config
             fromBeginning = tmpFromBeginning;
             onReady = tmpOnReady;
             groupId = tmpGroupId;
             groupIdPrefix = tmpGroupIdPrefix;
             logOffsets = tmpLogOffsets ?? false;
+            onError = tmpOnError;
             consumerConfig = tmpConsumerConfig;
         }
 
@@ -640,9 +651,8 @@ export class KafkaMessaging implements IMessaging {
             }) => {
                 this.logger?.verbose(`📥  Received from KAFKA topic "${topic}" (${batch.messages.length} messages)`);
                 for (const message of batch.messages) {
+                    const context: KafkaMessagingContext = {};
                     try {
-                        const context: KafkaMessagingContext = {};
-
                         try {
                             // unbufferize header values
                             Object.keys((message.headers || {})).forEach(key => {
@@ -665,6 +675,16 @@ export class KafkaMessaging implements IMessaging {
                         this.logger?.debug(`✔️  Resolved offset ${message.offset} from KAFKA topic "${topic}"`);
                     } catch (e) {
                         this.logger?.error(`KafkaMessaging.subscribe('${topic}', …) handler throwed an error:`, e);
+
+                        // Call custom error handler if provided
+                        if (onError) {
+                            try {
+                                const errorResult = onError(e, JSON.parse(message.value?.toString?.() || ''), context);
+                                if (errorResult) await errorResult;
+                            } catch (onErrorError) {
+                                this.logger?.error(`KafkaMessaging.subscribe('${topic}', …) onError callback failed:`, onErrorError);
+                            }
+                        }
                     }
                     await heartbeat();
                 }
