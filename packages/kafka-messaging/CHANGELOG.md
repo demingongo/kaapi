@@ -18,14 +18,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Lazy initialization for shared admin client
 - Race condition protection in `getProducer()` and `getSharedAdmin()`
 - Comprehensive JSDoc documentation
+- Mock test suite (no Kafka broker required)
+- Integration test suite
+- Support for Buffer, string, and null message values in `publish()` and `publishBatch()`
 
 ### Changed
 - Default group ID separator changed from `---` to `.` (e.g., `my-service.topic`)
 - Offset logging now disabled by default for performance
+- Test scripts reorganized: `test` (mock), `test:integration`, `test:all`
 
 ### Fixed
 - Potential race condition when `getProducer()` called concurrently
 - Added try/catch in `publish()` to properly handle and re-throw errors
+- Graceful handling of non-JSON message payloads in `subscribe()`
 
 ## [0.0.1] - 2025-XX-XX
 
@@ -39,4 +44,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `safeDisconnect()` with timeout protection
 - Integration with Kaapi's `ILogger`
 
-[Unreleased]: https://github.com/demingongo/kaapi/compare/e659e2f...81e3f7f
+[Unreleased]: https://github.com/demingongo/kaapi/compare/e659e2f...HEAD
