@@ -63,6 +63,20 @@ export interface KafkaMessagingSubscribeConfig extends Partial<ConsumerConfig> {
 }
 
 /**
+ * A message to be published in a batch.
+ */
+export interface KafkaMessagingBatchMessage<T = unknown> {
+    /** The message payload */
+    value: T
+    /** Optional message key for partitioning */
+    key?: string
+    /** Optional partition to send to */
+    partition?: number
+    /** Optional custom headers (merged with default headers) */
+    headers?: Record<string, string>
+}
+
+/**
  * A lightweight wrapper around KafkaJS that integrates with the Kaapi framework
  * to provide a clean and consistent message publishing and consuming interface.
  * 
@@ -506,6 +520,57 @@ export class KafkaMessaging implements IMessaging {
             await this.producer.disconnect();
             this.producer = undefined;
             this.currentProducerId = undefined;
+        }
+    }
+
+    /**
+     * Publishes multiple messages to a Kafka topic in a single batch.
+     * More efficient than multiple `publish()` calls for high-throughput scenarios.
+     * 
+     * @typeParam T - The type of the message payload
+     * @param topic - The Kafka topic to publish to
+     * @param messages - Array of messages to publish
+     * 
+     * @throws {Error} If the batch fails to send
+     * 
+     * @example
+     * ```ts
+     * await messaging.publishBatch('user-events', [
+     *     { value: { event: 'user.created', userId: '1' } },
+     *     { value: { event: 'user.created', userId: '2' } },
+     *     { value: { event: 'user.updated', userId: '3' }, key: 'user-3' },
+     * ]);
+     * ```
+     */
+    async publishBatch<T = unknown>(topic: string, messages: KafkaMessagingBatchMessage<T>[]): Promise<void> {
+        if (!messages.length) return;
+
+        const producer = await this.getProducer();
+
+        // If we don't have a producer, abort
+        if (!producer) return this.logger?.error('❌  Could not get producer');
+
+        const baseHeaders: IHeaders = {};
+        if (this.#name) baseHeaders.name = this.#name;
+        if (this.#address) baseHeaders.address = this.#address;
+
+        const kafkaMessages = messages.map((msg) => ({
+            value: JSON.stringify(msg.value),
+            key: msg.key,
+            partition: msg.partition,
+            timestamp: `${Date.now()}`,
+            headers: { ...baseHeaders, ...(msg.headers ?? {}) },
+        }));
+
+        try {
+            const res = await producer.send({
+                topic,
+                messages: kafkaMessages,
+            });
+            this.logger?.verbose(`📤  Sent batch to KAFKA topic "${topic}" (${messages.length} messages, offset ${res[0].baseOffset})`);
+        } catch (error) {
+            this.logger?.error(`❌  Failed to publish batch to "${topic}":`, error);
+            throw error;
         }
     }
 
