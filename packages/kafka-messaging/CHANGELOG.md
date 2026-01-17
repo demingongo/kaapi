@@ -39,4 +39,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `safeDisconnect()` with timeout protection
 - Integration with Kaapi's `ILogger`
 
-[Unreleased]: https://github.com/demingongo/kaapi/compare/e659e2f...HEAD
+[Unreleased]: https://github.com/demingongo/kaapi/compare/e659e2f...81e3f7f
