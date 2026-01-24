@@ -241,6 +241,7 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
     server(): KaapiServer {
         if (!this.kaapiServer) {
             this.kaapiServer = this.#createServer();
+            this.kaapiServer.base.decorate('request', 'publish', this.publish.bind(this));
         }
         return this.kaapiServer
     }

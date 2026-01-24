@@ -7,7 +7,7 @@ import winston from 'winston'
  * KafkaMessaging
  */
 export const messenger = new KafkaMessaging({
-    brokers: ['localhost:9094'],
+    brokers: ['localhost:9092'],
     logger: createLogger({
         level: 'debug',
         transports: [
