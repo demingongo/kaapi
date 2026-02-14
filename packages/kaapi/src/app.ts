@@ -1,21 +1,21 @@
-import { KaapiServer, KaapiServerOptions, KaapiServerRoute } from '@kaapi/server';
 import { IKaapiApp, AbstractKaapiApp } from './abstract-app';
-import { createLogger, ILogger } from './services/log';
-import { IMessaging, IMessagingContext, IMessagingSubscribeConfig } from './services/messaging';
-import qs from 'qs'
-import winston from 'winston';
 import { createDocsRouter, DocsConfig, DocsUIOptions } from './services/docs/docs';
 import { formatRequestRoute, formatRoutes, KaapiOpenAPI, KaapiPostman } from './services/docs/generators';
-import { HandlerDecorations, Lifecycle, ReqRef, ReqRefDefaults, Server } from '@hapi/hapi';
+import { createLogger, ILogger } from './services/log';
+import { IMessaging, IMessagingContext, IMessagingSubscribeConfig } from './services/messaging';
 import { KaapiPlugin, KaapiTools } from './services/plugins/plugin';
+import { HandlerDecorations, Lifecycle, ReqRef, ReqRefDefaults, Server } from '@hapi/hapi';
+import { KaapiServer, KaapiServerOptions, KaapiServerRoute } from '@kaapi/server';
 import { SchemaObject3_1 } from '@novice1/api-doc-generator';
+import qs from 'qs';
+import winston from 'winston';
 
 export interface KaapiAppOptions extends KaapiServerOptions {
-    logger?: ILogger,
-    loggerOptions?: winston.LoggerOptions,
-    messaging?: IMessaging,
-    docs?: DocsConfig,
-    extend?: KaapiPlugin[] | KaapiPlugin
+    logger?: ILogger;
+    loggerOptions?: winston.LoggerOptions;
+    messaging?: IMessaging;
+    docs?: DocsConfig;
+    extend?: KaapiPlugin[] | KaapiPlugin;
 }
 
 export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
@@ -23,64 +23,66 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
 
     protected messaging?: IMessaging;
 
-    protected docs: { openapi: KaapiOpenAPI, postman: KaapiPostman }
+    protected docs: { openapi: KaapiOpenAPI; postman: KaapiPostman };
 
     get openapi() {
-        return this.docs.openapi
+        return this.docs.openapi;
     }
 
     get postman() {
-        return this.docs.postman
+        return this.docs.postman;
     }
 
-    #defaultServerOpts?: KaapiServerOptions
+    #defaultServerOpts?: KaapiServerOptions;
 
-    #docsDisabled: boolean = false
+    #docsDisabled: boolean = false;
 
-    #docsPath: string = '/docs/api'
+    #docsPath: string = '/docs/api';
 
-    #docsOptions: DocsUIOptions = {}
+    #docsOptions: DocsUIOptions = {};
 
-    #serverStarted = false
+    #serverStarted = false;
 
     constructor(opts?: KaapiAppOptions) {
-        super()
+        super();
 
-        const { logger, loggerOptions, messaging, docs, extend, ...serverOpts } = opts || {}
+        const { logger, loggerOptions, messaging, docs, extend, ...serverOpts } = opts || {};
 
-        this.#defaultServerOpts = serverOpts
+        this.#defaultServerOpts = serverOpts;
 
-        this.log = logger || createLogger({
-            transports: [
-                new winston.transports.Console({
-                    format: winston.format.combine(
-                        winston.format.colorize(),
-                        winston.format.splat(),
-                        winston.format.simple()
-                    ),
-                }),
-            ],
-            ...(loggerOptions || {})
-        })
-        this.messaging = messaging
+        this.log =
+            logger ||
+            createLogger({
+                transports: [
+                    new winston.transports.Console({
+                        format: winston.format.combine(
+                            winston.format.colorize(),
+                            winston.format.splat(),
+                            winston.format.simple()
+                        ),
+                    }),
+                ],
+                ...(loggerOptions || {}),
+            });
+        this.messaging = messaging;
 
         if (!this.messaging) {
-            this.log.verbose('🙉 No messaging service!')
+            this.log.verbose('🙉 No messaging service!');
         } else {
-            this.log.verbose('💬 Messaging service activated!')
+            this.log.verbose('💬 Messaging service activated!');
         }
 
         this.docs = {
             openapi: new KaapiOpenAPI(docs?.openAPIOptions),
-            postman: new KaapiPostman(docs?.postmanOptions)
-        }
+            postman: new KaapiPostman(docs?.postmanOptions),
+        };
 
         if (docs?.disabled) {
-            this.#docsDisabled = !!(docs.disabled)
+            this.#docsDisabled = !!docs.disabled;
         }
 
         if (docs?.path) {
-            this.#docsPath = docs.path
+            this.#docsPath = docs.path;
         }
 
         if (docs?.title) {
@@ -100,10 +102,8 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
         }
 
         if (docs?.license) {
-            if (typeof docs?.license === 'string')
-                this.docs.openapi.setLicense(docs?.license);
-            else
-                this.docs.openapi.setLicense(docs?.license);
+            if (typeof docs?.license === 'string') this.docs.openapi.setLicense(docs?.license);
+            else this.docs.openapi.setLicense(docs?.license);
         }
 
         if (docs?.version) {
@@ -118,26 +118,26 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
 
             this.docs.openapi.setServers(docs.host);
 
-            this.docs.postman.setHost(hostUrl.replace(regex, match => {
-                return `{${match}}`
-            }));
+            this.docs.postman.setHost(
+                hostUrl.replace(regex, (match) => {
+                    return `{${match}}`;
+                })
+            );
 
             if (variables && Object.keys(variables).length) {
-                Object.keys(variables).forEach(
-                    varName => {
-                        this.docs.postman.addVariable({
-                            description: variables[varName].description,
-                            key: varName,
-                            name: varName,
-                            value: variables[varName].default
-                        })
-                    }
-                )
+                Object.keys(variables).forEach((varName) => {
+                    this.docs.postman.addVariable({
+                        description: variables[varName].description,
+                        key: varName,
+                        name: varName,
+                        value: variables[varName].default,
+                    });
+                });
             }
         } else if (!docs?.disabled) {
             // get host uri from base() application
 
-            const uri = this.base().info.uri
+            const uri = this.base().info.uri;
 
             if (uri) {
                 // even empty, should work on swagger ui
@@ -149,8 +149,7 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
         }
 
         if (docs?.security) {
-            this.docs.openapi.addSecurityScheme(docs?.security)
-                .setDefaultSecurity(docs?.security);
+            this.docs.openapi.addSecurityScheme(docs?.security).setDefaultSecurity(docs?.security);
             this.docs.postman.setDefaultSecurity(docs?.security);
         }
 
@@ -160,10 +159,15 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
 
         if (docs?.schemas) {
             if (Array.isArray(docs.schemas)) {
-                this.docs.openapi.setSchemas(docs.schemas.reduce((prev, mod) => {
-                    prev[mod.getName()] = mod.toObject()
-                    return prev
-                }, {} as Record<string, SchemaObject3_1>));
+                this.docs.openapi.setSchemas(
+                    docs.schemas.reduce(
+                        (prev, mod) => {
+                            prev[mod.getName()] = mod.toObject();
+                            return prev;
+                        },
+                        {} as Record<string, SchemaObject3_1>
+                    )
+                );
             } else {
                 this.docs.openapi.setSchemas(docs.schemas);
             }
@@ -178,7 +182,7 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
                 this.docs.openapi.addTag({
                     name: tag.name,
                     description: tag.description,
-                    externalDocs: tag.externalDocs
+                    externalDocs: tag.externalDocs,
                 });
                 this.docs.postman.addFolder({
                     item: [],
@@ -187,52 +191,51 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
                     event: tag.event,
                     name: tag.name,
                     protocolProfileBehavior: tag.protocolProfileBehavior,
-                    variable: tag.variable
+                    variable: tag.variable,
                 });
             }
         }
 
         if (docs?.ui) {
-            this.#docsOptions = docs.ui
+            this.#docsOptions = docs.ui;
         }
 
         if (extend) {
             this.extend(extend)
-                .catch(err => {
-                    this.log.error('Error while extending (app.extend)', err)
-                }).finally(() => {
-                    this.#createDocsRouter()
+                .catch((err) => {
+                    this.log.error('Error while extending (app.extend)', err);
                 })
+                .finally(() => {
+                    this.#createDocsRouter();
+                });
         } else {
-            this.#createDocsRouter()
+            this.#createDocsRouter();
         }
     }
 
     #createDocsRouter() {
         if (!this.#docsDisabled) {
-            const [route, handler] = createDocsRouter(
-                this.#docsPath,
-                this.docs,
-                this.#docsOptions
-            )
-            this.server().route(route, handler)
+            const [route, handler] = createDocsRouter(this.#docsPath, this.docs, this.#docsOptions);
+            this.server().route(route, handler);
         }
     }
 
     #createServer(): KaapiServer {
         return new KaapiServer({
             query: {
-                parser: (query) => qs.parse(query)
+                parser: (query) => qs.parse(query),
             },
-            ...(this.#defaultServerOpts || {})
-        })
+            ...(this.#defaultServerOpts || {}),
+        });
     }
 
     async #startServer() {
-        await this.kaapiServer?.base.start()
-        this.#serverStarted = true
+        await this.kaapiServer?.base.start();
+        this.#serverStarted = true;
         this.log.verbose('📢  Server listening on %s', this.kaapiServer?.base.info.uri);
-        this.log.verbose(`${this.kaapiServer?.base.info.id} ${this.kaapiServer?.base.info.started ? new Date(this.kaapiServer.base.info.started) : this.kaapiServer?.base.info.started}`);
+        this.log.verbose(
+            `${this.kaapiServer?.base.info.id} ${this.kaapiServer?.base.info.started ? new Date(this.kaapiServer.base.info.started) : this.kaapiServer?.base.info.started}`
+        );
     }
 
     /**
@@ -243,26 +246,26 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
             this.kaapiServer = this.#createServer();
             this.kaapiServer.base.decorate('request', 'publish', this.publish.bind(this));
         }
-        return this.kaapiServer
+        return this.kaapiServer;
     }
 
     /**
      * Initializes the server and returns it without starting it
      */
     base(): Server {
-        const server = this.server()
-        return server.base
+        const server = this.server();
+        return server.base;
     }
 
     /**
      * Initializes and starts the server if needed and returns it
      */
     async listen(): Promise<KaapiServer> {
-        const server = this.server()
+        const server = this.server();
         if (!this.#serverStarted) {
-            await this.#startServer()
+            await this.#startServer();
         }
-        return server
+        return server;
     }
 
     /**
@@ -272,64 +275,70 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
      * @return Return value: none.
      * [See docs](https://github.com/hapijs/hapi/blob/master/API.md#-await-serverstopoptions)
      */
-    async stop(options?: { timeout: number; }): Promise<void> {
-        await this.kaapiServer?.base.stop(options)
-        await this.messaging?.shutdown?.()
+    async stop(options?: { timeout: number }): Promise<void> {
+        await this.kaapiServer?.base.stop(options);
+        await this.messaging?.shutdown?.();
     }
 
     route<Refs extends ReqRef = ReqRefDefaults>(
         serverRoute: KaapiServerRoute<Refs>,
-        handler?: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>) {
+        handler?: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>
+    ) {
         const { routes: routesMeta, modifiers } = formatRoutes(
             serverRoute,
             this.docs.openapi.getSecuritySchemeUtils(),
             this.base().auth.settings.default
         );
-        this.docs.openapi.addCustom(routesMeta, modifiers)
-        this.docs.postman.addCustom(routesMeta, modifiers)
-        return super.route(serverRoute, handler)
+        this.docs.openapi.addCustom(routesMeta, modifiers);
+        this.docs.postman.addCustom(routesMeta, modifiers);
+        return super.route(serverRoute, handler);
     }
 
     refreshDocs() {
-        if (!this.kaapiServer) return
+        if (!this.kaapiServer) return;
 
         this.docs.openapi.removeAll();
         this.docs.postman.removeAll();
 
         const securitySchemeUtils = this.docs.openapi.getSecuritySchemeUtils();
         const authConfigDefault = this.base().auth.settings.default;
-        this.kaapiServer.base.table().forEach(
-            v => {
-                const { routes: routesMeta, modifiers } = formatRequestRoute(
-                    v,
-                    securitySchemeUtils,
-                    authConfigDefault
-                );
-                this.docs.openapi.addCustom(routesMeta, modifiers);
-                this.docs.postman.addCustom(routesMeta, modifiers);
-            }
-        )
+        this.kaapiServer.base.table().forEach((v) => {
+            const { routes: routesMeta, modifiers } = formatRequestRoute(v, securitySchemeUtils, authConfigDefault);
+            this.docs.openapi.addCustom(routesMeta, modifiers);
+            this.docs.postman.addCustom(routesMeta, modifiers);
+        });
     }
 
     async emit<T = unknown>(topic: string, message: T): Promise<void> {
-        return await this.messaging?.publish(topic, message)
+        return await this.messaging?.publish(topic, message);
     }
-    async on<T = unknown>(topic: string, handler: (message: T, context: IMessagingContext) => Promise<void> | void, conf?: IMessagingSubscribeConfig): Promise<void> {
-        return await this.messaging?.subscribe(topic, handler, conf)
+    async on<T = unknown>(
+        topic: string,
+        handler: (message: T, context: IMessagingContext) => Promise<void> | void,
+        conf?: IMessagingSubscribeConfig
+    ): Promise<void> {
+        return await this.messaging?.subscribe(topic, handler, conf);
     }
     async publish<T = unknown>(topic: string, message: T): Promise<void> {
-        return await this.messaging?.publish(topic, message)
+        return await this.messaging?.publish(topic, message);
     }
-    async subscribe<T = unknown>(topic: string, handler: (message: T, context: IMessagingContext) => Promise<void> | void, conf?: IMessagingSubscribeConfig): Promise<void> {
-        return await this.messaging?.subscribe(topic, handler, conf)
+    async subscribe<T = unknown>(
+        topic: string,
+        handler: (message: T, context: IMessagingContext) => Promise<void> | void,
+        conf?: IMessagingSubscribeConfig
+    ): Promise<void> {
+        return await this.messaging?.subscribe(topic, handler, conf);
     }
 
     async extend(plugins: KaapiPlugin[] | KaapiPlugin) {
-        const getCurrentApp = () => this
-        const getDocs = () => this.docs
+        const getCurrentApp = () => this;
+        const getDocs = () => this.docs;
         const tool: KaapiTools = {
             log: this.log,
-            route<Refs extends ReqRef = ReqRefDefaults>(serverRoute: KaapiServerRoute<Refs>, handler?: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>) {
+            route<Refs extends ReqRef = ReqRefDefaults>(
+                serverRoute: KaapiServerRoute<Refs>,
+                handler?: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>
+            ) {
                 const { routes: routesMeta, modifiers } = formatRoutes(
                     serverRoute,
                     getDocs().openapi.getSecuritySchemeUtils(),
@@ -337,20 +346,20 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
                 );
                 getDocs().openapi.addCustom(routesMeta, modifiers);
                 getDocs().postman.addCustom(routesMeta, modifiers);
-                getCurrentApp().server().route(serverRoute, handler)
-                return this
+                getCurrentApp().server().route(serverRoute, handler);
+                return this;
             },
             scheme: this.base().auth.scheme.bind(this.base().auth),
             strategy: this.base().auth.strategy.bind(this.base().auth),
             openapi: this.openapi,
             postman: this.postman,
-            server: this.base()
-        }
+            server: this.base(),
+        };
 
-        const values = Array.isArray(plugins) ? plugins : [plugins]
+        const values = Array.isArray(plugins) ? plugins : [plugins];
 
         for (const plugin of values) {
-            await plugin.integrate(tool)
+            await plugin.integrate(tool);
         }
     }
 }

@@ -1,29 +1,24 @@
 // BearerAuthDesign
-
+import { AuthDesign, KaapiTools } from '../plugin';
 import Boom from '@hapi/boom';
-import {
-    Auth,
-    AuthCredentials,
-    ReqRef,
-    ReqRefDefaults,
-    Request,
-    ResponseToolkit
-} from '@hapi/hapi';
+import { Auth, AuthCredentials, ReqRef, ReqRefDefaults, Request, ResponseToolkit } from '@hapi/hapi';
 import { BearerUtil } from '@novice1/api-doc-generator';
-import {
-    AuthDesign,
-    KaapiTools,
-} from '../plugin';
 
-export type BearerAuthOptions<
-    Refs extends ReqRef = ReqRefDefaults
-> = {
-    validate?(request: Request<Refs>, token: string, h: ResponseToolkit<Refs>): Promise<{
-        isValid?: boolean;
-        artifacts?: unknown;
-        credentials?: AuthCredentials;
-        message?: string;
-    } | Auth | Boom.Boom>;
+export type BearerAuthOptions<Refs extends ReqRef = ReqRefDefaults> = {
+    validate?(
+        request: Request<Refs>,
+        token: string,
+        h: ResponseToolkit<Refs>
+    ): Promise<
+        | {
+              isValid?: boolean;
+              artifacts?: unknown;
+              credentials?: AuthCredentials;
+              message?: string;
+          }
+        | Auth
+        | Boom.Boom
+    >;
 };
 
 export interface BearerAuthArg {
@@ -32,21 +27,17 @@ export interface BearerAuthArg {
 }
 
 export class BearerAuthDesign extends AuthDesign {
+    readonly key = 'Authorization';
+    protected strategyName: string = 'bearer-auth-design';
+    protected description?: string;
+    protected auth: BearerAuthOptions;
 
-    readonly key = 'Authorization'
-    protected strategyName: string = 'bearer-auth-design'
-    protected description?: string
-    protected auth: BearerAuthOptions
+    constructor(arg?: BearerAuthArg) {
+        super();
 
-    constructor(
-        arg?: BearerAuthArg
-    ) {
-        super()
+        if (arg?.strategyName) this.strategyName = arg.strategyName;
 
-        if (arg?.strategyName)
-            this.strategyName = arg.strategyName;
-
-        this.auth = arg?.auth ? { ...arg.auth } : {}
+        this.auth = arg?.auth ? { ...arg.auth } : {};
     }
 
     setDescription(description: string): this {
@@ -63,78 +54,74 @@ export class BearerAuthDesign extends AuthDesign {
     }
 
     docs(): BearerUtil | undefined {
-        const docs = new BearerUtil(this.strategyName)
+        const docs = new BearerUtil(this.strategyName);
 
         if (this.description) {
-            docs.setDescription(this.description)
+            docs.setDescription(this.description);
         }
 
-        return docs
+        return docs;
     }
 
     integrateStrategy(t: KaapiTools): void | Promise<void> {
-
-        const strategyName = this.strategyName
+        const strategyName = this.strategyName;
 
         t.scheme(strategyName, (_server, options) => {
-
             return {
                 authenticate: async (request, h) => {
-
                     const settings: BearerAuthOptions = options || {};
 
                     const authorization = request.raw.req.headers[this.key.toLowerCase()];
 
-
                     const authSplit = typeof authorization === 'string' ? authorization.split(/\s+/) : ['', ''];
 
-                    const tokenType = authSplit[0]
+                    const tokenType = authSplit[0];
 
                     if (tokenType.toLowerCase() !== 'bearer') {
-                        return Boom.unauthorized(null, strategyName)
+                        return Boom.unauthorized(null, strategyName);
                     }
 
-                    const token = authSplit[1]
+                    const token = authSplit[1];
 
                     if (settings.validate) {
                         try {
-                            const result = await settings.validate?.(request, token, h)
+                            const result = await settings.validate?.(request, token, h);
 
                             if (result && 'isAuth' in result) {
-                                return result
+                                return result;
                             }
 
                             if (result && 'isBoom' in result) {
-                                return result
+                                return result;
                             }
 
                             if (result) {
                                 const { isValid, credentials, artifacts, message } = result;
 
                                 if (isValid && credentials) {
-                                    return h.authenticated({ credentials, artifacts })
+                                    return h.authenticated({ credentials, artifacts });
                                 }
 
                                 if (message) {
                                     return h.unauthenticated(Boom.unauthorized(message, 'Bearer'), {
                                         credentials: credentials || {},
-                                        artifacts
-                                    })
+                                        artifacts,
+                                    });
                                 }
                             }
                         } catch (err) {
-                            return Boom.internal(err instanceof Error ? err : `${err}`)
+                            return Boom.internal(err instanceof Error ? err : `${err}`);
                         }
                     }
 
-                    return Boom.unauthorized(null, 'Bearer')
+                    return Boom.unauthorized(null, 'Bearer');
                 },
-            }
-        })
-        t.strategy(strategyName, strategyName, this.auth)
+            };
+        });
+        t.strategy(strategyName, strategyName, this.auth);
     }
 
     toString(): string {
-        return this.getStrategyName()
+        return this.getStrategyName();
     }
 }

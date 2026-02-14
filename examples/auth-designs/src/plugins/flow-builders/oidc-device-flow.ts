@@ -3,22 +3,21 @@ import {
     DeviceFlowOAuth2ErrorCode,
     NoneAuthMethod,
     OAuth2TokenResponse,
-    OIDCDeviceAuthorizationBuilder
-} from '@kaapi/oauth2-auth-design'
+    OIDCDeviceAuthorizationBuilder,
+} from '@kaapi/oauth2-auth-design';
 
-const tokenType = new BearerToken()
+const tokenType = new BearerToken();
 
-export default OIDCDeviceAuthorizationBuilder
-    .create()
+export default OIDCDeviceAuthorizationBuilder.create()
     .setTokenType(tokenType)
     .setTokenTTL(600) // 10m
     .addClientAuthenticationMethod(new NoneAuthMethod())
     .useAccessTokenJwks(true) // activates JWT access token verification with JWKS
     .validate(async (_, { token, jwtAccessTokenPayload }) => {
-        console.log('Device Code jwtAccessTokenPayload=', jwtAccessTokenPayload)
+        console.log('Device Code jwtAccessTokenPayload=', jwtAccessTokenPayload);
         //#region @TODO: validation
         if (jwtAccessTokenPayload?.sub != '248289761001') {
-            return { isValid: false }
+            return { isValid: false };
         }
 
         //#endregion @TODO: validation
@@ -31,115 +30,140 @@ export default OIDCDeviceAuthorizationBuilder
                     sub: '248289761001',
                     name: 'Jane Doe',
                     given_name: 'Jane',
-                }
-            }
-        }
+                },
+            },
+        };
     })
-    .authorizationRoute<{ Payload: { email: string, password: string } }>(route =>
-        route.setPath('/oauth2/v2/devicecode')
-            .generateCode(async ({ clientId, scope }) => {
-                // validate and generate code
-                if (clientId == 'testabc') {
-                    const userCode = 'XYZ-789'
+    .authorizationRoute<{ Payload: { email: string; password: string } }>((route) =>
+        route.setPath('/oauth2/v2/devicecode').generateCode(async ({ clientId, scope }) => {
+            // validate and generate code
+            if (clientId == 'testabc') {
+                const userCode = 'XYZ-789';
+                return {
+                    device_code: JSON.stringify({ clientId, scope }),
+                    expires_in: 900, // 15min
+                    interval: 5, // 5s
+                    user_code: userCode,
+                    verification_uri: 'http://localhost:3000/oauth2/v2/activate',
+                    verification_uri_complete: `http://localhost:3000/oauth2/v2/activate?user_code=${userCode}`,
+                };
+            }
+
+            return null;
+        })
+    )
+    .tokenRoute((route) =>
+        route.generateToken(
+            async (
+                { clientId, deviceCode, clientSecret, ttl, tokenType, createJwtAccessToken, createIdToken },
+                _req
+            ) => {
+                console.log('clientId', clientId);
+                console.log('clientSecret', clientSecret);
+                console.log('deviceCode', deviceCode);
+                console.log('ttl', ttl);
+
+                const decodedCode = JSON.parse(deviceCode);
+                const scope = decodedCode.scope;
+
+                console.log('scope', scope);
+
+                if (clientId != 'testabc') {
                     return {
-                        device_code: JSON.stringify({ clientId, scope }),
-                        expires_in: 900, // 15min
-                        interval: 5, // 5s
-                        user_code: userCode,
-                        verification_uri: 'http://localhost:3000/oauth2/v2/activate',
-                        verification_uri_complete: `http://localhost:3000/oauth2/v2/activate?user_code=${userCode}`
+                        error: DeviceFlowOAuth2ErrorCode.ACCESS_DENIED,
+                        error_description: "Token Request was missing the 'clientId' parameter.",
+                    };
+                }
+                if (!ttl) {
+                    return { error: DeviceFlowOAuth2ErrorCode.ACCESS_DENIED, error_description: 'Missing ttl' };
+                }
+                try {
+                    //#region @TODO: validation + token
+                    if (createJwtAccessToken) {
+                        const { token: accessToken } = await createJwtAccessToken({
+                            sub: '248289761001',
+                            name: 'Jane Doe',
+                        });
+                        const refreshToken = 'generated_refresh_token_from_dc';
+                        return new OAuth2TokenResponse({ access_token: accessToken })
+                            .setExpiresIn(ttl)
+                            .setRefreshToken(
+                                (scope?.split(' ').includes('offline_access') || undefined) && refreshToken
+                            )
+                            .setScope(scope?.split(' '))
+                            .setTokenType(tokenType)
+                            .setIdToken(
+                                (scope?.split(' ').includes('openid') || undefined) &&
+                                    (
+                                        await createIdToken?.({
+                                            sub: clientId,
+                                        })
+                                    )?.token
+                            );
                     }
+                    //#endregion @TODO: validation + token
+                } catch (err) {
+                    console.error(err);
                 }
 
-                return null
-            }))
-    .tokenRoute(route =>
-        route.generateToken(async ({ clientId, deviceCode, clientSecret, ttl, tokenType, createJwtAccessToken, createIdToken }, _req) => {
-
-            console.log('clientId', clientId)
-            console.log('clientSecret', clientSecret)
-            console.log('deviceCode', deviceCode)
-            console.log('ttl', ttl)
-
-            const decodedCode = JSON.parse(deviceCode);
-            const scope = decodedCode.scope;
-
-            console.log('scope', scope)
-
-            if (clientId != 'testabc') {
-                return { error: DeviceFlowOAuth2ErrorCode.ACCESS_DENIED, error_description: 'Token Request was missing the \'clientId\' parameter.' }
+                return null;
             }
-            if (!ttl) {
-                return { error: DeviceFlowOAuth2ErrorCode.ACCESS_DENIED, error_description: 'Missing ttl' }
-            }
-            try {
-                //#region @TODO: validation + token
-                if (createJwtAccessToken) {
+        )
+    )
+    .refreshTokenRoute((route) =>
+        route.generateToken(
+            async ({ clientId, refreshToken, scope, ttl, tokenType, createJwtAccessToken, createIdToken }, _req) => {
+                console.log('clientId', clientId);
+                console.log('refreshToken', refreshToken);
+                console.log('scope', scope);
+                console.log('ttl', ttl);
+
+                //#region @TODO: validation + refresh token
+                if (refreshToken === 'generated_refresh_token_from_dc' && createJwtAccessToken) {
+                    if (clientId != 'testabc') {
+                        return {
+                            error: DeviceFlowOAuth2ErrorCode.ACCESS_DENIED,
+                            error_description: "Invalid 'client_id'.",
+                        };
+                    }
+                    if (!ttl) {
+                        return { error: DeviceFlowOAuth2ErrorCode.ACCESS_DENIED, error_description: 'Missing ttl' };
+                    }
                     const { token: accessToken } = await createJwtAccessToken({
                         sub: '248289761001',
                         name: 'Jane Doe',
-                    })
-                    const refreshToken = 'generated_refresh_token_from_dc'
+                    });
+                    const newRefreshToken =
+                        (!scope || (scope && scope?.split(' ').includes('offline_access')) || undefined) &&
+                        'generated_refresh_token_from_dc';
                     return new OAuth2TokenResponse({ access_token: accessToken })
                         .setExpiresIn(ttl)
-                        .setRefreshToken((scope?.split(' ').includes('offline_access') || undefined) && refreshToken)
+                        .setRefreshToken(newRefreshToken)
                         .setScope(scope?.split(' '))
                         .setTokenType(tokenType)
                         .setIdToken(
-                            (scope?.split(' ').includes('openid') || undefined) && (await createIdToken?.({
-                                sub: clientId
-                            }))?.token
-                        )
+                            (scope?.split(' ').includes('openid') || undefined) &&
+                                (
+                                    await createIdToken?.({
+                                        sub: clientId,
+                                    })
+                                )?.token
+                        );
                 }
-                //#endregion @TODO: validation + token
-            } catch (err) {
-                console.error(err)
+
+                //#endregion @TODO: validation + refresh token
+
+                // invalid so continue
+                return null;
             }
-
-            return null
-        }))
-    .refreshTokenRoute(route => route.generateToken(async ({ clientId, refreshToken, scope, ttl, tokenType, createJwtAccessToken, createIdToken }, _req) => {
-
-        console.log('clientId', clientId)
-        console.log('refreshToken', refreshToken)
-        console.log('scope', scope)
-        console.log('ttl', ttl)
-
-        //#region @TODO: validation + refresh token
-        if (refreshToken === 'generated_refresh_token_from_dc' && createJwtAccessToken) {
-            if (clientId != 'testabc') {
-                return { error: DeviceFlowOAuth2ErrorCode.ACCESS_DENIED, error_description: 'Invalid \'client_id\'.' }
-            }
-            if (!ttl) {
-                return { error: DeviceFlowOAuth2ErrorCode.ACCESS_DENIED, error_description: 'Missing ttl' }
-            }
-            const { token: accessToken } = await createJwtAccessToken({
-                sub: '248289761001',
-                name: 'Jane Doe',
-            })
-            const newRefreshToken = (!scope || (scope && scope?.split(' ').includes('offline_access')) || undefined) && 'generated_refresh_token_from_dc'
-            return new OAuth2TokenResponse({ access_token: accessToken })
-                .setExpiresIn(ttl)
-                .setRefreshToken(newRefreshToken)
-                .setScope(scope?.split(' '))
-                .setTokenType(tokenType)
-                .setIdToken(
-                    (scope?.split(' ').includes('openid') || undefined) && (await createIdToken?.({
-                        sub: clientId
-                    }))?.token
-                )
-        }
-
-        //#endregion @TODO: validation + refresh token
-
-        // invalid so continue
-        return null
-
-    }))
-    .setDescription('This API uses OAuth 2 with the device authorization grant flow. [More info](https://www.oauth.com/oauth2-servers/device-flow/)')
+        )
+    )
+    .setDescription(
+        'This API uses OAuth 2 with the device authorization grant flow. [More info](https://www.oauth.com/oauth2-servers/device-flow/)'
+    )
     .setScopes({
         openid: 'Required for OpenID Connect; enables ID token issuance.',
         profile: 'Access to basic profile information such as name and picture.',
-        email: 'Access to the user\'s email address and its verification status.',
-        offline_access: 'Request a refresh token to access resources when the user is offline.'
-    })
+        email: "Access to the user's email address and its verification status.",
+        offline_access: 'Request a refresh token to access resources when the user is offline.',
+    });

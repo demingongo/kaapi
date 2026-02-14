@@ -1,8 +1,7 @@
 // example-simple.spec.ts
-
-import { Kaapi } from '@kaapi/kaapi';
+import { init } from '../src/server-simple';
 import { expect } from '@hapi/code';
-import { init } from '../src/server-simple'
+import { Kaapi } from '@kaapi/kaapi';
 
 describe('GET /', () => {
     let app: Kaapi;
@@ -18,7 +17,7 @@ describe('GET /', () => {
     it('responds with 200 /', async () => {
         const res = await app.base().inject({
             method: 'get',
-            url: '/'
+            url: '/',
         });
         expect(res.statusCode).to.equal(200);
     });

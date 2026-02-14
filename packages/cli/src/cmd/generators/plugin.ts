@@ -1,23 +1,23 @@
-import { camelCase, kebabCase } from '../../utils';
 import { FileGenerator, Question, QuestionType } from '../../definitions';
+import { camelCase, kebabCase } from '../../utils';
 
 export type PluginFileGenerator = FileGenerator & {
-    pluginName: string
-}
+    pluginName: string;
+};
 
 export const pluginGenerator: PluginFileGenerator = {
     name: 'kaapi-plugin',
     type: 'plugin',
     description: 'Creates a simple plugin for kaapi.',
     options: {
-        'plugin-name': 'The name of the plugin'
+        'plugin-name': 'The name of the plugin',
     },
 
     pluginName: '',
 
     init: function (options: Record<string, unknown>): void {
         if (typeof options['plugin-name'] == 'string') {
-            this.pluginName = camelCase(options['plugin-name'])
+            this.pluginName = camelCase(options['plugin-name']);
         }
     },
     getFileContent: function (): string {
@@ -29,13 +29,13 @@ export const ${this.pluginName}: KaapiPlugin = {
         // write your code here
     }
 }
-`
+`;
     },
     isValid() {
-        return !!this.pluginName
+        return !!this.pluginName;
     },
     getQuestions() {
-        const r: Question[] = []
+        const r: Question[] = [];
 
         if (!this.pluginName) {
             r.push({
@@ -43,17 +43,17 @@ export const ${this.pluginName}: KaapiPlugin = {
                 options: {
                     message: 'The name of the plugin?',
                     defaultValue: 'customPlugin',
-                    placeholder: 'customPlugin'
+                    placeholder: 'customPlugin',
                 },
                 setValue: (pluginName) => {
-                    this.pluginName = camelCase(pluginName)
-                }
-            })
+                    this.pluginName = camelCase(pluginName);
+                },
+            });
         }
 
-        return r
+        return r;
     },
     getFilename() {
-        return kebabCase(`${this.pluginName}`) + '.ts'
-    }
-}
+        return kebabCase(`${this.pluginName}`) + '.ts';
+    },
+};

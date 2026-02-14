@@ -15,9 +15,7 @@ const VALID_CLIENTS = [
     { client_id: 'service-api-client', client_secret: 's3cr3tK3y123!', allowed_scopes: ['openid', 'read', 'write'] },
 ];
 
-const REGISTERED_USERS = [
-    { id: 'user-1234', username: 'user', password: 'password' },
-];
+const REGISTERED_USERS = [{ id: 'user-1234', username: 'user', password: 'password' }];
 
 /**
  * In-memory auth codes store
@@ -49,7 +47,7 @@ const authDesign = OIDCAuthorizationCodeBuilder.create()
     })
 
     // Step 1: Authorization
-    .authorizationRoute<object, { Payload: { username?: string; password?: string; } }>((route) =>
+    .authorizationRoute<object, { Payload: { username?: string; password?: string } }>((route) =>
         route
             .setPath('/oauth2/authorize')
             .setUsernameField('username')
@@ -60,10 +58,14 @@ const authDesign = OIDCAuthorizationCodeBuilder.create()
                 if (!client) return null;
 
                 const requestedScopes = (scope ?? '').split(/\s+/).filter(Boolean);
-                const grantedScopes = requestedScopes.length ? requestedScopes.filter((s) => client.allowed_scopes.includes(s)) : client.allowed_scopes;
+                const grantedScopes = requestedScopes.length
+                    ? requestedScopes.filter((s) => client.allowed_scopes.includes(s))
+                    : client.allowed_scopes;
                 if (grantedScopes.length === 0) return null;
 
-                const user = REGISTERED_USERS.find(u => u.username === req.payload.username && u.password === req.payload.password);
+                const user = REGISTERED_USERS.find(
+                    (u) => u.username === req.payload.username && u.password === req.payload.password
+                );
                 if (!user) return null;
 
                 const code = `auth-${Date.now()}`;
@@ -84,51 +86,78 @@ const authDesign = OIDCAuthorizationCodeBuilder.create()
     .tokenRoute((route) =>
         route
             .setPath('/oauth2/token')
-            .generateToken(async ({ clientId, ttl, tokenType, code, clientSecret, codeVerifier, createJwtAccessToken, createIdToken, verifyCodeVerifier }) => {
-                const entry = authCodesStore.get(code);
-                if (!entry || entry.clientId !== clientId) return null;
+            .generateToken(
+                async ({
+                    clientId,
+                    ttl,
+                    tokenType,
+                    code,
+                    clientSecret,
+                    codeVerifier,
+                    createJwtAccessToken,
+                    createIdToken,
+                    verifyCodeVerifier,
+                }) => {
+                    const entry = authCodesStore.get(code);
+                    if (!entry || entry.clientId !== clientId) return null;
 
-                const client = VALID_CLIENTS.find(c => c.client_id === clientId);
-                if (!client) {
-                    return {
-                        error: OAuth2ErrorCode.INVALID_CLIENT,
-                        error_description: 'Client authentication failed.',
-                    };
-                }
-
-                if (entry.codeChallenge && codeVerifier) {
-                    if (!verifyCodeVerifier(codeVerifier, entry.codeChallenge)) {
-                        return { error: OAuth2ErrorCode.INVALID_GRANT, error_description: 'Invalid authorization grant.' };
+                    const client = VALID_CLIENTS.find((c) => c.client_id === clientId);
+                    if (!client) {
+                        return {
+                            error: OAuth2ErrorCode.INVALID_CLIENT,
+                            error_description: 'Client authentication failed.',
+                        };
                     }
-                } else if (clientSecret) {
-                    if (client.client_secret !== clientSecret) {
-                        return { error: OAuth2ErrorCode.INVALID_CLIENT, error_description: 'Client authentication failed.' };
+
+                    if (entry.codeChallenge && codeVerifier) {
+                        if (!verifyCodeVerifier(codeVerifier, entry.codeChallenge)) {
+                            return {
+                                error: OAuth2ErrorCode.INVALID_GRANT,
+                                error_description: 'Invalid authorization grant.',
+                            };
+                        }
+                    } else if (clientSecret) {
+                        if (client.client_secret !== clientSecret) {
+                            return {
+                                error: OAuth2ErrorCode.INVALID_CLIENT,
+                                error_description: 'Client authentication failed.',
+                            };
+                        }
+                    } else {
+                        return {
+                            error: OAuth2ErrorCode.INVALID_REQUEST,
+                            error_description: 'Missing or invalid request parameter.',
+                        };
                     }
-                } else {
-                    return { error: OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Missing or invalid request parameter.' };
+
+                    const user = REGISTERED_USERS.find((u) => u.id === entry.userId);
+                    if (!user) {
+                        return {
+                            error: OAuth2ErrorCode.INVALID_GRANT,
+                            error_description: 'Invalid authorization grant.',
+                        };
+                    }
+
+                    // Generate a signed JWT access token
+                    const { token: accessToken } = await createJwtAccessToken!({
+                        sub: entry.userId,
+                        client_id: clientId,
+                        scope: entry.scopes,
+                    });
+
+                    // Generate a signed JWT id token
+                    const idToken = entry.scopes.includes('openid')
+                        ? (await createIdToken!({ sub: entry.userId, name: user.username, aud: clientId })).token
+                        : undefined;
+
+                    // Return token response
+                    return new OAuth2TokenResponse({ access_token: accessToken })
+                        .setExpiresIn(ttl)
+                        .setTokenType(tokenType)
+                        .setScope(entry.scopes)
+                        .setIdToken(idToken);
                 }
-
-                const user = REGISTERED_USERS.find(u => u.id === entry.userId);
-                if (!user) {
-                    return {
-                        error: OAuth2ErrorCode.INVALID_GRANT,
-                        error_description: 'Invalid authorization grant.',
-                    };
-                }
-
-                // Generate a signed JWT access token
-                const { token: accessToken } = await createJwtAccessToken!({ sub: entry.userId, client_id: clientId, scope: entry.scopes });
-
-                // Generate a signed JWT id token
-                const idToken = entry.scopes.includes('openid') ? (await createIdToken!({ sub: entry.userId, name: user.username, aud: clientId })).token : undefined;
-
-                // Return token response
-                return new OAuth2TokenResponse({ access_token: accessToken })
-                    .setExpiresIn(ttl)
-                    .setTokenType(tokenType)
-                    .setScope(entry.scopes)
-                    .setIdToken(idToken);
-            })
+            )
     )
 
     // Step 3: JWKS endpoint
@@ -158,20 +187,20 @@ const app = new Kaapi({
 });
 
 // Extend app with grouped auth strategies
-app.extend(authDesign).then(
-    async () => {
-        // Default strategy
-        app.base().auth.default({ strategy: authDesign.getStrategyName(), mode: 'try' });
+app.extend(authDesign).then(async () => {
+    // Default strategy
+    app.base().auth.default({ strategy: authDesign.getStrategyName(), mode: 'try' });
 
-        // === Key rotation check every hour (rotation happens according to intervalMs) ===
-        setInterval(() => authDesign.checkAndRotateKeys().catch(console.error), 3600 * 1000);
+    // === Key rotation check every hour (rotation happens according to intervalMs) ===
+    setInterval(() => authDesign.checkAndRotateKeys().catch(console.error), 3600 * 1000);
 
-        // Start server
-        await app.listen();
-        app.log.info('🚀 Kaapi OIDC Device Authorization Server running at http://localhost:3000');
+    // Start server
+    await app.listen();
+    app.log.info('🚀 Kaapi OIDC Device Authorization Server running at http://localhost:3000');
 
-        // === Restricted Route Example ===
-        app.route<{ AuthUser: { id: string, clientId: string } }>({
+    // === Restricted Route Example ===
+    app.route<{ AuthUser: { id: string; clientId: string } }>(
+        {
             method: 'GET',
             path: '/greetings/{id}',
             auth: true,
@@ -180,13 +209,12 @@ app.extend(authDesign).then(
                 description: 'Greetings',
                 notes: [
                     '_Notes:_',
-                    '__Not recommended because the documentation does not understand paths with "*".__'
-                ]
+                    '__Not recommended because the documentation does not understand paths with "*".__',
+                ],
             },
-        }, req => `Hello ${req.auth.credentials.user?.id} in ${req.auth.credentials.user?.clientId}`);
+        },
+        (req) => `Hello ${req.auth.credentials.user?.id} in ${req.auth.credentials.user?.clientId}`
+    );
 
-        //app.refreshDocs()
-
-    },
-    app.log.error
-)
+    //app.refreshDocs()
+}, app.log.error);

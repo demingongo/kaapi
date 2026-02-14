@@ -1,9 +1,4 @@
 import {
-    Lifecycle,
-    ReqRef,
-    ReqRefDefaults
-} from '@kaapi/kaapi'
-import {
     IOAuth2TokenResponse,
     OAuth2TokenResponseBody,
     OAuth2ErrorBody,
@@ -14,38 +9,35 @@ import {
     OAuth2TokenRoute,
     IOAuth2TokenRoute,
     DefaultOAuth2TokenRoute,
-    OAuth2ErrorCode
-} from '../common'
-
+    OAuth2ErrorCode,
+} from '../common';
+import { Lifecycle, ReqRef, ReqRefDefaults } from '@kaapi/kaapi';
 
 //#region TokenRoute
 
 export interface OAuth2ClientCredentialsTokenParams extends OAuth2TokenParams {
-    clientId: string
-    clientSecret: string
-    scope?: string
+    clientId: string;
+    clientSecret: string;
+    scope?: string;
 }
 
 export type OAuth2ClientCredentialsTokenHandler<
     Refs extends ReqRef = ReqRefDefaults,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    R extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<Refs>
-> = OAuth2TokenHandler<OAuth2ClientCredentialsTokenParams, Refs, R>
+    R extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<Refs>,
+> = OAuth2TokenHandler<OAuth2ClientCredentialsTokenParams, Refs, R>;
 
-export type IOAuth2ClientCredentialsTokenRoute<
-    Refs extends ReqRef = ReqRefDefaults
-> = IOAuth2TokenRoute<OAuth2ClientCredentialsTokenParams, Refs>
-
-export class OAuth2ClientCredentialsTokenRoute<
-    Refs extends ReqRef = ReqRefDefaults
-> extends OAuth2TokenRoute<
+export type IOAuth2ClientCredentialsTokenRoute<Refs extends ReqRef = ReqRefDefaults> = IOAuth2TokenRoute<
     OAuth2ClientCredentialsTokenParams,
     Refs
-> implements IOAuth2ClientCredentialsTokenRoute<Refs> {
-    static buildDefault<
-        Refs extends ReqRef = ReqRefDefaults
-    >() {
-        return new DefaultOAuth2ClientCredentialsTokenRoute<Refs>()
+>;
+
+export class OAuth2ClientCredentialsTokenRoute<Refs extends ReqRef = ReqRefDefaults>
+    extends OAuth2TokenRoute<OAuth2ClientCredentialsTokenParams, Refs>
+    implements IOAuth2ClientCredentialsTokenRoute<Refs>
+{
+    static buildDefault<Refs extends ReqRef = ReqRefDefaults>() {
+        return new DefaultOAuth2ClientCredentialsTokenRoute<Refs>();
     }
 }
 
@@ -56,56 +48,60 @@ export class OAuth2ClientCredentialsTokenRoute<
 /**
  * Return null for invalid request
  */
-export type ClientCredentialsTokenGenerator<Refs extends ReqRef = ReqRefDefaults> = TokenGenerator<OAuth2ClientCredentialsTokenParams, Refs>;
+export type ClientCredentialsTokenGenerator<Refs extends ReqRef = ReqRefDefaults> = TokenGenerator<
+    OAuth2ClientCredentialsTokenParams,
+    Refs
+>;
 
-export class DefaultOAuth2ClientCredentialsTokenRoute<
-    Refs extends ReqRef = ReqRefDefaults
-> extends OAuth2ClientCredentialsTokenRoute<Refs>
-    implements DefaultOAuth2TokenRoute<
-        OAuth2ClientCredentialsTokenParams, Refs
-    > {
-
-    #generateToken: ClientCredentialsTokenGenerator<Refs>
+export class DefaultOAuth2ClientCredentialsTokenRoute<Refs extends ReqRef = ReqRefDefaults>
+    extends OAuth2ClientCredentialsTokenRoute<Refs>
+    implements DefaultOAuth2TokenRoute<OAuth2ClientCredentialsTokenParams, Refs>
+{
+    #generateToken: ClientCredentialsTokenGenerator<Refs>;
 
     constructor() {
         super('/oauth2/token', async (props, req, h) => {
             if (!props.clientSecret) {
-                return h.response({ error: OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Token request was missing \'client_secret\'.' }).code(400)
+                return h
+                    .response({
+                        error: OAuth2ErrorCode.INVALID_REQUEST,
+                        error_description: "Token request was missing 'client_secret'.",
+                    })
+                    .code(400);
             }
 
             // eslint-disable-next-line no-useless-assignment
-            let r: OAuth2TokenResponseBody | IOAuth2TokenResponse | OAuth2ErrorBody | null = null
+            let r: OAuth2TokenResponseBody | IOAuth2TokenResponse | OAuth2ErrorBody | null = null;
 
             try {
-                r = await this.#generateToken(props, req)
+                r = await this.#generateToken(props, req);
             } catch (err) {
-                return h.response({ error: OAuth2ErrorCode.INVALID_REQUEST, error_description: `${err}` }).code(400)
+                return h.response({ error: OAuth2ErrorCode.INVALID_REQUEST, error_description: `${err}` }).code(400);
             }
 
-            if (!r) return h.response({ error: OAuth2ErrorCode.INVALID_REQUEST }).code(400)
+            if (!r) return h.response({ error: OAuth2ErrorCode.INVALID_REQUEST }).code(400);
 
-            if ('error' in r) return h.response(r).code(400)
+            if ('error' in r) return h.response(r).code(400);
 
-            return h.response(r).code(200)
-        })
+            return h.response(r).code(200);
+        });
 
-        this.#generateToken = async () => ({ error: OAuth2ErrorCode.INVALID_REQUEST })
+        this.#generateToken = async () => ({ error: OAuth2ErrorCode.INVALID_REQUEST });
     }
 
     setPath(path: PathValue): this {
-        if (path)
-            this._path = path
-        return this
+        if (path) this._path = path;
+        return this;
     }
 
     validate(handler: OAuth2ClientCredentialsTokenHandler<Refs>): this {
-        this._handler = handler
-        return this
+        this._handler = handler;
+        return this;
     }
 
     generateToken(handler: ClientCredentialsTokenGenerator<Refs>): this {
-        this.#generateToken = handler
-        return this
+        this.#generateToken = handler;
+        return this;
     }
 }
 

@@ -1,42 +1,42 @@
-import { z } from 'zod/v4'
-import Boom from '@hapi/boom'
+import Boom from '@hapi/boom';
 import inert from '@hapi/inert';
-import Joi from 'joi'
-import { BearerUtil } from '@novice1/api-doc-generator';
 import { Kaapi } from '@kaapi/kaapi';
 import { validatorZod, ZodDocHelper } from '@kaapi/validator-zod';
+import { BearerUtil } from '@novice1/api-doc-generator';
+import Joi from 'joi';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { z } from 'zod/v4';
 
 const app = new Kaapi({
     port: 3000,
     host: 'localhost',
     loggerOptions: {
-        level: 'debug'
+        level: 'debug',
     },
     auth: {
         tokenType: 'Bearer',
         validate: async (_, token) => {
-            const isValid = token == 'alain'
-            const credentials = isValid ? { user: { username: 'Alain' } } : undefined
+            const isValid = token == 'alain';
+            const credentials = isValid ? { user: { username: 'Alain' } } : undefined;
             return {
                 isValid,
                 credentials,
-                message: credentials ? 'ok' : 'Unauthorized!'
-            }
+                message: credentials ? 'ok' : 'Unauthorized!',
+            };
         },
     },
     docs: {
         disabled: false,
-        security: new BearerUtil('mySecurityScheme')
+        security: new BearerUtil('mySecurityScheme'),
     },
     routes: {
         auth: {
             strategy: 'kaapi',
-            mode: 'try'
+            mode: 'try',
         },
         files: {
-            relativeTo: path.join(__dirname, '..', 'uploads')
+            relativeTo: path.join(__dirname, '..', 'uploads'),
         },
         plugins: {
             zod: {
@@ -45,35 +45,37 @@ const app = new Kaapi({
                      * jitless: Skip eval-based fast path. Default false.
                      * Validation rules should be properly ordered (.default(...).optional(...)).
                      * That will help fast validation and documentation generation.
-                     * If set to true, slower (every property is visited, defaults are applied, lazy/recursive schemas are resolved) but safer 
-                     * BUT documentation might be badly generated. 
+                     * If set to true, slower (every property is visited, defaults are applied, lazy/recursive schemas are resolved) but safer
+                     * BUT documentation might be badly generated.
                      * So either way (true or false), validation rules should be properly ordered.
                      */
                     jitless: false,
-                    reportInput: true // includes the input in the issue
+                    reportInput: true, // includes the input in the issue
                 },
                 failAction: async (_req, _h, err) => {
-                    console.log(Boom.isBoom(err) ? err.data.validationError.issues[0] : err)
-                    return Boom.isBoom(err) ? Boom.badRequest(err.data.validationError.issues[0].message) : err
-                }
-            }
-        }
-    }
-})
+                    console.log(Boom.isBoom(err) ? err.data.validationError.issues[0] : err);
+                    return Boom.isBoom(err) ? Boom.badRequest(err.data.validationError.issues[0].message) : err;
+                },
+            },
+        },
+    },
+});
 
 const schema = {
     query: z.object({
-        name: z.string().max(10)
-    })
-}
+        name: z.string().max(10),
+    }),
+};
 
 async function start() {
-
-    await app.extend([validatorZod, {
-        async integrate(t) {
-            await t.server.register(inert)
+    await app.extend([
+        validatorZod,
+        {
+            async integrate(t) {
+                await t.server.register(inert);
+            },
         },
-    }])
+    ]);
 
     app.route(
         {
@@ -83,180 +85,219 @@ async function start() {
             options: {
                 plugins: {
                     zod: {
-                        ...schema
+                        ...schema,
                     },
                     kaapi: {
-                        docs: false
-                    }
-                }
-            }
+                        docs: false,
+                    },
+                },
+            },
         },
         (req) => req.query
-    )
+    );
 
     // with handler as argument
-    app.base().zod({
-        payload: z.object({
-            version: z.number().max(5120).meta({
-                description: 'version number'
-            })
-        }).meta({
-            description: 'payload'
-        }),
-        query: z.object({
-            name: z.string().optional()
+    app.base()
+        .zod({
+            payload: z
+                .object({
+                    version: z.number().max(5120).meta({
+                        description: 'version number',
+                    }),
+                })
+                .meta({
+                    description: 'payload',
+                }),
+            query: z.object({
+                name: z.string().optional(),
+            }),
         })
-    }).route<{ AuthCredentialsExtra: { extraextra?: string } }>({
-        path: '/oops',
-        method: 'POST',
-        auth: true,
-        options: {
-            plugins: {
-                kaapi: {
-                    docs: {
-                        disabled: false
-                    }
-                }
+        .route<{ AuthCredentialsExtra: { extraextra?: string } }>(
+            {
+                path: '/oops',
+                method: 'POST',
+                auth: true,
+                options: {
+                    plugins: {
+                        kaapi: {
+                            docs: {
+                                disabled: false,
+                            },
+                        },
+                    },
+                },
             },
-        }
-    }, ({ payload, query: { name }, auth: { credentials: { extraextra } } }) => `${name ?? 'NONAME'}: ${payload?.version} ${extraextra ?? ''}`)
+            ({
+                payload,
+                query: { name },
+                auth: {
+                    credentials: { extraextra },
+                },
+            }) => `${name ?? 'NONAME'}: ${payload?.version} ${extraextra ?? ''}`
+        );
 
     // with handler in the route config (Hapi's way)
-    app.base().zod({
-        query: z.object({
-            name: z.string().trim().nonempty().max(10).meta({
-                description: 'The name'
-            }).optional().default('World')
-        }),
-        state: z.looseObject({
-            session: z.string().optional()
-        }).optional(),
-        options: {
-            reportInput: true // includes the input in the issue
-        },
-        failAction: async (_req, h, err) => {
-            if (Boom.isBoom(err)) {
-                return h.response({
-                    ...err.output.payload,
-                    details: err.data.validationError.issues
-                }).code(err.output.statusCode).takeover()
-            }
-            return err
-        }
-    }).route({
-        path: '/greetings',
-        method: 'GET',
-        auth: false,
-        options: {
-            plugins: {
-                kaapi: {
-                    docs: {
-                        disabled: false
-                    }
-                }
+    app.base()
+        .zod({
+            query: z.object({
+                name: z
+                    .string()
+                    .trim()
+                    .nonempty()
+                    .max(10)
+                    .meta({
+                        description: 'The name',
+                    })
+                    .optional()
+                    .default('World'),
+            }),
+            state: z
+                .looseObject({
+                    session: z.string().optional(),
+                })
+                .optional(),
+            options: {
+                reportInput: true, // includes the input in the issue
             },
-        },
-        handler: ({ query: { name } }) => `Hello mello ${name}`
-    })
+            failAction: async (_req, h, err) => {
+                if (Boom.isBoom(err)) {
+                    return h
+                        .response({
+                            ...err.output.payload,
+                            details: err.data.validationError.issues,
+                        })
+                        .code(err.output.statusCode)
+                        .takeover();
+                }
+                return err;
+            },
+        })
+        .route({
+            path: '/greetings',
+            method: 'GET',
+            auth: false,
+            options: {
+                plugins: {
+                    kaapi: {
+                        docs: {
+                            disabled: false,
+                        },
+                    },
+                },
+            },
+            handler: ({ query: { name } }) => `Hello mello ${name}`,
+        });
 
     // file upload
-    app.base().zod({
-        payload: z.object({
-            username: z.string().meta({
-                description: 'The username'
+    app.base()
+        .zod({
+            payload: z.object({
+                username: z.string().meta({
+                    description: 'The username',
+                }),
+                picture: z.looseObject({
+                    _data: z.instanceof(Buffer),
+                    hapi: z.looseObject({
+                        filename: z.string(),
+                        headers: z.looseObject({
+                            'content-type': z.string(),
+                        }),
+                    }),
+                }),
             }),
-            picture: z.looseObject({
-                _data: z.instanceof(Buffer),
-                hapi: z.looseObject({
-                    filename: z.string(),
-                    headers: z.looseObject({
-                        'content-type': z.string()
-                    })
-                })
-            })
         })
-    }).route({
-        method: 'POST',
-        path: '/upload',
-        auth: false,
-        options: {
-            description: 'Upload user pic',
-            tags: ['Index'],
-            payload: {
-                output: 'stream',
-                parse: true,
-                allow: 'multipart/form-data',
-                multipart: { output: 'stream' },
-                maxBytes: 1024 * 3_000
+        .route(
+            {
+                method: 'POST',
+                path: '/upload',
+                auth: false,
+                options: {
+                    description: 'Upload user pic',
+                    tags: ['Index'],
+                    payload: {
+                        output: 'stream',
+                        parse: true,
+                        allow: 'multipart/form-data',
+                        multipart: { output: 'stream' },
+                        maxBytes: 1024 * 3_000,
+                    },
+                },
+            },
+            async (req) => {
+                app.log.warn(req.payload.username);
+
+                app.log.warn('payload', Object.keys(req.payload));
+
+                app.log.warn('file keys', Object.keys(req.payload.picture.hapi));
+
+                const pic = req.payload.picture;
+
+                await fs.writeFile(path.join(__dirname, '..', 'uploads', pic.hapi.filename), pic._data);
+
+                return 'ok';
             }
-        }
-    }, async (req) => {
-        app.log.warn(req.payload.username)
+        );
 
-        app.log.warn('payload', Object.keys(req.payload))
-
-        app.log.warn('file keys', Object.keys(req.payload.picture.hapi))
-
-        const pic = req.payload.picture
-
-        await fs.writeFile(
-            path.join(__dirname, '..', 'uploads', pic.hapi.filename), pic._data)
-
-        return 'ok'
-    });
-
-    app.base().zod({
-        payload: z.object({
-            file: z.looseObject({
-                _data: z.instanceof(Buffer),
-                hapi: z.looseObject({
-                    filename: z.string(),
-                    headers: z.looseObject({
-                        'content-type': z.enum(['image/jpeg', 'image/jpg', 'image/png'])
-                    })
-                })
-            })
+    app.base()
+        .zod({
+            payload: z.object({
+                file: z.looseObject({
+                    _data: z.instanceof(Buffer),
+                    hapi: z.looseObject({
+                        filename: z.string(),
+                        headers: z.looseObject({
+                            'content-type': z.enum(['image/jpeg', 'image/jpg', 'image/png']),
+                        }),
+                    }),
+                }),
+            }),
         })
-    }).route({
-        method: 'POST',
-        path: '/upload-image',
-        options: {
-            description: 'Upload an image',
-            payload: {
-                output: 'stream',
-                parse: true,
-                allow: 'multipart/form-data',
-                multipart: { output: 'stream' },
-                maxBytes: 1024 * 3_000
-            }
-        }
-    }, (req, h) => h.response(req.payload.file._data).type(req.payload.file.hapi.headers['content-type']));
+        .route(
+            {
+                method: 'POST',
+                path: '/upload-image',
+                options: {
+                    description: 'Upload an image',
+                    payload: {
+                        output: 'stream',
+                        parse: true,
+                        allow: 'multipart/form-data',
+                        multipart: { output: 'stream' },
+                        maxBytes: 1024 * 3_000,
+                    },
+                },
+            },
+            (req, h) => h.response(req.payload.file._data).type(req.payload.file.hapi.headers['content-type'])
+        );
 
     // custom handler (inert)
-    app.base().zod({
-        params: z.object({
-            filename: z.string().meta(
-                { description: 'The name of the file' }
-            )
+    app.base()
+        .zod({
+            params: z.object({
+                filename: z.string().meta({ description: 'The name of the file' }),
+            }),
         })
-    }).route({
-        method: 'GET',
-        path: '/uploads/{filename}',
-        auth: false,
-        options: {
-            description: 'get uploaded file',
-            notes: [
-                '_Notes:_',
-                '- __Not recommended because the documentation does not understand paths with "*".__'
-            ],
-            tags: ['Index']
-        }
-    }, {
-        directory: {
-            path: '.',
-            redirectToSlash: true,
-        }
-    })
+        .route(
+            {
+                method: 'GET',
+                path: '/uploads/{filename}',
+                auth: false,
+                options: {
+                    description: 'get uploaded file',
+                    notes: [
+                        '_Notes:_',
+                        '- __Not recommended because the documentation does not understand paths with "*".__',
+                    ],
+                    tags: ['Index'],
+                },
+            },
+            {
+                directory: {
+                    path: '.',
+                    redirectToSlash: true,
+                },
+            }
+        );
 
     // without code typing (ts)
     app.route(
@@ -266,20 +307,18 @@ async function start() {
             method: 'GET',
             options: {
                 plugins: {
-                    zod: {
-
-                    },
+                    zod: {},
                     kaapi: {
                         docs: {
                             helperSchemaProperty: 'zod',
-                            openAPIHelperClass: ZodDocHelper
-                        }
-                    }
-                }
-            }
+                            openAPIHelperClass: ZodDocHelper,
+                        },
+                    },
+                },
+            },
         },
         (req) => req.query
-    )
+    );
 
     // Regular validation (joi):
     // - still works
@@ -293,29 +332,28 @@ async function start() {
             options: {
                 validate: {
                     query: Joi.object({
-                        name: Joi.string().required().max(10)
+                        name: Joi.string().required().max(10),
                     }),
                     failAction: async (_req, _h, err) => {
-                        console.log(Boom.isBoom(err) ? err.data.defaultError : err)
-                        return err
-                    }
+                        console.log(Boom.isBoom(err) ? err.data.defaultError : err);
+                        return err;
+                    },
                     //failAction: 'log'
-
-                }
-            }
+                },
+            },
         },
         (req) => req.query
-    )
+    );
 
     app.base().events.on('request', async (_req, event, tags) => {
         if (tags.validation) {
             console.log(event);
         }
-    })
+    });
 
-    app.refreshDocs()
+    app.refreshDocs();
 
-    await app.listen()
+    await app.listen();
 }
 
-start()
+start();

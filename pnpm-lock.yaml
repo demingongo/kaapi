@@ -128,43 +128,6 @@ importers:
       winston-daily-rotate-file:
         specifier: ^5.0.0
         version: 5.0.0(winston@3.19.0)
-    devDependencies:
-      '@eslint/eslintrc':
-        specifier: ^3.3.3
-        version: 3.3.3
-      '@eslint/js':
-        specifier: ^10.0.1
-        version: 10.0.1(eslint@10.0.0)
-      '@stylistic/eslint-plugin':
-        specifier: ^5.8.0
-        version: 5.8.0(eslint@10.0.0)
-      '@types/node':
-        specifier: ^25.2.3
-        version: 25.2.3
-      '@typescript-eslint/eslint-plugin':
-        specifier: ^8.55.0
-        version: 8.55.0(@typescript-eslint/parser@8.55.0(eslint@10.0.0)(typescript@5.9.3))(eslint@10.0.0)(typescript@5.9.3)
-      '@typescript-eslint/parser':
-        specifier: ^8.55.0
-        version: 8.55.0(eslint@10.0.0)(typescript@5.9.3)
-      eslint:
-        specifier: ^10.0.0
-        version: 10.0.0
-      globals:
-        specifier: ^17.3.0
-        version: 17.3.0
-      nodemon:
-        specifier: ^3.1.11
-        version: 3.1.11
-      ts-node:
-        specifier: ^10.9.2
-        version: 10.9.2(@types/node@25.2.3)(typescript@5.9.3)
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.55.0
-        version: 8.55.0(eslint@10.0.0)(typescript@5.9.3)
 
   examples/esm:
     dependencies:
@@ -214,36 +177,12 @@ importers:
       '@dotenvx/dotenvx':
         specifier: ^1.52.0
         version: 1.52.0
-      '@eslint/eslintrc':
-        specifier: ^3.3.3
-        version: 3.3.3
-      '@eslint/js':
-        specifier: ^10.0.1
-        version: 10.0.1(eslint@10.0.0)
-      '@stylistic/eslint-plugin':
-        specifier: ^5.8.0
-        version: 5.8.0(eslint@10.0.0)
-      '@trivago/prettier-plugin-sort-imports':
-        specifier: ^6.0.2
-        version: 6.0.2(prettier@3.8.1)
-      '@types/chai':
-        specifier: ^5.2.3
-        version: 5.2.3
       '@types/mocha':
         specifier: ^10.0.10
         version: 10.0.10
-      '@types/node':
-        specifier: ^25.2.3
-        version: 25.2.3
       '@types/pug':
         specifier: ^2.0.10
         version: 2.0.10
-      '@typescript-eslint/eslint-plugin':
-        specifier: ^8.55.0
-        version: 8.55.0(@typescript-eslint/parser@8.55.0(eslint@10.0.0)(typescript@5.9.3))(eslint@10.0.0)(typescript@5.9.3)
-      '@typescript-eslint/parser':
-        specifier: ^8.55.0
-        version: 8.55.0(eslint@10.0.0)(typescript@5.9.3)
       c8:
         specifier: ^10.1.3
         version: 10.1.3
@@ -253,36 +192,18 @@ importers:
       dependency-cruiser:
         specifier: ^17.3.8
         version: 17.3.8
-      eslint:
-        specifier: ^10.0.0
-        version: 10.0.0
-      eslint-config-prettier:
-        specifier: ^10.1.8
-        version: 10.1.8(eslint@10.0.0)
       eslint-import-resolver-typescript:
         specifier: ^4.4.4
         version: 4.4.4(eslint-plugin-import@2.32.0)(eslint@10.0.0)
-      eslint-plugin-import:
-        specifier: ^2.32.0
-        version: 2.32.0(@typescript-eslint/parser@8.55.0(eslint@10.0.0)(typescript@5.9.3))(eslint-import-resolver-typescript@4.4.4)(eslint@10.0.0)
-      globals:
-        specifier: ^17.3.0
-        version: 17.3.0
       kaukau:
         specifier: ^4.2.1
         version: 4.2.1
       mocha:
         specifier: ^11.7.5
         version: 11.7.5
-      prettier:
-        specifier: ^3.8.1
-        version: 3.8.1
       shx:
         specifier: ^0.4.0
         version: 0.4.0
-      ts-node:
-        specifier: ^10.9.2
-        version: 10.9.2(@types/node@25.2.3)(typescript@5.9.3)
       tsup:
         specifier: ^8.5.1
         version: 8.5.1(tsx@4.21.0)(typescript@5.9.3)(yaml@2.8.2)
@@ -292,12 +213,6 @@ importers:
       type-coverage:
         specifier: ^2.29.7
         version: 2.29.7(typescript@5.9.3)
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.55.0
-        version: 8.55.0(eslint@10.0.0)(typescript@5.9.3)
 
   examples/kaapi-app:
     dependencies:
@@ -319,43 +234,6 @@ importers:
       tslib:
         specifier: ^2.8.1
         version: 2.8.1
-    devDependencies:
-      '@eslint/eslintrc':
-        specifier: ^3.3.3
-        version: 3.3.3
-      '@eslint/js':
-        specifier: ^10.0.1
-        version: 10.0.1(eslint@10.0.0)
-      '@stylistic/eslint-plugin':
-        specifier: ^5.8.0
-        version: 5.8.0(eslint@10.0.0)
-      '@types/node':
-        specifier: ^25.2.3
-        version: 25.2.3
-      '@typescript-eslint/eslint-plugin':
-        specifier: ^8.55.0
-        version: 8.55.0(@typescript-eslint/parser@8.55.0(eslint@10.0.0)(typescript@5.9.3))(eslint@10.0.0)(typescript@5.9.3)
-      '@typescript-eslint/parser':
-        specifier: ^8.55.0
-        version: 8.55.0(eslint@10.0.0)(typescript@5.9.3)
-      eslint:
-        specifier: ^10.0.0
-        version: 10.0.0
-      globals:
-        specifier: ^17.3.0
-        version: 17.3.0
-      nodemon:
-        specifier: ^3.1.11
-        version: 3.1.11
-      ts-node:
-        specifier: ^10.9.2
-        version: 10.9.2(@types/node@25.2.3)(typescript@5.9.3)
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.55.0
-        version: 8.55.0(eslint@10.0.0)(typescript@5.9.3)
 
   examples/kaapi-messaging:
     dependencies:
@@ -374,43 +252,6 @@ importers:
       winston:
         specifier: ^3.19.0
         version: 3.19.0
-    devDependencies:
-      '@eslint/eslintrc':
-        specifier: ^3.3.3
-        version: 3.3.3
-      '@eslint/js':
-        specifier: ^10.0.1
-        version: 10.0.1(eslint@10.0.0)
-      '@stylistic/eslint-plugin':
-        specifier: ^5.8.0
-        version: 5.8.0(eslint@10.0.0)
-      '@types/node':
-        specifier: ^25.2.3
-        version: 25.2.3
-      '@typescript-eslint/eslint-plugin':
-        specifier: ^8.55.0
-        version: 8.55.0(@typescript-eslint/parser@8.55.0(eslint@10.0.0)(typescript@5.9.3))(eslint@10.0.0)(typescript@5.9.3)
-      '@typescript-eslint/parser':
-        specifier: ^8.55.0
-        version: 8.55.0(eslint@10.0.0)(typescript@5.9.3)
-      eslint:
-        specifier: ^10.0.0
-        version: 10.0.0
-      globals:
-        specifier: ^17.3.0
-        version: 17.3.0
-      nodemon:
-        specifier: ^3.1.11
-        version: 3.1.11
-      ts-node:
-        specifier: ^10.9.2
-        version: 10.9.2(@types/node@25.2.3)(typescript@5.9.3)
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.55.0
-        version: 8.55.0(eslint@10.0.0)(typescript@5.9.3)
 
   examples/kaapi-server:
     dependencies:
@@ -423,43 +264,6 @@ importers:
       tslib:
         specifier: ^2.8.1
         version: 2.8.1
-    devDependencies:
-      '@eslint/eslintrc':
-        specifier: ^3.3.3
-        version: 3.3.3
-      '@eslint/js':
-        specifier: ^10.0.1
-        version: 10.0.1(eslint@10.0.0)
-      '@stylistic/eslint-plugin':
-        specifier: ^5.8.0
-        version: 5.8.0(eslint@10.0.0)
-      '@types/node':
-        specifier: ^25.2.3
-        version: 25.2.3
-      '@typescript-eslint/eslint-plugin':
-        specifier: ^8.55.0
-        version: 8.55.0(@typescript-eslint/parser@8.55.0(eslint@10.0.0)(typescript@5.9.3))(eslint@10.0.0)(typescript@5.9.3)
-      '@typescript-eslint/parser':
-        specifier: ^8.55.0
-        version: 8.55.0(eslint@10.0.0)(typescript@5.9.3)
-      eslint:
-        specifier: ^10.0.0
-        version: 10.0.0
-      globals:
-        specifier: ^17.3.0
-        version: 17.3.0
-      nodemon:
-        specifier: ^3.1.11
-        version: 3.1.11
-      ts-node:
-        specifier: ^10.9.2
-        version: 10.9.2(@types/node@25.2.3)(typescript@5.9.3)
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.55.0
-        version: 8.55.0(eslint@10.0.0)(typescript@5.9.3)
 
   examples/kaapi-zod:
     dependencies:
@@ -496,43 +300,6 @@ importers:
       zod:
         specifier: ^4.3.6
         version: 4.3.6
-    devDependencies:
-      '@eslint/eslintrc':
-        specifier: ^3.3.3
-        version: 3.3.3
-      '@eslint/js':
-        specifier: ^10.0.1
-        version: 10.0.1(eslint@10.0.0)
-      '@stylistic/eslint-plugin':
-        specifier: ^5.8.0
-        version: 5.8.0(eslint@10.0.0)
-      '@types/node':
-        specifier: ^25.2.3
-        version: 25.2.3
-      '@typescript-eslint/eslint-plugin':
-        specifier: ^8.55.0
-        version: 8.55.0(@typescript-eslint/parser@8.55.0(eslint@10.0.0)(typescript@5.9.3))(eslint@10.0.0)(typescript@5.9.3)
-      '@typescript-eslint/parser':
-        specifier: ^8.55.0
-        version: 8.55.0(eslint@10.0.0)(typescript@5.9.3)
-      eslint:
-        specifier: ^10.0.0
-        version: 10.0.0
-      globals:
-        specifier: ^17.3.0
-        version: 17.3.0
-      nodemon:
-        specifier: ^3.1.11
-        version: 3.1.11
-      ts-node:
-        specifier: ^10.9.2
-        version: 10.9.2(@types/node@25.2.3)(typescript@5.9.3)
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.55.0
-        version: 8.55.0(eslint@10.0.0)(typescript@5.9.3)
 
   examples/socket:
     dependencies:
@@ -557,43 +324,6 @@ importers:
       tslib:
         specifier: ^2.8.1
         version: 2.8.1
-    devDependencies:
-      '@eslint/eslintrc':
-        specifier: ^3.3.3
-        version: 3.3.3
-      '@eslint/js':
-        specifier: ^10.0.1
-        version: 10.0.1(eslint@10.0.0)
-      '@stylistic/eslint-plugin':
-        specifier: ^5.8.0
-        version: 5.8.0(eslint@10.0.0)
-      '@types/node':
-        specifier: ^25.2.3
-        version: 25.2.3
-      '@typescript-eslint/eslint-plugin':
-        specifier: ^8.55.0
-        version: 8.55.0(@typescript-eslint/parser@8.55.0(eslint@10.0.0)(typescript@5.9.3))(eslint@10.0.0)(typescript@5.9.3)
-      '@typescript-eslint/parser':
-        specifier: ^8.55.0
-        version: 8.55.0(eslint@10.0.0)(typescript@5.9.3)
-      eslint:
-        specifier: ^10.0.0
-        version: 10.0.0
-      globals:
-        specifier: ^17.3.0
-        version: 17.3.0
-      nodemon:
-        specifier: ^3.1.11
-        version: 3.1.11
-      ts-node:
-        specifier: ^10.9.2
-        version: 10.9.2(@types/node@25.2.3)(typescript@5.9.3)
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.55.0
-        version: 8.55.0(eslint@10.0.0)(typescript@5.9.3)
 
   examples/testing:
     dependencies:
@@ -628,63 +358,18 @@ importers:
         specifier: ^2.8.1
         version: 2.8.1
     devDependencies:
-      '@eslint/eslintrc':
-        specifier: ^3.3.3
-        version: 3.3.3
-      '@eslint/js':
-        specifier: ^10.0.1
-        version: 10.0.1(eslint@10.0.0)
       '@hapi/lab':
         specifier: ^26.0.0
-        version: 26.0.0(@hapi/eslint-plugin@7.0.0(@babel/core@7.29.0)(@babel/eslint-parser@7.28.6(@babel/core@7.29.0)(eslint@10.0.0)))(typescript@5.9.3)
-      '@stylistic/eslint-plugin':
-        specifier: ^5.8.0
-        version: 5.8.0(eslint@10.0.0)
+        version: 26.0.0(@hapi/eslint-plugin@7.0.0(@babel/core@7.29.0)(@babel/eslint-parser@7.28.6(@babel/core@7.29.0)(eslint@9.39.2)))(typescript@5.9.3)
       '@types/code':
         specifier: ^4.0.8
         version: 4.0.8
       '@types/mocha':
         specifier: ^10.0.10
         version: 10.0.10
-      '@types/node':
-        specifier: ^25.2.3
-        version: 25.2.3
       '@types/node-jose':
         specifier: ^1.1.13
         version: 1.1.13
-      '@typescript-eslint/eslint-plugin':
-        specifier: ^8.55.0
-        version: 8.55.0(@typescript-eslint/parser@8.55.0(eslint@10.0.0)(typescript@5.9.3))(eslint@10.0.0)(typescript@5.9.3)
-      '@typescript-eslint/parser':
-        specifier: ^8.55.0
-        version: 8.55.0(eslint@10.0.0)(typescript@5.9.3)
-      chai:
-        specifier: ^6.2.2
-        version: 6.2.2
-      eslint:
-        specifier: ^10.0.0
-        version: 10.0.0
-      globals:
-        specifier: ^17.3.0
-        version: 17.3.0
-      kaukau:
-        specifier: ^4.2.1
-        version: 4.2.1
-      mocha:
-        specifier: ^11.7.5
-        version: 11.7.5
-      nodemon:
-        specifier: ^3.1.11
-        version: 3.1.11
-      ts-node:
-        specifier: ^10.9.2
-        version: 10.9.2(@types/node@25.2.3)(typescript@5.9.3)
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.55.0
-        version: 8.55.0(eslint@10.0.0)(typescript@5.9.3)
 
   examples/validators:
     dependencies:
@@ -737,45 +422,9 @@ importers:
         specifier: ^4.3.6
         version: 4.3.6
     devDependencies:
-      '@eslint/eslintrc':
-        specifier: ^3.3.3
-        version: 3.3.3
-      '@eslint/js':
-        specifier: ^10.0.1
-        version: 10.0.1(eslint@10.0.0)
-      '@stylistic/eslint-plugin':
-        specifier: ^5.8.0
-        version: 5.8.0(eslint@10.0.0)
       '@types/busboy':
         specifier: ^1.5.4
         version: 1.5.4
-      '@types/node':
-        specifier: ^25.2.3
-        version: 25.2.3
-      '@typescript-eslint/eslint-plugin':
-        specifier: ^8.55.0
-        version: 8.55.0(@typescript-eslint/parser@8.55.0(eslint@10.0.0)(typescript@5.9.3))(eslint@10.0.0)(typescript@5.9.3)
-      '@typescript-eslint/parser':
-        specifier: ^8.55.0
-        version: 8.55.0(eslint@10.0.0)(typescript@5.9.3)
-      eslint:
-        specifier: ^10.0.0
-        version: 10.0.0
-      globals:
-        specifier: ^17.3.0
-        version: 17.3.0
-      nodemon:
-        specifier: ^3.1.11
-        version: 3.1.11
-      ts-node:
-        specifier: ^10.9.2
-        version: 10.9.2(@types/node@25.2.3)(typescript@5.9.3)
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.55.0
-        version: 8.55.0(eslint@10.0.0)(typescript@5.9.3)
 
   packages/cli:
     dependencies:
@@ -4485,22 +4134,13 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@babel/eslint-parser@7.28.6(@babel/core@7.29.0(supports-color@8.1.1))(eslint@9.39.2(supports-color@8.1.1))':
+  '@babel/eslint-parser@7.28.6(@babel/core@7.29.0)(eslint@9.39.2)':
     dependencies:
       '@babel/core': 7.29.0(supports-color@8.1.1)
       '@nicolo-ribaudo/eslint-scope-5-internals': 5.1.1-v1
       eslint: 9.39.2(supports-color@8.1.1)
       eslint-visitor-keys: 2.1.0
       semver: 6.3.1
-
-  '@babel/eslint-parser@7.28.6(@babel/core@7.29.0)(eslint@10.0.0)':
-    dependencies:
-      '@babel/core': 7.29.0(supports-color@8.1.1)
-      '@nicolo-ribaudo/eslint-scope-5-internals': 5.1.1-v1
-      eslint: 10.0.0
-      eslint-visitor-keys: 2.1.0
-      semver: 6.3.1
-    optional: true
 
   '@babel/generator@7.29.1':
     dependencies:
@@ -4726,7 +4366,7 @@ snapshots:
       eslint: 10.0.0
       eslint-visitor-keys: 3.4.3
 
-  '@eslint-community/eslint-utils@4.9.1(eslint@9.39.2(supports-color@8.1.1))':
+  '@eslint-community/eslint-utils@4.9.1(eslint@9.39.2)':
     dependencies:
       eslint: 9.39.2(supports-color@8.1.1)
       eslint-visitor-keys: 3.4.3
@@ -4886,12 +4526,12 @@ snapshots:
     dependencies:
       '@hapi/boom': 10.0.1
 
-  '@hapi/eslint-plugin@7.0.0(@babel/core@7.29.0)(@babel/eslint-parser@7.28.6(@babel/core@7.29.0)(eslint@10.0.0))':
+  '@hapi/eslint-plugin@7.0.0(@babel/core@7.29.0)(@babel/eslint-parser@7.28.6(@babel/core@7.29.0)(eslint@9.39.2))':
     dependencies:
       globals: 15.15.0
     optionalDependencies:
       '@babel/core': 7.29.0(supports-color@8.1.1)
-      '@babel/eslint-parser': 7.28.6(@babel/core@7.29.0)(eslint@10.0.0)
+      '@babel/eslint-parser': 7.28.6(@babel/core@7.29.0)(eslint@9.39.2)
 
   '@hapi/file@3.0.0': {}
 
@@ -4943,12 +4583,12 @@ snapshots:
       '@hapi/cryptiles': 6.0.3
       '@hapi/hoek': 11.0.7
 
-  '@hapi/lab@26.0.0(@hapi/eslint-plugin@7.0.0(@babel/core@7.29.0)(@babel/eslint-parser@7.28.6(@babel/core@7.29.0)(eslint@10.0.0)))(typescript@5.9.3)':
+  '@hapi/lab@26.0.0(@hapi/eslint-plugin@7.0.0(@babel/core@7.29.0)(@babel/eslint-parser@7.28.6(@babel/core@7.29.0)(eslint@9.39.2)))(typescript@5.9.3)':
     dependencies:
       '@babel/core': 7.29.0(supports-color@8.1.1)
-      '@babel/eslint-parser': 7.28.6(@babel/core@7.29.0(supports-color@8.1.1))(eslint@9.39.2(supports-color@8.1.1))
+      '@babel/eslint-parser': 7.28.6(@babel/core@7.29.0)(eslint@9.39.2)
       '@hapi/bossy': 6.0.1
-      '@hapi/eslint-plugin': 7.0.0(@babel/core@7.29.0)(@babel/eslint-parser@7.28.6(@babel/core@7.29.0)(eslint@10.0.0))
+      '@hapi/eslint-plugin': 7.0.0(@babel/core@7.29.0)(@babel/eslint-parser@7.28.6(@babel/core@7.29.0)(eslint@9.39.2))
       '@hapi/hoek': 11.0.7
       diff: 5.2.2
       eslint: 9.39.2(supports-color@8.1.1)
@@ -6336,7 +5976,7 @@ snapshots:
 
   eslint@9.39.2(supports-color@8.1.1):
     dependencies:
-      '@eslint-community/eslint-utils': 4.9.1(eslint@9.39.2(supports-color@8.1.1))
+      '@eslint-community/eslint-utils': 4.9.1(eslint@9.39.2)
       '@eslint-community/regexpp': 4.12.2
       '@eslint/config-array': 0.21.1(supports-color@8.1.1)
       '@eslint/config-helpers': 0.4.2

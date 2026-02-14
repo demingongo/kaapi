@@ -17,16 +17,18 @@ export type KaapiAuthOptions = {
         request: Hapi.Request<Hapi.ReqRefDefaults>,
         token: string,
         h: Hapi.ResponseToolkit<Hapi.ReqRefDefaults>
-    ) => Promise<
-        {
-            isValid?: boolean | undefined;
-            artifacts?: unknown | undefined;
-            credentials?: Hapi.AuthCredentials | undefined;
-            message?: string | undefined;
-            scheme?: string | undefined;
-        }
-        | Hapi.Auth
-    > | undefined;
+    ) =>
+        | Promise<
+              | {
+                    isValid?: boolean | undefined;
+                    artifacts?: unknown | undefined;
+                    credentials?: Hapi.AuthCredentials | undefined;
+                    message?: string | undefined;
+                    scheme?: string | undefined;
+                }
+              | Hapi.Auth
+          >
+        | undefined;
 };
 
 export interface KaapiServerOptions extends Hapi.ServerOptions {

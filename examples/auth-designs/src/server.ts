@@ -1,10 +1,8 @@
 // server.ts
-
-import {
-    Kaapi
-} from '@kaapi/kaapi'
-import { customAuthDesign } from './plugins/customAuthDesign'
+import { customAuthDesign } from './plugins/customAuthDesign';
+import { Kaapi } from '@kaapi/kaapi';
 import { randomBytes } from 'node:crypto';
+
 //import logger from './drafts/logger'
 
 export const app = new Kaapi({
@@ -12,7 +10,7 @@ export const app = new Kaapi({
     host: 'localhost',
     //logger: logger,
     loggerOptions: {
-        level: 'debug'
+        level: 'debug',
     },
     docs: {
         disabled: false,
@@ -29,11 +27,11 @@ export const app = new Kaapi({
         // parse cookies
         state: {
             parse: true,
-            failAction: 'log'
-        }
+            failAction: 'log',
+        },
     },
-    extend: customAuthDesign
-})
+    extend: customAuthDesign,
+});
 
 // cookies
 app.base().state('kaapisession', {
@@ -41,7 +39,7 @@ app.base().state('kaapisession', {
     isHttpOnly: true,
     //encoding: 'base64json'
     encoding: 'iron',
-    password: randomBytes(32).toString('base64url')
+    password: randomBytes(32).toString('base64url'),
 });
 
 // register plugins
@@ -51,18 +49,16 @@ app.extend(apiKeyAuthDesign)
 */
 //app.extend(customAuthDesign)
 
-
 // to not set it in all the routes but will be used in routes
 // with no auth defined
 app.base().auth.default({
-    strategies: customAuthDesign.getStrategies(),//['oauth2-authorization-code'],
-    mode: 'try'
-})
-app.log('default strategy:', app.base().auth.settings.default)
+    strategies: customAuthDesign.getStrategies(), //['oauth2-authorization-code'],
+    mode: 'try',
+});
+app.log('default strategy:', app.base().auth.settings.default);
 
 app.base().ext('onPreHandler', (request, h) => {
-    app.log.warn('onPreHandler -', request.method.toUpperCase(), request.path, request.payload)
-
+    app.log.warn('onPreHandler -', request.method.toUpperCase(), request.path, request.payload);
 
     return h.continue;
 });
@@ -70,13 +66,16 @@ app.base().ext('onPreHandler', (request, h) => {
 /**
  * Export a promise for readiness
  */
-export const appReady = app.base().register({
-    name: 'myplugin',
-    register(_server) {
-        // register "myplugin" plugin
-    },
-}).then(async () => {
-    app.log.info('"myplugin" plugin registered')
-    await app.listen()
-    return app
-})
+export const appReady = app
+    .base()
+    .register({
+        name: 'myplugin',
+        register(_server) {
+            // register "myplugin" plugin
+        },
+    })
+    .then(async () => {
+        app.log.info('"myplugin" plugin registered');
+        await app.listen();
+        return app;
+    });

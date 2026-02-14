@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.0.41] - 2026-01-17
 
 ### Added
+
 - `publishBatch()` method for efficient multi-message publishing
 - `onError` callback in `subscribe()` for custom error handling
 - `groupId` and `groupIdPrefix` options in `subscribe()` for custom consumer group IDs
@@ -23,11 +24,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for Buffer, string, and null message values in `publish()` and `publishBatch()`
 
 ### Changed
+
 - Default group ID separator changed from `---` to `.` (e.g., `my-service.topic`)
 - Offset logging now disabled by default for performance
 - Test scripts reorganized: `test` (mock), `test:integration`, `test:all`
 
 ### Fixed
+
 - Potential race condition when `getProducer()` called concurrently
 - Added try/catch in `publish()` to properly handle and re-throw errors
 - Graceful handling of non-JSON message payloads in `subscribe()`
@@ -35,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.0.1] - 2025-XX-XX
 
 ### Added
+
 - Initial release
 - `KafkaMessaging` class implementing `IMessaging` interface
 - `publish()` and `subscribe()` methods

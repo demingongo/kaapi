@@ -1,4 +1,4 @@
-import { ValidatorValibotSchema, ValidatorValibot } from './types'
+import { ValidatorValibotSchema, ValidatorValibot } from './types';
 
 declare module '@kaapi/kaapi' {
     interface PluginSpecificConfiguration {
@@ -6,8 +6,8 @@ declare module '@kaapi/kaapi' {
     }
 
     interface Server {
-        valibot: ValidatorValibot
+        valibot: ValidatorValibot;
     }
 }
 
-export { }
+export {};

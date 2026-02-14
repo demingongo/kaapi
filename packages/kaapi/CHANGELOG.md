@@ -10,11 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.0.42] - 2026-01-24
 
 ### Added
+
 - `publish()` method in request for publishing from http handler
 
 ## [0.0.1] - 2025-XX-XX
 
 ### Added
+
 - Initial release
 
 [Unreleased]: https://github.com/demingongo/kaapi/compare/v0.0.42...HEAD

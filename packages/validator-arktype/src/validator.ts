@@ -64,40 +64,42 @@ function mergeOptions<V extends ValidatorArkSchema, R extends ArklessReqRef>(
                 openAPIHelperClass: OpenAPIArkHelper,
             };
     }
-    return options
+    return options;
 }
 
 export const withSchema = function withSchema<V extends ValidatorArkSchema>(schema: V): ValidatorArkRouteBuilder<V> {
     return {
         route<R extends ArklessReqRef = ArklessReqRefDefaults>(
             serverRoute: KaapiServerRoute<ValidatorArkReqRef<V> & R>,
-            handler?: HandlerDecorations | Lifecycle.Method<ValidatorArkReqRef<V> & R, Lifecycle.ReturnValue<ValidatorArkReqRef<V> & R>>
+            handler?:
+                | HandlerDecorations
+                | Lifecycle.Method<ValidatorArkReqRef<V> & R, Lifecycle.ReturnValue<ValidatorArkReqRef<V> & R>>
         ) {
-            const { ...route } = serverRoute
+            const { ...route } = serverRoute;
             if (!route.options) {
-                route.options = {}
+                route.options = {};
             }
             if (typeof route.options === 'object') {
-                mergeOptions(route.options, schema)
+                mergeOptions(route.options, schema);
             } else if (typeof route.options === 'function') {
                 const fn = route.options.bind(route);
                 route.options = (server) => {
-                    const options = fn(server)
-                    return mergeOptions(options, schema)
-                }
+                    const options = fn(server);
+                    return mergeOptions(options, schema);
+                };
             }
             if (handler) {
-                route.handler = handler
+                route.handler = handler;
             }
-            return route
-        }
-    }
-}
+            return route;
+        },
+    };
+};
 
 export const validatorArk: KaapiPlugin = {
     async integrate(t) {
         const validator: ValidatorArk = <V extends ValidatorArkSchema>(schema: V) => {
-            const builder = withSchema(schema)
+            const builder = withSchema(schema);
             return {
                 route<R extends ArklessReqRef = ArklessReqRefDefaults>(
                     serverRoute: KaapiServerRoute<ValidatorArkReqRef<V> & R>,
@@ -105,10 +107,7 @@ export const validatorArk: KaapiPlugin = {
                         | HandlerDecorations
                         | Lifecycle.Method<ValidatorArkReqRef<V> & R, Lifecycle.ReturnValue<ValidatorArkReqRef<V> & R>>
                 ) {
-                    t.route(builder.route(
-                        serverRoute,
-                        handler
-                    ));
+                    t.route(builder.route(serverRoute, handler));
                     return t.server;
                 },
             };

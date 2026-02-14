@@ -1,5 +1,5 @@
-import { Kaapi, BearerAuthDesign } from '@kaapi/kaapi';
 import inert from '@hapi/inert';
+import { Kaapi, BearerAuthDesign } from '@kaapi/kaapi';
 import Joi from 'joi';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -14,14 +14,14 @@ const bearerAuthDesign = new BearerAuthDesign({
                     isValid: true,
                     credentials: {
                         user: {
-                            name: 'admin'
-                        }
-                    }
+                            name: 'admin',
+                        },
+                    },
                 };
             }
             return { isValid: false };
-        }
-    }
+        },
+    },
 });
 
 // 2. Initialize Kaapi with bearer strategy
@@ -32,19 +32,18 @@ const app = new Kaapi({
     routes: {
         auth: {
             strategy: bearerAuthDesign.getStrategyName(),
-            mode: 'try'
+            mode: 'try',
         },
         validate: {
             failAction: async (_request, _h, err) => {
                 // Just rethrow the original error so Hapi includes full Joi details in the response
                 throw err;
-            }
-        }
-    }
+            },
+        },
+    },
 });
 
 async function start() {
-
     // 3. Register hapi-inert for file support
     await app.base().register(inert);
 
@@ -68,42 +67,45 @@ app.route<{
             };
         };
     };
-}>({
-    method: 'POST',
-    path: '/profile/update',
-    options: {
-        description: 'Update user profile with resume upload',
-        tags: ['Profile'],
-        validate: {
-            payload: Joi.object({
-                firstName: Joi.string().max(50),
-                lastName: Joi.string().max(50),
-                resume: Joi.object().required().tag('files')
-            })
+}>(
+    {
+        method: 'POST',
+        path: '/profile/update',
+        options: {
+            description: 'Update user profile with resume upload',
+            tags: ['Profile'],
+            validate: {
+                payload: Joi.object({
+                    firstName: Joi.string().max(50),
+                    lastName: Joi.string().max(50),
+                    resume: Joi.object().required().tag('files'),
+                }),
+            },
+            payload: {
+                output: 'stream',
+                parse: true,
+                allow: 'multipart/form-data',
+                multipart: { output: 'stream' },
+                maxBytes: 1024 * 3_000, // 3MB
+            },
+            auth: {
+                strategy: bearerAuthDesign.getStrategyName(),
+                mode: 'required',
+            },
         },
-        payload: {
-            output: 'stream',
-            parse: true,
-            allow: 'multipart/form-data',
-            multipart: { output: 'stream' },
-            maxBytes: 1024 * 3_000 // 3MB
-        },
-        auth: {
-            strategy: bearerAuthDesign.getStrategyName(),
-            mode: 'required'
-        }
+    },
+    async ({ payload }) => {
+        const { firstName, lastName, resume } = payload;
+
+        // Save the resume file
+        const uploadPath = path.join(__dirname, '..', 'uploads', resume.hapi.filename);
+        await fs.writeFile(uploadPath, resume._data);
+
+        return {
+            message: 'Profile updated',
+            uploaded: resume.hapi.filename,
+            firstName,
+            lastName,
+        };
     }
-}, async ({ payload }) => {
-    const { firstName, lastName, resume } = payload;
-
-    // Save the resume file
-    const uploadPath = path.join(__dirname, '..', 'uploads', resume.hapi.filename);
-    await fs.writeFile(uploadPath, resume._data);
-
-    return {
-        message: 'Profile updated',
-        uploaded: resume.hapi.filename,
-        firstName,
-        lastName
-    };
-});
+);

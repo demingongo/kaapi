@@ -1,10 +1,10 @@
-import { FileGenerator, FileGeneratorType, Question, QuestionType } from '@kaapi/cli/definitions'
-import { camelCase, kebabCase } from '@kaapi/cli/utils'
+import { FileGenerator, FileGeneratorType, Question, QuestionType } from '@kaapi/cli/definitions';
+import { camelCase, kebabCase } from '@kaapi/cli/utils';
 
 enum KIND_ENUM {
     dpopReplayDetector = 'dpop-replay-detector',
     jwksKeyStore = 'jwks-key-store',
-    jwksRotationTimestampStore = 'jwks-rotation-timestamp-store'
+    jwksRotationTimestampStore = 'jwks-rotation-timestamp-store',
 }
 
 const KIND_OPTIONS: {
@@ -12,119 +12,114 @@ const KIND_OPTIONS: {
     label: string;
     hint: string;
 }[] = [
-        {
-            value: KIND_ENUM.dpopReplayDetector,
-            label: 'DPoP Replay Detector',
-            hint: ''
-        },
-        {
-            value: KIND_ENUM.jwksKeyStore,
-            label: 'Jwks Key Store',
-            hint: ''
-        },
-        {
-            value: KIND_ENUM.jwksRotationTimestampStore,
-            label: 'Jwks Rotation Timestamp Store',
-            hint: ''
-        },
-    ];
+    {
+        value: KIND_ENUM.dpopReplayDetector,
+        label: 'DPoP Replay Detector',
+        hint: '',
+    },
+    {
+        value: KIND_ENUM.jwksKeyStore,
+        label: 'Jwks Key Store',
+        hint: '',
+    },
+    {
+        value: KIND_ENUM.jwksRotationTimestampStore,
+        label: 'Jwks Rotation Timestamp Store',
+        hint: '',
+    },
+];
 
 export class OAuth2UtilGenerator implements FileGenerator {
-
     get type(): FileGeneratorType {
-        return 'others'
+        return 'others';
     }
 
     get name(): 'oauth2-util' {
-        return 'oauth2-util'
+        return 'oauth2-util';
     }
 
     get description(): string {
-        return 'Creates util.'
+        return 'Creates util.';
     }
 
     get notes(): string[] {
-        return [
-            'Allowed values for --kind:',
-            ...KIND_OPTIONS.map(o => `  - ${o.value}`)
-        ]
+        return ['Allowed values for --kind:', ...KIND_OPTIONS.map((o) => `  - ${o.value}`)];
     }
 
     get options(): Record<string, string> {
         return {
             name: 'The name',
-            kind: 'The kind'
-        }
+            kind: 'The kind',
+        };
     }
 
     #values = {
         name: '',
-        kind: ''
-    }
+        kind: '',
+    };
 
     init(options: Record<string, unknown>): void {
         if (typeof options['name'] == 'string') {
-            this.#values.name = camelCase(options['name'])
+            this.#values.name = camelCase(options['name']);
         }
         if (typeof options['kind'] == 'string') {
-            if (!KIND_OPTIONS.map(v => v.value).includes(options['kind'])) {
-                throw new Error(`Invalid value for '--kind'. Allowed values are: ${KIND_OPTIONS.map(v => v.value).join(', ')}.`)
+            if (!KIND_OPTIONS.map((v) => v.value).includes(options['kind'])) {
+                throw new Error(
+                    `Invalid value for '--kind'. Allowed values are: ${KIND_OPTIONS.map((v) => v.value).join(', ')}.`
+                );
             }
-            this.#values.kind = options['kind']
+            this.#values.kind = options['kind'];
         }
     }
 
     isValid(): boolean {
-        return !!(this.#values.name && this.#values.kind)
+        return !!(this.#values.name && this.#values.kind);
     }
 
     getFileContent(): string {
-        if (this.#values.kind === KIND_ENUM.dpopReplayDetector)
-            return this.#getDpopReplayDetectorContent()
-        else if (this.#values.kind === KIND_ENUM.jwksKeyStore)
-            return this.#getJwksKeyStoreContent()
+        if (this.#values.kind === KIND_ENUM.dpopReplayDetector) return this.#getDpopReplayDetectorContent();
+        else if (this.#values.kind === KIND_ENUM.jwksKeyStore) return this.#getJwksKeyStoreContent();
         else if (this.#values.kind === KIND_ENUM.jwksRotationTimestampStore)
-            return this.#getJwksRotationTimestampStoreContent()
-        else
-            return ''
+            return this.#getJwksRotationTimestampStoreContent();
+        else return '';
     }
 
     getQuestions(): Question[] {
-        const r: Question[] = []
+        const r: Question[] = [];
 
-        if (!(this.#values.kind && KIND_OPTIONS.map(v => v.value).includes(this.#values.kind))) {
+        if (!(this.#values.kind && KIND_OPTIONS.map((v) => v.value).includes(this.#values.kind))) {
             r.push({
                 type: QuestionType.select,
                 options: {
                     message: 'The kind?',
-                    options: KIND_OPTIONS
+                    options: KIND_OPTIONS,
                 },
                 setValue: (value) => {
-                    this.#values.kind = `${value}`
-                }
-            })
+                    this.#values.kind = `${value}`;
+                },
+            });
         }
 
         if (!this.#values.name) {
-            const camelCasedType = camelCase(this.#values.kind || 'custom-util')
+            const camelCasedType = camelCase(this.#values.kind || 'custom-util');
             r.push({
                 type: QuestionType.text,
                 options: {
                     message: 'The name?',
                     defaultValue: camelCasedType,
-                    placeholder: camelCasedType
+                    placeholder: camelCasedType,
                 },
                 setValue: (pluginName) => {
-                    this.#values.name = camelCase(pluginName)
-                }
-            })
+                    this.#values.name = camelCase(pluginName);
+                },
+            });
         }
 
-        return r
+        return r;
     }
 
     getFilename(): string {
-        return kebabCase(`${this.#values.name}`) + '.ts'
+        return kebabCase(`${this.#values.name}`) + '.ts';
     }
 
     #getDpopReplayDetectorContent(): string {
@@ -170,7 +165,7 @@ export const ${this.#values.name}: ReplayDetector = {
         throw new Error('Method not implemented.');
     }
 };
-`
+`;
     }
 
     #getJwksKeyStoreContent(): string {
@@ -215,7 +210,7 @@ export const ${this.#values.name}: JwksKeyStore = {
         throw new Error('Function not implemented.');
     }
 };
-`
+`;
     }
 
     #getJwksRotationTimestampStoreContent(): string {
@@ -250,6 +245,6 @@ export const ${this.#values.name}: JwksRotationTimestampStore = {
         throw new Error('Function not implemented.');
     }
 };
-`
+`;
     }
 }

@@ -28,16 +28,16 @@ npm install zod@^4.0.0
 ### 🔌 Register the Plugin
 
 ```ts
-import { z } from 'zod/v4'
-import { Kaapi } from '@kaapi/kaapi'
-import { validatorZod } from '@kaapi/validator-zod'
+import { Kaapi } from '@kaapi/kaapi';
+import { validatorZod } from '@kaapi/validator-zod';
+import { z } from 'zod/v4';
 
 const app = new Kaapi({
-  port: 3000,
-  host: 'localhost',
-  docs: {
-    disabled: false // explicitly enables documentation generation
-  }
+    port: 3000,
+    host: 'localhost',
+    docs: {
+        disabled: false, // explicitly enables documentation generation
+    },
 });
 
 await app.extend(validatorZod); // register the plugin
@@ -48,14 +48,14 @@ await app.extend(validatorZod); // register the plugin
 ### 📐 Define a Schema
 
 ```ts
-import { z } from 'zod/v4'
-import { ValidatorZodSchema } from '@kaapi/validator-zod'
+import { ValidatorZodSchema } from '@kaapi/validator-zod';
+import { z } from 'zod/v4';
 
 const routeSchema: ValidatorZodSchema = {
-  payload: z.object({
-    name: z.string()
-  })
-}
+    payload: z.object({
+        name: z.string(),
+    }),
+};
 ```
 
 ---
@@ -63,13 +63,15 @@ const routeSchema: ValidatorZodSchema = {
 ### 🧭 Create a Route
 
 ```ts
-app.base().zod(routeSchema).route(
-  {
-    method: 'POST',
-    path: '/items'
-  },
-  req => ({ id: Date.now(), name: req.payload.name })
-)
+app.base()
+    .zod(routeSchema)
+    .route(
+        {
+            method: 'POST',
+            path: '/items',
+        },
+        (req) => ({ id: Date.now(), name: req.payload.name })
+    );
 
 // or using inline handler
 /*
@@ -89,23 +91,23 @@ You can use `withSchema` to create validated routes without directly chaining fr
 This cleanly separates **route construction** from **app registration**.
 
 ```ts
-import { withSchema } from '@kaapi/validator-zod'
-import { z } from 'zod/v4'
+import { withSchema } from '@kaapi/validator-zod';
+import { z } from 'zod/v4';
 
 const schema = {
-  payload: z.object({
-    name: z.string()
-  })
-}
+    payload: z.object({
+        name: z.string(),
+    }),
+};
 
 const route = withSchema(schema).route({
-  method: 'POST',
-  path: '/items',
-  handler: req => ({ id: Date.now(), name: req.payload.name })
-})
+    method: 'POST',
+    path: '/items',
+    handler: (req) => ({ id: Date.now(), name: req.payload.name }),
+});
 
 // later, during app setup
-app.route(route)
+app.route(route);
 ```
 
 This is the most flexible and convenient way to use `@kaapi/validator-zod` when building modular APIs.
@@ -118,10 +120,10 @@ This is the most flexible and convenient way to use `@kaapi/validator-zod` when 
 
 Customize Zod parsing behavior:
 
-| Property      | Type                      | Default     | Description                                                                 |
-|---------------|---------------------------|-------------|-----------------------------------------------------------------------------|
-| `error`       | `errors.$ZodErrorMap<T>` | `undefined` | Custom error map for localization or formatting                            |
-| `reportInput` | `boolean`                | `false`     | When `true`, includes original input in error issues (useful for debugging)             |
+| Property      | Type                     | Default     | Description                                                                                                     |
+| ------------- | ------------------------ | ----------- | --------------------------------------------------------------------------------------------------------------- |
+| `error`       | `errors.$ZodErrorMap<T>` | `undefined` | Custom error map for localization or formatting                                                                 |
+| `reportInput` | `boolean`                | `false`     | When `true`, includes original input in error issues (useful for debugging)                                     |
 | `jitless`     | `boolean`                | `false`     | When `true`, disables JIT optimizations for environments where `eval` is restricted (e.g., Cloudflare Workers). |
 
 ---
@@ -130,12 +132,12 @@ Customize Zod parsing behavior:
 
 Control how validation failures are handled:
 
-| Value         | Behavior                     | Safe? | Description                                      |
-|---------------|------------------------------|-------|--------------------------------------------------|
-| `'error'`     | Reject with validation error | ✅     | Default safe behavior                                 |
-| `'log'`       | Log and reject               | ✅     | Useful for observability                         |
-| `function`    | Custom handler               | ✅ (developer-controlled)    | Must return or throw explicitly                  |
-| `'ignore'`    | ❌ Not supported              | ❌     | Unsafe and not implemented                       |
+| Value      | Behavior                     | Safe?                     | Description                     |
+| ---------- | ---------------------------- | ------------------------- | ------------------------------- |
+| `'error'`  | Reject with validation error | ✅                        | Default safe behavior           |
+| `'log'`    | Log and reject               | ✅                        | Useful for observability        |
+| `function` | Custom handler               | ✅ (developer-controlled) | Must return or throw explicitly |
+| `'ignore'` | ❌ Not supported             | ❌                        | Unsafe and not implemented      |
 
 ---
 
@@ -147,17 +149,17 @@ You can override Zod validation behavior **globally** for all routes, or **per r
 
 ```ts
 const app = new Kaapi({
-  // ...
-  routes: {
-    plugins: {
-      zod: {
-        options: {
-          reportInput: true
+    // ...
+    routes: {
+        plugins: {
+            zod: {
+                options: {
+                    reportInput: true,
+                },
+                failAction: 'log',
+            },
         },
-        failAction: 'log'
-      }
-    }
-  }
+    },
 });
 
 await app.extend(validatorZod);
@@ -168,29 +170,41 @@ This sets `reportInput` to `true` for all Zod-validated routes, and logs validat
 #### 🔂 Per-Route Override
 
 ```ts
-app.base().zod({
-  query: z.object({
-    name: z.string().trim().nonempty().max(10).meta({
-      description: 'Optional name to personalize the greeting response'
-    }).optional().default('World')
-  }),
-  options: {
-    reportInput: false
-  },
-  failAction: async (request, h, err) => {
-    if (Boom.isBoom(err)) {
-      return h.response({
-        ...err.output.payload,
-        details: err.data.validationError.issues
-      }).code(err.output.statusCode).takeover()
-    }
-    return err
-  }
-}).route({
-  path: '/greetings',
-  method: 'GET',
-  handler: ({ query: { name } }) => `Hello ${name}!`
-});
+app.base()
+    .zod({
+        query: z.object({
+            name: z
+                .string()
+                .trim()
+                .nonempty()
+                .max(10)
+                .meta({
+                    description: 'Optional name to personalize the greeting response',
+                })
+                .optional()
+                .default('World'),
+        }),
+        options: {
+            reportInput: false,
+        },
+        failAction: async (request, h, err) => {
+            if (Boom.isBoom(err)) {
+                return h
+                    .response({
+                        ...err.output.payload,
+                        details: err.data.validationError.issues,
+                    })
+                    .code(err.output.statusCode)
+                    .takeover();
+            }
+            return err;
+        },
+    })
+    .route({
+        path: '/greetings',
+        method: 'GET',
+        handler: ({ query: { name } }) => `Hello ${name}!`,
+    });
 ```
 
 ---
@@ -200,35 +214,37 @@ app.base().zod({
 Multipart file uploads with Zod validation is supported. Here's how to validate an uploaded image file and stream it back in the response:
 
 ```ts
-app.base().zod({
-  payload: z.object({
-    file: z.looseObject({
-      _data: z.instanceof(Buffer),
-      hapi: z.looseObject({
-        filename: z.string(),
-        headers: z.looseObject({
-          'content-type': z.enum(['image/jpeg', 'image/jpg', 'image/png'])
-        })
-      })
+app.base()
+    .zod({
+        payload: z.object({
+            file: z.looseObject({
+                _data: z.instanceof(Buffer),
+                hapi: z.looseObject({
+                    filename: z.string(),
+                    headers: z.looseObject({
+                        'content-type': z.enum(['image/jpeg', 'image/jpg', 'image/png']),
+                    }),
+                }),
+            }),
+        }),
     })
-  })
-}).route({
-  method: 'POST',
-  path: '/upload-image',
-  options: {
-    description: 'Upload an image',
-    payload: {
-      output: 'stream',
-      parse: true,
-      allow: 'multipart/form-data',
-      multipart: { output: 'stream' },
-      maxBytes: 1024 * 3_000
-    }
-  }
-}, (req, h) =>
-  h.response(req.payload.file._data)
-    .type(req.payload.file.hapi.headers['content-type'])
-);
+    .route(
+        {
+            method: 'POST',
+            path: '/upload-image',
+            options: {
+                description: 'Upload an image',
+                payload: {
+                    output: 'stream',
+                    parse: true,
+                    allow: 'multipart/form-data',
+                    multipart: { output: 'stream' },
+                    maxBytes: 1024 * 3_000,
+                },
+            },
+        },
+        (req, h) => h.response(req.payload.file._data).type(req.payload.file.hapi.headers['content-type'])
+    );
 ```
 
 ### 🧾 Notes
@@ -257,4 +273,3 @@ MIT
 ## 🤝 Contributing
 
 Contributions, issues, and feature requests are welcome! Feel free to open a discussion or submit a pull request.
-

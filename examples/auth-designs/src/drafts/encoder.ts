@@ -1,4 +1,3 @@
-
 export function encode(payload: object): string {
     return Buffer.from(JSON.stringify(payload)).toString('base64url');
 }

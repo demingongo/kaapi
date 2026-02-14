@@ -52,6 +52,8 @@ export type ValidatorArk = <V extends ValidatorArkSchema>(
 export interface ValidatorArkRouteBuilder<V extends ValidatorArkSchema> {
     route<R extends ArklessReqRef = ArklessReqRefDefaults>(
         serverRoute: KaapiServerRoute<ValidatorArkReqRef<V> & R>,
-        handler?: HandlerDecorations | Lifecycle.Method<ValidatorArkReqRef<V> & R, Lifecycle.ReturnValue<ValidatorArkReqRef<V> & R>>
+        handler?:
+            | HandlerDecorations
+            | Lifecycle.Method<ValidatorArkReqRef<V> & R, Lifecycle.ReturnValue<ValidatorArkReqRef<V> & R>>
     ): KaapiServerRoute<ValidatorArkReqRef<V> & R>;
 }

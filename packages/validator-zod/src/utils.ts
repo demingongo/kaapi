@@ -12,8 +12,8 @@ function joinPath(path: PropertyKey[]): string {
     if (path.length === 1) {
         const propertyKey = path[0];
 
-        const propertyKeyString = typeof propertyKey === 'symbol' ?
-            (propertyKey.description ?? '') : String(propertyKey);
+        const propertyKeyString =
+            typeof propertyKey === 'symbol' ? (propertyKey.description ?? '') : String(propertyKey);
 
         return propertyKeyString || '""';
     }
@@ -25,8 +25,8 @@ function joinPath(path: PropertyKey[]): string {
         }
 
         // handle symbols
-        const propertyKeyString = typeof propertyKey === 'symbol' ?
-            (propertyKey.description ?? '') : String(propertyKey);
+        const propertyKeyString =
+            typeof propertyKey === 'symbol' ? (propertyKey.description ?? '') : String(propertyKey);
 
         // handle quoted values
         if (propertyKeyString.includes('"')) {
@@ -47,19 +47,15 @@ function joinPath(path: PropertyKey[]): string {
 /**
  * @see https://github.com/causaly/zod-validation-error/blob/main/lib/v4/MessageBuilder.ts
  */
-export function mapIssue(
-    issue: $ZodIssue
-): string {
+export function mapIssue(issue: $ZodIssue): string {
     if (issue.code === 'invalid_union' && issue.errors.length !== 0) {
         const individualMessages = issue.errors.map((issues) =>
             issues
                 .map((subIssue) =>
-                    mapIssue(
-                        {
-                            ...subIssue,
-                            path: issue.path.concat(subIssue.path),
-                        }
-                    )
+                    mapIssue({
+                        ...subIssue,
+                        path: issue.path.concat(subIssue.path),
+                    })
                 )
                 .join('; ')
         );
@@ -76,10 +72,7 @@ export function mapIssue(
         issue.message.length === 0 ? issue.message : issue.message.charAt(0).toUpperCase() + issue.message.slice(1)
     );
 
-    pathCondition: if (
-        issue.path !== undefined &&
-        issue.path.length !== 0
-    ) {
+    pathCondition: if (issue.path !== undefined && issue.path.length !== 0) {
         // handle array indices
         if (issue.path.length === 1) {
             const identifier = issue.path[0];

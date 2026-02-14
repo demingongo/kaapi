@@ -10,4 +10,4 @@ declare module '@kaapi/kaapi' {
     }
 }
 
-export { };
+export {};

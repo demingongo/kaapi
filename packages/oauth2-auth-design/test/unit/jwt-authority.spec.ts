@@ -1,13 +1,8 @@
-import { expect } from 'chai'
-import { 
-    JwtAuthority, 
-    JwksRotator
-} from '../../src/utils/jwt-authority'
-import { 
-    InMemoryKeyStore
-} from '../../src/utils/in-memory-key-store'
-import { JWTPayload } from 'jose'
+import { InMemoryKeyStore } from '../../src/utils/in-memory-key-store';
+import { JwtAuthority, JwksRotator } from '../../src/utils/jwt-authority';
 import { createLogger } from '@kaapi/kaapi';
+import { expect } from 'chai';
+import { JWTPayload } from 'jose';
 
 describe('JwtAuthority', () => {
     let keyStore: InMemoryKeyStore;
@@ -46,7 +41,7 @@ describe('JwtAuthority', () => {
         try {
             await jwt.verify('eyJ4Ijo1LCJ5Ijo2fQ==');
             expect.fail('Expected error was not thrown');
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
             expect(err.message).to.include('Invalid or missing "kid"');
         }
@@ -65,7 +60,7 @@ describe('JwksRotator', () => {
             keyGenerator: jwt,
             rotatorKeyStore: keyStore,
             rotationIntervalMs: 1000 * 60 * 60 * 24, // 1 day
-            logger: createLogger()
+            logger: createLogger(),
         });
     });
 

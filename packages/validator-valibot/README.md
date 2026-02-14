@@ -28,15 +28,15 @@ npm install valibot@^1.1.0
 ### 🔌 Register the Plugin
 
 ```ts
-import { Kaapi } from '@kaapi/kaapi'
-import { validatorValibot } from '@kaapi/validator-valibot'
+import { Kaapi } from '@kaapi/kaapi';
+import { validatorValibot } from '@kaapi/validator-valibot';
 
 const app = new Kaapi({
-  port: 3000,
-  host: 'localhost',
-  docs: {
-    disabled: false // explicitly enables documentation generation
-  }
+    port: 3000,
+    host: 'localhost',
+    docs: {
+        disabled: false, // explicitly enables documentation generation
+    },
 });
 
 await app.extend(validatorValibot); // register the plugin
@@ -47,14 +47,14 @@ await app.extend(validatorValibot); // register the plugin
 ### 📐 Define a Schema
 
 ```ts
-import * as v from 'valibot'
-import { ValidatorValibotSchema } from '@kaapi/validator-valibot'
+import { ValidatorValibotSchema } from '@kaapi/validator-valibot';
+import * as v from 'valibot';
 
 const routeSchema: ValidatorValibotSchema = {
-  payload: v.object({
-    name: v.string()
-  })
-}
+    payload: v.object({
+        name: v.string(),
+    }),
+};
 ```
 
 ---
@@ -62,13 +62,15 @@ const routeSchema: ValidatorValibotSchema = {
 ### 🧭 Create a Route
 
 ```ts
-app.base().valibot(routeSchema).route(
-  {
-    method: 'POST',
-    path: '/items'
-  },
-  req => ({ id: Date.now(), name: req.payload.name })
-)
+app.base()
+    .valibot(routeSchema)
+    .route(
+        {
+            method: 'POST',
+            path: '/items',
+        },
+        (req) => ({ id: Date.now(), name: req.payload.name })
+    );
 
 // or using inline handler
 /*
@@ -88,23 +90,23 @@ You can use `withSchema` to create validated routes without directly chaining fr
 This cleanly separates **route construction** from **app registration**.
 
 ```ts
-import { withSchema } from '@kaapi/validator-valibot'
-import * as v from 'valibot'
+import { withSchema } from '@kaapi/validator-valibot';
+import * as v from 'valibot';
 
 const schema = {
-  payload: v.object({
-    name: v.string()
-  })
-}
+    payload: v.object({
+        name: v.string(),
+    }),
+};
 
 const route = withSchema(schema).route({
-  method: 'POST',
-  path: '/items',
-  handler: req => ({ id: Date.now(), name: req.payload.name })
-})
+    method: 'POST',
+    path: '/items',
+    handler: (req) => ({ id: Date.now(), name: req.payload.name }),
+});
 
 // later, during app setup
-app.route(route)
+app.route(route);
 ```
 
 This is the most flexible and convenient way to use `@kaapi/validator-valibot` when building modular APIs.
@@ -117,12 +119,12 @@ This is the most flexible and convenient way to use `@kaapi/validator-valibot` w
 
 Customize Valibot parsing behavior:
 
-| Property      | Type                      | Default     | Description                                                                 |
-|---------------|---------------------------|-------------|-----------------------------------------------------------------------------|
-| `abortEarly`  | `boolean`                 | `undefined` | Whether it should be aborted early                                          |
-| `abortPipeEarly`  | `boolean`                 | `undefined` | Whether a pipe should be aborted early                                          |
-| `lang`        | `string`                 | `undefined` | The selected language                                                        |
-| `message`        | `ErrorMessage<TIssue>`                 | `undefined` | The error message                                                        |
+| Property         | Type                   | Default     | Description                            |
+| ---------------- | ---------------------- | ----------- | -------------------------------------- |
+| `abortEarly`     | `boolean`              | `undefined` | Whether it should be aborted early     |
+| `abortPipeEarly` | `boolean`              | `undefined` | Whether a pipe should be aborted early |
+| `lang`           | `string`               | `undefined` | The selected language                  |
+| `message`        | `ErrorMessage<TIssue>` | `undefined` | The error message                      |
 
 ---
 
@@ -130,12 +132,12 @@ Customize Valibot parsing behavior:
 
 Control how validation failures are handled:
 
-| Value         | Behavior                     | Safe? | Description                                      |
-|---------------|------------------------------|-------|--------------------------------------------------|
-| `'error'`     | Reject with validation error | ✅     | Default safe behavior                                 |
-| `'log'`       | Log and reject               | ✅     | Useful for observability                         |
-| `function`    | Custom handler               | ✅ (developer-controlled)    | Must return or throw explicitly                  |
-| `'ignore'`    | ❌ Not supported              | ❌     | Unsafe and not implemented                       |
+| Value      | Behavior                     | Safe?                     | Description                     |
+| ---------- | ---------------------------- | ------------------------- | ------------------------------- |
+| `'error'`  | Reject with validation error | ✅                        | Default safe behavior           |
+| `'log'`    | Log and reject               | ✅                        | Useful for observability        |
+| `function` | Custom handler               | ✅ (developer-controlled) | Must return or throw explicitly |
+| `'ignore'` | ❌ Not supported             | ❌                        | Unsafe and not implemented      |
 
 ---
 
@@ -147,17 +149,17 @@ You can override Valibot validation behavior **globally** for all routes, or **p
 
 ```ts
 const app = new Kaapi({
-  // ...
-  routes: {
-    plugins: {
-      valibot: {
-        options: {
-          abortEarly: true
+    // ...
+    routes: {
+        plugins: {
+            valibot: {
+                options: {
+                    abortEarly: true,
+                },
+                failAction: 'log',
+            },
         },
-        failAction: 'log'
-      }
-    }
-  }
+    },
 });
 
 await app.extend(validatorValibot);
@@ -168,36 +170,50 @@ This sets `abortEarly` to `true` for all Valibot-validated routes, and logs vali
 #### 🔂 Per-Route Override
 
 ```ts
-app.base().valibot({
-  query: v.object({
-    name: v.optional(v.pipe(v.string(), v.trim(), v.nonEmpty(), v.maxLength(10), v.description('Optional name to personalize the greeting response')), 'World'),
-    age: v.optional(
-      v.pipe(
-        v.string(), 
-        v.transform((input) => typeof input === 'string' ? Number(input) : input), 
-        v.number(), 
-        v.integer(), 
-        v.minValue(1)
-      )
-    )
-  }),
-  options: {
-    abortEarly: false
-  },
-  failAction: async (request, h, err) => {
-    if (Boom.isBoom(err)) {
-      return h.response({
-        ...err.output.payload,
-        details: err.data.validationError.issues
-      }).code(err.output.statusCode).takeover()
-    }
-    return err
-  }
-}).route({
-  path: '/greetings',
-  method: 'GET',
-  handler: ({ query: { name } }) => `Hello ${name}!`
-});
+app.base()
+    .valibot({
+        query: v.object({
+            name: v.optional(
+                v.pipe(
+                    v.string(),
+                    v.trim(),
+                    v.nonEmpty(),
+                    v.maxLength(10),
+                    v.description('Optional name to personalize the greeting response')
+                ),
+                'World'
+            ),
+            age: v.optional(
+                v.pipe(
+                    v.string(),
+                    v.transform((input) => (typeof input === 'string' ? Number(input) : input)),
+                    v.number(),
+                    v.integer(),
+                    v.minValue(1)
+                )
+            ),
+        }),
+        options: {
+            abortEarly: false,
+        },
+        failAction: async (request, h, err) => {
+            if (Boom.isBoom(err)) {
+                return h
+                    .response({
+                        ...err.output.payload,
+                        details: err.data.validationError.issues,
+                    })
+                    .code(err.output.statusCode)
+                    .takeover();
+            }
+            return err;
+        },
+    })
+    .route({
+        path: '/greetings',
+        method: 'GET',
+        handler: ({ query: { name } }) => `Hello ${name}!`,
+    });
 ```
 
 ---
@@ -207,38 +223,40 @@ app.base().valibot({
 Multipart file uploads with Valibot validation is supported. Here's how to validate an uploaded image file and stream it back in the response:
 
 ```ts
-app.base().valibot({
-  payload: v.object({
-    file: v.pipe(
-      v.looseObject({
-        _data: v.instance(Buffer),
-        hapi: v.looseObject({
-          filename: v.string(),
-          headers: v.looseObject({
-            'content-type': v.picklist(['image/jpeg', 'image/jpg', 'image/png'] as const)
-          })
-        })
-      }),
-      v.description('The image to upload')
-    )
-  })
-}).route({
-  method: 'POST',
-  path: '/upload-image',
-  options: {
-    description: 'Upload an image',
-    payload: {
-      output: 'stream',
-      parse: true,
-      allow: 'multipart/form-data',
-      multipart: { output: 'stream' },
-      maxBytes: 1024 * 3_000
-    }
-  }
-}, (req, h) =>
-  h.response(req.payload.file._data)
-    .type(req.payload.file.hapi.headers['content-type'])
-);
+app.base()
+    .valibot({
+        payload: v.object({
+            file: v.pipe(
+                v.looseObject({
+                    _data: v.instance(Buffer),
+                    hapi: v.looseObject({
+                        filename: v.string(),
+                        headers: v.looseObject({
+                            'content-type': v.picklist(['image/jpeg', 'image/jpg', 'image/png'] as const),
+                        }),
+                    }),
+                }),
+                v.description('The image to upload')
+            ),
+        }),
+    })
+    .route(
+        {
+            method: 'POST',
+            path: '/upload-image',
+            options: {
+                description: 'Upload an image',
+                payload: {
+                    output: 'stream',
+                    parse: true,
+                    allow: 'multipart/form-data',
+                    multipart: { output: 'stream' },
+                    maxBytes: 1024 * 3_000,
+                },
+            },
+        },
+        (req, h) => h.response(req.payload.file._data).type(req.payload.file.hapi.headers['content-type'])
+    );
 ```
 
 ### 🧾 Notes
@@ -267,4 +285,3 @@ MIT
 ## 🤝 Contributing
 
 Contributions, issues, and feature requests are welcome! Feel free to open a discussion or submit a pull request.
-

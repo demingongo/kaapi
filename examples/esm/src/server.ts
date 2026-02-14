@@ -1,11 +1,11 @@
 // server.ts
-import path from 'node:path';
 import logger from './drafts/logger';
 import { customAuthDesign } from './plugins/customAuthDesign';
 import { Kaapi } from '@kaapi/kaapi';
-import { randomBytes } from 'node:crypto';
 import { validatorArk } from '@kaapi/validator-arktype';
 import { validatorValibot } from '@kaapi/validator-valibot';
+import { randomBytes } from 'node:crypto';
+import path from 'node:path';
 
 export const app = new Kaapi({
     port: 3000,
@@ -52,14 +52,14 @@ app.base().ext('onPreHandler', (request, h) => {
     return h.continue;
 });
 
-await app.extend([validatorArk, validatorValibot])
+await app.extend([validatorArk, validatorValibot]);
 
 await app.base().register(await import('@hapi/vision'));
 
 app.base().views({
     engines: {
-        pug: await import('pug')
+        pug: await import('pug'),
     },
     relativeTo: path.join(import.meta.dirname, '..'),
-    path: 'templates'
+    path: 'templates',
 });

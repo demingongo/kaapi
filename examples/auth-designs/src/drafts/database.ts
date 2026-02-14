@@ -1,55 +1,54 @@
-
 export interface InMemoryData {
     id: string;
     [key: string]: unknown;
 }
 
 export class InMemoryCollection<Data extends InMemoryData = InMemoryData> {
-    protected documents: Record<string, Data> = {}
+    protected documents: Record<string, Data> = {};
 
     async findById(id: string) {
-        return this.documents[id]
+        return this.documents[id];
     }
 
     async findByCredentials(id: string, secret: string) {
-        return this.documents[id]?.secret === secret ? this.documents[id] : undefined
+        return this.documents[id]?.secret === secret ? this.documents[id] : undefined;
     }
 
     async insertOne(data: Data) {
-        this.documents[data.id] = data
+        this.documents[data.id] = data;
     }
 }
 
 export type User = InMemoryData & {
-    name: string
-    given_name?: string
-    email?: string
-    password?: string
-}
+    name: string;
+    given_name?: string;
+    email?: string;
+    password?: string;
+};
 
 export type Client = InMemoryData & {
-    name: string
-    secret?: string
-    details?: User
-}
+    name: string;
+    secret?: string;
+    details?: User;
+};
 
 export type DeviceToken = InMemoryData & {
-    userCode: string
-    expiresAt: number
-    userId?: string
-}
+    userCode: string;
+    expiresAt: number;
+    userId?: string;
+};
 
 export class InMemoryUsers extends InMemoryCollection<User> {
     async findByCredentials(email: string, password: string) {
         let result: User | undefined;
         for (const k in this.documents) {
-            const user = this.documents[k]
+            const user = this.documents[k];
             if (user.email === email && user.password === password) {
-                result = user
+                result = user;
                 break;
             }
         }
-        return result
+        return result;
     }
 }
 
@@ -57,14 +56,14 @@ export class InMemoryDeviceTokens extends InMemoryCollection<DeviceToken> {
     async updateOneWithId(id: string, updateSet: { userId: string }) {
         let result: DeviceToken | undefined;
         if (this.documents[id]) {
-            result = this.documents[id]
-            result.userId = updateSet.userId
+            result = this.documents[id];
+            result.userId = updateSet.userId;
         }
-        return result
+        return result;
     }
 
     async deleteOneWithId(id: string) {
-        delete this.documents[id]
+        delete this.documents[id];
     }
 }
 
@@ -72,19 +71,19 @@ const users = new InMemoryUsers();
 
 const user1: User = {
     id: 'machine-123',
-    name: 'ingestor-prod-01'
-}
+    name: 'ingestor-prod-01',
+};
 
 const user2: User = {
     id: '248289761001',
     name: 'Jane Doe',
     given_name: 'Jane',
     email: 'janed@example.com',
-    password: '123'
-}
+    password: '123',
+};
 
-users.insertOne(user1)
-users.insertOne(user2)
+users.insertOne(user1);
+users.insertOne(user2);
 
 const clients = new InMemoryCollection<Client>();
 
@@ -92,20 +91,20 @@ clients.insertOne({
     id: 'svc-data-ingestor',
     name: 'Data Ingestor Service',
     secret: '123',
-    details: user1
-})
+    details: user1,
+});
 clients.insertOne({
     id: 'public-app',
     name: 'Public App',
     secret: 'public-app',
-})
+});
 clients.insertOne({
     id: 'device-app',
-    name: 'Device App Service'
-})
+    name: 'Device App Service',
+});
 
 export default {
     clients,
     users,
-    deviceTokens: new InMemoryDeviceTokens()
-}
+    deviceTokens: new InMemoryDeviceTokens(),
+};

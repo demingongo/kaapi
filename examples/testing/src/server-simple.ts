@@ -1,7 +1,6 @@
 // src/server-simple.ts
-
-import { Kaapi } from '@kaapi/kaapi';
 import Boom from '@hapi/boom';
+import { Kaapi } from '@kaapi/kaapi';
 
 //#region prep
 
@@ -9,11 +8,11 @@ const app = new Kaapi({
     port: 3000,
     host: 'localhost',
     loggerOptions: {
-        level: 'debug'
+        level: 'debug',
     },
     docs: {
-        title: 'examples-testing'
-    }
+        title: 'examples-testing',
+    },
 });
 
 //#endregion prep
@@ -23,33 +22,34 @@ const app = new Kaapi({
 // 404
 app.route({}, () => Boom.notFound('Nothing here'));
 
-app.route({
-    method: 'GET',
-    path: '/',
-    options: {
-        description: 'index'
-    }
-}, () => 'Hello World!');
+app.route(
+    {
+        method: 'GET',
+        path: '/',
+        options: {
+            description: 'index',
+        },
+    },
+    () => 'Hello World!'
+);
 
 //#endregion routing
 
 //#region init
 
 export async function init() {
-
     await app.base().initialize();
     return app;
-};
+}
 
 //#endregion init
 
 //#region start
 
 export async function start() {
-
-    const { base: server } = await app.listen()
+    const { base: server } = await app.listen();
     console.log(`Server running at: ${server.info.uri}`);
     return app;
-};
+}
 
 //#endregion start

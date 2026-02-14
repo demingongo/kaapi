@@ -1,5 +1,4 @@
-import { deepExtend } from './deep-extend'
-import jsontoxml from 'jsontoxml'
+import { deepExtend } from './deep-extend';
 import {
     ContextResponseUtil,
     GroupResponseUtil,
@@ -7,20 +6,24 @@ import {
     MediaTypeUtil,
     ReferenceObject,
     ResponseUtil,
-    SchemaObject3_1
-} from '@novice1/api-doc-generator'
+    SchemaObject3_1,
+} from '@novice1/api-doc-generator';
 import {
     ExampleObject,
     MediaTypeObject,
     ResponseObject,
-    XMLObject
-} from '@novice1/api-doc-generator/lib/generators/openapi/definitions'
-import { HeaderObject, RequestBodyObject } from '@novice1/api-doc-generator/lib/generators/postman/definitions'
-import { BaseResponseUtil } from '@novice1/api-doc-generator/lib/utils/responses/baseResponseUtils'
+    XMLObject,
+} from '@novice1/api-doc-generator/lib/generators/openapi/definitions';
+import { HeaderObject, RequestBodyObject } from '@novice1/api-doc-generator/lib/generators/postman/definitions';
+import { BaseResponseUtil } from '@novice1/api-doc-generator/lib/utils/responses/baseResponseUtils';
+import jsontoxml from 'jsontoxml';
 
 // -------------------- TYPES --------------------
 
-export type SchemaModel = Omit<SchemaObject3_1, 'allOf' | 'anyOf' | 'oneOf' | 'not' | 'items' | 'properties' | 'additionalProperties'> & {
+export type SchemaModel = Omit<
+    SchemaObject3_1,
+    'allOf' | 'anyOf' | 'oneOf' | 'not' | 'items' | 'properties' | 'additionalProperties'
+> & {
     allOf?: Array<SchemaModel | ISchemaModifier>;
     anyOf?: Array<SchemaModel | ISchemaModifier>;
     oneOf?: Array<SchemaModel | ISchemaModifier>;
@@ -28,17 +31,17 @@ export type SchemaModel = Omit<SchemaObject3_1, 'allOf' | 'anyOf' | 'oneOf' | 'n
     items?: SchemaModel | ISchemaModifier;
     properties?: Record<string, SchemaModel | ISchemaModifier>;
     additionalProperties?: boolean | SchemaModel | ISchemaModifier;
-}
+};
 
 export interface ISchemaModifier {
-    ref(): ReferenceObject
-    toObject(): SchemaObject3_1
+    ref(): ReferenceObject;
+    toObject(): SchemaObject3_1;
 }
 
 export type MediaTypeModel = Omit<MediaTypeObject, 'schema' | 'examples'> & {
-    examples?: Record<string, ExampleObject | ReferenceObject | ExampleModifier>
+    examples?: Record<string, ExampleObject | ReferenceObject | ExampleModifier>;
     schema?: SchemaModel | ReferenceObject | SchemaModifier;
-}
+};
 
 export interface OpenAPIRequestBodyObject {
     content: Record<string, MediaTypeObject>;
@@ -49,70 +52,69 @@ export interface OpenAPIRequestBodyObject {
 export type PostmanRequestBodyModel = {
     body: RequestBodyObject;
     header: HeaderObject[];
-}
+};
 
 // -------------------- CLASSES --------------------
 
 export class ExampleModifier {
-
-    protected name: string
-    protected value: unknown
-    protected externalValue?: string
+    protected name: string;
+    protected value: unknown;
+    protected externalValue?: string;
     protected summary?: string;
     protected description?: string;
 
     constructor(name: string, example?: ExampleObject) {
-        this.name = name
+        this.name = name;
         if (example) {
-            this.value = example.value
-            this.externalValue = example.externalValue
-            this.summary = example.summary
-            this.description = example.description
+            this.value = example.value;
+            this.externalValue = example.externalValue;
+            this.summary = example.summary;
+            this.description = example.description;
         }
     }
 
     getName(): string {
-        return this.name
+        return this.name;
     }
 
     setValue(value: unknown): this {
-        this.value = value
-        return this
+        this.value = value;
+        return this;
     }
 
     getValue(): unknown {
-        return this.value
+        return this.value;
     }
 
     setExternalValue(externalValue: string): this {
-        this.externalValue = externalValue
-        return this
+        this.externalValue = externalValue;
+        return this;
     }
 
     getExternalValue(): string | undefined {
-        return this.externalValue
+        return this.externalValue;
     }
 
     setSummary(summary: string): this {
-        this.summary = summary
-        return this
+        this.summary = summary;
+        return this;
     }
 
     getSummary(): string | undefined {
-        return this.summary
+        return this.summary;
     }
 
     setDescription(description: string): this {
-        this.description = description
-        return this
+        this.description = description;
+        return this;
     }
 
     getDescription(): string | undefined {
-        return this.description
+        return this.description;
     }
 
     ref(): ReferenceObject {
-        return { $ref: `#/components/examples/${this.name}` }
+        return { $ref: `#/components/examples/${this.name}` };
     }
 
     toObject(): ExampleObject {
@@ -120,21 +122,21 @@ export class ExampleModifier {
             description: this.description,
             externalValue: this.externalValue,
             summary: this.summary,
-            value: this.value
-        }
+            value: this.value,
+        };
     }
 
     toJSON(): ExampleObject {
-        return this.toObject()
+        return this.toObject();
     }
 }
 
 export class SchemaModifier implements ISchemaModifier {
-    protected name: string
-    protected schema: SchemaModel = {}
+    protected name: string;
+    protected schema: SchemaModel = {};
 
     constructor(name: string, schema?: SchemaModel) {
-        this.name = name
+        this.name = name;
         if (schema) {
             this.setSchema(schema);
         }
@@ -142,132 +144,134 @@ export class SchemaModifier implements ISchemaModifier {
 
     #convertOne(v: SchemaModel | ISchemaModifier): SchemaObject3_1 | ReferenceObject {
         if ('ref' in v && typeof v.ref == 'function') {
-            return v.ref()
+            return v.ref();
         } else {
-            return new SchemaModifier('tmp', v as SchemaModel).toObject()
+            return new SchemaModifier('tmp', v as SchemaModel).toObject();
         }
     }
 
     #convertMany(v: Array<SchemaModel | ISchemaModifier>): Array<SchemaObject3_1 | ReferenceObject> {
-        const r: Array<SchemaObject3_1 | ReferenceObject> = []
+        const r: Array<SchemaObject3_1 | ReferenceObject> = [];
         for (const element of v) {
-            r.push(this.#convertOne(element))
+            r.push(this.#convertOne(element));
         }
-        return r
+        return r;
     }
 
-    #convertObjectOf(v: Record<string, SchemaModel | ISchemaModifier>): Record<string, SchemaObject3_1 | ReferenceObject> {
-        const r: Record<string, SchemaObject3_1 | ReferenceObject> = {}
+    #convertObjectOf(
+        v: Record<string, SchemaModel | ISchemaModifier>
+    ): Record<string, SchemaObject3_1 | ReferenceObject> {
+        const r: Record<string, SchemaObject3_1 | ReferenceObject> = {};
         for (const k in v) {
-            const vk = v[k]
-            r[k] = (this.#convertOne(vk))
+            const vk = v[k];
+            r[k] = this.#convertOne(vk);
         }
-        return r
+        return r;
     }
 
     getName(): string {
-        return this.name
+        return this.name;
     }
 
     setSchema(schema: SchemaModel): this {
         this.schema = schema;
-        return this
+        return this;
     }
 
     ref(): ReferenceObject {
-        return { $ref: `#/components/schemas/${this.name}` }
+        return { $ref: `#/components/schemas/${this.name}` };
     }
 
     toObject(): SchemaObject3_1 {
-        const { allOf, anyOf, oneOf, not, items, properties, additionalProperties, ...value } = this.schema
-        const valueToKeep: SchemaObject3_1 = value
+        const { allOf, anyOf, oneOf, not, items, properties, additionalProperties, ...value } = this.schema;
+        const valueToKeep: SchemaObject3_1 = value;
         if (allOf) {
-            valueToKeep.allOf = this.#convertMany(allOf)
+            valueToKeep.allOf = this.#convertMany(allOf);
         }
         if (anyOf) {
-            valueToKeep.anyOf = this.#convertMany(anyOf)
+            valueToKeep.anyOf = this.#convertMany(anyOf);
         }
         if (oneOf) {
-            valueToKeep.oneOf = this.#convertMany(oneOf)
+            valueToKeep.oneOf = this.#convertMany(oneOf);
         }
         if (not) {
-            valueToKeep.not = this.#convertOne(not)
+            valueToKeep.not = this.#convertOne(not);
         }
         if (items) {
-            valueToKeep.items = this.#convertOne(items)
+            valueToKeep.items = this.#convertOne(items);
         }
         if (properties) {
-            valueToKeep.properties = this.#convertObjectOf(properties)
+            valueToKeep.properties = this.#convertObjectOf(properties);
         }
         if (typeof additionalProperties !== 'undefined') {
             if (typeof additionalProperties === 'boolean') {
-                valueToKeep.additionalProperties = additionalProperties
+                valueToKeep.additionalProperties = additionalProperties;
             } else {
-                valueToKeep.additionalProperties = this.#convertOne(additionalProperties)
+                valueToKeep.additionalProperties = this.#convertOne(additionalProperties);
             }
         }
         return { ...valueToKeep };
     }
 
     toJSON(): SchemaObject3_1 {
-        return this.toObject()
+        return this.toObject();
     }
 }
 
 export class MediaTypeModifier extends MediaTypeUtil {
+    protected schema?: SchemaModel | SchemaModifier;
 
-    protected schema?: SchemaModel | SchemaModifier
-
-    protected examples?: Record<string, ExampleObject | ReferenceObject | ExampleModifier>
+    protected examples?: Record<string, ExampleObject | ReferenceObject | ExampleModifier>;
 
     constructor(mediaType?: MediaTypeModel) {
-        super({})
+        super({});
         if (mediaType) {
-            const { examples, schema, encoding, example } = mediaType
-            if (encoding)
-                this.setEncoding(encoding)
-            if (example)
-                this.setExample(example)
+            const { examples, schema, encoding, example } = mediaType;
+            if (encoding) this.setEncoding(encoding);
+            if (example) this.setExample(example);
             if (examples) {
-                this.setExamples(examples)
+                this.setExamples(examples);
             }
             if (schema) {
-                this.setSchema(schema)
+                this.setSchema(schema);
             }
         }
     }
 
     setExamples(examples: Record<string, ExampleObject | ReferenceObject | ExampleModifier>): this {
-        this.examples = examples
-        return this
+        this.examples = examples;
+        return this;
     }
 
     setSchema(schema: SchemaModel | SchemaModifier): this {
-        this.schema = schema
-        return this
+        this.schema = schema;
+        return this;
     }
 
     toObject(noRef?: boolean): MediaTypeObject {
-        const withSchema: { schema?: SchemaObject3_1 | ReferenceObject, examples?: Record<string, ExampleObject | ReferenceObject> } = {};
+        const withSchema: {
+            schema?: SchemaObject3_1 | ReferenceObject;
+            examples?: Record<string, ExampleObject | ReferenceObject>;
+        } = {};
         if (typeof this.schema !== 'undefined') {
             if (this.schema instanceof SchemaModifier) {
-                withSchema.schema = this.schema.ref()
+                withSchema.schema = this.schema.ref();
             } else {
-                withSchema.schema = new SchemaModifier('tmp', this.schema).toObject()
+                withSchema.schema = new SchemaModifier('tmp', this.schema).toObject();
             }
         }
         if (typeof this.examples !== 'undefined') {
-            withSchema.examples = {}
+            withSchema.examples = {};
             for (const key in this.examples) {
-                const example = this.examples[key]
+                const example = this.examples[key];
                 if (example instanceof ExampleModifier) {
                     if (noRef) {
-                        withSchema.examples[key] = example.toObject()
+                        withSchema.examples[key] = example.toObject();
                     } else {
-                        withSchema.examples[key] = example.ref()
+                        withSchema.examples[key] = example.ref();
                     }
                 } else {
-                    withSchema.examples[key] = example
+                    withSchema.examples[key] = example;
                 }
             }
         }
@@ -286,7 +290,7 @@ function isContentFileSchema(schema: SchemaModel | ReferenceObject | SchemaModif
 
     if ('type' in schema) {
         if (schema.type !== 'string') {
-            return r
+            return r;
         }
         nbProps++;
     }
@@ -304,7 +308,7 @@ function isContentFileSchema(schema: SchemaModel | ReferenceObject | SchemaModif
     }
 
     if (nbProps === Object.keys(schema).length) {
-        r = true
+        r = true;
     }
 
     return r;
@@ -319,11 +323,11 @@ interface JsontoxmlSample {
 
 function createElementJsontoxmlSample(name: string, schema: SchemaObject3_1 | ReferenceObject): JsontoxmlSample {
     const res: JsontoxmlSample = {
-        name
+        name,
     };
     if ('xml' in schema) {
         let prefix = '';
-        const xml: XMLObject | undefined = schema.xml as (XMLObject | undefined);
+        const xml: XMLObject | undefined = schema.xml as XMLObject | undefined;
         if (xml?.name) {
             res.name = xml.name;
         }
@@ -333,14 +337,14 @@ function createElementJsontoxmlSample(name: string, schema: SchemaObject3_1 | Re
         if (xml?.namespace) {
             const xmlns = prefix ? `xmlns:${prefix}` : `xmlns:${res.name}`;
             res.attrs = {
-                [xmlns]: xml.namespace
+                [xmlns]: xml.namespace,
             };
         }
         if (prefix) {
             res.name = `${prefix}:${res.name}`;
         }
     }
-    return res
+    return res;
 }
 
 function formatJsontoxmlSample(json: JsontoxmlSample, properties: Record<string, SchemaObject3_1 | ReferenceObject>) {
@@ -348,7 +352,7 @@ function formatJsontoxmlSample(json: JsontoxmlSample, properties: Record<string,
         const propSchema = properties[propName];
         const jsonChild = createJsontoxmlSample(propName, propSchema);
         if ('xml' in propSchema) {
-            const xmlObject = propSchema.xml as (XMLObject | undefined);
+            const xmlObject = propSchema.xml as XMLObject | undefined;
             if (xmlObject?.attribute) {
                 json.attrs = json.attrs || {};
                 json.attrs[propName] = jsonChild.text || '';
@@ -371,52 +375,52 @@ function createJsontoxmlSample(name: string, schema: SchemaObject3_1 | Reference
             // no overdo: do not support anyOf or oneOf here
             if (schema.items && 'type' in schema.items && typeof schema.items.type === 'string') {
                 let text: string | undefined;
-                const itemType = schema.items.type
-                const itemSchema = schema.items
+                const itemType = schema.items.type;
+                const itemSchema = schema.items;
                 if (typeof itemSchema.default !== 'undefined') {
-                    text = `${itemSchema.default}`
+                    text = `${itemSchema.default}`;
                 } else if (itemSchema.examples?.length) {
-                    text = `${itemSchema.examples[0]}`
+                    text = `${itemSchema.examples[0]}`;
                 } else if (itemSchema.type === 'number' || itemSchema.type === 'integer') {
-                    text = `${itemSchema.minimum ? itemSchema.minimum : (itemSchema.exclusiveMinimum ? itemSchema.exclusiveMinimum : 0)}`;
+                    text = `${itemSchema.minimum ? itemSchema.minimum : itemSchema.exclusiveMinimum ? itemSchema.exclusiveMinimum : 0}`;
                 } else if (itemSchema.type === 'boolean') {
                     text = 'true';
                 } else if (itemSchema.type === 'string') {
                     text = `${itemSchema.format || itemSchema.type}`;
                 } else if (itemSchema.format) {
-                    text = `(${itemSchema.format})`
+                    text = `(${itemSchema.format})`;
                 } else if (itemType) {
-                    text = `(${itemType})`
+                    text = `(${itemType})`;
                 }
                 if (text) {
                     res.text = text;
                 }
             }
         } else if (schema.type === 'object' && schema.properties && Object.keys(schema.properties).length) {
-            formatJsontoxmlSample(res, schema.properties)
+            formatJsontoxmlSample(res, schema.properties);
         } else {
             let text: string | undefined;
             if (typeof schema.default !== 'undefined') {
-                text = `${schema.default}`
+                text = `${schema.default}`;
             } else if (schema.examples?.length) {
-                text = `${schema.examples[0]}`
+                text = `${schema.examples[0]}`;
             } else if (schema.type === 'number' || schema.type === 'integer') {
-                text = `${schema.minimum ? schema.minimum : (schema.exclusiveMinimum ? schema.exclusiveMinimum : 0)}`;
+                text = `${schema.minimum ? schema.minimum : schema.exclusiveMinimum ? schema.exclusiveMinimum : 0}`;
             } else if (schema.type === 'boolean') {
                 text = 'true';
             } else if (schema.type === 'string') {
                 text = `${schema.format || schema.type}`;
             } else if (schema.format) {
-                text = `(${schema.format})`
+                text = `(${schema.format})`;
             } else if (schema.type) {
-                text = `(${schema.type})`
+                text = `(${schema.type})`;
             }
             if (text) {
                 res.text = text;
             }
         }
     }
-    return res
+    return res;
 }
 
 function createRawSample(schema: SchemaObject3_1 | ReferenceObject, deepLevel = 0): unknown {
@@ -425,34 +429,32 @@ function createRawSample(schema: SchemaObject3_1 | ReferenceObject, deepLevel = 
         return;
     }
     if ('$ref' in schema && Object.keys(schema).length === 1) {
-        return
+        return;
     }
 
     if ('default' in schema && typeof schema.default !== 'undefined') {
         // default value
-        sample = schema.default
+        sample = schema.default;
     } else if ('enum' in schema && Array.isArray(schema.enum) && schema.enum.length) {
         // default value
-        sample = schema.enum[0]
+        sample = schema.enum[0];
     } else if ('examples' in schema && Array.isArray(schema.examples) && schema.examples.length) {
         // first example value
-        sample = schema.examples[0]
+        sample = schema.examples[0];
     } else if ('anyOf' in schema && Array.isArray(schema.anyOf) && schema.anyOf.length) {
         // first example value
-        sample = createRawSample(schema.anyOf[0], deepLevel + 1)
+        sample = createRawSample(schema.anyOf[0], deepLevel + 1);
     } else if ('oneOf' in schema && Array.isArray(schema.oneOf) && schema.oneOf.length) {
         // first example value
-        sample = createRawSample(schema.oneOf[0], deepLevel + 1)
+        sample = createRawSample(schema.oneOf[0], deepLevel + 1);
     } else if ('type' in schema) {
         if (schema.type === 'object') {
             const obj: Record<string, unknown> = {};
             if (schema.properties) {
-                const props = schema.properties
-                Object.keys(props).forEach(
-                    name => {
-                        obj[name] = createRawSample(props[name], deepLevel + 1);
-                    }
-                );
+                const props = schema.properties;
+                Object.keys(props).forEach((name) => {
+                    obj[name] = createRawSample(props[name], deepLevel + 1);
+                });
             }
             sample = obj;
         } else if (schema.type === 'array') {
@@ -465,15 +467,15 @@ function createRawSample(schema: SchemaObject3_1 | ReferenceObject, deepLevel = 
             }
             sample = arr;
         } else if (schema.type === 'number' || schema.type === 'integer') {
-            sample = schema.minimum ? schema.minimum : (schema.exclusiveMinimum ? schema.exclusiveMinimum : 0);
+            sample = schema.minimum ? schema.minimum : schema.exclusiveMinimum ? schema.exclusiveMinimum : 0;
         } else if (schema.type === 'boolean') {
-            sample = true
+            sample = true;
         } else if (schema.format) {
-            sample = `<${schema.format}>`
+            sample = `<${schema.format}>`;
         } else if (schema.type === 'string') {
-            sample = ''
+            sample = '';
         } else {
-            sample = `<${schema.type}>`
+            sample = `<${schema.type}>`;
         }
     }
 
@@ -539,64 +541,69 @@ export class RequestBodyDocsModifier {
     }
 
     ref(): ReferenceObject {
-        return { $ref: this.requestBodyRef || `#/components/requestBodies/${this.name}` }
+        return { $ref: this.requestBodyRef || `#/components/requestBodies/${this.name}` };
     }
 
     toPostman(): PostmanRequestBodyModel {
-        const result: PostmanRequestBodyModel['body'] = {}
-        const header: PostmanRequestBodyModel['header'] = []
+        const result: PostmanRequestBodyModel['body'] = {};
+        const header: PostmanRequestBodyModel['header'] = [];
         for (const contentType in this.content) {
             header.push({
                 key: 'Content-Type',
-                value: contentType
+                value: contentType,
             });
-            const mediaTypeModel = this.content[contentType].toModel()
-            const contentSchema = mediaTypeModel.schema
-            result.mode = 'raw'
+            const mediaTypeModel = this.content[contentType].toModel();
+            const contentSchema = mediaTypeModel.schema;
+            result.mode = 'raw';
             if (contentType === 'multipart/form-data') {
-                result.mode = 'formdata'
-                result.formdata = []
+                result.mode = 'formdata';
+                result.formdata = [];
                 if (contentSchema) {
-                    const rawSchema: SchemaObject3_1 | undefined = contentSchema instanceof SchemaModifier ?
-                        contentSchema.toObject() : (
-                            !('$ref' in contentSchema) ? new SchemaModifier('tmp', contentSchema).toObject() : undefined
-                        )
+                    const rawSchema: SchemaObject3_1 | undefined =
+                        contentSchema instanceof SchemaModifier
+                            ? contentSchema.toObject()
+                            : !('$ref' in contentSchema)
+                              ? new SchemaModifier('tmp', contentSchema).toObject()
+                              : undefined;
                     if (rawSchema) {
                         if (rawSchema.properties) {
                             for (const key in rawSchema.properties) {
-                                const propSchema = rawSchema.properties[key]
+                                const propSchema = rawSchema.properties[key];
                                 if ('$ref' in propSchema) {
                                     result.formdata.push({
                                         key,
-                                        type: 'text'
-                                    })
+                                        type: 'text',
+                                    });
                                 } else {
-                                    const fieldType = propSchema.contentMediaType ? 'file' : 'text'
+                                    const fieldType = propSchema.contentMediaType ? 'file' : 'text';
                                     result.formdata.push({
                                         key,
                                         type: fieldType,
                                         description: propSchema.description,
                                         src: fieldType === 'file' ? [] : undefined,
-                                        disabled: rawSchema.required?.includes(key) ? false : true
-                                    })
+                                        disabled: rawSchema.required?.includes(key) ? false : true,
+                                    });
                                 }
                             }
                         }
                     }
                 }
             } else if (!contentSchema || isContentFileSchema(contentSchema)) {
-                result.mode = 'file'
+                result.mode = 'file';
                 result.file = {
-                    src: ''
-                }
-                result.disabled = false
+                    src: '',
+                };
+                result.disabled = false;
             } else {
                 // create raw value
                 if (typeof mediaTypeModel.example !== 'undefined') {
                     result.raw = `${mediaTypeModel.example}`;
                 }
                 // if there are examples
-                if (typeof mediaTypeModel.examples !== 'undefined' && Object.keys(mediaTypeModel.examples).length !== 0) {
+                if (
+                    typeof mediaTypeModel.examples !== 'undefined' &&
+                    Object.keys(mediaTypeModel.examples).length !== 0
+                ) {
                     for (const key in mediaTypeModel.examples) {
                         const example = mediaTypeModel.examples[key];
                         if (example instanceof ExampleModifier) {
@@ -610,26 +617,25 @@ export class RequestBodyDocsModifier {
                 }
                 // if no raw content was set
                 if (!result.raw) {
-                    const rawSchema: SchemaObject3_1 | undefined = contentSchema instanceof SchemaModifier ?
-                        contentSchema.toObject() : (
-                            !('$ref' in contentSchema) ? new SchemaModifier('tmp', contentSchema).toObject() : undefined
-                        )
+                    const rawSchema: SchemaObject3_1 | undefined =
+                        contentSchema instanceof SchemaModifier
+                            ? contentSchema.toObject()
+                            : !('$ref' in contentSchema)
+                              ? new SchemaModifier('tmp', contentSchema).toObject()
+                              : undefined;
                     if (rawSchema) {
                         if (contentType === 'application/xml') {
                             // xml
-                            const json: JsontoxmlSample = createElementJsontoxmlSample(
-                                'element',
-                                rawSchema
-                            );
+                            const json: JsontoxmlSample = createElementJsontoxmlSample('element', rawSchema);
                             if ('properties' in rawSchema && rawSchema.properties) {
-                                formatJsontoxmlSample(json, rawSchema.properties)
+                                formatJsontoxmlSample(json, rawSchema.properties);
                             }
                             result.raw = jsontoxml([json], {
                                 xmlHeader: true,
-                                indent: ' '
+                                indent: ' ',
                             });
                         } else {
-                            const sample = createRawSample(rawSchema)
+                            const sample = createRawSample(rawSchema);
                             if (typeof sample !== 'undefined') {
                                 result.raw = JSON.stringify(sample, null, '\t');
                             }
@@ -639,28 +645,28 @@ export class RequestBodyDocsModifier {
             }
             break;
         }
-        return { header, body: result }
+        return { header, body: result };
     }
 
     toOpenAPI(): OpenAPIRequestBodyObject {
-        const content: OpenAPIRequestBodyObject['content'] = {}
+        const content: OpenAPIRequestBodyObject['content'] = {};
         for (const contentType in this.content) {
-            const modifier = this.content[contentType]
-            content[contentType] = modifier.toObject()
+            const modifier = this.content[contentType];
+            content[contentType] = modifier.toObject();
         }
         const result: OpenAPIRequestBodyObject = {
-            content
-        }
+            content,
+        };
 
         if (this.description) {
-            result.description = this.description
+            result.description = this.description;
         }
 
         if (this.isRequired()) {
-            result.required = true
+            result.required = true;
         }
 
-        return result
+        return result;
     }
 }
 
@@ -670,8 +676,7 @@ export class RequestBodyDocsModifier {
 export class ResponseDocsModifier extends ResponseUtil {
     constructor(name?: string) {
         super(name);
-        if (!name)
-            this.setName('')
+        if (!name) this.setName('');
     }
     toOpenAPIRefPreferred(): Record<string, ResponseObject | ReferenceObject>;
     toOpenAPIRefPreferred(ctxt: IOpenAPIResponseContext): Record<string, ResponseObject | ReferenceObject>;
@@ -692,29 +697,29 @@ export class ResponseDocsModifier extends ResponseUtil {
         if (ctxt.ref) {
             return {
                 [name]: {
-                    $ref: ctxt.ref
-                }
+                    $ref: ctxt.ref,
+                },
             };
         }
         if (this.ref) {
             return {
                 [name]: {
-                    $ref: this.ref
-                }
+                    $ref: this.ref,
+                },
             };
         }
         if (this.name) {
             return {
                 [name]: {
-                    $ref: `#/components/responses/${this.name}`
-                }
-            }
+                    $ref: `#/components/responses/${this.name}`,
+                },
+            };
         }
-        return this.toOpenAPI(ctxt)
+        return this.toOpenAPI(ctxt);
     }
 
     withContext(): ContextResponseDocsModifier {
-        return new ContextResponseDocsModifier(this)
+        return new ContextResponseDocsModifier(this);
     }
 }
 
@@ -748,7 +753,7 @@ export class GroupResponseDocsModifier extends GroupResponseUtil {
     }
     toOpenAPIRefPreferred(): Record<string, ResponseObject | ReferenceObject> {
         let r: Record<string, ResponseObject | ReferenceObject> = {};
-        this.responseUtils.forEach(builder => {
+        this.responseUtils.forEach((builder) => {
             if (builder instanceof ResponseDocsModifier) {
                 r = { ...r, ...builder.toOpenAPIRefPreferred() };
             } else {
@@ -759,8 +764,6 @@ export class GroupResponseDocsModifier extends GroupResponseUtil {
     }
 }
 
-export function groupResponses(
-    ...modifiers: BaseResponseUtil[]
-) {
-    return new GroupResponseDocsModifier(modifiers)
+export function groupResponses(...modifiers: BaseResponseUtil[]) {
+    return new GroupResponseDocsModifier(modifiers);
 }

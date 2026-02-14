@@ -94,23 +94,23 @@ You can use `withSchema` to create validated routes without directly chaining fr
 This cleanly separates **route construction** from **app registration**.
 
 ```ts
-import { withSchema } from '@kaapi/validator-arktype'
+import { withSchema } from '@kaapi/validator-arktype';
 import { type } from 'arktype';
 
 const schema = {
-  payload: type({
-      name: 'string'
-  })
-}
+    payload: type({
+        name: 'string',
+    }),
+};
 
 const route = withSchema(schema).route({
-  method: 'POST',
-  path: '/items',
-  handler: req => ({ id: Date.now(), name: req.payload.name })
-})
+    method: 'POST',
+    path: '/items',
+    handler: (req) => ({ id: Date.now(), name: req.payload.name }),
+});
 
 // later, during app setup
-app.route(route)
+app.route(route);
 ```
 
 This is the most flexible and convenient way to use `@kaapi/validator-arktype` when building modular APIs.
@@ -164,7 +164,7 @@ app.base()
             name: type(['string', '@', 'Optional name to personalize the greeting response'])
                 .pipe((v) => v?.trim() ?? '')
                 .to('0 < string <= 10')
-                .default('World')
+                .default('World'),
         }),
         failAction: async (request, h, err) => {
             if (Boom.isBoom(err)) {
@@ -201,7 +201,7 @@ app.base()
                 hapi: type({
                     filename: 'string',
                     headers: {
-                        'content-type': '\'image/jpeg\' | \'image/jpg\' | \'image/png\'',
+                        'content-type': "'image/jpeg' | 'image/jpg' | 'image/png'",
                     },
                 }),
             }),

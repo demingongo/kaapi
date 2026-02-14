@@ -1,8 +1,8 @@
-import { camelCase, kebabCase } from '../../utils';
 import { FileGenerator, Question, QuestionType } from '../../definitions';
+import { camelCase, kebabCase } from '../../utils';
 
 export interface GeneratorFileGenerator extends FileGenerator {
-    generatorName: string
+    generatorName: string;
 }
 
 export const kaapiGeneratorGenerator: GeneratorFileGenerator = {
@@ -10,20 +10,20 @@ export const kaapiGeneratorGenerator: GeneratorFileGenerator = {
     type: 'others',
     description: 'Creates a simple generator for @kaapi/cli.',
     options: {
-        name: 'The name of the generator'
+        name: 'The name of the generator',
     },
 
     generatorName: '',
 
     init: function (options: Record<string, unknown>): void {
         if (typeof options['name'] == 'string') {
-            this.generatorName = camelCase(options['name'])
+            this.generatorName = camelCase(options['name']);
         }
     },
     getFileContent: function (): string {
         let className = camelCase(this.generatorName);
-        className = className.substring(0, 1).toUpperCase() + className.substring(1)
-        const cmdName = kebabCase(this.generatorName)
+        className = className.substring(0, 1).toUpperCase() + className.substring(1);
+        const cmdName = kebabCase(this.generatorName);
         return `import { FileGenerator, FileGeneratorType, Question, QuestionType } from '@kaapi/cli/definitions'
 import { kebabCase } from '@kaapi/cli/utils'
 
@@ -122,10 +122,10 @@ start();
         \`
     }
 }
-`
+`;
     },
     isValid(): boolean {
-        return !!this.generatorName
+        return !!this.generatorName;
     },
     getQuestions(): Question[] {
         return [
@@ -134,16 +134,16 @@ start();
                 options: {
                     message: 'The name of the generator?',
                     defaultValue: 'custom-generator',
-                    placeholder: 'custom-generator'
+                    placeholder: 'custom-generator',
                 },
                 setValue: (generatorName) => {
-                    this.generatorName = camelCase(generatorName)
+                    this.generatorName = camelCase(generatorName);
                 },
-                skip: () => !!this.generatorName
-            }
-        ]
+                skip: () => !!this.generatorName,
+            },
+        ];
     },
     getFilename(): string {
-        return `${kebabCase(this.generatorName)}.ts`
-    }
-}
+        return `${kebabCase(this.generatorName)}.ts`;
+    },
+};

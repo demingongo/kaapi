@@ -1,4 +1,4 @@
-import { ValidatorZodSchema, ValidatorZod } from './types'
+import { ValidatorZodSchema, ValidatorZod } from './types';
 
 declare module '@kaapi/kaapi' {
     interface PluginSpecificConfiguration {
@@ -6,8 +6,8 @@ declare module '@kaapi/kaapi' {
     }
 
     interface Server {
-        zod: ValidatorZod
+        zod: ValidatorZod;
     }
 }
 
-export { }
+export {};

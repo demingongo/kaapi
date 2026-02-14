@@ -1,11 +1,9 @@
 {
-  "entryPoints": [
-    "src"
-  ],
-  "out": "docs",
+    "entryPoints": ["src"],
+    "out": "docs",
 
-  "excludeInternal": true,
-  "excludePrivate": true,
-  "includeVersion": true,
-  "hideGenerator": true
+    "excludeInternal": true,
+    "excludePrivate": true,
+    "includeVersion": true,
+    "hideGenerator": true
 }

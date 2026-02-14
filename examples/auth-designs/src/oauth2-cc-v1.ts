@@ -14,7 +14,7 @@ import {
     //PrivateKeyJwt
 } from '@kaapi/oauth2-auth-design';
 
-const tokenType = new BearerToken()
+const tokenType = new BearerToken();
 //const tokenType = new DPoPToken()
 //    .setTTL(300) // default 300s
 //    .setReplayDetector(createInMemoryReplayStore()) // cache DPoP tokens
@@ -24,10 +24,9 @@ export const clientCredentialsDesignV1 = MultipleFlowsBuilder.create()
     .tokenEndpoint('/oauth2/m2mcc/token')
     .setPublicKeyExpiry(36000 * 2)
     .setJwksKeyStore(createInMemoryKeyStore()) // store for JWKS
-    .jwksRoute(route => route.setPath('/oauth2/m2mcc/keys')) // activates jwks uri
+    .jwksRoute((route) => route.setPath('/oauth2/m2mcc/keys')) // activates jwks uri
     .add(
-        OIDCClientCredentialsBuilder
-            .create()
+        OIDCClientCredentialsBuilder.create()
             .setTokenType(tokenType)
             .setTokenTTL(36000)
             .addClientAuthenticationMethod(new ClientSecretPost())
@@ -35,10 +34,10 @@ export const clientCredentialsDesignV1 = MultipleFlowsBuilder.create()
             //.jwksRoute(route => route.setPath('/oauth2/m2m/keys')) // activates jwks uri
             .useAccessTokenJwks(true) // activates JWT access token verification with JWKS
             .validate(async (_, { token, jwtAccessTokenPayload }) => {
-                console.log('jwtAccessTokenPayload=', jwtAccessTokenPayload)
+                console.log('jwtAccessTokenPayload=', jwtAccessTokenPayload);
                 //#region @TODO: validation
                 if (jwtAccessTokenPayload?.machine != '248289761001') {
-                    return { isValid: false }
+                    return { isValid: false };
                 }
 
                 //#endregion @TODO: validation
@@ -51,57 +50,64 @@ export const clientCredentialsDesignV1 = MultipleFlowsBuilder.create()
                             sub: '248289761001',
                             name: 'Jane Doe',
                             given_name: 'Jane',
-                        }
-                    }
-                }
+                        },
+                    },
+                };
             })
-            .tokenRoute(route =>
-                route//.setPath('/oauth2/m2m/token')
-                    .generateToken(async ({ clientId, clientSecret, ttl, scope, createJwtAccessToken, createIdToken }, _req) => {
+            .tokenRoute((route) =>
+                route //.setPath('/oauth2/m2m/token')
+                    .generateToken(
+                        async ({ clientId, clientSecret, ttl, scope, createJwtAccessToken, createIdToken }, _req) => {
+                            console.log('clientId', clientId);
+                            console.log('clientSecret', clientSecret);
+                            console.log('ttl', ttl);
 
-                        console.log('clientId', clientId)
-                        console.log('clientSecret', clientSecret)
-                        console.log('ttl', ttl)
-
-                        if (!clientSecret) {
-                            return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Token Request was missing the \'client_secret\' parameter.' }
-                        }
-                        if (!ttl) {
-                            return { error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Missing ttl' }
-                        }
-                        try {
-                            //#region @TODO: validation + token
-                            if (createJwtAccessToken) {
-                                const { token: accessToken } = await createJwtAccessToken({
-                                    machine: '248289761001',
-                                    name: 'Jane Doe',
-                                })
-                                const refreshToken = 'generated_refresh_token'/*await createJwtAccessToken({
+                            if (!clientSecret) {
+                                return {
+                                    error: OAuth2ErrorCode.INVALID_REQUEST,
+                                    error_description: "Token Request was missing the 'client_secret' parameter.",
+                                };
+                            }
+                            if (!ttl) {
+                                return { error: OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Missing ttl' };
+                            }
+                            try {
+                                //#region @TODO: validation + token
+                                if (createJwtAccessToken) {
+                                    const { token: accessToken } = await createJwtAccessToken({
+                                        machine: '248289761001',
+                                        name: 'Jane Doe',
+                                    });
+                                    const refreshToken = 'generated_refresh_token'; /*await createJwtAccessToken({
                                 machine: '248289761001',
                                 name: 'Jane Doe',
                                 refresh: true,
                                 exp: ttl * 2
                             })*/
-                                const idToken = (scope?.split(' ').includes('openid') || undefined) && await createIdToken?.({
-                                    sub: clientId
-                                })
-                                return new OAuth2TokenResponse({ access_token: accessToken })
-                                    .setExpiresIn(ttl)
-                                    .setRefreshToken(refreshToken)
-                                    .setScope(scope?.split(' '))
-                                    .setTokenType(tokenType)
-                                    .setIdToken(
-                                        idToken?.token
-                                    )
+                                    const idToken =
+                                        (scope?.split(' ').includes('openid') || undefined) &&
+                                        (await createIdToken?.({
+                                            sub: clientId,
+                                        }));
+                                    return new OAuth2TokenResponse({ access_token: accessToken })
+                                        .setExpiresIn(ttl)
+                                        .setRefreshToken(refreshToken)
+                                        .setScope(scope?.split(' '))
+                                        .setTokenType(tokenType)
+                                        .setIdToken(idToken?.token);
+                                }
+                                //#endregion @TODO: validation + token
+                            } catch (err) {
+                                console.error(err);
                             }
-                            //#endregion @TODO: validation + token
-                        } catch (err) {
-                            console.error(err)
-                        }
 
-                        return null
-                    }))
-            .setDescription('This API uses OAuth 2 with the client credentials grant flow. [More info](https://oauth.net/2/grant-types/authorization-code/)')
+                            return null;
+                        }
+                    )
+            )
+            .setDescription(
+                'This API uses OAuth 2 with the client credentials grant flow. [More info](https://oauth.net/2/grant-types/authorization-code/)'
+            )
             .setScopes({
                 'read:data': 'Allows the client to retrieve or query data from the service.',
                 'write:data': 'Allows the client to create or update data in the service.',
@@ -112,9 +118,10 @@ export const clientCredentialsDesignV1 = MultipleFlowsBuilder.create()
                 'write:logs': 'Allows the client to send or store logs into the system.',
                 'execute:tasks': 'Allows the client to trigger or run predefined tasks or jobs.',
                 'manage:tokens': 'Allows the client to manage access or refresh tokens for automation.',
-                'admin:all': 'Grants full administrative access to all available resources and operations.'
+                'admin:all': 'Grants full administrative access to all available resources and operations.',
             })
-    ).build()
+    )
+    .build();
 
 /*
 OIDCClientCredentialsBuilder

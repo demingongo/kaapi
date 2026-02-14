@@ -4,25 +4,25 @@
 
 It abstracts Kafka's producer/consumer logic and provides a simple interface to:
 
-* ✅ Publish messages (single or batch)
-* ✅ Subscribe to topics with flexible consumer group options
-* ✅ Support structured logging via Kaapi's logger
-* ✅ Handle offsets and message metadata
-* ✅ Reuse Kafka producers/consumers with race-condition protection
-* ✅ Custom error handling for failed message handlers
+- ✅ Publish messages (single or batch)
+- ✅ Subscribe to topics with flexible consumer group options
+- ✅ Support structured logging via Kaapi's logger
+- ✅ Handle offsets and message metadata
+- ✅ Reuse Kafka producers/consumers with race-condition protection
+- ✅ Custom error handling for failed message handlers
 
 ---
 
 ## ✨ Features
 
-* Simple `publish(topic, message)` and `publishBatch(topic, messages)` APIs
-* Flexible `subscribe(topic, handler, config)` with custom groupId, error handling, and offset tracking
-* Singleton producer with race-condition safe initialization
-* Lazy admin initialization to minimize connections
-* KafkaJS-compatible configuration
-* Structured logging via Kaapi's `ILogger`
-* Typed message handling with TypeScript
-* Graceful shutdown with detailed summary
+- Simple `publish(topic, message)` and `publishBatch(topic, messages)` APIs
+- Flexible `subscribe(topic, handler, config)` with custom groupId, error handling, and offset tracking
+- Singleton producer with race-condition safe initialization
+- Lazy admin initialization to minimize connections
+- KafkaJS-compatible configuration
+- Structured logging via Kaapi's `ILogger`
+- Typed message handling with TypeScript
+- Graceful shutdown with detailed summary
 
 ---
 
@@ -48,7 +48,7 @@ const messaging = new KafkaMessaging({
     brokers: ['localhost:9092'],
     name: 'my-service',
     address: 'service-1',
-    logger: createLogger() // optional, use Kaapi ILogger
+    logger: createLogger(), // optional, use Kaapi ILogger
 });
 ```
 
@@ -68,13 +68,16 @@ The constructor accepts a `KafkaMessagingConfig` object, which extends `KafkaCon
 ### Creating a Topic
 
 ```ts
-await messaging.createTopic({
-    topic: 'my-topic',
-    numPartitions: 1,
-    replicationFactor: 1,
-}, {
-    waitForLeaders: true
-});
+await messaging.createTopic(
+    {
+        topic: 'my-topic',
+        numPartitions: 1,
+        replicationFactor: 1,
+    },
+    {
+        waitForLeaders: true,
+    }
+);
 
 // ensure the topic is ready before publishing
 const timeoutMs = 10000;
@@ -98,6 +101,7 @@ await messaging.publish('my-topic', {
 ```
 
 Messages can be:
+
 - **Objects** → automatically JSON-serialized
 - **Strings** → sent as-is
 - **Buffers** → sent as-is (for binary data)
@@ -117,6 +121,7 @@ await messaging.publishBatch('user-events', [
 ```
 
 Each message in the batch can include:
+
 - `value` — the message payload (required)
 - `key` — optional partition key
 - `partition` — optional specific partition
@@ -129,13 +134,17 @@ Each message in the batch can include:
 `subscribe(topic, handler, config?)` subscribes to a Kafka topic and calls the provided handler on each message.
 
 ```ts
-await messaging.subscribe('my-topic', async (message, context) => {
-    console.log('Received:', message);
-    console.log('Offset:', context.offset);
-    console.log('Timestamp:', context.timestamp);
-}, {
-    fromBeginning: true
-});
+await messaging.subscribe(
+    'my-topic',
+    async (message, context) => {
+        console.log('Received:', message);
+        console.log('Offset:', context.offset);
+        console.log('Timestamp:', context.timestamp);
+    },
+    {
+        fromBeginning: true,
+    }
+);
 ```
 
 #### Subscribe Configuration
@@ -152,6 +161,7 @@ await messaging.subscribe('my-topic', async (message, context) => {
 #### Consumer Group ID Resolution
 
 The consumer group ID is resolved in this order:
+
 1. `groupId` if provided
 2. `{groupIdPrefix}.{topic}` if prefix provided
 3. `{name}.{topic}` using the service name from config
@@ -159,13 +169,13 @@ The consumer group ID is resolved in this order:
 
 ```ts
 // Using custom group ID
-await messaging.subscribe('user-events', handler, { 
-    groupId: 'my-custom-consumer-group' 
+await messaging.subscribe('user-events', handler, {
+    groupId: 'my-custom-consumer-group',
 });
 
 // Using custom prefix → "analytics.user-events"
-await messaging.subscribe('user-events', handler, { 
-    groupIdPrefix: 'analytics' 
+await messaging.subscribe('user-events', handler, {
+    groupIdPrefix: 'analytics',
 });
 ```
 
@@ -174,21 +184,26 @@ await messaging.subscribe('user-events', handler, {
 Use the `onError` callback to handle errors from message handlers without crashing:
 
 ```ts
-await messaging.subscribe('user-events', async (message) => {
-    await processMessage(message); // might throw
-}, {
-    onError: async (error, message, context) => {
-        console.error('Failed to process message:', error);
-        console.error('Message:', message);
-        console.error('Offset:', context.offset);
-        
-        // Log to external service, send to DLQ, etc.
-        await alertService.notify(error);
+await messaging.subscribe(
+    'user-events',
+    async (message) => {
+        await processMessage(message); // might throw
+    },
+    {
+        onError: async (error, message, context) => {
+            console.error('Failed to process message:', error);
+            console.error('Message:', message);
+            console.error('Offset:', context.offset);
+
+            // Log to external service, send to DLQ, etc.
+            await alertService.notify(error);
+        },
     }
-});
+);
 ```
 
 The `onError` callback receives:
+
 - `error` — the error thrown by the handler
 - `message` — the parsed message that failed
 - `context` — the message context (offset, headers, timestamp, etc.)
@@ -200,7 +215,7 @@ await messaging.subscribe('my-topic', handler, {
     onReady: (consumer) => {
         console.log('Consumer is ready!');
         // Access the raw KafkaJS consumer if needed
-    }
+    },
 });
 ```
 
@@ -212,7 +227,9 @@ await messaging.subscribe('my-topic', handler, {
 const offsets = await messaging.fetchTopicOffsets('my-topic');
 
 offsets?.forEach((partition) => {
-    console.log(`Partition ${partition.partition}: offset=${partition.offset}, high=${partition.high}, low=${partition.low}`);
+    console.log(
+        `Partition ${partition.partition}: offset=${partition.offset}, high=${partition.high}, low=${partition.low}`
+    );
 });
 ```
 
@@ -246,15 +263,14 @@ process.on('SIGTERM', async () => {
 
 ```ts
 // messaging.ts
-
-import { Kaapi } from '@kaapi/kaapi'
+import { Kaapi } from '@kaapi/kaapi';
 import { KafkaMessaging } from '@kaapi/kafka-messaging';
 
 const messaging = new KafkaMessaging({
     clientId: 'my-app',
     brokers: ['localhost:9092'],
     name: 'my-service',
-    address: 'service-1'
+    address: 'service-1',
 });
 
 /**
@@ -270,7 +286,6 @@ const app = new Kaapi({
  * Demonstrates how to subscribe and publish a message
  */
 async function runExample(): Promise<void> {
-
     /**
      * Option 1: Use Kaapi app (recommended in app lifecycle)
      */
@@ -290,15 +305,19 @@ async function runExample(): Promise<void> {
     await messaging.publish('my-topic', { event: 'user.created', userId: 123 });
 
     // Subscribe with error handling
-    await messaging.subscribe('my-topic', async (message, context) => {
-        console.log('Received:', message);
-        console.log('Offset:', context.offset);
-    }, {
-        fromBeginning: true,
-        onError: (error, message, context) => {
-            console.error('Handler failed:', error);
+    await messaging.subscribe(
+        'my-topic',
+        async (message, context) => {
+            console.log('Received:', message);
+            console.log('Offset:', context.offset);
+        },
+        {
+            fromBeginning: true,
+            onError: (error, message, context) => {
+                console.error('Handler failed:', error);
+            },
         }
-    });
+    );
 
     // Batch publish
     await messaging.publishBatch('my-topic', [
@@ -320,35 +339,35 @@ The `KafkaMessaging` class provides a safe and resilient interface for interacti
 
 ### Public Methods
 
-| Method                                            | Purpose                                                                      |
-| ------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `createProducer(config?)`                         | Creates and connects a Kafka producer. Automatically tracked.                |
-| `createConsumer(groupId, config?)`                | Creates and connects a Kafka consumer. Automatically tracked.                |
-| `createAdmin(config?)`                            | Creates and connects a Kafka admin client. Tracked for shutdown.             |
-| `getProducer()`                                   | Gets or creates the singleton producer (race-condition safe).                |
-| `publish(topic, message)`                         | Sends a message to the specified topic.                                      |
-| `publishBatch(topic, messages)`                   | Sends multiple messages in a single batch.                                   |
-| `subscribe(topic, handler, config?)`              | Subscribes to a topic and processes messages with the given handler.         |
-| `fetchTopicOffsets(topic)`                        | Fetches partition offsets for a topic.                                       |
-| `createTopic(topicConfig, options?)`              | Creates a Kafka topic with optional validation and leader wait.              |
-| `waitForTopicReady(topic, timeoutMs?, intervalMs?)` | Waits for a topic to be ready (has partitions).                            |
-| `shutdown()`                                      | Gracefully disconnects all tracked clients. Returns a summary.               |
-| `safeDisconnect(client, timeoutMs?)`              | Disconnects a Kafka client with timeout protection.                          |
-| `disconnectProducer()`                            | Disconnects the singleton producer.                                          |
+| Method                                              | Purpose                                                              |
+| --------------------------------------------------- | -------------------------------------------------------------------- |
+| `createProducer(config?)`                           | Creates and connects a Kafka producer. Automatically tracked.        |
+| `createConsumer(groupId, config?)`                  | Creates and connects a Kafka consumer. Automatically tracked.        |
+| `createAdmin(config?)`                              | Creates and connects a Kafka admin client. Tracked for shutdown.     |
+| `getProducer()`                                     | Gets or creates the singleton producer (race-condition safe).        |
+| `publish(topic, message)`                           | Sends a message to the specified topic.                              |
+| `publishBatch(topic, messages)`                     | Sends multiple messages in a single batch.                           |
+| `subscribe(topic, handler, config?)`                | Subscribes to a topic and processes messages with the given handler. |
+| `fetchTopicOffsets(topic)`                          | Fetches partition offsets for a topic.                               |
+| `createTopic(topicConfig, options?)`                | Creates a Kafka topic with optional validation and leader wait.      |
+| `waitForTopicReady(topic, timeoutMs?, intervalMs?)` | Waits for a topic to be ready (has partitions).                      |
+| `shutdown()`                                        | Gracefully disconnects all tracked clients. Returns a summary.       |
+| `safeDisconnect(client, timeoutMs?)`                | Disconnects a Kafka client with timeout protection.                  |
+| `disconnectProducer()`                              | Disconnects the singleton producer.                                  |
 
 ### Read-only Properties
 
-| Property          | Type                    | Description                        |
-| ----------------- | ----------------------- | ---------------------------------- |
-| `activeProducers` | `ReadonlySet<Producer>` | Currently tracked producers.       |
-| `activeConsumers` | `ReadonlySet<Consumer>` | Currently tracked consumers.       |
+| Property          | Type                    | Description                  |
+| ----------------- | ----------------------- | ---------------------------- |
+| `activeProducers` | `ReadonlySet<Producer>` | Currently tracked producers. |
+| `activeConsumers` | `ReadonlySet<Consumer>` | Currently tracked consumers. |
 
 ### Internal/Protected Methods
 
-| Method           | Status    | Reason                                                        |
-| ---------------- | --------- | ------------------------------------------------------------- |
-| `getKafka()`     | Protected | Used internally to instantiate Kafka clients.                 |
-| `getSharedAdmin()` | Protected | Lazy-initialized shared admin for internal operations.      |
+| Method             | Status    | Reason                                                 |
+| ------------------ | --------- | ------------------------------------------------------ |
+| `getKafka()`       | Protected | Used internally to instantiate Kafka clients.          |
+| `getSharedAdmin()` | Protected | Lazy-initialized shared admin for internal operations. |
 
 ### Best Practices
 
@@ -363,17 +382,17 @@ The `KafkaMessaging` class provides a safe and resilient interface for interacti
 
 ## 🛠️ Requirements
 
-* Node.js 18+
-* A running Kafka instance
-* Optional: integrate into a [Kaapi](https://github.com/demingongo/kaapi) service lifecycle
+- Node.js 18+
+- A running Kafka instance
+- Optional: integrate into a [Kaapi](https://github.com/demingongo/kaapi) service lifecycle
 
 ---
 
 ## 📚 Related
 
-* [KafkaJS](https://github.com/tulios/kafkajs) — the underlying Kafka client
-* [Kaapi](https://github.com/demingongo/kaapi) — framework powering this abstraction
-* [@kaapi/kaapi](https://www.npmjs.com/package/@kaapi/kaapi)
+- [KafkaJS](https://github.com/tulios/kafkajs) — the underlying Kafka client
+- [Kaapi](https://github.com/demingongo/kaapi) — framework powering this abstraction
+- [@kaapi/kaapi](https://www.npmjs.com/package/@kaapi/kaapi)
 
 ---
 

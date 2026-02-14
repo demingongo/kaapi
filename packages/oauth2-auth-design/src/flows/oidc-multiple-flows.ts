@@ -1,11 +1,5 @@
-import {
-    AuthDesign,
-    ILogger,
-    KaapiTools,
-    ReqRef,
-    ReqRefDefaults,
-    RouteOptions,
-} from '@kaapi/kaapi'
+import { InMemoryKeyStore } from '../utils/in-memory-key-store';
+import { JwksKeyStore, JwksRotationTimestampStore, JwksRotator, JwtAuthority } from '../utils/jwt-authority';
 import {
     DefaultJWKSRoute,
     IJWKSRoute,
@@ -15,13 +9,12 @@ import {
     OAuth2JwksOptions,
     OAuth2SingleAuthFlow,
     OAuth2SingleAuthFlowBuilder,
-    OIDCAuthUtil
-} from './common'
-import { BaseAuthUtil } from '@novice1/api-doc-generator/lib/utils/auth/baseAuthUtils'
-import { JwksKeyStore, JwksRotationTimestampStore, JwksRotator, JwtAuthority } from '../utils/jwt-authority'
-import { InMemoryKeyStore } from '../utils/in-memory-key-store'
+    OIDCAuthUtil,
+} from './common';
+import { AuthDesign, ILogger, KaapiTools, ReqRef, ReqRefDefaults, RouteOptions } from '@kaapi/kaapi';
+import { BaseAuthUtil } from '@novice1/api-doc-generator/lib/utils/auth/baseAuthUtils';
 
-export type SingleCodeFlow = AuthDesign & OAuth2SingleAuthFlow
+export type SingleCodeFlow = AuthDesign & OAuth2SingleAuthFlow;
 
 //#region MultipleFlows
 
@@ -37,7 +30,6 @@ export interface MultipleFlowsArg {
 }
 
 export class MultipleFlows extends AuthDesign {
-
     protected logger?: ILogger;
 
     protected flows: SingleCodeFlow[];
@@ -66,28 +58,28 @@ export class MultipleFlows extends AuthDesign {
         ...props
     }: MultipleFlowsArg) {
         super();
-        this.logger = logger
-        this.flows = [...flows]
-        this.tokenEndpoint = tokenEndpoint
-        this.jwksRoute = jwksRoute
-        this.openidConfiguration = openidConfiguration || {}
+        this.logger = logger;
+        this.flows = [...flows];
+        this.tokenEndpoint = tokenEndpoint;
+        this.jwksRoute = jwksRoute;
+        this.openidConfiguration = openidConfiguration || {};
 
-        this.jwksKeyStore = props?.jwksOptions?.keyStore
-        this.jwksPublicKeyTtl = props?.jwksOptions?.ttl
-        this.jwksRotationIntervalMs = props?.jwksOptions?.rotation?.intervalMs
-        this.jwksRotationTimestampStore = props?.jwksOptions?.rotation?.timestampStore
+        this.jwksKeyStore = props?.jwksOptions?.keyStore;
+        this.jwksPublicKeyTtl = props?.jwksOptions?.ttl;
+        this.jwksRotationIntervalMs = props?.jwksOptions?.rotation?.intervalMs;
+        this.jwksRotationTimestampStore = props?.jwksOptions?.rotation?.timestampStore;
 
         if (securitySchemeName) {
-            this.setSecuritySchemeName(securitySchemeName)
+            this.setSecuritySchemeName(securitySchemeName);
         }
     }
 
     protected getJwtAuthority(): JwtAuthority | undefined {
         if (this.jwtAuthority) return this.jwtAuthority;
         if (this.jwksRoute || this.jwksKeyStore /*|| this.options.useAccessTokenJwks*/) {
-            this.jwtAuthority = new JwtAuthority(this.jwksKeyStore || new InMemoryKeyStore(), this.jwksPublicKeyTtl)
+            this.jwtAuthority = new JwtAuthority(this.jwksKeyStore || new InMemoryKeyStore(), this.jwksPublicKeyTtl);
         }
-        return this.jwtAuthority
+        return this.jwtAuthority;
     }
 
     protected getJwksRotator(): JwksRotator | undefined {
@@ -98,26 +90,25 @@ export class MultipleFlows extends AuthDesign {
                 keyGenerator: jwtAuthority,
                 rotationIntervalMs: this.jwksRotationIntervalMs,
                 rotatorKeyStore: this.jwksRotationTimestampStore || new InMemoryKeyStore(),
-                logger: this.logger
-            })
+                logger: this.logger,
+            });
         }
-        return this.jwksRotator
+        return this.jwksRotator;
     }
 
     async checkAndRotateKeys(): Promise<void> {
-        return this.getJwksRotator()?.checkAndRotateKeys()
+        return this.getJwksRotator()?.checkAndRotateKeys();
     }
 
     async generateKeyPair(): Promise<void> {
-        return this.getJwtAuthority()?.generateKeyPair()
+        return this.getJwtAuthority()?.generateKeyPair();
     }
 
     /**
      * Name used in the documentation
      */
     setSecuritySchemeName(name: string) {
-        if (name)
-            this.securitySchemeName = name
+        if (name) this.securitySchemeName = name;
     }
 
     docs(): BaseAuthUtil | undefined {
@@ -126,84 +117,92 @@ export class MultipleFlows extends AuthDesign {
             const scopes = flow.getScopes();
             if (scopes) {
                 for (const scope in scopes) {
-                    r.addScope(scope, scopes[scope])
+                    r.addScope(scope, scopes[scope]);
                 }
             }
         }
-        return r
+        return r;
     }
 
     integrateStrategy(t: KaapiTools): void {
         for (const flow of this.flows) {
-            flow.integrateStrategy(t)
+            flow.integrateStrategy(t);
         }
     }
 
     integrateHook(t: KaapiTools): void | Promise<void> {
-
         const jwtAuthority = this.getJwtAuthority();
-        const host = t.postman?.getHostValue() || ''
+        const host = t.postman?.getHostValue() || '';
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const routesOptions: RouteOptions<any> = {
             plugins: {
                 kaapi: {
-                    docs: false
-                }
-            }
-        }
+                    docs: false,
+                },
+            },
+        };
 
-        const refreshTokenHandlerFlows: SingleCodeFlow[] = []
+        const refreshTokenHandlerFlows: SingleCodeFlow[] = [];
 
         for (const flow of this.flows) {
             if (typeof flow.handleRefreshToken === 'function') {
-                refreshTokenHandlerFlows.push(flow)
+                refreshTokenHandlerFlows.push(flow);
             }
         }
 
         for (const flow of this.flows) {
             if (typeof flow.registerAuthorizationEndpoint === 'function') {
-                flow.registerAuthorizationEndpoint(t)
+                flow.registerAuthorizationEndpoint(t);
             }
         }
 
         // token
-        t
-            .route<{ Payload: { grant_type?: unknown; } }>({
-                options: routesOptions,
-                path: this.tokenEndpoint,
-                method: 'POST',
-                handler: async (req, h) => {
-                    const grantType = req.payload.grant_type;
+        t.route<{ Payload: { grant_type?: unknown } }>({
+            options: routesOptions,
+            path: this.tokenEndpoint,
+            method: 'POST',
+            handler: async (req, h) => {
+                const grantType = req.payload.grant_type;
 
-                    if (grantType && typeof grantType === 'string') {
-                        if (grantType != 'refresh_token') {
-                            for (const flow of this.flows) {
-                                if (grantType === flow.grantType) {
-                                    return await flow.handleToken(t, req, h)
-                                }
-                            }
-                        } else {
-                            if (refreshTokenHandlerFlows.length) {
-                                // iterate to find the right method
-                                for (const flow of refreshTokenHandlerFlows) {
-                                    if (typeof flow.handleRefreshToken === 'function') {
-                                        const result = await flow.handleRefreshToken(t, req, h);
-                                        if (result === h.continue) {
-                                            continue
-                                        } else {
-                                            return result
-                                        }
-                                    }
-                                }
-                                return h.response({ error: OAuth2ErrorCode.INVALID_GRANT, error_description: 'Token was not validated by any handler.' }).code(400)
+                if (grantType && typeof grantType === 'string') {
+                    if (grantType != 'refresh_token') {
+                        for (const flow of this.flows) {
+                            if (grantType === flow.grantType) {
+                                return await flow.handleToken(t, req, h);
                             }
                         }
+                    } else {
+                        if (refreshTokenHandlerFlows.length) {
+                            // iterate to find the right method
+                            for (const flow of refreshTokenHandlerFlows) {
+                                if (typeof flow.handleRefreshToken === 'function') {
+                                    const result = await flow.handleRefreshToken(t, req, h);
+                                    if (result === h.continue) {
+                                        continue;
+                                    } else {
+                                        return result;
+                                    }
+                                }
+                            }
+                            return h
+                                .response({
+                                    error: OAuth2ErrorCode.INVALID_GRANT,
+                                    error_description: 'Token was not validated by any handler.',
+                                })
+                                .code(400);
+                        }
                     }
-
-                    return h.response({ error: OAuth2ErrorCode.UNSUPPORTED_GRANT_TYPE, error_description: `Request does not support the 'grant_type' '${req.payload.grant_type}'.` }).code(400)
                 }
-            });
+
+                return h
+                    .response({
+                        error: OAuth2ErrorCode.UNSUPPORTED_GRANT_TYPE,
+                        error_description: `Request does not support the 'grant_type' '${req.payload.grant_type}'.`,
+                    })
+                    .code(400);
+            },
+        });
 
         // jwks
         if (this.jwksRoute && jwtAuthority) {
@@ -213,23 +212,26 @@ export class MultipleFlows extends AuthDesign {
                 options: {
                     plugins: {
                         kaapi: {
-                            docs: false
-                        }
-                    }
+                            docs: false,
+                        },
+                    },
                 },
                 handler: async (req, h) => {
-
-                    const jwks = await jwtAuthority.getJwksEndpointResponse()
+                    const jwks = await jwtAuthority.getJwksEndpointResponse();
 
                     if (this.jwksRoute?.handler) {
-                        return this.jwksRoute.handler({
-                            jwks
-                        }, req, h)
+                        return this.jwksRoute.handler(
+                            {
+                                jwks,
+                            },
+                            req,
+                            h
+                        );
                     }
 
-                    return jwks
-                }
-            })
+                    return jwks;
+                },
+            });
         }
 
         // discovery endpoint
@@ -239,16 +241,16 @@ export class MultipleFlows extends AuthDesign {
             options: {
                 plugins: {
                     kaapi: {
-                        docs: false
-                    }
-                }
+                        docs: false,
+                    },
+                },
             },
             handler: () => {
                 let wellKnownOpenIDConfig: {
                     authorization_endpoint?: string;
                     grant_types_supported: string[];
                     token_endpoint_auth_methods_supported: string[];
-                    [key: string]: unknown
+                    [key: string]: unknown;
                 } = {
                     issuer: `${host}`,
                     authorization_endpoint: undefined,
@@ -258,8 +260,8 @@ export class MultipleFlows extends AuthDesign {
                     jwks_uri: this.jwksRoute ? `${host}${this.jwksRoute.path}` : undefined,
                     registration_endpoint: undefined,
                     grant_types_supported: [],
-                    token_endpoint_auth_methods_supported: []
-                }
+                    token_endpoint_auth_methods_supported: [],
+                };
 
                 for (const flow of this.flows) {
                     if (typeof flow.getDiscoveryConfiguration === 'function') {
@@ -278,33 +280,35 @@ export class MultipleFlows extends AuthDesign {
                                 Object.entries(more).map(([key, val]) => [
                                     key,
                                     // merge arrays and ensure unique values (Set)
-                                    Array.isArray(wellKnownOpenIDConfig[key]) && Array.isArray(val) ? [...new Set([
-                                        ...wellKnownOpenIDConfig[key],
-                                        ...val
-                                    ])] : val
+                                    Array.isArray(wellKnownOpenIDConfig[key]) && Array.isArray(val)
+                                        ? [...new Set([...wellKnownOpenIDConfig[key], ...val])]
+                                        : val,
                                 ])
-                            )
+                            ),
                         };
                     }
                 }
 
-                const result = { ...wellKnownOpenIDConfig, ...this.openidConfiguration }
+                const result = { ...wellKnownOpenIDConfig, ...this.openidConfiguration };
 
                 // Format unhandled endpoints
-                if (typeof result.userinfo_endpoint === 'string' && (/^\/(?!\/)/.test(result.userinfo_endpoint))) {
-                    result.userinfo_endpoint = `${host}${result.userinfo_endpoint}`
+                if (typeof result.userinfo_endpoint === 'string' && /^\/(?!\/)/.test(result.userinfo_endpoint)) {
+                    result.userinfo_endpoint = `${host}${result.userinfo_endpoint}`;
                 }
-                if (typeof result.registration_endpoint === 'string' && (/^\/(?!\/)/.test(result.registration_endpoint))) {
-                    result.registration_endpoint = `${host}${result.registration_endpoint}`
+                if (
+                    typeof result.registration_endpoint === 'string' &&
+                    /^\/(?!\/)/.test(result.registration_endpoint)
+                ) {
+                    result.registration_endpoint = `${host}${result.registration_endpoint}`;
                 }
 
-                return result
-            }
-        })
+                return result;
+            },
+        });
     }
 
     getStrategyName(): string[] {
-        return this.flows.map(f => f.getStrategyName()).flat()
+        return this.flows.map((f) => f.getStrategyName()).flat();
     }
 }
 
@@ -312,49 +316,47 @@ export class MultipleFlows extends AuthDesign {
 
 //#region Builder
 
-export type MultipleFlowsBuilderArg = Omit<MultipleFlowsArg, 'flows'>
-
+export type MultipleFlowsBuilderArg = Omit<MultipleFlowsArg, 'flows'>;
 
 export class MultipleFlowsBuilder implements OAuth2AuthDesignBuilder {
+    protected params: MultipleFlowsBuilderArg;
 
-    protected params: MultipleFlowsBuilderArg
-
-    protected builders: OAuth2SingleAuthFlowBuilder[] = []
+    protected builders: OAuth2SingleAuthFlowBuilder[] = [];
 
     constructor(params: MultipleFlowsBuilderArg) {
-        this.params = params
+        this.params = params;
     }
 
     static create(params?: Partial<MultipleFlowsBuilderArg>) {
         const paramsComplete: MultipleFlowsBuilderArg = {
-            tokenEndpoint: params && params.tokenEndpoint || '/oauth2/token',
+            tokenEndpoint: (params && params.tokenEndpoint) || '/oauth2/token',
             jwksOptions: {},
-            ...(params || {})
+            ...(params || {}),
         };
-        paramsComplete.jwksOptions = paramsComplete.jwksOptions || {}
+        paramsComplete.jwksOptions = paramsComplete.jwksOptions || {};
         if (!paramsComplete.jwksOptions.keyStore) {
-            paramsComplete.jwksOptions.keyStore = new InMemoryKeyStore()
+            paramsComplete.jwksOptions.keyStore = new InMemoryKeyStore();
         }
-        return new MultipleFlowsBuilder(paramsComplete)
+        return new MultipleFlowsBuilder(paramsComplete);
     }
 
     /**
      * Name used in the documentation
      */
     setSecuritySchemeName(name: string): this {
-        this.params.securitySchemeName = name
-        return this
+        this.params.securitySchemeName = name;
+        return this;
     }
 
     additionalConfiguration(openidConfiguration: Record<string, unknown>): this {
-        this.params.openidConfiguration = openidConfiguration
-        return this
+        this.params.openidConfiguration = openidConfiguration;
+        return this;
     }
 
     setJwksKeyStore(keyStore: JwksKeyStore): this {
-        this.params.jwksOptions = this.params.jwksOptions || {}
-        this.params.jwksOptions.keyStore = keyStore
-        return this
+        this.params.jwksOptions = this.params.jwksOptions || {};
+        this.params.jwksOptions.keyStore = keyStore;
+        return this;
     }
 
     /**
@@ -362,46 +364,44 @@ export class MultipleFlowsBuilder implements OAuth2AuthDesignBuilder {
      * @param ttl seconds
      */
     setPublicKeyExpiry(ttl: number): this {
-        this.params.jwksOptions = this.params.jwksOptions || {}
-        this.params.jwksOptions.ttl = ttl
-        return this
+        this.params.jwksOptions = this.params.jwksOptions || {};
+        this.params.jwksOptions.ttl = ttl;
+        return this;
     }
 
     setJwksRotatorOptions(jwksRotatorOptions: OAuth2JwksOptions['rotation']): this {
-        this.params.jwksOptions = this.params.jwksOptions || {}
-        this.params.jwksOptions.rotation = jwksRotatorOptions
-        return this
+        this.params.jwksOptions = this.params.jwksOptions || {};
+        this.params.jwksOptions.rotation = jwksRotatorOptions;
+        return this;
     }
 
     jwksRoute<Refs extends ReqRef = ReqRefDefaults>(handler: (route: DefaultJWKSRoute<Refs>) => void): this {
         this.params.jwksRoute = this.params.jwksRoute || JWKSRoute.buildDefault();
-        handler(this.params.jwksRoute)
-        return this
+        handler(this.params.jwksRoute);
+        return this;
     }
 
     tokenEndpoint(path: string): this {
-        if (path)
-            this.params.tokenEndpoint = path
-        return this
+        if (path) this.params.tokenEndpoint = path;
+        return this;
     }
 
     add(builder: OAuth2SingleAuthFlowBuilder): this {
-        this.builders.push(builder)
+        this.builders.push(builder);
         return this;
     }
 
     build(): MultipleFlows {
         const result = new MultipleFlows({
             ...this.params,
-            flows: this.builders.map(b => {
+            flows: this.builders.map((b) => {
                 b.setJwksKeyStore(this.params.jwksOptions.keyStore!);
-                if (this.params.jwksOptions.ttl)
-                    b.setPublicKeyExpiry(this.params.jwksOptions.ttl)
-                return b.build()
-            })
+                if (this.params.jwksOptions.ttl) b.setPublicKeyExpiry(this.params.jwksOptions.ttl);
+                return b.build();
+            }),
         });
 
-        return result
+        return result;
     }
 }
 

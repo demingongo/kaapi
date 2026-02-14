@@ -1,6 +1,6 @@
-import jose from 'node-jose'
-import { JWTPayload, jwtVerify, JWTHeaderParameters } from 'jose'
-import { ILogger } from '@kaapi/kaapi'
+import { ILogger } from '@kaapi/kaapi';
+import { JWTPayload, jwtVerify, JWTHeaderParameters } from 'jose';
+import jose from 'node-jose';
 
 export interface RSA {
     kty: 'RSA';
@@ -19,20 +19,20 @@ export interface JwksKeyStore {
      * Stores the current active private key and its corresponding public key.
      * The public key will be kept for the duration of the TTL for JWKS purposes.
      */
-    storeKeyPair(kid: string, privateKey: object, publicKey: object, ttl: number): void | Promise<void>
+    storeKeyPair(kid: string, privateKey: object, publicKey: object, ttl: number): void | Promise<void>;
     /**
      * Retrieves the current private key used for signing.
      */
-    getPrivateKey(): Promise<object | undefined>
+    getPrivateKey(): Promise<object | undefined>;
     /**
      * Retrieves all valid public keys that have not expired.
      * These are used for exposing in JWKS.
      */
-    getPublicKeys(): Promise<object[]>
+    getPublicKeys(): Promise<object[]>;
 }
 
 export interface KeyGenerator {
-    generateKeyPair(): Promise<void>
+    generateKeyPair(): Promise<void>;
 }
 
 /**
@@ -42,7 +42,6 @@ export interface KeyGenerator {
  * - Exposes public keys (for JWKS endpoint)
  */
 export class JwtAuthority implements KeyGenerator {
-
     #store: JwksKeyStore;
     /**
      * seconds
@@ -50,139 +49,139 @@ export class JwtAuthority implements KeyGenerator {
     #ttl: number;
 
     /**
-     * 
-     * @param store 
+     *
+     * @param store
      * @param ttl seconds
      */
     constructor(store: JwksKeyStore, ttl: number = 36000) {
-        this.#store = store
-        this.#ttl = ttl
+        this.#store = store;
+        this.#ttl = ttl;
     }
 
     async #saveKeys(key: jose.JWK.Key) {
-        const pub = key.toJSON()
-        const priv = key.toJSON(true)
+        const pub = key.toJSON();
+        const priv = key.toJSON(true);
 
-        await this.#store.storeKeyPair(('kid' in pub && `${pub.kid}`) || '', priv, pub, this.#ttl)
+        await this.#store.storeKeyPair(('kid' in pub && `${pub.kid}`) || '', priv, pub, this.#ttl);
     }
 
     async #generateKeyPair(keyStore: jose.JWK.KeyStore): Promise<jose.JWK.Key> {
-        return await keyStore.generate('RSA', 2048, { alg: 'RS256', use: 'sig' })
+        return await keyStore.generate('RSA', 2048, { alg: 'RS256', use: 'sig' });
     }
 
     async #getPrivateKey(): Promise<jose.JWK.Key> {
-        const privateJwk = await this.#store.getPrivateKey()
+        const privateJwk = await this.#store.getPrivateKey();
         if (privateJwk) {
             return await jose.JWK.asKey(privateJwk);
         } else {
-            const keyStore = jose.JWK.createKeyStore()
-            const key = await this.#generateKeyPair(keyStore)
-            await this.#saveKeys(key)
-            return key
+            const keyStore = jose.JWK.createKeyStore();
+            const key = await this.#generateKeyPair(keyStore);
+            await this.#saveKeys(key);
+            return key;
         }
     }
 
     async #getPublicKeyStore(): Promise<jose.JWK.KeyStore> {
-        const publicJwks = await this.#store.getPublicKeys()
-        let keyStore: jose.JWK.KeyStore
+        const publicJwks = await this.#store.getPublicKeys();
+        let keyStore: jose.JWK.KeyStore;
         if (publicJwks?.length) {
-            const keys = []
+            const keys = [];
             for (const k of publicJwks) {
-                keys.push(k)
+                keys.push(k);
             }
-            keyStore = await jose.JWK.asKeyStore(JSON.stringify({ keys }))
+            keyStore = await jose.JWK.asKeyStore(JSON.stringify({ keys }));
         } else {
-            keyStore = jose.JWK.createKeyStore()
+            keyStore = jose.JWK.createKeyStore();
         }
-        const arr = keyStore.all({ use: 'sig' })
+        const arr = keyStore.all({ use: 'sig' });
         if (!arr.length) {
-            const key = await this.#generateKeyPair(keyStore)
-            await this.#saveKeys(key)
+            const key = await this.#generateKeyPair(keyStore);
+            await this.#saveKeys(key);
         }
-        return keyStore
+        return keyStore;
     }
 
     async getPublicKeys(): Promise<{ keys: jose.JWK.RawKey[] }> {
-        const keyStore = await this.#getPublicKeyStore()
-        const json = keyStore.toJSON() as ({ keys: jose.JWK.RawKey[] })
+        const keyStore = await this.#getPublicKeyStore();
+        const json = keyStore.toJSON() as { keys: jose.JWK.RawKey[] };
         if (json && 'keys' in json && Array.isArray(json.keys)) {
-            json.keys = [...json.keys].reverse()
+            json.keys = [...json.keys].reverse();
         }
-        return json
+        return json;
     }
 
     /**
      * Get current kid for observability/debugging
      */
     async getCurrentKid(): Promise<string | undefined> {
-        const key = await this.#getPrivateKey()
-        return key?.kid
+        const key = await this.#getPrivateKey();
+        return key?.kid;
     }
 
     /**
      * Helper for JWKS endpoint
      */
     getJwksEndpointResponse(): Promise<{ keys: jose.JWK.RawKey[] }> {
-        return this.getPublicKeys()
+        return this.getPublicKeys();
     }
 
     async getPublicKey(kid: string): Promise<RSA | undefined> {
-        const keyStore = await this.#getPublicKeyStore()
-        const key = keyStore.get(kid)
-        return key ? (key.toJSON() as RSA) : undefined
+        const keyStore = await this.#getPublicKeyStore();
+        const key = keyStore.get(kid);
+        return key ? (key.toJSON() as RSA) : undefined;
     }
 
     async generateKeyPair(): Promise<void> {
         const keyStore = jose.JWK.createKeyStore();
         const key = await this.#generateKeyPair(keyStore);
-        await this.#saveKeys(key)
+        await this.#saveKeys(key);
     }
 
-    async sign(payload: JWTPayload): Promise<{ token: string; kid: string; }> {
-        const key = await this.#getPrivateKey()
+    async sign(payload: JWTPayload): Promise<{ token: string; kid: string }> {
+        const key = await this.#getPrivateKey();
 
-        if (!key) throw new Error('sign: KEY STORE IS EMPTY')
+        if (!key) throw new Error('sign: KEY STORE IS EMPTY');
 
         const result = await jose.JWS.createSign({ compact: true, fields: { typ: 'jwt', alg: 'RS256' } }, key)
             .update(typeof payload === 'string' || payload instanceof Buffer ? payload : JSON.stringify(payload))
-            .final()
+            .final();
 
-        const kid: string = key.kid
-        return { token: `${result}`, kid }
+        const kid: string = key.kid;
+        return { token: `${result}`, kid };
     }
 
     async verify<P extends JWTPayload = JWTPayload>(token: string): Promise<P> {
-        const [header] = token.split('.')
-        const parsedHeader = JSON.parse(Buffer.from(header, 'base64url').toString()) as JWTHeaderParameters
-        const kid = parsedHeader.kid
+        const [header] = token.split('.');
+        const parsedHeader = JSON.parse(Buffer.from(header, 'base64url').toString()) as JWTHeaderParameters;
+        const kid = parsedHeader.kid;
 
         if (!kid || typeof kid !== 'string') throw new Error('Invalid or missing "kid" in JWT header');
 
-        const key = await this.getPublicKey(kid)
+        const key = await this.getPublicKey(kid);
 
-        if (!key) throw new Error(`Key with kid "${kid}" not found`)
+        if (!key) throw new Error(`Key with kid "${kid}" not found`);
 
-        const { payload, protectedHeader } = await jwtVerify<P>(token, key)
+        const { payload, protectedHeader } = await jwtVerify<P>(token, key);
 
         if (protectedHeader.alg !== 'RS256') {
-            throw new Error(`Unexpected algorithm: ${protectedHeader.alg}`)
+            throw new Error(`Unexpected algorithm: ${protectedHeader.alg}`);
         }
 
         // additional checks hardening security
         if ('jwk' in protectedHeader) {
-            throw new Error('Unexpected JWK in header — potential forgery attempt')
+            throw new Error('Unexpected JWK in header — potential forgery attempt');
         }
         if (protectedHeader.typ && protectedHeader.typ.toLowerCase() !== 'jwt') {
-            throw new Error(`Unexpected typ: ${protectedHeader.typ}`)
+            throw new Error(`Unexpected typ: ${protectedHeader.typ}`);
         }
 
-        return payload
+        return payload;
     }
 }
 
 export interface JwksRotationTimestampStore {
-    getLastRotationTimestamp(): Promise<number>
-    setLastRotationTimestamp(rotationTimestamp: number): Promise<void>
+    getLastRotationTimestamp(): Promise<number>;
+    setLastRotationTimestamp(rotationTimestamp: number): Promise<void>;
 }
 
 export interface JwksRotatorOptions {
@@ -196,13 +195,13 @@ export class JwksRotator {
     private readonly keyGenerator: KeyGenerator;
     private readonly rotatorKeyStore: JwksRotationTimestampStore;
     private readonly rotationIntervalMs: number;
-    private readonly logger: JwksRotatorOptions['logger']
+    private readonly logger: JwksRotatorOptions['logger'];
 
     constructor({ keyGenerator, rotationIntervalMs, rotatorKeyStore, logger }: JwksRotatorOptions) {
         this.keyGenerator = keyGenerator;
         this.rotationIntervalMs = rotationIntervalMs;
         this.rotatorKeyStore = rotatorKeyStore;
-        this.logger = logger
+        this.logger = logger;
     }
 
     /**
@@ -219,7 +218,9 @@ export class JwksRotator {
             await this.rotatorKeyStore.setLastRotationTimestamp(now);
         } else {
             const nextIn = this.rotationIntervalMs - (now - lastRotation);
-            this.logger?.info(`[JWKS] Key rotation not needed. Next rotation in ${Math.round(nextIn / 1000 / 60)} minutes`);
+            this.logger?.info(
+                `[JWKS] Key rotation not needed. Next rotation in ${Math.round(nextIn / 1000 / 60)} minutes`
+            );
         }
     }
 

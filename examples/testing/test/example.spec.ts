@@ -1,8 +1,7 @@
 // example.spec.ts
-
-import { Kaapi } from '@kaapi/kaapi';
+import { init } from '../src/server';
 import { expect } from '@hapi/code';
-import { init } from '../src/server'
+import { Kaapi } from '@kaapi/kaapi';
 
 describe('GET /', () => {
     let app: Kaapi;
@@ -18,7 +17,7 @@ describe('GET /', () => {
     it('responds with 200 /', async () => {
         const res = await app.base().inject({
             method: 'get',
-            url: '/'
+            url: '/',
         });
         expect(res.statusCode).to.equal(200);
     });
@@ -38,7 +37,7 @@ describe('GET /file', () => {
     it('responds with 404 /file', async () => {
         const res = await app.base().inject({
             method: 'get',
-            url: '/file'
+            url: '/file',
         });
         expect(res.statusCode).to.equal(404);
     });
@@ -58,7 +57,7 @@ describe('GET /socketapp', () => {
     it('responds with 200', async () => {
         const res = await app.base().inject({
             method: 'get',
-            url: '/socketapp'
+            url: '/socketapp',
         });
         expect(res.statusCode).to.equal(200);
     });
@@ -78,7 +77,7 @@ describe('GET /docs/api', () => {
     it('responds with 200', async () => {
         const res = await app.base().inject({
             method: 'get',
-            url: '/docs/api'
+            url: '/docs/api',
         });
         expect(res.statusCode).to.equal(200);
     });
@@ -98,11 +97,11 @@ describe('GET /docs/api/schema', () => {
     it('responds with 200', async () => {
         const res = await app.base().inject({
             method: 'get',
-            url: '/docs/api/schema'
+            url: '/docs/api/schema',
         });
         expect(res.statusCode).to.equal(200);
 
-        const payload = JSON.parse(res.payload)
+        const payload = JSON.parse(res.payload);
         console.log(payload);
         expect(payload.openapi).to.equal('3.1.1');
         expect(payload.info.version).to.equal('0.0.2');

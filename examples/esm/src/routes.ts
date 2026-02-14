@@ -51,56 +51,57 @@ app.route({
     method: 'POST',
     options: {
         description: 'Post xml',
+        payload: {
+            parse: false, // do NOT parse automatically 
+            allow: 'application/xml', // accept XML content-type 
+            output: 'data' // give me the raw payload 
+        },
         plugins: {
             kaapi: {
                 docs: {
                     modifiers: () => ({
-                        requestBody: new RequestBodyDocsModifier()
-                            .addMediaType(
-                                'application/xml',
-                                {
-                                    schema: {
-                                        type: 'object',
-                                        properties: {
-                                            id: {
-                                                type: 'integer',
-                                                format: 'int32'
-                                            },
-                                            name: {
-                                                type: 'string',
-                                                xml: {
-                                                    namespace: 'http://example.com/schema/sample',
-                                                    prefix: 'sample'
-                                                }
-                                            },
-                                            animals: {
-                                                type: 'array',
-                                                uniqueItems: false,
-                                                items: {
-                                                    type: 'string',
-                                                    xml: {
-                                                        name: 'animal'
-                                                    }
-                                                }
-                                            },
-
-                                            safe: {
-                                                type: 'boolean'
+                        requestBody: new RequestBodyDocsModifier().addMediaType('application/xml', {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    id: {
+                                        type: 'integer',
+                                        format: 'int32',
+                                    },
+                                    name: {
+                                        type: 'string',
+                                        xml: {
+                                            namespace: 'http://example.com/schema/sample',
+                                            prefix: 'sample',
+                                        },
+                                    },
+                                    animals: {
+                                        type: 'array',
+                                        uniqueItems: false,
+                                        items: {
+                                            type: 'string',
+                                            xml: {
+                                                name: 'animal',
                                             },
                                         },
-                                        xml: {
-                                            name: 'element'
-                                        }
-                                    }
-                                }
-                            )
-                    })
-                }
-            }
-        }
+                                    },
+
+                                    safe: {
+                                        type: 'boolean',
+                                    },
+                                },
+                                xml: {
+                                    name: 'element',
+                                },
+                            },
+                        }),
+                    }),
+                },
+            },
+        },
     },
-    handler: () => 'ok'
-})
+    handler: () => 'ok',
+});
 
 app.route({
     path: '/json',
@@ -111,49 +112,45 @@ app.route({
             kaapi: {
                 docs: {
                     modifiers: () => ({
-                        requestBody: new RequestBodyDocsModifier()
-                            .addMediaType(
-                                'application/json',
-                                {
-                                    schema: {
-                                        type: 'object',
-                                        properties: {
-                                            id: {
-                                                type: 'integer',
-                                                format: 'int32'
-                                            },
-                                            name: {
-                                                type: 'string',
-                                                xml: {
-                                                    namespace: 'http://example.com/schema/sample',
-                                                    prefix: 'sample'
-                                                }
-                                            },
-                                            animals: {
-                                                type: 'array',
-                                                uniqueItems: false,
-                                                items: {
-                                                    type: 'string',
-                                                    xml: {
-                                                        name: 'animal'
-                                                    }
-                                                }
-                                            },
-
-                                            safe: {
-                                                type: 'boolean'
+                        requestBody: new RequestBodyDocsModifier().addMediaType('application/json', {
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    id: {
+                                        type: 'integer',
+                                        format: 'int32',
+                                    },
+                                    name: {
+                                        type: 'string',
+                                        xml: {
+                                            namespace: 'http://example.com/schema/sample',
+                                            prefix: 'sample',
+                                        },
+                                    },
+                                    animals: {
+                                        type: 'array',
+                                        uniqueItems: false,
+                                        items: {
+                                            type: 'string',
+                                            xml: {
+                                                name: 'animal',
                                             },
                                         },
-                                        xml: {
-                                            name: 'element'
-                                        }
-                                    }
-                                }
-                            )
-                    })
-                }
-            }
-        }
+                                    },
+
+                                    safe: {
+                                        type: 'boolean',
+                                    },
+                                },
+                                xml: {
+                                    name: 'element',
+                                },
+                            },
+                        }),
+                    }),
+                },
+            },
+        },
     },
-    handler: () => 'ok'
-})
+    handler: () => 'ok',
+});

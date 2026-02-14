@@ -1,11 +1,11 @@
-import { Kaapi, APIKeyAuthDesign } from '@kaapi/kaapi';
-import Boom from '@hapi/boom'
-import inert from '@hapi/inert';
 import { CustomMessaging } from './CustomMessaging';
-import Joi from 'joi'
-import fs from 'node:fs/promises'
+import Boom from '@hapi/boom';
+import inert from '@hapi/inert';
+import { Kaapi, APIKeyAuthDesign } from '@kaapi/kaapi';
+import Joi from 'joi';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import Stream from 'node:stream';
-import path from 'node:path'
 
 //#region init
 
@@ -18,21 +18,21 @@ const apiKeyAuthDesign = new APIKeyAuthDesign({
                     isValid: true,
                     credentials: {
                         user: {
-                            name: 'admin'
-                        }
-                    }
-                }
+                            name: 'admin',
+                        },
+                    },
+                };
             }
             return {
-                isValid: false
-            }
+                isValid: false,
+            };
         },
-        headerTokenType: 'Session'
+        headerTokenType: 'Session',
     },
-    key: 'Authorization'
+    key: 'Authorization',
 })
     .inHeader()
-    .setDescription('Session token type')
+    .setDescription('Session token type');
 
 const app = new Kaapi({
     port: 3000,
@@ -46,32 +46,32 @@ const app = new Kaapi({
             if (!token) {
                 // can call h.authenticated/h.unauthenticated directly
                 // if you know what you are doing
-                return h.unauthenticated(Boom.unauthorized('Sorry bud, you are NOT authorized', 'Bearer'))
+                return h.unauthenticated(Boom.unauthorized('Sorry bud, you are NOT authorized', 'Bearer'));
             }
 
             return {
                 isValid: !!token,
                 credentials: { user: { username: 'Niko' } },
-                message: !token ? 'Sorry buddy, you are UNauthorized' : undefined
-            }
-        }
+                message: !token ? 'Sorry buddy, you are UNauthorized' : undefined,
+            };
+        },
     },
     loggerOptions: {
-        level: 'debug'
+        level: 'debug',
     },
     messaging: new CustomMessaging(),
     routes: {
         auth: {
             strategy: apiKeyAuthDesign.getStrategyName(), // or 'api-key-auth-design'
-            mode: 'try'
-        }
+            mode: 'try',
+        },
     },
     docs: {
         disabled: false,
         path: '/docs/api',
         host: {
             url: '', //'http://localhost:3000',
-            description: 'An app built with Kaapi'
+            description: 'An app built with Kaapi',
         },
         license: 'UNLICENSED',
         version: '0.0.2',
@@ -79,24 +79,24 @@ const app = new Kaapi({
         ui: {
             swagger: {
                 customCssUrl: '/public/swagger-ui.css',
-                customSiteTitle: 'examples-kaapi-app documentation'
-            }
-        }
+                customSiteTitle: 'examples-kaapi-app documentation',
+            },
+        },
     },
-    extend: [apiKeyAuthDesign]
-})
+    extend: [apiKeyAuthDesign],
+});
 
 //#endregion init
 
 //#region config
 
 // server static files
-app.base().register(inert).then(
-    () => {
-        app.listen()
+app.base()
+    .register(inert)
+    .then(() => {
+        app.listen();
         //app.refreshDocs() // can be used to sort routes by paths and discover routes that were added directly to .base()
-    }
-);
+    });
 
 app.base().ext('onPreResponse', (request, h) => {
     const response = request.response;
@@ -108,15 +108,12 @@ app.base().ext('onPreResponse', (request, h) => {
 
         // Example: override 401 Unauthorized error message
         if (statusCode === 401) {
-            return h
-                .response({ message: 'Custom unauthorized response.' })
-                .code(401);
+            return h.response({ message: 'Custom unauthorized response.' }).code(401);
         }
     }
 
     return h.continue;
 });
-
 
 /*
 // commented because it can be set from the init (see above)
@@ -127,143 +124,163 @@ app.idle().server.auth.default({
 })
 */
 
-
 //#endregion config
 
 //#region routing
 
 // 404
-app.route({}, () => Boom.notFound('Nothing here'))
+app.route({}, () => Boom.notFound('Nothing here'));
 
-app.route({
-    method: 'GET',
-    path: '/profile',
-    options: {
+app.route(
+    {
+        method: 'GET',
+        path: '/profile',
+        options: {
+            auth: {
+                strategy: 'api-key-auth-design',
+                mode: 'required',
+            },
+        },
+    },
+    ({
         auth: {
-            strategy: 'api-key-auth-design',
-            mode: 'required'
-        }
-    }
-}, ({ auth: { credentials: { user } } }) => `Hello ${user && 'name' in user ? user.name : 'World'}!`)
+            credentials: { user },
+        },
+    }) => `Hello ${user && 'name' in user ? user.name : 'World'}!`
+);
 
-app.route({
-    method: 'GET',
-    path: '/file',
-    auth: true, // mode 'required' if no mode is defined in the route 
-    options: {
-        description: 'Profile picture'
+app.route(
+    {
+        method: 'GET',
+        path: '/file',
+        auth: true, // mode 'required' if no mode is defined in the route
+        options: {
+            description: 'Profile picture',
+        },
+    },
+    {
+        file: `${process.cwd()}/public/profile-icon.png`,
     }
-}, {
-    file: `${process.cwd()}/public/profile-icon.png`
-})
+);
 
 // to not insert in documentation, add directly from server
-app.route({
-    method: 'GET',
-    path: '/error',
-    options: {
-        description: 'Just throwing an error'
+app.route(
+    {
+        method: 'GET',
+        path: '/error',
+        options: {
+            description: 'Just throwing an error',
+        },
+    },
+    () => {
+        throw Boom.badRequest('An error now?');
     }
-}, () => {
-    throw Boom.badRequest('An error now?')
-})
+);
 
 app.route<{
     Payload: {
-        username: string, picture: {
-            _data: Stream,
+        username: string;
+        picture: {
+            _data: Stream;
             hapi: {
-                filename: string,
+                filename: string;
                 headers: {
-                    'content-type': string
-                }
-            }
-        }
-    }
-}>({
-    method: 'POST',
-    path: '/upload',
-    options: {
-        description: 'Upload user pic',
-        tags: ['Index'],
-        validate: {
-            payload: Joi.object({
-                username: Joi.string().required(),
-                picture: Joi.object().required().tag('files')
-            })
+                    'content-type': string;
+                };
+            };
+        };
+    };
+}>(
+    {
+        method: 'POST',
+        path: '/upload',
+        options: {
+            description: 'Upload user pic',
+            tags: ['Index'],
+            validate: {
+                payload: Joi.object({
+                    username: Joi.string().required(),
+                    picture: Joi.object().required().tag('files'),
+                }),
+            },
+            payload: {
+                output: 'stream',
+                parse: true,
+                allow: 'multipart/form-data',
+                multipart: { output: 'stream' },
+                maxBytes: 1024 * 3_000,
+            },
         },
-        payload: {
-            output: 'stream',
-            parse: true,
-            allow: 'multipart/form-data',
-            multipart: { output: 'stream' },
-            maxBytes: 1024 * 3_000
-        }
+    },
+    async (req) => {
+        app.log.warn(req.payload.username);
+
+        app.log.warn('payload', Object.keys(req.payload));
+
+        app.log.warn('file keys', Object.keys(req.payload.picture.hapi));
+
+        const pic = req.payload.picture;
+
+        await fs.writeFile(path.join(__dirname, '..', 'uploads', pic.hapi.filename), pic._data);
+
+        return 'ok';
     }
-}, async (req) => {
-    app.log.warn(req.payload.username)
+);
 
-    app.log.warn('payload', Object.keys(req.payload))
-
-    app.log.warn('file keys', Object.keys(req.payload.picture.hapi))
-
-    const pic = req.payload.picture
-
-    await fs.writeFile(
-        path.join(__dirname, '..', 'uploads', pic.hapi.filename), pic._data)
-
-    return 'ok'
-})
-
-app.route<{ Query: { name?: string } }>({
-    method: 'GET',
-    path: '/',
-    options: {
-        description: 'greet someone',
-        tags: ['Index'],
-        validate: {
-            query: Joi.object({
-                name: Joi.string().description('The name of the person to greet').trim()
-            })
-        }
-    }
-}, ({ query: { name } }) => `Hello ${name || 'World'}!`)
+app.route<{ Query: { name?: string } }>(
+    {
+        method: 'GET',
+        path: '/',
+        options: {
+            description: 'greet someone',
+            tags: ['Index'],
+            validate: {
+                query: Joi.object({
+                    name: Joi.string().description('The name of the person to greet').trim(),
+                }),
+            },
+        },
+    },
+    ({ query: { name } }) => `Hello ${name || 'World'}!`
+);
 
 /**
  * Not recommended because the documentation does not understand paths with "*"
  */
-app.route<{ Params: { filename?: string } }>({
-    method: 'GET',
-    path: '/public/{filename*}',
-    options: {
-        description: 'get public file',
-        notes: [
-            '_Notes:_',
-            '- __Not recommended because the documentation does not understand paths with "*".__'
-        ],
-        tags: ['Index'],
-        validate: {
-            params: Joi.object({
-                filename: Joi.string().description('The name of the file').required()
-            })
-        }
+app.route<{ Params: { filename?: string } }>(
+    {
+        method: 'GET',
+        path: '/public/{filename*}',
+        options: {
+            description: 'get public file',
+            notes: ['_Notes:_', '- __Not recommended because the documentation does not understand paths with "*".__'],
+            tags: ['Index'],
+            validate: {
+                params: Joi.object({
+                    filename: Joi.string().description('The name of the file').required(),
+                }),
+            },
+        },
+    },
+    ({ params: { filename } }, h) => {
+        app.log.info(`file: ${process.cwd()}/public/${filename}`);
+        return h.file(`${process.cwd()}/public/${filename}`);
     }
-}, ({ params: { filename } }, h) => {
-    app.log.info(`file: ${process.cwd()}/public/${filename}`)
-    return h.file(`${process.cwd()}/public/${filename}`)
-})
+);
 
 //#endregion routing
 
 //#region messaging
 
-app.publish('main', { message: 'coucou' })
+app.publish('main', { message: 'coucou' });
 
-app.subscribe('main', (m: { message: string }, context) => {
-    app.log(context.id, ':', m.message)
-}, {
-
-})
+app.subscribe(
+    'main',
+    (m: { message: string }, context) => {
+        app.log(context.id, ':', m.message);
+    },
+    {}
+);
 
 //console.log(Joi.object().required().tag('files'))
 

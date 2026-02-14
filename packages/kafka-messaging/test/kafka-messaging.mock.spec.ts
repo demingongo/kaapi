@@ -1,10 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unused-expressions */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-
-import { expect } from 'chai';
-import sinon from 'sinon';
-import { Kafka, Producer, Consumer, Admin } from 'kafkajs';
 import { KafkaMessaging } from '../src/index';
+import { expect } from 'chai';
+import { Kafka, Producer, Consumer, Admin } from 'kafkajs';
+import sinon from 'sinon';
 
 describe('KafkaMessaging - Mock Tests', () => {
     let messaging: KafkaMessaging;
@@ -65,11 +64,9 @@ describe('KafkaMessaging - Mock Tests', () => {
                 if (listener) listener();
             }),
             createTopics: sinon.stub().resolves(true),
-            fetchTopicOffsets: sinon.stub().resolves([
-                { partition: 0, offset: '10', high: '10', low: '0' }
-            ]),
+            fetchTopicOffsets: sinon.stub().resolves([{ partition: 0, offset: '10', high: '10', low: '0' }]),
             fetchTopicMetadata: sinon.stub().resolves({
-                topics: [{ name: 'test', partitions: [{ partitionId: 0, leader: 1 }] }]
+                topics: [{ name: 'test', partitions: [{ partitionId: 0, leader: 1 }] }],
             }),
             on: sinon.stub().callsFake((event: string, listener: () => void) => {
                 adminEventListeners.set(event, listener);
@@ -195,10 +192,10 @@ describe('KafkaMessaging - Mock Tests', () => {
             const topic = 'batch-topic';
             const buffer = Buffer.from('binary');
             const messages = [
-                { value: { id: 1 } },           // JSON object
-                { value: 'plain string' },       // string
-                { value: buffer },               // Buffer
-                { value: null },                 // null
+                { value: { id: 1 } }, // JSON object
+                { value: 'plain string' }, // string
+                { value: buffer }, // Buffer
+                { value: null }, // null
             ];
 
             await messaging.publishBatch<Buffer | string | object | null>(topic, messages);
@@ -227,7 +224,7 @@ describe('KafkaMessaging - Mock Tests', () => {
         });
 
         it('should subscribe to a topic with auto-generated groupId', async () => {
-            await messaging.subscribe('my-topic', () => { });
+            await messaging.subscribe('my-topic', () => {});
 
             expect(consumerStub.subscribe.calledOnce).to.be.true;
             expect(consumerStub.run.calledOnce).to.be.true;
@@ -236,7 +233,7 @@ describe('KafkaMessaging - Mock Tests', () => {
         it('should subscribe with custom groupId', async () => {
             const createConsumerSpy = sinon.spy(messaging, 'createConsumer');
 
-            await messaging.subscribe('my-topic', () => { }, {
+            await messaging.subscribe('my-topic', () => {}, {
                 groupId: 'custom-group',
             });
 
@@ -246,7 +243,7 @@ describe('KafkaMessaging - Mock Tests', () => {
         it('should subscribe with groupIdPrefix', async () => {
             const createConsumerSpy = sinon.spy(messaging, 'createConsumer');
 
-            await messaging.subscribe('my-topic', () => { }, {
+            await messaging.subscribe('my-topic', () => {}, {
                 groupIdPrefix: 'my-prefix',
             });
 
@@ -259,7 +256,7 @@ describe('KafkaMessaging - Mock Tests', () => {
         it('should call onReady callback after subscription', async () => {
             let readyConsumer: any = null;
 
-            await messaging.subscribe('my-topic', () => { }, {
+            await messaging.subscribe('my-topic', () => {}, {
                 onReady: (consumer) => {
                     readyConsumer = consumer;
                 },
@@ -269,7 +266,7 @@ describe('KafkaMessaging - Mock Tests', () => {
         });
 
         it('should use fromBeginning option when subscribing', async () => {
-            await messaging.subscribe('my-topic', () => { }, {
+            await messaging.subscribe('my-topic', () => {}, {
                 fromBeginning: true,
             });
 
@@ -378,27 +375,33 @@ describe('KafkaMessaging - Mock Tests', () => {
                 eachBatchHandler = config.eachBatch;
             });
 
-            await messaging.subscribe('test-topic', () => {
-                throw new Error('Handler error');
-            }, {
-                onError: (error, message) => {
-                    capturedError = error;
-                    capturedMessage = message;
+            await messaging.subscribe(
+                'test-topic',
+                () => {
+                    throw new Error('Handler error');
                 },
-            });
+                {
+                    onError: (error, message) => {
+                        capturedError = error;
+                        capturedMessage = message;
+                    },
+                }
+            );
 
             // Simulate a batch with one message
             await eachBatchHandler({
                 batch: {
                     topic: 'test-topic',
                     partition: 0,
-                    messages: [{
-                        key: null,
-                        value: Buffer.from(JSON.stringify({ test: true })),
-                        headers: {},
-                        offset: '0',
-                        timestamp: Date.now().toString(),
-                    }],
+                    messages: [
+                        {
+                            key: null,
+                            value: Buffer.from(JSON.stringify({ test: true })),
+                            headers: {},
+                            offset: '0',
+                            timestamp: Date.now().toString(),
+                        },
+                    ],
                 },
                 resolveOffset: sinon.stub(),
                 heartbeat: sinon.stub().resolves(),
@@ -417,26 +420,32 @@ describe('KafkaMessaging - Mock Tests', () => {
                 eachBatchHandler = config.eachBatch;
             });
 
-            await messaging.subscribe('test-topic', async () => {
-                return Promise.reject(new Error('Async error'));
-            }, {
-                onError: async () => {
-                    await new Promise(resolve => setTimeout(resolve, 10));
-                    asyncHandlerCalled = true;
+            await messaging.subscribe(
+                'test-topic',
+                async () => {
+                    return Promise.reject(new Error('Async error'));
                 },
-            });
+                {
+                    onError: async () => {
+                        await new Promise((resolve) => setTimeout(resolve, 10));
+                        asyncHandlerCalled = true;
+                    },
+                }
+            );
 
             await eachBatchHandler({
                 batch: {
                     topic: 'test-topic',
                     partition: 0,
-                    messages: [{
-                        key: null,
-                        value: Buffer.from(JSON.stringify({ test: true })),
-                        headers: {},
-                        offset: '0',
-                        timestamp: Date.now().toString(),
-                    }],
+                    messages: [
+                        {
+                            key: null,
+                            value: Buffer.from(JSON.stringify({ test: true })),
+                            headers: {},
+                            offset: '0',
+                            timestamp: Date.now().toString(),
+                        },
+                    ],
                 },
                 resolveOffset: sinon.stub(),
                 heartbeat: sinon.stub().resolves(),
@@ -451,26 +460,32 @@ describe('KafkaMessaging - Mock Tests', () => {
                 eachBatchHandler = config.eachBatch;
             });
 
-            await messaging.subscribe('test-topic', () => {
-                throw new Error('Handler error');
-            }, {
-                onError: () => {
-                    throw new Error('onError also failed');
+            await messaging.subscribe(
+                'test-topic',
+                () => {
+                    throw new Error('Handler error');
                 },
-            });
+                {
+                    onError: () => {
+                        throw new Error('onError also failed');
+                    },
+                }
+            );
 
             // Should not throw
             await eachBatchHandler({
                 batch: {
                     topic: 'test-topic',
                     partition: 0,
-                    messages: [{
-                        key: null,
-                        value: Buffer.from(JSON.stringify({ test: true })),
-                        headers: {},
-                        offset: '0',
-                        timestamp: Date.now().toString(),
-                    }],
+                    messages: [
+                        {
+                            key: null,
+                            value: Buffer.from(JSON.stringify({ test: true })),
+                            headers: {},
+                            offset: '0',
+                            timestamp: Date.now().toString(),
+                        },
+                    ],
                 },
                 resolveOffset: sinon.stub(),
                 heartbeat: sinon.stub().resolves(),
@@ -497,13 +512,15 @@ describe('KafkaMessaging - Mock Tests', () => {
                 batch: {
                     topic: 'test-topic',
                     partition: 0,
-                    messages: [{
-                        key: null,
-                        value: Buffer.from(JSON.stringify({ nested: { value: 42 } })),
-                        headers: {},
-                        offset: '0',
-                        timestamp: Date.now().toString(),
-                    }],
+                    messages: [
+                        {
+                            key: null,
+                            value: Buffer.from(JSON.stringify({ nested: { value: 42 } })),
+                            headers: {},
+                            offset: '0',
+                            timestamp: Date.now().toString(),
+                        },
+                    ],
                 },
                 resolveOffset: sinon.stub(),
                 heartbeat: sinon.stub().resolves(),
@@ -528,13 +545,15 @@ describe('KafkaMessaging - Mock Tests', () => {
                 batch: {
                     topic: 'test-topic',
                     partition: 0,
-                    messages: [{
-                        key: null,
-                        value: null,
-                        headers: {},
-                        offset: '0',
-                        timestamp: Date.now().toString(),
-                    }],
+                    messages: [
+                        {
+                            key: null,
+                            value: null,
+                            headers: {},
+                            offset: '0',
+                            timestamp: Date.now().toString(),
+                        },
+                    ],
                 },
                 resolveOffset: sinon.stub(),
                 heartbeat: sinon.stub().resolves(),
@@ -560,13 +579,15 @@ describe('KafkaMessaging - Mock Tests', () => {
                 batch: {
                     topic: 'test-topic',
                     partition: 0,
-                    messages: [{
-                        key: null,
-                        value: originalBuffer,
-                        headers: {},
-                        offset: '0',
-                        timestamp: Date.now().toString(),
-                    }],
+                    messages: [
+                        {
+                            key: null,
+                            value: originalBuffer,
+                            headers: {},
+                            offset: '0',
+                            timestamp: Date.now().toString(),
+                        },
+                    ],
                 },
                 resolveOffset: sinon.stub(),
                 heartbeat: sinon.stub().resolves(),
@@ -593,13 +614,15 @@ describe('KafkaMessaging - Mock Tests', () => {
                 batch: {
                     topic: 'test-topic',
                     partition: 0,
-                    messages: [{
-                        key: null,
-                        value: Buffer.from('42'),
-                        headers: {},
-                        offset: '0',
-                        timestamp: Date.now().toString(),
-                    }],
+                    messages: [
+                        {
+                            key: null,
+                            value: Buffer.from('42'),
+                            headers: {},
+                            offset: '0',
+                            timestamp: Date.now().toString(),
+                        },
+                    ],
                 },
                 resolveOffset: sinon.stub(),
                 heartbeat: sinon.stub().resolves(),
@@ -625,13 +648,15 @@ describe('KafkaMessaging - Mock Tests', () => {
                 batch: {
                     topic: 'test-topic',
                     partition: 0,
-                    messages: [{
-                        key: null,
-                        value: Buffer.from('"quoted string"'),  // Valid JSON string
-                        headers: {},
-                        offset: '0',
-                        timestamp: Date.now().toString(),
-                    }],
+                    messages: [
+                        {
+                            key: null,
+                            value: Buffer.from('"quoted string"'), // Valid JSON string
+                            headers: {},
+                            offset: '0',
+                            timestamp: Date.now().toString(),
+                        },
+                    ],
                 },
                 resolveOffset: sinon.stub(),
                 heartbeat: sinon.stub().resolves(),
@@ -657,13 +682,15 @@ describe('KafkaMessaging - Mock Tests', () => {
                 batch: {
                     topic: 'test-topic',
                     partition: 0,
-                    messages: [{
-                        key: Buffer.from('my-key'),
-                        value: Buffer.from(JSON.stringify({ test: true })),
-                        headers: { traceId: Buffer.from('trace-123') },
-                        offset: '5',
-                        timestamp: '1234567890',
-                    }],
+                    messages: [
+                        {
+                            key: Buffer.from('my-key'),
+                            value: Buffer.from(JSON.stringify({ test: true })),
+                            headers: { traceId: Buffer.from('trace-123') },
+                            offset: '5',
+                            timestamp: '1234567890',
+                        },
+                    ],
                 },
                 resolveOffset: sinon.stub(),
                 heartbeat: sinon.stub().resolves(),

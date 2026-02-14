@@ -1,24 +1,29 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import getAbsoluteSwaggerFsPath from 'swagger-ui-dist/absolute-path'
+import getAbsoluteSwaggerFsPath from 'swagger-ui-dist/absolute-path';
 
-const favIconHtml = '<link rel="icon" type="image/png" href="./favicon-32x32.png" sizes="32x32" />' +
-    '<link rel="icon" type="image/png" href="./favicon-16x16.png" sizes="16x16" />'
+const favIconHtml =
+    '<link rel="icon" type="image/png" href="./favicon-32x32.png" sizes="32x32" />' +
+    '<link rel="icon" type="image/png" href="./favicon-16x16.png" sizes="16x16" />';
 
 const stringify = function (obj: any) {
-    const placeholder = '____FUNCTIONPLACEHOLDER____'
-    const fns: any[] = []
-    let json = JSON.stringify(obj, function (_key, value) {
-        if (typeof value === 'function') {
-            fns.push(value)
-            return placeholder
-        }
-        return value
-    }, 2)
+    const placeholder = '____FUNCTIONPLACEHOLDER____';
+    const fns: any[] = [];
+    let json = JSON.stringify(
+        obj,
+        function (_key, value) {
+            if (typeof value === 'function') {
+                fns.push(value);
+                return placeholder;
+            }
+            return value;
+        },
+        2
+    );
     json = json.replace(new RegExp('"' + placeholder + '"', 'g'), function () {
-        return fns.shift()
-    })
-    return 'var options = ' + json + ';'
-}
+        return fns.shift();
+    });
+    return 'var options = ' + json + ';';
+};
 
 const htmlTplString = `
   <!-- HTML for static distribution bundle build -->
@@ -101,7 +106,7 @@ const htmlTplString = `
   </body>
   
   </html>
-  `
+  `;
 
 const jsTplString = `
   window.onload = function() {
@@ -159,54 +164,53 @@ const jsTplString = `
   
     window.ui = ui
   }
-  `
+  `;
 
 function toExternalScriptTag(url: any) {
-    return `<script src='${url}'></script>`
+    return `<script src='${url}'></script>`;
 }
 
 function toInlineScriptTag(jsCode: any) {
-    return `<script>${jsCode}</script>`
+    return `<script>${jsCode}</script>`;
 }
 
 function toExternalStylesheetTag(url: any) {
-    return `<link href='${url}' rel='stylesheet'>`
+    return `<link href='${url}' rel='stylesheet'>`;
 }
 
 function toTags(customCode: any, toScript: any) {
     if (typeof customCode === 'string') {
-        return toScript(customCode)
+        return toScript(customCode);
     } else if (Array.isArray(customCode)) {
-        return customCode.map(toScript).join('\n')
+        return customCode.map(toScript).join('\n');
     } else {
-        return ''
+        return '';
     }
 }
 
 export interface SwaggerUiOptions {
-    swaggerOptions?: any,
-    customCss?: string | string[],
-    customJs?: string | string[],
-    customJsStr?: string | string[],
-    customfavIcon?: string,
-    customRobots?: string,
-    swaggerUrl?: any,
-    swaggerUrls?: any,
-    explorer?: boolean,
-    customSiteTitle?: string,
-    customCssUrl?: string | string[]
+    swaggerOptions?: any;
+    customCss?: string | string[];
+    customJs?: string | string[];
+    customJsStr?: string | string[];
+    customfavIcon?: string;
+    customRobots?: string;
+    swaggerUrl?: any;
+    swaggerUrls?: any;
+    explorer?: boolean;
+    customSiteTitle?: string;
+    customCssUrl?: string | string[];
 }
 
 export class SwaggerUiGenerator {
-
-    #swaggerInit = ''
+    #swaggerInit = '';
 
     get swaggerInit() {
-        return this.#swaggerInit
+        return this.#swaggerInit;
     }
 
     getAbsoluteSwaggerFsPath() {
-        return getAbsoluteSwaggerFsPath()
+        return getAbsoluteSwaggerFsPath();
     }
 
     generateHTML(
@@ -220,54 +224,60 @@ export class SwaggerUiGenerator {
         _htmlTplString?: any,
         _jsTplString?: any
     ) {
-        let isExplorer
-        let customJs
-        let customJsStr
-        let swaggerUrls
-        let customCssUrl
-        let customRobots
+        let isExplorer;
+        let customJs;
+        let customJsStr;
+        let swaggerUrls;
+        let customCssUrl;
+        let customRobots;
 
         if (opts && typeof opts === 'object') {
-            options = opts.swaggerOptions
-            customCss = opts.customCss
-            customJs = opts.customJs
-            customJsStr = opts.customJsStr
-            customfavIcon = opts.customfavIcon
-            customRobots = opts.customRobots
-            swaggerUrl = opts.swaggerUrl
-            swaggerUrls = opts.swaggerUrls
-            isExplorer = opts.explorer || !!swaggerUrls
-            customSiteTitle = opts.customSiteTitle
-            customCssUrl = opts.customCssUrl
+            options = opts.swaggerOptions;
+            customCss = opts.customCss;
+            customJs = opts.customJs;
+            customJsStr = opts.customJsStr;
+            customfavIcon = opts.customfavIcon;
+            customRobots = opts.customRobots;
+            swaggerUrl = opts.swaggerUrl;
+            swaggerUrls = opts.swaggerUrls;
+            isExplorer = opts.explorer || !!swaggerUrls;
+            customSiteTitle = opts.customSiteTitle;
+            customCssUrl = opts.customCssUrl;
         } else {
             //support legacy params based function
-            isExplorer = opts
+            isExplorer = opts;
         }
-        options = options || {}
-        const explorerString = isExplorer ? '' : '.swagger-ui .topbar .download-url-wrapper { display: none }'
-        customCss = explorerString + ' ' + customCss || explorerString
-        customfavIcon = customfavIcon || false
-        customSiteTitle = customSiteTitle || 'Swagger UI'
-        _htmlTplString = _htmlTplString || htmlTplString
-        _jsTplString = _jsTplString || jsTplString
+        options = options || {};
+        const explorerString = isExplorer ? '' : '.swagger-ui .topbar .download-url-wrapper { display: none }';
+        customCss = explorerString + ' ' + customCss || explorerString;
+        customfavIcon = customfavIcon || false;
+        customSiteTitle = customSiteTitle || 'Swagger UI';
+        _htmlTplString = _htmlTplString || htmlTplString;
+        _jsTplString = _jsTplString || jsTplString;
 
-        const robotsMetaString = customRobots ? '<meta name="robots" content="' + customRobots + '" />' : ''
-        const favIconString = customfavIcon ? '<link rel="icon" href="' + customfavIcon + '" />' : favIconHtml
-        const htmlWithCustomCss = _htmlTplString.toString().replace('<% customCss %>', customCss)
-        const htmlWithCustomRobots = htmlWithCustomCss.replace('<% robotsMetaString %>', robotsMetaString)
-        const htmlWithFavIcon = htmlWithCustomRobots.replace('<% favIconString %>', favIconString)
-        const htmlWithCustomJsUrl = htmlWithFavIcon.replace('<% customJs %>', toTags(customJs, toExternalScriptTag))
-        const htmlWithCustomJs = htmlWithCustomJsUrl.replace('<% customJsStr %>', toTags(customJsStr, toInlineScriptTag))
-        const htmlWithCustomCssUrl = htmlWithCustomJs.replace('<% customCssUrl %>', toTags(customCssUrl, toExternalStylesheetTag))
+        const robotsMetaString = customRobots ? '<meta name="robots" content="' + customRobots + '" />' : '';
+        const favIconString = customfavIcon ? '<link rel="icon" href="' + customfavIcon + '" />' : favIconHtml;
+        const htmlWithCustomCss = _htmlTplString.toString().replace('<% customCss %>', customCss);
+        const htmlWithCustomRobots = htmlWithCustomCss.replace('<% robotsMetaString %>', robotsMetaString);
+        const htmlWithFavIcon = htmlWithCustomRobots.replace('<% favIconString %>', favIconString);
+        const htmlWithCustomJsUrl = htmlWithFavIcon.replace('<% customJs %>', toTags(customJs, toExternalScriptTag));
+        const htmlWithCustomJs = htmlWithCustomJsUrl.replace(
+            '<% customJsStr %>',
+            toTags(customJsStr, toInlineScriptTag)
+        );
+        const htmlWithCustomCssUrl = htmlWithCustomJs.replace(
+            '<% customCssUrl %>',
+            toTags(customCssUrl, toExternalStylesheetTag)
+        );
 
         const initOptions = {
             swaggerDoc: swaggerDoc || undefined,
             customOptions: options,
             swaggerUrl: swaggerUrl || undefined,
-            swaggerUrls: swaggerUrls || undefined
-        }
+            swaggerUrls: swaggerUrls || undefined,
+        };
 
-        this.#swaggerInit = _jsTplString.toString().replace('<% swaggerOptions %>', stringify(initOptions))
-        return htmlWithCustomCssUrl.replace('<% title %>', customSiteTitle)
+        this.#swaggerInit = _jsTplString.toString().replace('<% swaggerOptions %>', stringify(initOptions));
+        return htmlWithCustomCssUrl.replace('<% title %>', customSiteTitle);
     }
 }

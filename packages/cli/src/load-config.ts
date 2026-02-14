@@ -1,8 +1,8 @@
+import { Config } from './definitions';
+import * as prompts from '@clack/prompts';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'url';
-import * as prompts from '@clack/prompts';
-import { Config } from './definitions';
 
 export async function loadKaapiConfig(silent?: boolean): Promise<Config> {
     const configNames = ['kaapi.config.mjs', 'kaapi.config.js'];
@@ -18,7 +18,7 @@ export async function loadKaapiConfig(silent?: boolean): Promise<Config> {
 
     if (!configPath) {
         if (!silent) prompts.log.warn('No kaapi config file found.');
-        return {}
+        return {};
     }
 
     // Support both CommonJS and ESM exports
@@ -27,7 +27,7 @@ export async function loadKaapiConfig(silent?: boolean): Promise<Config> {
     const configModule = await import(configModuleUrl);
     const config = configModule.default || configModule;
 
-    if (!silent) prompts.log.info(`Loaded kaapi config: ${configPath}`)
+    if (!silent) prompts.log.info(`Loaded kaapi config: ${configPath}`);
 
     return config;
 }

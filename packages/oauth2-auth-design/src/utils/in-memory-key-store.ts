@@ -18,8 +18,8 @@ export class InMemoryKeyStore implements JwksKeyStore, JwksRotationTimestampStor
 
     async getPublicKeys(): Promise<object[]> {
         const now = Date.now();
-        this.publicKeys = this.publicKeys.filter(k => k.exp > now)
-        return this.publicKeys.map(k => k.key);
+        this.publicKeys = this.publicKeys.filter((k) => k.exp > now);
+        return this.publicKeys.map((k) => k.key);
     }
 
     async getLastRotationTimestamp(): Promise<number> {
@@ -32,5 +32,5 @@ export class InMemoryKeyStore implements JwksKeyStore, JwksRotationTimestampStor
 }
 
 export function createInMemoryKeyStore(): InMemoryKeyStore {
-    return new InMemoryKeyStore()
+    return new InMemoryKeyStore();
 }

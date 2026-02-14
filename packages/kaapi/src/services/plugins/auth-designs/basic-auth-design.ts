@@ -1,29 +1,25 @@
 // BasicAuthDesign
-
+import { AuthDesign, KaapiTools } from '../plugin';
 import Boom from '@hapi/boom';
-import {
-    Auth,
-    AuthCredentials,
-    ReqRef,
-    ReqRefDefaults,
-    Request,
-    ResponseToolkit
-} from '@hapi/hapi';
+import { Auth, AuthCredentials, ReqRef, ReqRefDefaults, Request, ResponseToolkit } from '@hapi/hapi';
 import { BasicAuthUtil } from '@novice1/api-doc-generator';
-import {
-    AuthDesign,
-    KaapiTools,
-} from '../plugin';
 
-export type BasicAuthOptions<
-    Refs extends ReqRef = ReqRefDefaults
-> = {
-    validate?(request: Request<Refs>, username: string, password: string, h: ResponseToolkit<Refs>): Promise<{
-        isValid?: boolean;
-        artifacts?: unknown;
-        credentials?: AuthCredentials;
-        message?: string;
-    } | Auth | Boom.Boom>;
+export type BasicAuthOptions<Refs extends ReqRef = ReqRefDefaults> = {
+    validate?(
+        request: Request<Refs>,
+        username: string,
+        password: string,
+        h: ResponseToolkit<Refs>
+    ): Promise<
+        | {
+              isValid?: boolean;
+              artifacts?: unknown;
+              credentials?: AuthCredentials;
+              message?: string;
+          }
+        | Auth
+        | Boom.Boom
+    >;
 };
 
 export interface BasicAuthArg {
@@ -32,21 +28,17 @@ export interface BasicAuthArg {
 }
 
 export class BasicAuthDesign extends AuthDesign {
+    readonly key = 'Authorization';
+    protected strategyName: string = 'basic-auth-design';
+    protected description?: string;
+    protected auth: BasicAuthOptions;
 
-    readonly key = 'Authorization'
-    protected strategyName: string = 'basic-auth-design'
-    protected description?: string
-    protected auth: BasicAuthOptions
+    constructor(arg?: BasicAuthArg) {
+        super();
 
-    constructor(
-        arg?: BasicAuthArg
-    ) {
-        super()
+        if (arg?.strategyName) this.strategyName = arg.strategyName;
 
-        if (arg?.strategyName)
-            this.strategyName = arg.strategyName;
-
-        this.auth = arg?.auth ? { ...arg.auth } : {}
+        this.auth = arg?.auth ? { ...arg.auth } : {};
     }
 
     setDescription(description: string): this {
@@ -63,80 +55,76 @@ export class BasicAuthDesign extends AuthDesign {
     }
 
     docs(): BasicAuthUtil | undefined {
-        const docs = new BasicAuthUtil(this.strategyName)
+        const docs = new BasicAuthUtil(this.strategyName);
 
         if (this.description) {
-            docs.setDescription(this.description)
+            docs.setDescription(this.description);
         }
 
-        return docs
+        return docs;
     }
 
     integrateStrategy(t: KaapiTools): void | Promise<void> {
-
-        const strategyName = this.strategyName
+        const strategyName = this.strategyName;
 
         t.scheme(strategyName, (_server, options) => {
-
             return {
                 authenticate: async (request, h) => {
-
                     const settings: BasicAuthOptions = options || {};
 
                     const authorization = request.raw.req.headers[this.key.toLowerCase()];
 
-
                     const authSplit = typeof authorization === 'string' ? authorization.split(/\s+/) : ['', ''];
 
-                    const tokenType = authSplit[0]
+                    const tokenType = authSplit[0];
 
                     if (tokenType.toLowerCase() !== 'basic') {
-                        return Boom.unauthorized(null, strategyName)
+                        return Boom.unauthorized(null, strategyName);
                     }
 
-                    const token = authSplit[1]
+                    const token = authSplit[1];
 
                     const [username, password] = Buffer.from(token, 'base64').toString().split(':', 2);
 
                     if (settings.validate) {
                         try {
-                            const result = await settings.validate?.(request, username, password, h)
+                            const result = await settings.validate?.(request, username, password, h);
 
                             if (result && 'isAuth' in result) {
-                                return result
+                                return result;
                             }
 
                             if (result && 'isBoom' in result) {
-                                return result
+                                return result;
                             }
 
                             if (result) {
                                 const { isValid, credentials, artifacts, message } = result;
 
                                 if (isValid && credentials) {
-                                    return h.authenticated({ credentials, artifacts })
+                                    return h.authenticated({ credentials, artifacts });
                                 }
 
                                 if (message) {
                                     return h.unauthenticated(Boom.unauthorized(message, 'Basic'), {
                                         credentials: credentials || {},
-                                        artifacts
-                                    })
+                                        artifacts,
+                                    });
                                 }
                             }
                         } catch (err) {
-                            return Boom.internal(err instanceof Error ? err : `${err}`)
+                            return Boom.internal(err instanceof Error ? err : `${err}`);
                         }
                     }
 
-                    return Boom.unauthorized(null, 'Basic')
+                    return Boom.unauthorized(null, 'Basic');
                 },
-            }
-        })
-        t.strategy(strategyName, strategyName, this.auth)
+            };
+        });
+        t.strategy(strategyName, strategyName, this.auth);
     }
 
     toString(): string {
-        return this.getStrategyName()
+        return this.getStrategyName();
     }
 }

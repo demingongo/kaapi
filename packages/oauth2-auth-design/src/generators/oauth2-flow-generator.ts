@@ -1,10 +1,10 @@
-import { FileGenerator, FileGeneratorType, Question, QuestionType } from '@kaapi/cli/definitions'
-import { camelCase, kebabCase } from '@kaapi/cli/utils'
+import { FileGenerator, FileGeneratorType, Question, QuestionType } from '@kaapi/cli/definitions';
+import { camelCase, kebabCase } from '@kaapi/cli/utils';
 
 enum FLOW_ENUM {
     oidcAuthCode = 'oidc-auth-code',
     oidcClientCredentials = 'oidc-client-credentials',
-    oidcDeviceAuth = 'oidc-device-auth'
+    oidcDeviceAuth = 'oidc-device-auth',
 }
 
 const FLOW_OPTIONS: {
@@ -12,85 +12,79 @@ const FLOW_OPTIONS: {
     label: string;
     hint: string;
 }[] = [
-        {
-            value: FLOW_ENUM.oidcAuthCode,
-            label: 'OIDC Authorization Code',
-            hint: ''
-        },
-        {
-            value: FLOW_ENUM.oidcClientCredentials,
-            label: 'OIDC Client Credentials',
-            hint: ''
-        },
-        {
-            value: FLOW_ENUM.oidcDeviceAuth,
-            label: 'OIDC Device Authorization',
-            hint: ''
-        }
-    ];
+    {
+        value: FLOW_ENUM.oidcAuthCode,
+        label: 'OIDC Authorization Code',
+        hint: '',
+    },
+    {
+        value: FLOW_ENUM.oidcClientCredentials,
+        label: 'OIDC Client Credentials',
+        hint: '',
+    },
+    {
+        value: FLOW_ENUM.oidcDeviceAuth,
+        label: 'OIDC Device Authorization',
+        hint: '',
+    },
+];
 
 export class OAuth2FlowGenerator implements FileGenerator {
-
     get type(): FileGeneratorType {
-        return 'auth-design'
+        return 'auth-design';
     }
 
     get name(): 'oauth2-flow' {
-        return 'oauth2-flow'
+        return 'oauth2-flow';
     }
 
     get description(): string {
-        return 'Creates an auth design based on OAuth2 specifications.'
+        return 'Creates an auth design based on OAuth2 specifications.';
     }
 
     get notes(): string[] {
-        return [
-            'Allowed values for --flow:',
-            ...FLOW_OPTIONS.map(o => `  - ${o.value}`)
-        ]
+        return ['Allowed values for --flow:', ...FLOW_OPTIONS.map((o) => `  - ${o.value}`)];
     }
 
     get options(): Record<string, string> {
         return {
             name: 'The name of the strategy',
-            flow: 'The grant type flow'
-        }
+            flow: 'The grant type flow',
+        };
     }
 
     #values = {
         name: '',
-        flow: ''
-    }
+        flow: '',
+    };
 
     init(options: Record<string, unknown>): void {
         if (typeof options['name'] == 'string') {
-            this.#values.name = camelCase(options['name'])
+            this.#values.name = camelCase(options['name']);
         }
         if (typeof options['flow'] == 'string') {
-            if (!FLOW_OPTIONS.map(v => v.value).includes(options['flow'])) {
-                throw new Error(`Invalid value for '--flow'. Allowed values are: ${FLOW_OPTIONS.map(v => v.value).join(', ')}.`)
+            if (!FLOW_OPTIONS.map((v) => v.value).includes(options['flow'])) {
+                throw new Error(
+                    `Invalid value for '--flow'. Allowed values are: ${FLOW_OPTIONS.map((v) => v.value).join(', ')}.`
+                );
             }
-            this.#values.flow = options['flow']
+            this.#values.flow = options['flow'];
         }
     }
 
     isValid(): boolean {
-        return !!this.#values.name
+        return !!this.#values.name;
     }
 
     getFileContent(): string {
-        if (this.#values.flow === FLOW_ENUM.oidcAuthCode)
-            return this.#getOidcAuthCodeContent()
-        else if (this.#values.flow === FLOW_ENUM.oidcClientCredentials)
-            return this.#getOidcClientCredentialsContent()
-        else if (this.#values.flow === FLOW_ENUM.oidcDeviceAuth)
-            return this.#getOidcDeviceAuthContent()
-        else
-            return ''
+        if (this.#values.flow === FLOW_ENUM.oidcAuthCode) return this.#getOidcAuthCodeContent();
+        else if (this.#values.flow === FLOW_ENUM.oidcClientCredentials) return this.#getOidcClientCredentialsContent();
+        else if (this.#values.flow === FLOW_ENUM.oidcDeviceAuth) return this.#getOidcDeviceAuthContent();
+        else return '';
     }
 
     getQuestions(): Question[] {
-        const r: Question[] = []
+        const r: Question[] = [];
 
         if (!this.#values.name) {
             r.push({
@@ -98,33 +92,33 @@ export class OAuth2FlowGenerator implements FileGenerator {
                 options: {
                     message: 'The name of the strategy?',
                     defaultValue: 'oauth2-strategy',
-                    placeholder: 'oauth2-strategy'
+                    placeholder: 'oauth2-strategy',
                 },
                 setValue: (value) => {
-                    this.#values.name = camelCase(value)
-                }
-            })
+                    this.#values.name = camelCase(value);
+                },
+            });
         }
 
-        if (!(this.#values.flow && FLOW_OPTIONS.map(v => v.value).includes(this.#values.flow))) {
+        if (!(this.#values.flow && FLOW_OPTIONS.map((v) => v.value).includes(this.#values.flow))) {
             r.push({
                 type: QuestionType.select,
                 options: {
                     message: 'The authorization flow?',
                     options: FLOW_OPTIONS,
-                    initialValue: 'oidc-auth-code'
+                    initialValue: 'oidc-auth-code',
                 },
                 setValue: (value) => {
-                    this.#values.flow = `${value}`
-                }
-            })
+                    this.#values.flow = `${value}`;
+                },
+            });
         }
 
-        return r
+        return r;
     }
 
     getFilename(): string {
-        return kebabCase(`${this.#values.name}`) + '.ts'
+        return kebabCase(`${this.#values.name}`) + '.ts';
     }
 
     #getOidcAuthCodeContent(): string {
@@ -316,7 +310,7 @@ export const oidcAuthCodeBuilder = OIDCAuthorizationCodeBuilder.create()
         intervalMs: 7.884e9, // 91 days
         timestampStore: createInMemoryKeyStore(),
     });
-`
+`;
     }
 
     #getOidcClientCredentialsContent(): string {
@@ -424,7 +418,7 @@ export const oidcClientCredentialsBuilder = OIDCClientCredentialsBuilder.create(
         intervalMs: 7.884e9, // 91 days
         timestampStore: createInMemoryKeyStore(),
     });
-`
+`;
     }
 
     #getOidcDeviceAuthContent(): string {
@@ -616,6 +610,6 @@ export const oidcAuthCodeBuilder = OIDCAuthorizationCodeBuilder.create()
         intervalMs: 7.884e9, // 91 days
         timestampStore: createInMemoryKeyStore(),
     });
-`
+`;
     }
 }

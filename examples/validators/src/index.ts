@@ -1,43 +1,43 @@
-
 //import Boom from '@hapi/boom'
+import Boom from '@hapi/boom';
 import inert from '@hapi/inert';
-import Joi from 'joi'
-import { BearerUtil } from '@novice1/api-doc-generator';
 import {
     groupResponses,
     Kaapi,
     MediaTypeModifier,
     RequestBodyDocsModifier,
-    ResponseDocsModifier, SchemaModifier
+    ResponseDocsModifier,
+    SchemaModifier,
 } from '@kaapi/kaapi';
-import path from 'node:path';
-import { type } from 'arktype';
-import * as v from 'valibot';
-import { z } from 'zod'
 import { validatorArk } from '@kaapi/validator-arktype';
 import { validatorValibot } from '@kaapi/validator-valibot';
 import { validatorZod } from '@kaapi/validator-zod';
-import Stream, { PassThrough } from 'node:stream';
-import busboy from 'busboy'
+import { BearerUtil } from '@novice1/api-doc-generator';
+import { type } from 'arktype';
+import busboy from 'busboy';
+import Joi from 'joi';
 import fs from 'node:fs';
-import Boom from '@hapi/boom';
+import path from 'node:path';
+import Stream, { PassThrough } from 'node:stream';
+import * as v from 'valibot';
+import { z } from 'zod';
 
 const app = new Kaapi({
     port: 8000,
     host: 'localhost',
     loggerOptions: {
-        level: 'debug'
+        level: 'debug',
     },
     auth: {
         tokenType: 'Bearer',
         validate: async (_, token) => {
-            const isValid = token == 'alain'
-            const credentials = isValid ? { user: { username: 'Alain' } } : undefined
+            const isValid = token == 'alain';
+            const credentials = isValid ? { user: { username: 'Alain' } } : undefined;
             return {
                 isValid,
                 credentials,
-                message: credentials ? 'ok' : 'Unauthorized!'
-            }
+                message: credentials ? 'ok' : 'Unauthorized!',
+            };
         },
     },
     docs: {
@@ -60,17 +60,17 @@ const app = new Kaapi({
                 setTimeout(() => {
                 if (document.documentElement.classList.contains("dark-mode")) { document.documentElement.classList.remove("dark-mode"); }
                 }, 10)
-                `
-            }
-        }
+                `,
+            },
+        },
     },
     routes: {
         auth: {
             strategy: 'kaapi',
-            mode: 'try'
+            mode: 'try',
         },
         files: {
-            relativeTo: path.join(__dirname, '..', 'uploads')
+            relativeTo: path.join(__dirname, '..', 'uploads'),
         },
         /*
         plugins: {
@@ -83,34 +83,39 @@ const app = new Kaapi({
             }
         }
         */
-    }
-})
+    },
+});
 
 async function start() {
+    await app.extend([validatorArk]);
+    await app.extend([validatorValibot]);
+    await app.extend([validatorZod]);
 
-    await app.extend([validatorArk])
-    await app.extend([validatorValibot])
-    await app.extend([validatorZod])
-
-    await app.extend([{
-        async integrate(t) {
-            await t.server.register(inert)
+    await app.extend([
+        {
+            async integrate(t) {
+                await t.server.register(inert);
+            },
         },
-    }])
+    ]);
 
     // ArkType validation
     app.base()
         .ark({
             payload: type({
-                file: type({
-                    _data: type.instanceOf(Buffer),
-                    hapi: type({
-                        filename: 'string',
-                        headers: {
-                            'content-type': '\'image/jpeg\' | \'image/jpg\' | \'image/png\'',
-                        },
-                    }),
-                }, '@', 'The file if nothing else'),
+                file: type(
+                    {
+                        _data: type.instanceOf(Buffer),
+                        hapi: type({
+                            filename: 'string',
+                            headers: {
+                                'content-type': '\'image/jpeg\' | \'image/jpg\' | \'image/png\'',
+                            },
+                        }),
+                    },
+                    '@',
+                    'The file if nothing else'
+                ),
             }),
         })
         .route(
@@ -132,117 +137,127 @@ async function start() {
             (req, h) => h.response(req.payload.file._data).type(req.payload.file.hapi.headers['content-type'])
         );
 
-
     // Valibot validation
-    app.base().valibot({
-        payload: v.object({
-            file: v.pipe(
-                v.looseObject({
-                    _data: v.instance(Buffer),
-                    hapi: v.looseObject({
-                        filename: v.string(),
-                        headers: v.looseObject({
-                            'content-type': v.picklist(['image/jpeg', 'image/jpg', 'image/png'] as const)
-                        })
-                    })
-                }),
-                v.description('The file itself (image)')
-            )
+    app.base()
+        .valibot({
+            payload: v.object({
+                file: v.pipe(
+                    v.looseObject({
+                        _data: v.instance(Buffer),
+                        hapi: v.looseObject({
+                            filename: v.string(),
+                            headers: v.looseObject({
+                                'content-type': v.picklist(['image/jpeg', 'image/jpg', 'image/png'] as const),
+                            }),
+                        }),
+                    }),
+                    v.description('The file itself (image)')
+                ),
+            }),
         })
-    }).route({
-        method: 'POST',
-        path: '/upload-image-valibot',
-        options: {
-            tags: ['valibot'],
-            description: 'Upload an image',
-            payload: {
-                output: 'stream',
-                parse: true,
-                allow: 'multipart/form-data',
-                multipart: { output: 'stream' },
-                maxBytes: 1024 * 3_000
-            }
-        }
-    }, ({ payload: { file } }, h) => h.response(file._data).type(file.hapi.headers['content-type']));
+        .route(
+            {
+                method: 'POST',
+                path: '/upload-image-valibot',
+                options: {
+                    tags: ['valibot'],
+                    description: 'Upload an image',
+                    payload: {
+                        output: 'stream',
+                        parse: true,
+                        allow: 'multipart/form-data',
+                        multipart: { output: 'stream' },
+                        maxBytes: 1024 * 3_000,
+                    },
+                },
+            },
+            ({ payload: { file } }, h) => h.response(file._data).type(file.hapi.headers['content-type'])
+        );
 
     // Zod validation (route "options" as function will only have docs at refreshDocs)
-    app.base().zod({
-        payload: z.object({
-            file: z.looseObject({
-                _data: z.instanceof(Buffer),
-                hapi: z.looseObject({
-                    filename: z.string(),
-                    headers: z.looseObject({
-                        'content-type': z.enum(['image/jpeg', 'image/jpg', 'image/png'])
-                    })
-                })
-            })
+    app.base()
+        .zod({
+            payload: z.object({
+                file: z.looseObject({
+                    _data: z.instanceof(Buffer),
+                    hapi: z.looseObject({
+                        filename: z.string(),
+                        headers: z.looseObject({
+                            'content-type': z.enum(['image/jpeg', 'image/jpg', 'image/png']),
+                        }),
+                    }),
+                }),
+            }),
         })
-    }).route({
-        method: 'POST',
-        path: '/upload-image-zod',
-        options: () => {
-            return ({
-                tags: ['zod'],
-                description: 'Upload an image',
-                payload: {
-                    output: 'stream',
-                    parse: true,
-                    allow: 'multipart/form-data',
-                    multipart: { output: 'stream' },
-                    maxBytes: 1024 * 3_000
-                }, plugins: {
-
-                }
-            })
-        }
-    }, (req, h) =>
-        h.response(req.payload.file._data)
-            .type(req.payload.file.hapi.headers['content-type'])
-    );
-
+        .route(
+            {
+                method: 'POST',
+                path: '/upload-image-zod',
+                options: () => {
+                    return {
+                        tags: ['zod'],
+                        description: 'Upload an image',
+                        payload: {
+                            output: 'stream',
+                            parse: true,
+                            allow: 'multipart/form-data',
+                            multipart: { output: 'stream' },
+                            maxBytes: 1024 * 3_000,
+                        },
+                        plugins: {},
+                    };
+                },
+            },
+            (req, h) => h.response(req.payload.file._data).type(req.payload.file.hapi.headers['content-type'])
+        );
 
     // Regular validation (joi)
     app.route<{
         Payload: {
             file: {
-                _data: Buffer,
+                _data: Buffer;
                 hapi: {
-                    filename: string,
+                    filename: string;
                     headers: {
-                        'content-type': string
-                    }
-                }
-            }
-        }
-    }>({
-        method: 'POST',
-        path: '/upload-image-joi',
-        options: {
-            tags: ['joi'],
-            description: 'Upload an image',
-            validate: {
-                payload: Joi.object({
-                    file: Joi.object({
-                        _data: Joi.object().instance(Buffer),
-                        hapi: Joi.object({
-                            filename: Joi.string(),
-                            headers: Joi.object({
-                                'content-type': Joi.string().valid('image/jpeg', 'image/jpg', 'image/png')
-                            }).unknown(true)
-                        }).unknown(true)
-                    }).unknown(true).required().tag('files') // 👈 tag required for docs
-                }).required()
+                        'content-type': string;
+                    };
+                };
+            };
+        };
+    }>(
+        {
+            method: 'POST',
+            path: '/upload-image-joi',
+            options: {
+                tags: ['joi'],
+                description: 'Upload an image',
+                validate: {
+                    payload: Joi.object({
+                        file: Joi.object({
+                            _data: Joi.object().instance(Buffer),
+                            hapi: Joi.object({
+                                filename: Joi.string(),
+                                headers: Joi.object({
+                                    'content-type': Joi.string().valid('image/jpeg', 'image/jpg', 'image/png'),
+                                }).unknown(true),
+                            }).unknown(true),
+                        })
+                            .unknown(true)
+                            .required()
+                            .tag('files'), // 👈 tag required for docs
+                    }).required(),
+                },
+                payload: {
+                    output: 'stream',
+                    parse: true,
+                    allow: 'multipart/form-data',
+                    multipart: { output: 'stream' },
+                    maxBytes: 1024 * 3000, // 3MB
+                },
             },
-            payload: {
-                output: 'stream',
-                parse: true,
-                allow: 'multipart/form-data',
-                multipart: { output: 'stream' },
-                maxBytes: 1024 * 3000 // 3MB
-            }
-        }
-    }, ({ payload: { file } }, h) => h.response(file._data).type(file.hapi.headers['content-type']));
+        },
+        ({ payload: { file } }, h) => h.response(file._data).type(file.hapi.headers['content-type'])
+    );
 
     /*
 const fileFieldSchema: SchemaObject3_1 = {
@@ -313,56 +328,55 @@ const fileFieldSchema: SchemaObject3_1 = {
                             },
                             */
                             modifiers: () => ({
-                                requestBody: new RequestBodyDocsModifier()
-                                    .setRequired(true)
-                                    .addMediaType('multipart/form-data', new MediaTypeModifier(
-                                        {
-                                            schema: new SchemaModifier('UploadImageBusboy', {
-                                                type: 'object',
-                                                properties: {
-                                                    username: {
-                                                        type: 'string',
-                                                        description: 'The name of the user',
-                                                        format: 'email'
-                                                    },
-                                                    file: {
-                                                        type: 'string',
-                                                        description: 'The image to upload',
-                                                        contentMediaType: 'application/octet-stream'
-                                                    }
+                                requestBody: new RequestBodyDocsModifier().setRequired(true).addMediaType(
+                                    'multipart/form-data',
+                                    new MediaTypeModifier({
+                                        schema: new SchemaModifier('UploadImageBusboy', {
+                                            type: 'object',
+                                            properties: {
+                                                username: {
+                                                    type: 'string',
+                                                    description: 'The name of the user',
+                                                    format: 'email',
                                                 },
-                                                required: [
-                                                    'file'
-                                                ],
-                                            }).toObject()
-                                        }
-                                    )),
+                                                file: {
+                                                    type: 'string',
+                                                    description: 'The image to upload',
+                                                    contentMediaType: 'application/octet-stream',
+                                                },
+                                            },
+                                            required: ['file'],
+                                        }).toObject(),
+                                    })
+                                ),
                                 responses: groupResponses(
                                     new ResponseDocsModifier()
                                         .setCode(200)
                                         .setDefault(true)
                                         .setDescription('The file itself'),
-                                    new ResponseDocsModifier()
-                                        .setCode(400)
-                                        .setDescription('Bad Request')
-                                )
-
-                            })
-                        }
+                                    new ResponseDocsModifier().setCode(400).setDescription('Bad Request')
+                                ),
+                            }),
+                        },
                     },
-                }
+                },
             },
         },
         async (request, h) => {
             const bb = busboy({ headers: request.headers });
 
-            let savedFilename = ''
+            let savedFilename = '';
 
             const promise = new Promise<void>((resolve, _reject) => {
                 bb.on('file', (fieldname, file, info) => {
                     const { filename, encoding, mimeType } = info;
-                    console.log(`File [${fieldname}]: filename: %j, encoding: %j, mimeType: %j`, filename, encoding, mimeType);
-                    savedFilename = filename
+                    console.log(
+                        `File [${fieldname}]: filename: %j, encoding: %j, mimeType: %j`,
+                        filename,
+                        encoding,
+                        mimeType
+                    );
+                    savedFilename = filename;
                     file.pipe(fs.createWriteStream(`./uploads/${filename}`));
                 });
                 bb.on('field', (name, val, _info) => {
@@ -370,15 +384,15 @@ const fileFieldSchema: SchemaObject3_1 = {
                 });
                 bb.on('close', () => {
                     console.log('Done parsing form!');
-                    resolve()
+                    resolve();
                 });
-            })
+            });
 
             request.raw.req.pipe(bb);
 
             await promise;
 
-            return h.file(savedFilename)
+            return h.file(savedFilename);
         }
     );
 
@@ -386,7 +400,7 @@ const fileFieldSchema: SchemaObject3_1 = {
 
     // (route "options" as function will only have docs at refreshDocs)
     app.route<{
-        Payload: Stream.Readable
+        Payload: Stream.Readable;
     }>(
         {
             method: 'POST',
@@ -410,19 +424,19 @@ const fileFieldSchema: SchemaObject3_1 = {
                                     .setRequired(true)
                                     .addMediaType(VALID_TYPES[0], {
                                         schema: {
-                                            type: 'string'
-                                        }
+                                            type: 'string',
+                                        },
                                     })
                                     .addMediaType(VALID_TYPES[1], {
                                         schema: {
-                                            type: 'string'
-                                        }
+                                            type: 'string',
+                                        },
                                     })
                                     .addMediaType(VALID_TYPES[2], {
                                         schema: {
-                                            type: 'string'
-                                        }
-                                    })
+                                            type: 'string',
+                                        },
+                                    }),
                             }),
                         },
                     },
@@ -438,8 +452,7 @@ const fileFieldSchema: SchemaObject3_1 = {
                 let buffer = Buffer.alloc(0);
                 let validated = false;
 
-                request.payload.on('data', chunk => {
-
+                request.payload.on('data', (chunk) => {
                     if (!validated) {
                         buffer = Buffer.concat([buffer, chunk]);
 
@@ -447,13 +460,12 @@ const fileFieldSchema: SchemaObject3_1 = {
                             const header = buffer.subarray(0, 8);
 
                             // PNG/JPG check (really validate the file type)
-                            const pngSig = Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
-                            const jpegSig = Buffer.from([0xFF, 0xD8]);
+                            const pngSig = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+                            const jpegSig = Buffer.from([0xff, 0xd8]);
 
                             if (header.equals(pngSig) || header.subarray(0, 2).equals(jpegSig)) {
                                 validated = true;
-                                resolve(h.response(pass)
-                                    .type(contentType));
+                                resolve(h.response(pass).type(contentType));
                             } else {
                                 request.payload.unpipe(pass);
                                 // Drain the rest of the stream so client doesn't hang
@@ -467,21 +479,29 @@ const fileFieldSchema: SchemaObject3_1 = {
 
                 request.payload.on('end', () => {
                     console.log('Done parsing payload!');
-                    pass.end()
-                })
+                    pass.end();
+                });
             });
 
-            return await validatorPromise
+            return await validatorPromise;
         }
     );
 
     const combinationPayloadSchema = type([
         {
-            n: type(['number.integer | string', '@', { description: 'Number of total objects', examples: [5], format: 'integer' }])
+            n: type([
+                'number.integer | string',
+                '@',
+                { description: 'Number of total objects', examples: [5], format: 'integer' },
+            ])
                 .pipe((v) => Number(v))
                 .to('1 <= number.integer <= 50'),
-            r: type(['1 | 2 | 3 | string', '@', { description: 'Number of objects chosen at once', examples: [3], format: 'integer' }])
-                .pipe((v) => typeof v === 'string' ? (v ? Number(v) : NaN) : v)
+            r: type([
+                '1 | 2 | 3 | string',
+                '@',
+                { description: 'Number of objects chosen at once', examples: [3], format: 'integer' },
+            ])
+                .pipe((v) => (typeof v === 'string' ? (v ? Number(v) : NaN) : v))
                 .to('1 | 2 | 3')
                 .default(3),
         },
@@ -493,7 +513,6 @@ const fileFieldSchema: SchemaObject3_1 = {
             r: 'number',
         })(payload);
     });
-
 
     // route
     app.base()
@@ -523,9 +542,9 @@ const fileFieldSchema: SchemaObject3_1 = {
         );
 
     // (route "options" as function will only have docs at refreshDocs)
-    setTimeout(() => app.refreshDocs(), 2000)
+    setTimeout(() => app.refreshDocs(), 2000);
 
-    await app.listen()
+    await app.listen();
 }
 
-start()
+start();

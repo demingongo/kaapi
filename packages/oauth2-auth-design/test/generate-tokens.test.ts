@@ -1,6 +1,6 @@
+import { expect } from 'chai';
 import { generateKeyPair, exportJWK, SignJWT } from 'jose';
 import { v4 as uuidv4 } from 'uuid';
-import { expect } from 'chai'
 
 describe('generate tokens', function () {
     it('should generate a DPoP token', async () => {
@@ -23,12 +23,12 @@ describe('generate tokens', function () {
             htm,
             htu,
             jti,
-            iat
+            iat,
         })
             .setProtectedHeader({
                 alg: 'ES256',
                 typ: 'dpop+jwt',
-                jwk: publicJwk
+                jwk: publicJwk,
             })
             .sign(privateKey);
 
@@ -36,6 +36,6 @@ describe('generate tokens', function () {
         console.log('🔐 DPoP Token:\n', dpop);
         console.log('\n📦 Public JWK:\n', JSON.stringify(publicJwk, null, 2));
 
-        expect(dpop).to.be.a('string')
+        expect(dpop).to.be.a('string');
     });
-})
+});

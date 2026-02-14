@@ -1,26 +1,26 @@
 {
-  "name": "@kaapi/server",
-  "version": "0.0.42",
-  "private": false,
-  "description": "kaapi server",
-  "main": "lib/index.js",
-  "scripts": {
-    "lint": "eslint .",
-    "build": "tsc",
-    "format": "prettier --write ./src",
-    "format:check": "prettier --check ./src"
-  },
-  "author": "demingongo",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/demingongo/kaapi.git",
-    "directory": "packages/server"
-  },
-  "license": "MIT",
-  "dependencies": {
-    "@hapi/boom": "^10.0.1",
-    "@hapi/hapi": "^21.4.4",
-    "@hapi/hoek": "^11.0.7",
-    "tslib": "^2.8.1"
-  }
+    "name": "@kaapi/server",
+    "version": "0.0.42",
+    "private": false,
+    "description": "kaapi server",
+    "main": "lib/index.js",
+    "scripts": {
+        "lint": "eslint .",
+        "build": "tsc",
+        "format": "prettier --write ./src",
+        "format:check": "prettier --check ./src"
+    },
+    "author": "demingongo",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/demingongo/kaapi.git",
+        "directory": "packages/server"
+    },
+    "license": "MIT",
+    "dependencies": {
+        "@hapi/boom": "^10.0.1",
+        "@hapi/hapi": "^21.4.4",
+        "@hapi/hoek": "^11.0.7",
+        "tslib": "^2.8.1"
+    }
 }

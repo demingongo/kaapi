@@ -1,11 +1,11 @@
-import { AuthResponseRenderer, OAuth2ErrorBody } from '@kaapi/oauth2-auth-design'
+import { AuthResponseRenderer, OAuth2ErrorBody } from '@kaapi/oauth2-auth-design';
 
 const TEMPLATES_AUTH: Record<string, AuthResponseRenderer> = {
-  'authorization-page': (({ error, errorMessage, usernameField, passwordField }) => {
-    if (error && ['invalid_client'].includes(error)) {
-      return { error, error_description: errorMessage } as OAuth2ErrorBody
-    }
-    return `<!DOCTYPE html>
+    'authorization-page': ({ error, errorMessage, usernameField, passwordField }) => {
+        if (error && ['invalid_client'].includes(error)) {
+            return { error, error_description: errorMessage } as OAuth2ErrorBody;
+        }
+        return `<!DOCTYPE html>
 <html lang="en">
  <head>
   <meta charset="UTF-8">
@@ -38,13 +38,12 @@ const TEMPLATES_AUTH: Record<string, AuthResponseRenderer> = {
   </div>
   </form>
  </body>
-</html>`
-  }),
+</html>`;
+    },
 
-  'consent-page': ((_, params) => {
-
-    params.clientId
-    return `<!DOCTYPE html>
+    'consent-page': (_, params) => {
+        params.clientId;
+        return `<!DOCTYPE html>
 <html lang="en">
  <head>
   <meta charset="UTF-8">
@@ -78,17 +77,23 @@ const TEMPLATES_AUTH: Record<string, AuthResponseRenderer> = {
   </div>
   </form>
  </body>
-</html>`
-  })
-}
-
-
+</html>`;
+    },
+};
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export default async function renderHtml(template: string, substitution?: Record<string, any>): Promise<string | object> {
-  if (!(template in TEMPLATES_AUTH)) {
-    throw new Error(`Unknown template '${template}'`)
-  }
+export default async function renderHtml(
+    template: string,
+    substitution?: Record<string, any>
+): Promise<string | object> {
+    if (!(template in TEMPLATES_AUTH)) {
+        throw new Error(`Unknown template '${template}'`);
+    }
 
-  return TEMPLATES_AUTH[template](substitution?.context || {}, substitution?.params || {}, substitution?.req || {}, substitution?.h || {})
+    return TEMPLATES_AUTH[template](
+        substitution?.context || {},
+        substitution?.params || {},
+        substitution?.req || {},
+        substitution?.h || {}
+    );
 }

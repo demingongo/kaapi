@@ -1,71 +1,68 @@
+import { KaapiOpenAPI, KaapiPostman } from './generators';
+import { SchemaModifier } from './modifiers';
+import { SwaggerUiGenerator, SwaggerUiOptions } from './swagger-ui-generator';
+import Boom from '@hapi/boom';
+import { HandlerDecorations, Lifecycle, ReqRef, ReqRefDefaults } from '@hapi/hapi';
+import { KaapiServerRoute } from '@kaapi/server';
+import { OpenAPIOptions, PostmanOptions } from '@novice1/api-doc-generator';
 import {
     ExampleObject,
     LicenseObject,
     ReferenceObject,
     SchemaObject,
     ServerObject,
-    TagObject
-} from '@novice1/api-doc-generator/lib/generators/openapi/definitions'
-import { Folder } from '@novice1/api-doc-generator/lib/generators/postman/definitions'
-import { BaseAuthUtil } from '@novice1/api-doc-generator/lib/utils/auth/baseAuthUtils'
-import { BaseResponseUtil } from '@novice1/api-doc-generator/lib/utils/responses/baseResponseUtils'
-import { OpenAPIOptions, PostmanOptions } from '@novice1/api-doc-generator'
-import { SwaggerUiGenerator, SwaggerUiOptions } from './swagger-ui-generator'
-import { KaapiOpenAPI, KaapiPostman } from './generators'
-import { HandlerDecorations, Lifecycle, ReqRef, ReqRefDefaults } from '@hapi/hapi'
-import { KaapiServerRoute } from '@kaapi/server'
-import Boom from '@hapi/boom'
-import fs from 'node:fs'
-import { SchemaModifier } from './modifiers'
+    TagObject,
+} from '@novice1/api-doc-generator/lib/generators/openapi/definitions';
+import { Folder } from '@novice1/api-doc-generator/lib/generators/postman/definitions';
+import { BaseAuthUtil } from '@novice1/api-doc-generator/lib/utils/auth/baseAuthUtils';
+import { BaseResponseUtil } from '@novice1/api-doc-generator/lib/utils/responses/baseResponseUtils';
+import fs from 'node:fs';
 
 const bootTime = Date.now();
 
 function trimQuery(q: string) {
-    return q && q.split('?')[0]
+    return q && q.split('?')[0];
 }
 
-export type DocsTag = TagObject & Omit<Folder, 'item'>
+export type DocsTag = TagObject & Omit<Folder, 'item'>;
 
-export type DocsSwaggerUIOptions = Omit<Omit<SwaggerUiOptions, 'swaggerUrl'>, 'swaggerUrls'>
+export type DocsSwaggerUIOptions = Omit<Omit<SwaggerUiOptions, 'swaggerUrl'>, 'swaggerUrls'>;
 
 export interface DocsUIOptions {
-    swagger?: DocsSwaggerUIOptions
+    swagger?: DocsSwaggerUIOptions;
 }
 
 export interface DocsConfig {
     /**
      * Disable docs routes.
      */
-    disabled?: boolean
-    path?: string
-    title?: string
-    consumes?: string[]
-    security?: BaseAuthUtil
-    license?: LicenseObject | string
-    version?: string
-    host?: ServerObject
-    examples?: Record<string, ReferenceObject | ExampleObject>
-    schemas?: SchemaModifier[] | Record<string, SchemaObject | ReferenceObject>
-    responses?: BaseResponseUtil
-    tags?: DocsTag[]
-    ui?: DocsUIOptions
+    disabled?: boolean;
+    path?: string;
+    title?: string;
+    consumes?: string[];
+    security?: BaseAuthUtil;
+    license?: LicenseObject | string;
+    version?: string;
+    host?: ServerObject;
+    examples?: Record<string, ReferenceObject | ExampleObject>;
+    schemas?: SchemaModifier[] | Record<string, SchemaObject | ReferenceObject>;
+    responses?: BaseResponseUtil;
+    tags?: DocsTag[];
+    ui?: DocsUIOptions;
 
-    openAPIOptions?: OpenAPIOptions
-    postmanOptions?: PostmanOptions
+    openAPIOptions?: OpenAPIOptions;
+    postmanOptions?: PostmanOptions;
 }
 
 export function createDocsRouter<Refs extends ReqRef = ReqRefDefaults>(
     path: string,
-    { openapi, postman }: { openapi: KaapiOpenAPI, postman: KaapiPostman },
-    options?: DocsUIOptions): [
-        route: KaapiServerRoute<Refs>,
-        handler: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>
-    ] {
+    { openapi, postman }: { openapi: KaapiOpenAPI; postman: KaapiPostman },
+    options?: DocsUIOptions
+): [route: KaapiServerRoute<Refs>, handler: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>] {
+    const lastSlashPos = path.lastIndexOf('/');
+    const prefix = path.substring(0, lastSlashPos || path.length);
 
-    const lastSlashPos = path.lastIndexOf('/')
-    const prefix = path.substring(0, lastSlashPos || path.length)
-
-    const ui = new SwaggerUiGenerator()
+    const ui = new SwaggerUiGenerator();
 
     return [
         {
@@ -75,11 +72,11 @@ export function createDocsRouter<Refs extends ReqRef = ReqRefDefaults>(
                 plugins: {
                     kaapi: {
                         docs: {
-                            disabled: true
-                        }
-                    }
-                }
-            }
+                            disabled: true,
+                        },
+                    },
+                },
+            },
         },
         (req, h) => {
             if (req.url.pathname == path) {
@@ -91,19 +88,21 @@ export function createDocsRouter<Refs extends ReqRef = ReqRefDefaults>(
                     options?.swagger?.customfavIcon,
                     null,
                     options?.swagger?.customSiteTitle
-                )
+                );
                 return h.response(html).header('Content-Type', 'text/html');
             } else if (req.url.pathname == `${path}${path.endsWith('/') ? '' : '/'}schema`) {
-                if (req.query &&
+                if (
+                    req.query &&
                     typeof req.query === 'object' &&
                     'format' in req.query &&
-                    req.query.format == 'postman') {
-                    return postman.result()
+                    req.query.format == 'postman'
+                ) {
+                    return postman.result();
                 }
-                return openapi.result()
+                return openapi.result();
             } else {
                 if (trimQuery(req.url.pathname).endsWith('/package.json')) {
-                    return Boom.notFound()
+                    return Boom.notFound();
                 } else if (trimQuery(req.url.pathname).endsWith('/swagger-ui-init.js')) {
                     return h.response(ui.swaggerInit).header('Content-Type', 'application/javascript');
                 }
@@ -113,40 +112,41 @@ export function createDocsRouter<Refs extends ReqRef = ReqRefDefaults>(
 
                     const posFileName = trimQuery(req.url.pathname).lastIndexOf('/');
 
-                    let filepath = ''
+                    let filepath = '';
 
-                    const swaggerUiFile = ui.getAbsoluteSwaggerFsPath()
-                        + trimQuery(req.url.pathname).substring(posFileName > -1 ? posFileName : 0)
+                    const swaggerUiFile =
+                        ui.getAbsoluteSwaggerFsPath() +
+                        trimQuery(req.url.pathname).substring(posFileName > -1 ? posFileName : 0);
 
                     if (fs.existsSync(swaggerUiFile)) {
-                        filepath = swaggerUiFile
+                        filepath = swaggerUiFile;
                     }
 
                     if (filepath) {
-                        let readStreamOptions: { encoding?: BufferEncoding } = { encoding: 'utf-8' }
-                        let cT = 'application/octet-stream'
+                        let readStreamOptions: { encoding?: BufferEncoding } = { encoding: 'utf-8' };
+                        let cT = 'application/octet-stream';
                         if (filepath.endsWith('.js')) {
-                            cT = 'application/javascript'
+                            cT = 'application/javascript';
                         } else if (filepath.endsWith('.css')) {
-                            cT = 'text/css'
+                            cT = 'text/css';
                         } else if (filepath.endsWith('.png')) {
-                            readStreamOptions = {}
-                            cT = 'image/png'
+                            readStreamOptions = {};
+                            cT = 'image/png';
                         } else if (filepath.endsWith('.html')) {
-                            cT = 'text/html'
+                            cT = 'text/html';
                         }
-                        return h.response(fs.createReadStream(filepath, readStreamOptions))
-                            .ttl(cacheDuration).header(
-                                'Last-Modified',
-                                (new Date(bootTime)).toUTCString()
-                            ).header('Content-Type', cT);
+                        return h
+                            .response(fs.createReadStream(filepath, readStreamOptions))
+                            .ttl(cacheDuration)
+                            .header('Last-Modified', new Date(bootTime).toUTCString())
+                            .header('Content-Type', cT);
                     }
                 } catch (e) {
-                    console.error(e)
+                    console.error(e);
                 }
 
-                return Boom.notFound()
+                return Boom.notFound();
             }
-        }
+        },
     ];
 }

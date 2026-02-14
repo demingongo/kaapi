@@ -200,7 +200,7 @@ describe('ValidatorArk Schema Validation', () => {
                         return val;
                     })
                     .to('number.integer >= 1'),
-            })
+            }),
         };
 
         const route = withSchema(schema).route({
@@ -208,8 +208,8 @@ describe('ValidatorArk Schema Validation', () => {
             path: '/with-schema',
             handler: ({ payload, query }) => ({
                 name: payload.name,
-                age: query.age
-            })
+                age: query.age,
+            }),
         });
 
         app.route(route);
@@ -218,20 +218,20 @@ describe('ValidatorArk Schema Validation', () => {
         const ok = await app.base().inject({
             method: 'POST',
             url: '/with-schema?age=30',
-            payload: { name: 'Alice' }
+            payload: { name: 'Alice' },
         });
 
         expect(ok.statusCode).to.equal(200);
         expect(ok.result).to.deep.equal({
             name: 'Alice',
-            age: 30
+            age: 30,
         });
 
         // invalid request
         const fail = await app.base().inject({
             method: 'POST',
             url: '/with-schema?age=-1',
-            payload: { name: 'Al' }
+            payload: { name: 'Al' },
         });
 
         expect(fail.statusCode).to.equal(400);

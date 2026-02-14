@@ -1,36 +1,36 @@
 {
-  "name": "@kaapi/kafka-messaging",
-  "version": "0.0.42",
-  "private": false,
-  "description": "Kafka-based messaging for kaapi",
-  "main": "lib/index.js",
-  "scripts": {
-    "lint": "eslint .",
-    "build": "tsc",
-    "test": "kaukau --require ts-node/register --config kaukau.config.mjs --ext mock.spec.ts",
-    "test:integration": "kaukau --require ts-node/register --config kaukau.config.mjs --ext integration.spec.ts",
-    "test:mock": "kaukau --require ts-node/register --config kaukau.config.mjs --ext mock.spec.ts",
-    "test:all": "kaukau --require ts-node/register --config kaukau.config.mjs"
-  },
-  "keywords": [
-    "kaapi",
-    "messaging",
-    "kafka",
-    "typescript"
-  ],
-  "author": "demingongo",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/demingongo/kaapi.git",
-    "directory": "packages/kafka-messaging"
-  },
-  "license": "MIT",
-  "dependencies": {
-    "@kaapi/kaapi": "workspace:^",
-    "kafkajs": "^2.2.4",
-    "tslib": "^2.8.1"
-  },
-  "devDependencies": {
-    "@types/mocha": "^10.0.10"
-  }
+    "name": "@kaapi/kafka-messaging",
+    "version": "0.0.42",
+    "private": false,
+    "description": "Kafka-based messaging for kaapi",
+    "main": "lib/index.js",
+    "scripts": {
+        "lint": "eslint .",
+        "build": "tsc",
+        "test": "kaukau --require ts-node/register --config kaukau.config.mjs --ext mock.spec.ts",
+        "test:integration": "kaukau --require ts-node/register --config kaukau.config.mjs --ext integration.spec.ts",
+        "test:mock": "kaukau --require ts-node/register --config kaukau.config.mjs --ext mock.spec.ts",
+        "test:all": "kaukau --require ts-node/register --config kaukau.config.mjs"
+    },
+    "keywords": [
+        "kaapi",
+        "messaging",
+        "kafka",
+        "typescript"
+    ],
+    "author": "demingongo",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/demingongo/kaapi.git",
+        "directory": "packages/kafka-messaging"
+    },
+    "license": "MIT",
+    "dependencies": {
+        "@kaapi/kaapi": "workspace:^",
+        "kafkajs": "^2.2.4",
+        "tslib": "^2.8.1"
+    },
+    "devDependencies": {
+        "@types/mocha": "^10.0.10"
+    }
 }

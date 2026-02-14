@@ -1,5 +1,6 @@
-import { createLogger } from '@kaapi/kaapi'
-import winston from 'winston'
+import { createLogger } from '@kaapi/kaapi';
+import winston from 'winston';
+
 //import DailyRotateFile from 'winston-daily-rotate-file' // For on-prem applications with no log aggregation or restricted env
 
 export default createLogger({
@@ -20,10 +21,8 @@ export default createLogger({
     ],
     exceptionHandlers: [
         //new DailyRotateFile({ filename: 'logs/exceptions-%DATE%.log' }),
-        new winston.transports.Console({ handleExceptions: true })
+        new winston.transports.Console({ handleExceptions: true }),
     ],
-    rejectionHandlers: [
-        new winston.transports.Console()
-    ],
-    exitOnError: false
-})
+    rejectionHandlers: [new winston.transports.Console()],
+    exitOnError: false,
+});

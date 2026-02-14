@@ -5,32 +5,32 @@ export interface ReplayStore<T extends string | number> {
 }
 
 export class InMemoryReplayStore<T extends string | number = string | number> implements ReplayStore<T> {
-    private values: Record<string, NodeJS.Timeout> = {}
+    private values: Record<string, NodeJS.Timeout> = {};
 
     async has(value: T): Promise<boolean> {
         if (this.values[`${value}`]) {
-            return true
+            return true;
         }
-        return false
+        return false;
     }
 
     async delete(value: T): Promise<void> {
-        delete this.values[`${value}`]
+        delete this.values[`${value}`];
     }
 
     async add(value: T, ttlSeconds: number): Promise<void> {
-        const to = this.values[`${value}`]
+        const to = this.values[`${value}`];
         if (to) {
-            clearTimeout(to)
+            clearTimeout(to);
         }
         this.values[`${value}`] = setTimeout(async () => {
-            await this.delete(value)
-        }, ttlSeconds * 1000)
+            await this.delete(value);
+        }, ttlSeconds * 1000);
     }
 }
 
-export type ReplayDetector = ReplayStore<string>
+export type ReplayDetector = ReplayStore<string>;
 
 export function createInMemoryReplayStore<T extends string | number = string | number>(): InMemoryReplayStore<T> {
-    return new InMemoryReplayStore<T>()
+    return new InMemoryReplayStore<T>();
 }

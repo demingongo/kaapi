@@ -1,6 +1,6 @@
-import fs from 'node:fs'
-import { fileURLToPath } from 'node:url';
+import fs from 'node:fs';
 import path, { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 async function copyDtsFiles(src, dest) {
     await fs.promises.mkdir(dest, { recursive: true });
@@ -20,7 +20,7 @@ async function copyDtsFiles(src, dest) {
 }
 
 async function buildDT() {
-    console.log('scripts/buildDT')
+    console.log('scripts/buildDT');
 
     await copyDtsFiles(
         `${dirname(fileURLToPath(import.meta.url))}/../src`,
@@ -39,7 +39,7 @@ async function buildDT() {
 
     await fs.promises.writeFile(destFilePath, content, { encoding: 'utf-8' });
 
-    console.log('Done')
+    console.log('Done');
 }
 
-buildDT()
+buildDT();

@@ -1,9 +1,24 @@
-import Boom from '@hapi/boom';
-import { objectAsync, type ObjectEntriesAsync, parseAsync, ValiError } from 'valibot'
-import type { KaapiServerRoute, HandlerDecorations, Lifecycle, KaapiPlugin, Request, ResponseToolkit, RouteOptions } from '@kaapi/kaapi';
-import type { ValibotlessReqRef, ValibotlessReqRefDefaults, ValidatorValibot, ValidatorValibotReqRef, ValidatorValibotRouteBuilder, ValidatorValibotSchema } from './types';
-import { OpenAPIValibotHelper, PostmanValibotHelper } from './doc-helpers';
 import pkg from '../package.json';
+import { OpenAPIValibotHelper, PostmanValibotHelper } from './doc-helpers';
+import type {
+    ValibotlessReqRef,
+    ValibotlessReqRefDefaults,
+    ValidatorValibot,
+    ValidatorValibotReqRef,
+    ValidatorValibotRouteBuilder,
+    ValidatorValibotSchema,
+} from './types';
+import Boom from '@hapi/boom';
+import type {
+    KaapiServerRoute,
+    HandlerDecorations,
+    Lifecycle,
+    KaapiPlugin,
+    Request,
+    ResponseToolkit,
+    RouteOptions,
+} from '@kaapi/kaapi';
+import { objectAsync, type ObjectEntriesAsync, parseAsync, ValiError } from 'valibot';
 
 const { parse = { payload: true, query: true, params: true, headers: true, state: true } } = {};
 export const supportedProps = ['payload', 'query', 'params', 'headers', 'state'] as const;
@@ -18,7 +33,7 @@ const normalizeBooleans = (obj: Record<string, unknown>) => {
         }
     }
     return obj;
-}
+};
 
 function mergeOptions<V extends ValidatorValibotSchema, R extends ValibotlessReqRef>(
     options: RouteOptions<ValidatorValibotReqRef<V> & R>,
@@ -26,65 +41,74 @@ function mergeOptions<V extends ValidatorValibotSchema, R extends ValibotlessReq
 ) {
     // validator
     if (!options.plugins) {
-        options.plugins = {}
+        options.plugins = {};
     }
-    options.plugins.valibot = schema
+    options.plugins.valibot = schema;
 
     // docs
-    options.plugins.kaapi = options.plugins.kaapi || {}
-    if (options.plugins.kaapi.docs != false && // docs not disabled
+    options.plugins.kaapi = options.plugins.kaapi || {};
+    if (
+        options.plugins.kaapi.docs != false && // docs not disabled
         !options.plugins.kaapi.docs?.disabled // docs not disabled
     ) {
-        if (!options.plugins?.kaapi?.docs?.helperSchemaProperty) // docs have not helperSchemaProperty
-            options.plugins.kaapi.docs = { ...options.plugins.kaapi.docs, helperSchemaProperty: 'valibot' }
-        if (!options.plugins?.kaapi?.docs?.openAPIHelperClass) // docs have not openAPIHelperClass
-            options.plugins.kaapi.docs = { ...options.plugins.kaapi.docs, openAPIHelperClass: OpenAPIValibotHelper }
+        if (!options.plugins?.kaapi?.docs?.helperSchemaProperty)
+            // docs have not helperSchemaProperty
+            options.plugins.kaapi.docs = { ...options.plugins.kaapi.docs, helperSchemaProperty: 'valibot' };
+        if (!options.plugins?.kaapi?.docs?.openAPIHelperClass)
+            // docs have not openAPIHelperClass
+            options.plugins.kaapi.docs = { ...options.plugins.kaapi.docs, openAPIHelperClass: OpenAPIValibotHelper };
     }
-    return options
+    return options;
 }
 
-export const withSchema = function withSchema<V extends ValidatorValibotSchema>(schema: V): ValidatorValibotRouteBuilder<V> {
+export const withSchema = function withSchema<V extends ValidatorValibotSchema>(
+    schema: V
+): ValidatorValibotRouteBuilder<V> {
     return {
         route<R extends ValibotlessReqRef = ValibotlessReqRefDefaults>(
             serverRoute: KaapiServerRoute<ValidatorValibotReqRef<V> & R>,
-            handler?: HandlerDecorations | Lifecycle.Method<ValidatorValibotReqRef<V> & R, Lifecycle.ReturnValue<ValidatorValibotReqRef<V> & R>>
+            handler?:
+                | HandlerDecorations
+                | Lifecycle.Method<ValidatorValibotReqRef<V> & R, Lifecycle.ReturnValue<ValidatorValibotReqRef<V> & R>>
         ) {
-            const { ...route } = serverRoute
+            const { ...route } = serverRoute;
             if (!route.options) {
-                route.options = {}
+                route.options = {};
             }
             if (typeof route.options === 'object') {
-                mergeOptions(route.options, schema)
+                mergeOptions(route.options, schema);
             } else if (typeof route.options === 'function') {
                 const fn = route.options.bind(route);
                 route.options = (server) => {
-                    const options = fn(server)
-                    return mergeOptions(options, schema)
-                }
+                    const options = fn(server);
+                    return mergeOptions(options, schema);
+                };
             }
             if (handler) {
-                route.handler = handler
+                route.handler = handler;
             }
-            return route
-        }
-    }
-}
+            return route;
+        },
+    };
+};
 
 export const validatorValibot: KaapiPlugin = {
     async integrate(t) {
         const validator: ValidatorValibot = <V extends ValidatorValibotSchema>(schema: V) => {
-            const builder = withSchema(schema)
+            const builder = withSchema(schema);
             return {
                 route<R extends ValibotlessReqRef = ValibotlessReqRefDefaults>(
                     serverRoute: KaapiServerRoute<ValidatorValibotReqRef<V> & R>,
-                    handler?: HandlerDecorations | Lifecycle.Method<ValidatorValibotReqRef<V> & R, Lifecycle.ReturnValue<ValidatorValibotReqRef<V> & R>>
+                    handler?:
+                        | HandlerDecorations
+                        | Lifecycle.Method<
+                              ValidatorValibotReqRef<V> & R,
+                              Lifecycle.ReturnValue<ValidatorValibotReqRef<V> & R>
+                          >
                 ) {
-                    t.route(builder.route(
-                        serverRoute,
-                        handler
-                    ));
+                    t.route(builder.route(serverRoute, handler));
                     return t.server;
-                }
+                },
             };
         };
 
@@ -93,7 +117,9 @@ export const validatorValibot: KaapiPlugin = {
             version: pkg.version,
             register: async function (server) {
                 server.ext('onPreHandler', async (request: Request, h: ResponseToolkit) => {
-                    const routeValidation = request?.route?.settings?.plugins?.valibot as ValidatorValibotSchema | undefined;
+                    const routeValidation = request?.route?.settings?.plugins?.valibot as
+                        | ValidatorValibotSchema
+                        | undefined;
                     try {
                         // Initialize empty objects to hold the parsed data and corresponding Valibot schemas
                         const data: Record<string, unknown> = {};
@@ -126,7 +152,11 @@ export const validatorValibot: KaapiPlugin = {
                         if (hasProps) {
                             // Create a Valibot object from the collected schema and parse asynchronously
                             // Options can come from routeValidation.options
-                            const parsedProps = await parseAsync(objectAsync(dataSchema), data, routeValidation?.options);
+                            const parsedProps = await parseAsync(
+                                objectAsync(dataSchema),
+                                data,
+                                routeValidation?.options
+                            );
                             // Merge the parsed and validated properties back into the request object
                             Object.assign(request, parsedProps);
                         }
@@ -156,10 +186,10 @@ export const validatorValibot: KaapiPlugin = {
                             }
                         } else if (err instanceof Error) {
                             // If it’s a regular Error, use its message
-                            message = err.message
+                            message = err.message;
                         } else {
                             // Unknown error type
-                            message = 'Unknown error'
+                            message = 'Unknown error';
                         }
 
                         // Create a Boom badRequest response with the error message
@@ -167,12 +197,12 @@ export const validatorValibot: KaapiPlugin = {
 
                         // Attach the raw validation error object for debugging/logging
                         response.data = {
-                            validationError: err
-                        }
+                            validationError: err,
+                        };
 
                         // Handle custom failAction if it’s a function
                         if (typeof routeValidation?.failAction === 'function') {
-                            return routeValidation.failAction(request, h, response)
+                            return routeValidation.failAction(request, h, response);
                         }
 
                         // If failAction is 'log', log the validation error with the request
@@ -185,7 +215,7 @@ export const validatorValibot: KaapiPlugin = {
                         return response;
                     }
                 });
-                server.decorate('server', 'valibot', validator)
+                server.decorate('server', 'valibot', validator);
             },
         });
 
@@ -196,4 +226,4 @@ export const validatorValibot: KaapiPlugin = {
             t.postman.addHelperClass(PostmanValibotHelper);
         }
     },
-}
+};

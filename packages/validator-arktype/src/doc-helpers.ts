@@ -3,7 +3,7 @@ import { OpenAPIJsonHelper, PostmanJsonHelper } from '@novice1/api-doc-json-help
 import { type, Type, type JsonSchema } from 'arktype';
 
 /**
- * reformat anyOf to externalize common values for: 
+ * reformat anyOf to externalize common values for:
  * - examples
  * - format
  * - description
@@ -12,18 +12,18 @@ function reformatAnyOf(schema: JsonSchema) {
     if ('anyOf' in schema) {
         const propertiesToCheck: ('description' | 'examples' | 'format')[] = [];
         if (!schema.description) {
-            propertiesToCheck.push('description')
+            propertiesToCheck.push('description');
         }
         if (!schema.examples) {
-            propertiesToCheck.push('examples')
+            propertiesToCheck.push('examples');
         }
         if (!schema.format) {
-            propertiesToCheck.push('format')
+            propertiesToCheck.push('format');
         }
         const objects = schema.anyOf;
         for (const prop of propertiesToCheck) {
             // Get the value from the first object
-            const firstElement = objects[0]
+            const firstElement = objects[0];
             if (firstElement && typeof firstElement === 'object') {
                 const firstValue = firstElement[prop];
 
@@ -37,7 +37,7 @@ function reformatAnyOf(schema: JsonSchema) {
                 };
 
                 // Check all objects
-                const allSame = objects.every(obj => {
+                const allSame = objects.every((obj) => {
                     const val = obj[prop];
                     if (Array.isArray(firstValue) && Array.isArray(val)) {
                         return arraysEqual(firstValue, val);
@@ -91,14 +91,12 @@ function transformValue(value?: Type | object | unknown) {
 
                 if ('properties' in r) {
                     // because default values are not always in the schema (arktype bug)
-                    const r2 = (value as Type).toJSON()
-                    if ('in' in r2 &&
-                        r2.in &&
-                        typeof r2.in === 'object' &&
-                        'optional' in r2.in) {
+                    const r2 = (value as Type).toJSON();
+                    if ('in' in r2 && r2.in && typeof r2.in === 'object' && 'optional' in r2.in) {
                         if (Array.isArray(r2.in.optional)) {
                             for (const prop of r2.in.optional) {
-                                if (typeof prop === 'object' &&
+                                if (
+                                    typeof prop === 'object' &&
                                     prop &&
                                     'key' in prop &&
                                     typeof prop.key === 'string' &&
@@ -106,7 +104,7 @@ function transformValue(value?: Type | object | unknown) {
                                     'default' in prop &&
                                     typeof prop.default !== 'undefined'
                                 ) {
-                                    r.properties[prop.key].default = prop.default
+                                    r.properties[prop.key].default = prop.default;
                                 }
                             }
                         }
@@ -114,7 +112,7 @@ function transformValue(value?: Type | object | unknown) {
 
                     // reformat anyOf schemas
                     for (const prop in r.properties) {
-                        reformatAnyOf(r.properties[prop])
+                        reformatAnyOf(r.properties[prop]);
                     }
                 }
                 return r;
@@ -126,7 +124,7 @@ function transformValue(value?: Type | object | unknown) {
 }
 
 export class OpenAPIArkHelper extends OpenAPIJsonHelper implements KaapiOpenAPIHelperInterface {
-    protected _originalSchema?: Type
+    protected _originalSchema?: Type;
     constructor(
         params: {
             value?: Type | object | unknown;
@@ -136,7 +134,7 @@ export class OpenAPIArkHelper extends OpenAPIJsonHelper implements KaapiOpenAPIH
     ) {
         super({ ...params, value: transformValue(params.value) }, isRequired);
         if (params.value instanceof Type) {
-            this._originalSchema = params.value
+            this._originalSchema = params.value;
         }
     }
     isValid(): boolean {
@@ -199,18 +197,19 @@ export class OpenAPIArkHelper extends OpenAPIJsonHelper implements KaapiOpenAPIH
         return r;
     }
     isRequired(): boolean {
-        let r = super.isRequired()
+        let r = super.isRequired();
         if (!r && this._originalSchema) {
             const schema = this._schema;
             // if there is at least one required property
-            if ('required' in schema &&
+            if (
+                'required' in schema &&
                 Array.isArray(schema.required) &&
                 'properties' in schema &&
                 typeof schema.properties === 'object' &&
                 schema.properties &&
                 schema.required.length <= Object.keys(schema.properties).length
             ) {
-                r = true
+                r = true;
             }
         }
         return r;
@@ -221,24 +220,26 @@ export class OpenAPIArkHelper extends OpenAPIJsonHelper implements KaapiOpenAPIH
         if ('properties' in schema && typeof schema.properties === 'object' && schema.properties) {
             const properties: Record<string, unknown> = schema.properties as Record<string, unknown>;
             if (this._originalSchema) {
-                const betterR: Record<string, Type> = {}
+                const betterR: Record<string, Type> = {};
                 for (const p in properties) {
                     const isRequired: boolean =
                         'required' in schema && Array.isArray(schema.required) && schema.required.includes(p);
                     const ch = new OpenAPIArkHelper({ value: properties[p] }, isRequired);
                     if (ch.isFile()) {
-                        const propOriginalSchema = (this._originalSchema as Type<Record<string, unknown>>)?.props?.find(v => v.key === p)
+                        const propOriginalSchema = (this._originalSchema as Type<Record<string, unknown>>)?.props?.find(
+                            (v) => v.key === p
+                        );
                         if (propOriginalSchema) {
                             let key = p;
                             if (!isRequired) {
-                                key = `${p}?` // set it as optional
+                                key = `${p}?`; // set it as optional
                             }
-                            betterR[key] = propOriginalSchema.value
+                            betterR[key] = propOriginalSchema.value;
                         }
                     }
                 }
                 if (Object.keys(betterR).length) {
-                    return type<unknown, Type<typeof betterR>>(betterR) as unknown as Record<string, unknown>
+                    return type<unknown, Type<typeof betterR>>(betterR) as unknown as Record<string, unknown>;
                 }
             } else {
                 for (const p in properties) {
@@ -256,7 +257,7 @@ export class OpenAPIArkHelper extends OpenAPIJsonHelper implements KaapiOpenAPIH
 }
 
 export class PostmanArkHelper extends PostmanJsonHelper {
-    protected _originalSchema?: Type
+    protected _originalSchema?: Type;
     constructor(
         params: {
             value?: Type | object | unknown;
@@ -266,7 +267,7 @@ export class PostmanArkHelper extends PostmanJsonHelper {
     ) {
         super({ ...params, value: transformValue(params.value) }, isRequired);
         if (params.value instanceof Type) {
-            this._originalSchema = params.value
+            this._originalSchema = params.value;
         }
     }
     isValid(): boolean {
@@ -281,18 +282,19 @@ export class PostmanArkHelper extends PostmanJsonHelper {
         );
     }
     isRequired(): boolean {
-        let r = super.isRequired()
+        let r = super.isRequired();
         if (!r && this._originalSchema) {
             const schema = this._schema;
             // if there is at least one required property
-            if ('required' in schema &&
+            if (
+                'required' in schema &&
                 Array.isArray(schema.required) &&
                 'properties' in schema &&
                 typeof schema.properties === 'object' &&
                 schema.properties &&
                 schema.required.length <= Object.keys(schema.properties).length
             ) {
-                r = true
+                r = true;
             }
         }
         return r;

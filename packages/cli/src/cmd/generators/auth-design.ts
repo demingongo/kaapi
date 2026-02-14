@@ -1,8 +1,8 @@
-import { FileGenerator, FileGeneratorType, Question, QuestionType } from '../../definitions'
-import { camelCase, kebabCase, snakeCase } from '../../utils'
+import { FileGenerator, FileGeneratorType, Question, QuestionType } from '../../definitions';
+import { camelCase, kebabCase, snakeCase } from '../../utils';
 
 enum FLOW_ENUM {
-    cookieSession = 'cookie-session'
+    cookieSession = 'cookie-session',
 }
 
 const FLOW_OPTIONS: {
@@ -10,72 +10,68 @@ const FLOW_OPTIONS: {
     label: string;
     hint: string;
 }[] = [
-        {
-            value: FLOW_ENUM.cookieSession,
-            label: 'Cookie Session',
-            hint: ''
-        }
-    ];
+    {
+        value: FLOW_ENUM.cookieSession,
+        label: 'Cookie Session',
+        hint: '',
+    },
+];
 
 export class AuthDesignGenerator implements FileGenerator {
-
     get type(): FileGeneratorType {
-        return 'auth-design'
+        return 'auth-design';
     }
 
     get name(): 'kaapi-auth-design' {
-        return 'kaapi-auth-design'
+        return 'kaapi-auth-design';
     }
 
     get description(): string {
-        return 'Creates an auth design for kaapi.'
+        return 'Creates an auth design for kaapi.';
     }
 
     get notes(): string[] {
-        return [
-            'Allowed values for --flow:',
-            ...FLOW_OPTIONS.map(o => `  - ${o.value}`)
-        ]
+        return ['Allowed values for --flow:', ...FLOW_OPTIONS.map((o) => `  - ${o.value}`)];
     }
 
     get options(): Record<string, string> {
         return {
             name: 'The name of the strategy',
-            flow: 'The auth flow'
-        }
+            flow: 'The auth flow',
+        };
     }
 
     #values = {
         strategyName: '',
         flow: '',
-        keyName: 'session_id'
-    }
+        keyName: 'session_id',
+    };
 
     init(options: Record<string, unknown>): void {
         if (typeof options['name'] == 'string') {
-            this.#values.strategyName = camelCase(options['name'])
+            this.#values.strategyName = camelCase(options['name']);
         }
         if (typeof options['flow'] == 'string') {
-            if (!FLOW_OPTIONS.map(v => v.value).includes(options['flow'])) {
-                throw new Error(`Invalid value for '--flow'. Allowed values are: ${FLOW_OPTIONS.map(v => v.value).join(', ')}.`)
+            if (!FLOW_OPTIONS.map((v) => v.value).includes(options['flow'])) {
+                throw new Error(
+                    `Invalid value for '--flow'. Allowed values are: ${FLOW_OPTIONS.map((v) => v.value).join(', ')}.`
+                );
             }
-            this.#values.flow = options['flow']
+            this.#values.flow = options['flow'];
         }
     }
 
     isValid(): boolean {
-        return !!(this.#values.strategyName && this.#values.keyName)
+        return !!(this.#values.strategyName && this.#values.keyName);
     }
 
     getFileContent(): string {
-        if (this.#values.flow === FLOW_ENUM.cookieSession)
-            return this.#getCookieSessionContent()
-        else
-            return ''
+        if (this.#values.flow === FLOW_ENUM.cookieSession) return this.#getCookieSessionContent();
+        else return '';
     }
 
     getQuestions(): Question[] {
-        const r: Question[] = []
+        const r: Question[] = [];
 
         if (!this.#values.strategyName) {
             r.push({
@@ -83,26 +79,26 @@ export class AuthDesignGenerator implements FileGenerator {
                 options: {
                     message: 'The name of the strategy?',
                     defaultValue: 'kaapi-strategy',
-                    placeholder: 'kaapi-strategy'
+                    placeholder: 'kaapi-strategy',
                 },
                 setValue: (value) => {
-                    this.#values.strategyName = kebabCase(value)
-                }
-            })
+                    this.#values.strategyName = kebabCase(value);
+                },
+            });
         }
 
-        if (!(this.#values.flow && FLOW_OPTIONS.map(v => v.value).includes(this.#values.flow))) {
+        if (!(this.#values.flow && FLOW_OPTIONS.map((v) => v.value).includes(this.#values.flow))) {
             r.push({
                 type: QuestionType.select,
                 options: {
                     message: 'The authorization flow?',
                     options: FLOW_OPTIONS,
-                    initialValue: FLOW_ENUM.cookieSession
+                    initialValue: FLOW_ENUM.cookieSession,
                 },
                 setValue: (value) => {
-                    this.#values.flow = `${value}`
-                }
-            })
+                    this.#values.flow = `${value}`;
+                },
+            });
         }
 
         r.push({
@@ -110,18 +106,18 @@ export class AuthDesignGenerator implements FileGenerator {
             type: QuestionType.text,
             options: {
                 message: 'Name for the cookie session?',
-                initialValue: this.#values.keyName
+                initialValue: this.#values.keyName,
             },
             setValue: (value) => {
-                this.#values.keyName = snakeCase(`${value}`)
-            }
-        })
+                this.#values.keyName = snakeCase(`${value}`);
+            },
+        });
 
-        return r
+        return r;
     }
 
     getFilename(): string {
-        return kebabCase(`${this.#values.strategyName}`) + '.ts'
+        return kebabCase(`${this.#values.strategyName}`) + '.ts';
     }
 
     #getCookieSessionContent(): string {
@@ -178,6 +174,6 @@ export const ${camelCase(this.#values.strategyName)} = new CookieSessionAuthDesi
         },
     },
 })
-`
+`;
     }
 }

@@ -1,41 +1,41 @@
-import { FileGenerator, FileGeneratorType, Question, QuestionType } from '@kaapi/cli/dist/definitions'
-import { kebabCase } from '@kaapi/cli/dist/utils'
+import { FileGenerator, FileGeneratorType, Question, QuestionType } from '@kaapi/cli/dist/definitions';
+import { kebabCase } from '@kaapi/cli/dist/utils';
 
 export class EsmAppLauncher implements FileGenerator {
     get type(): FileGeneratorType {
-        return 'others'
+        return 'others';
     }
 
     get name(): 'esm-app-launcher' {
-        return 'esm-app-launcher'
+        return 'esm-app-launcher';
     }
 
     get description(): string {
-        return 'Creates a simple app starter.'
+        return 'Creates a simple app starter.';
     }
 
     get notes(): string[] {
-        return []
+        return [];
     }
 
     get options(): Record<string, string> {
         return {
-            name: 'The name of the app.'
-        }
+            name: 'The name of the app.',
+        };
     }
 
     private _values = {
-        name: ''
-    }
+        name: '',
+    };
 
     init(options: Record<string, unknown>): void {
         if (typeof options['name'] == 'string') {
-            this._values.name = options['name']
+            this._values.name = options['name'];
         }
     }
 
     isValid(): boolean {
-        return true
+        return true;
     }
 
     getQuestions(): Question[] {
@@ -45,18 +45,18 @@ export class EsmAppLauncher implements FileGenerator {
                 options: {
                     message: 'What is the name of the app?',
                     defaultValue: 'app',
-                    placeholder: 'app'
+                    placeholder: 'app',
                 },
                 setValue: (value) => {
-                    this._values.name = `${value}`
+                    this._values.name = `${value}`;
                 },
-                skip: () => !!this._values.name
-            }
-        ]
+                skip: () => !!this._values.name,
+            },
+        ];
     }
 
     getFilename(): string {
-        return `${kebabCase(this._values.name)}.ts`
+        return `${kebabCase(this._values.name)}.ts`;
     }
 
     getFileContent(): string {
@@ -94,6 +94,6 @@ process.on('unhandledRejection', (err) => {
 });
 
 start();
-        `
+        `;
     }
 }

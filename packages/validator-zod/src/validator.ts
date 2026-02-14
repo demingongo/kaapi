@@ -1,11 +1,28 @@
+import pkg from '../package.json';
+import type {
+    ValidatorZod,
+    ValidatorZodReqRef,
+    ValidatorZodRouteBuilder,
+    ValidatorZodSchema,
+    ZodlessReqRef,
+    ZodlessReqRefDefaults,
+    ZodSchema,
+} from './types';
+import { mapIssue } from './utils';
 import Boom from '@hapi/boom';
+import {
+    KaapiServerRoute,
+    HandlerDecorations,
+    Lifecycle,
+    KaapiPlugin,
+    Request,
+    ResponseToolkit,
+    KaapiOpenAPIHelperInterface,
+    RouteOptions,
+} from '@kaapi/kaapi';
+import { OpenAPIZodHelper, PostmanZodHelper } from '@novice1/api-doc-zod-helper';
 import { z } from 'zod/v4';
 import { $ZodIssue } from 'zod/v4/core';
-import { KaapiServerRoute, HandlerDecorations, Lifecycle, KaapiPlugin, Request, ResponseToolkit, KaapiOpenAPIHelperInterface, RouteOptions } from '@kaapi/kaapi';
-import { OpenAPIZodHelper, PostmanZodHelper } from '@novice1/api-doc-zod-helper';
-import type { ValidatorZod, ValidatorZodReqRef, ValidatorZodRouteBuilder, ValidatorZodSchema, ZodlessReqRef, ZodlessReqRefDefaults, ZodSchema } from './types';
-import { mapIssue } from './utils';
-import pkg from '../package.json';
 
 const { parse = { payload: true, query: true, params: true, headers: true, state: true } } = {};
 export const supportedProps = ['payload', 'query', 'params', 'headers', 'state'] as const;
@@ -20,17 +37,17 @@ const normalizeBooleans = (obj: Record<string, unknown>) => {
         }
     }
     return obj;
-}
+};
 
 export class ZodDocHelper extends OpenAPIZodHelper implements KaapiOpenAPIHelperInterface {
     isFile() {
-        const children = this.getChildren()
-        const dataType = children._data?.getType()
-        return dataType === 'custom'
+        const children = this.getChildren();
+        const dataType = children._data?.getType();
+        return dataType === 'custom';
     }
 
     getRawSchema() {
-        return this._schema
+        return this._schema;
     }
 
     getFilesChildren(): Record<string, typeof this._schema> {
@@ -38,14 +55,13 @@ export class ZodDocHelper extends OpenAPIZodHelper implements KaapiOpenAPIHelper
         if (!this.isValid()) {
             return r;
         }
-        const schema = this.getMostInnerType()
+        const schema = this.getMostInnerType();
         if (schema?.def) {
             if ('shape' in schema.def && typeof schema.def.shape === 'object' && schema.def.shape) {
-                const properties: Record<string, unknown> = schema.def.shape as Record<string, unknown>
+                const properties: Record<string, unknown> = schema.def.shape as Record<string, unknown>;
                 for (const p in properties) {
-                    const ch = new ZodDocHelper({ value: properties[p] })
-                    if (ch.isValid() && ch.isFile())
-                        r[p] = ch.getRawSchema()
+                    const ch = new ZodDocHelper({ value: properties[p] });
+                    if (ch.isValid() && ch.isFile()) r[p] = ch.getRawSchema();
                 }
             }
         }
@@ -55,12 +71,12 @@ export class ZodDocHelper extends OpenAPIZodHelper implements KaapiOpenAPIHelper
 
 export const zodDocsConfig = {
     openAPIOptions: {
-        helperClass: OpenAPIZodHelper
+        helperClass: OpenAPIZodHelper,
     },
     postmanOptions: {
-        helperClass: PostmanZodHelper
-    }
-}
+        helperClass: PostmanZodHelper,
+    },
+};
 
 function mergeOptions<V extends ValidatorZodSchema, R extends ZodlessReqRef>(
     options: RouteOptions<ValidatorZodReqRef<V> & R>,
@@ -68,65 +84,69 @@ function mergeOptions<V extends ValidatorZodSchema, R extends ZodlessReqRef>(
 ) {
     // validator
     if (!options.plugins) {
-        options.plugins = {}
+        options.plugins = {};
     }
-    options.plugins.zod = schema
+    options.plugins.zod = schema;
 
     // docs
-    options.plugins.kaapi = options.plugins.kaapi || {}
-    if (options.plugins.kaapi.docs != false && // docs not disabled
+    options.plugins.kaapi = options.plugins.kaapi || {};
+    if (
+        options.plugins.kaapi.docs != false && // docs not disabled
         !options.plugins.kaapi.docs?.disabled // docs not disabled
     ) {
-        if (!options.plugins?.kaapi?.docs?.helperSchemaProperty) // docs have not helperSchemaProperty
-            options.plugins.kaapi.docs = { ...options.plugins.kaapi.docs, helperSchemaProperty: 'zod' }
-        if (!options.plugins?.kaapi?.docs?.openAPIHelperClass) // docs have not openAPIHelperClass
-            options.plugins.kaapi.docs = { ...options.plugins.kaapi.docs, openAPIHelperClass: ZodDocHelper }
+        if (!options.plugins?.kaapi?.docs?.helperSchemaProperty)
+            // docs have not helperSchemaProperty
+            options.plugins.kaapi.docs = { ...options.plugins.kaapi.docs, helperSchemaProperty: 'zod' };
+        if (!options.plugins?.kaapi?.docs?.openAPIHelperClass)
+            // docs have not openAPIHelperClass
+            options.plugins.kaapi.docs = { ...options.plugins.kaapi.docs, openAPIHelperClass: ZodDocHelper };
     }
-    return options
+    return options;
 }
 
 export const withSchema = function withSchema<V extends ValidatorZodSchema>(schema: V): ValidatorZodRouteBuilder<V> {
     return {
         route<R extends ZodlessReqRef = ZodlessReqRefDefaults>(
             serverRoute: KaapiServerRoute<ValidatorZodReqRef<V> & R>,
-            handler?: HandlerDecorations | Lifecycle.Method<ValidatorZodReqRef<V> & R, Lifecycle.ReturnValue<ValidatorZodReqRef<V> & R>>
+            handler?:
+                | HandlerDecorations
+                | Lifecycle.Method<ValidatorZodReqRef<V> & R, Lifecycle.ReturnValue<ValidatorZodReqRef<V> & R>>
         ) {
-            const { ...route } = serverRoute
+            const { ...route } = serverRoute;
             if (!route.options) {
-                route.options = {}
+                route.options = {};
             }
             if (typeof route.options === 'object') {
-                mergeOptions(route.options, schema)
+                mergeOptions(route.options, schema);
             } else if (typeof route.options === 'function') {
                 const fn = route.options.bind(route);
                 route.options = (server) => {
-                    const options = fn(server)
-                    return mergeOptions(options, schema)
-                }
+                    const options = fn(server);
+                    return mergeOptions(options, schema);
+                };
             }
             if (handler) {
-                route.handler = handler
+                route.handler = handler;
             }
-            return route
-        }
-    }
-}
+            return route;
+        },
+    };
+};
 
 export const validatorZod: KaapiPlugin = {
     async integrate(t) {
         const validator: ValidatorZod = <V extends ValidatorZodSchema>(schema: V) => {
-            const builder = withSchema(schema)
+            const builder = withSchema(schema);
             return {
                 route<R extends ZodlessReqRef = ZodlessReqRefDefaults>(
                     serverRoute: KaapiServerRoute<ValidatorZodReqRef<V> & R>,
-                    handler?: HandlerDecorations | Lifecycle.Method<ValidatorZodReqRef<V> & R, Lifecycle.ReturnValue<ValidatorZodReqRef<V> & R>>
+                    handler?:
+                        | HandlerDecorations
+                        | Lifecycle.Method<ValidatorZodReqRef<V> & R, Lifecycle.ReturnValue<ValidatorZodReqRef<V> & R>>
                 ) {
-                    t.route(builder.route(
-                        serverRoute,
-                        handler
-                    ));
+                    t.route(builder.route(serverRoute, handler));
                     return t.server;
-                }
+                },
             };
         };
 
@@ -181,11 +201,13 @@ export const validatorZod: KaapiPlugin = {
                         let message: string;
 
                         // Check if the error is a Zod validation error
-                        if (err instanceof Object &&
+                        if (
+                            err instanceof Object &&
                             'name' in err &&
                             (err.name === 'ZodError' || err.name === '$ZodError') &&
                             'issues' in err &&
-                            Array.isArray(err.issues)) {
+                            Array.isArray(err.issues)
+                        ) {
                             const zodIssues = err.issues;
                             if (zodIssues.length !== 0) {
                                 // Build a single error message string from all Zod issues
@@ -193,17 +215,17 @@ export const validatorZod: KaapiPlugin = {
                                     .map((issue: $ZodIssue) => {
                                         // Track which property caused the issue
                                         if (Array.isArray(issue.path) && issue.path.length !== 0) {
-                                            const key = issue.path[0]
+                                            const key = issue.path[0];
                                             if (typeof key === 'symbol') {
                                                 if (key.description) {
-                                                    issuePaths.add(key.description)
+                                                    issuePaths.add(key.description);
                                                 }
                                             } else {
-                                                issuePaths.add(String(key))
+                                                issuePaths.add(String(key));
                                             }
                                         }
                                         // Map the issue to a human-readable string
-                                        return mapIssue(issue)
+                                        return mapIssue(issue);
                                     })
                                     .join('; ');
                             } else {
@@ -212,10 +234,10 @@ export const validatorZod: KaapiPlugin = {
                             }
                         } else if (err instanceof Error) {
                             // If it’s a regular Error, use its message
-                            message = err.message
+                            message = err.message;
                         } else {
                             // Unknown error type
-                            message = 'Unknown error'
+                            message = 'Unknown error';
                         }
 
                         // Create a Boom badRequest response with the error message
@@ -223,12 +245,12 @@ export const validatorZod: KaapiPlugin = {
 
                         // Attach the raw validation error object for debugging/logging
                         response.data = {
-                            validationError: err
-                        }
+                            validationError: err,
+                        };
 
                         // Handle custom failAction if it’s a function
                         if (typeof routeValidation?.failAction === 'function') {
-                            return routeValidation.failAction(request, h, response)
+                            return routeValidation.failAction(request, h, response);
                         }
 
                         // If failAction is 'log', log the validation error with the request
@@ -241,7 +263,7 @@ export const validatorZod: KaapiPlugin = {
                         return response;
                     }
                 });
-                server.decorate('server', 'zod', validator)
+                server.decorate('server', 'zod', validator);
             },
         });
 
@@ -252,4 +274,4 @@ export const validatorZod: KaapiPlugin = {
             t.postman.addHelperClass(zodDocsConfig.postmanOptions.helperClass);
         }
     },
-}
+};

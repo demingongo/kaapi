@@ -1,14 +1,26 @@
-import { Admin, AdminConfig, Consumer, ConsumerConfig, IHeaders, ITopicConfig, Kafka, KafkaConfig, Producer, ProducerConfig, logLevel } from 'kafkajs'
-import { ILogger, IMessaging, IMessagingContext } from '@kaapi/kaapi'
-import { randomBytes } from 'crypto'
+import { ILogger, IMessaging, IMessagingContext } from '@kaapi/kaapi';
+import { randomBytes } from 'crypto';
+import {
+    Admin,
+    AdminConfig,
+    Consumer,
+    ConsumerConfig,
+    IHeaders,
+    ITopicConfig,
+    Kafka,
+    KafkaConfig,
+    Producer,
+    ProducerConfig,
+    logLevel,
+} from 'kafkajs';
 
 /**
  * Extended messaging context with Kafka-specific metadata.
  */
 export interface KafkaMessagingContext extends IMessagingContext {
     /** The Kafka message offset */
-    offset?: string
-    address?: string
+    offset?: string;
+    address?: string;
 }
 
 /**
@@ -17,13 +29,13 @@ export interface KafkaMessagingContext extends IMessagingContext {
  */
 export interface KafkaMessagingConfig extends KafkaConfig {
     /** Optional logger implementing Kaapi's ILogger interface */
-    logger?: ILogger
+    logger?: ILogger;
     /** Optional unique service address for routing and identification */
-    address?: string
+    address?: string;
     /** Optional human-readable name for service tracking/monitoring */
-    name?: string
+    name?: string;
     /** Optional default KafkaJS producer configuration */
-    producer?: ProducerConfig
+    producer?: ProducerConfig;
 }
 
 /**
@@ -32,34 +44,34 @@ export interface KafkaMessagingConfig extends KafkaConfig {
  */
 export interface KafkaMessagingSubscribeConfig extends Partial<ConsumerConfig> {
     /** Whether to start consuming from the beginning of the topic */
-    fromBeginning?: boolean
+    fromBeginning?: boolean;
     /** Callback invoked when the consumer is ready */
-    onReady?(consumer: Consumer): void
-    /** 
-     * Custom consumer group ID. If not provided, defaults to `{name}.{topic}` 
+    onReady?(consumer: Consumer): void;
+    /**
+     * Custom consumer group ID. If not provided, defaults to `{name}.{topic}`
      * where `name` is the service name from KafkaMessagingConfig.
      */
-    groupId?: string
+    groupId?: string;
     /**
      * Prefix for the auto-generated group ID. Only used when `groupId` is not provided.
      * Defaults to the service `name` or 'group' if name is not set.
      */
-    groupIdPrefix?: string
+    groupIdPrefix?: string;
     /**
-     * Whether to log partition offsets on subscribe. 
+     * Whether to log partition offsets on subscribe.
      * Requires an admin client connection, adding some overhead.
      * @default false
      */
-    logOffsets?: boolean
+    logOffsets?: boolean;
     /**
      * Called when a message handler throws an error.
      * Allows custom error handling (e.g., alerting, metrics, logging to external service).
-     * 
+     *
      * @param error - The error thrown by the handler
      * @param message - The parsed message that failed
      * @param context - The message context (offset, headers, etc.)
      */
-    onError?(error: unknown, message: unknown, context: KafkaMessagingContext): void | Promise<void>
+    onError?(error: unknown, message: unknown, context: KafkaMessagingContext): void | Promise<void>;
 }
 
 /**
@@ -67,19 +79,19 @@ export interface KafkaMessagingSubscribeConfig extends Partial<ConsumerConfig> {
  */
 export interface KafkaMessagingBatchMessage<T = unknown> {
     /** The message payload */
-    value: T
+    value: T;
     /** Optional message key for partitioning */
-    key?: string
+    key?: string;
     /** Optional partition to send to */
-    partition?: number
+    partition?: number;
     /** Optional custom headers (merged with default headers) */
-    headers?: Record<string, string>
+    headers?: Record<string, string>;
 }
 
 /**
  * A lightweight wrapper around KafkaJS that integrates with the Kaapi framework
  * to provide a clean and consistent message publishing and consuming interface.
- * 
+ *
  * @example
  * ```ts
  * const messaging = new KafkaMessaging({
@@ -88,18 +100,17 @@ export interface KafkaMessagingBatchMessage<T = unknown> {
  *     name: 'my-service',
  *     address: 'service-1'
  * });
- * 
+ *
  * await messaging.publish('my-topic', { event: 'user.created' });
  * await messaging.subscribe('my-topic', (msg, ctx) => console.log(msg));
  * ```
  */
 export class KafkaMessaging implements IMessaging {
+    #config: KafkaConfig;
+    #producerConfig?: ProducerConfig;
 
-    #config: KafkaConfig
-    #producerConfig?: ProducerConfig
-
-    #address?: string
-    #name?: string
+    #address?: string;
+    #name?: string;
 
     #consumers: Set<Consumer> = new Set();
     #producers: Set<Producer> = new Set();
@@ -126,47 +137,48 @@ export class KafkaMessaging implements IMessaging {
 
     /**
      * Creates a new KafkaMessaging instance.
-     * 
+     *
      * @param arg - Configuration options for the Kafka client
      */
     constructor(arg: KafkaMessagingConfig) {
-
         const { logger, address, name, producer, ...kafkaConfig } = arg;
 
         this.#config = kafkaConfig;
         this.#producerConfig = producer;
 
-        this.#name = name
-        this.#address = address
-        this.logger = logger
+        this.#name = name;
+        this.#address = address;
+        this.logger = logger;
     }
 
     private _createInstance() {
-        this.logger?.info(`clientId=${this.#config.clientId}, address=${this.#address}`)
+        this.logger?.info(`clientId=${this.#config.clientId}, address=${this.#address}`);
         if (!this.#config.brokers) return;
 
         return new Kafka({
-            logCreator: () => ({ namespace, level, label, log }) => {
-                let lvl: logLevel | null = level
-                if (!log[level]) lvl = null;
-                switch (lvl) {
-                    case logLevel.ERROR:
-                    case logLevel.NOTHING:
-                        this.logger?.error('KAFKA', label, namespace, log.message);
-                        break;
-                    case logLevel.WARN:
-                        this.logger?.warn('KAFKA', label, namespace, log.message);
-                        break;
-                    case logLevel.INFO:
-                        this.logger?.info('KAFKA', label, namespace, log.message);
-                        break
-                    case logLevel.DEBUG:
-                        this.logger?.debug('KAFKA', label, namespace, log.message);
-                        break;
-                    default:
-                        this.logger?.silly('KAFKA', label, namespace, log.message);
-                }
-            },
+            logCreator:
+                () =>
+                ({ namespace, level, label, log }) => {
+                    let lvl: logLevel | null = level;
+                    if (!log[level]) lvl = null;
+                    switch (lvl) {
+                        case logLevel.ERROR:
+                        case logLevel.NOTHING:
+                            this.logger?.error('KAFKA', label, namespace, log.message);
+                            break;
+                        case logLevel.WARN:
+                            this.logger?.warn('KAFKA', label, namespace, log.message);
+                            break;
+                        case logLevel.INFO:
+                            this.logger?.info('KAFKA', label, namespace, log.message);
+                            break;
+                        case logLevel.DEBUG:
+                            this.logger?.debug('KAFKA', label, namespace, log.message);
+                            break;
+                        default:
+                            this.logger?.silly('KAFKA', label, namespace, log.message);
+                    }
+                },
             ...this.#config,
         });
     }
@@ -210,7 +222,7 @@ export class KafkaMessaging implements IMessaging {
         const producer = await this.createProducer(this.#producerConfig);
         if (!producer) return;
 
-        const producerId = randomBytes(16).toString('hex')
+        const producerId = randomBytes(16).toString('hex');
         this.producer = producer;
         this.currentProducerId = producerId;
 
@@ -229,15 +241,15 @@ export class KafkaMessaging implements IMessaging {
 
     protected getKafka() {
         if (!this.kafka) {
-            this.kafka = this._createInstance()
+            this.kafka = this._createInstance();
         }
-        return this.kafka
+        return this.kafka;
     }
 
     /**
      * Gets or creates a shared admin instance for internal operations.
      * Uses lazy initialization to avoid unnecessary connections.
-     * 
+     *
      * @returns A promise that resolves to the shared admin instance
      */
     protected async getSharedAdmin(): Promise<Admin | undefined> {
@@ -265,10 +277,10 @@ export class KafkaMessaging implements IMessaging {
     /**
      * Creates and connects a Kafka admin client.
      * The admin client is automatically tracked and will be disconnected during shutdown.
-     * 
+     *
      * @param config - Optional admin client configuration
      * @returns A promise that resolves to the connected admin client, or undefined if Kafka is unavailable
-     * 
+     *
      * @example
      * ```ts
      * const admin = await messaging.createAdmin();
@@ -294,15 +306,15 @@ export class KafkaMessaging implements IMessaging {
 
     /**
      * Creates a new Kafka topic with the specified configuration.
-     * 
+     *
      * @param topic - The topic configuration including name, partitions, and replication factor
      * @param config - Optional creation options
      * @param config.validateOnly - If true, only validates the request without creating the topic
      * @param config.waitForLeaders - If true, waits for partition leaders to be elected
      * @param config.timeout - Timeout in milliseconds for the operation
-     * 
+     *
      * @throws {Error} If the admin client cannot be created
-     * 
+     *
      * @example
      * ```ts
      * await messaging.createTopic({
@@ -312,17 +324,19 @@ export class KafkaMessaging implements IMessaging {
      * }, { waitForLeaders: true });
      * ```
      */
-    async createTopic(topic: ITopicConfig, config?: { validateOnly?: boolean; waitForLeaders?: boolean; timeout?: number }) {
+    async createTopic(
+        topic: ITopicConfig,
+        config?: { validateOnly?: boolean; waitForLeaders?: boolean; timeout?: number }
+    ) {
         const admin = await this.createAdmin();
         if (!admin) throw new Error('Admin client unavailable');
         await admin.createTopics({
             topics: [topic],
-            ...(config || {})
+            ...(config || {}),
         });
 
         await admin.disconnect();
     }
-
 
     /**
      * Waits for a Kafka topic to become ready (i.e., it exists and has partitions).
@@ -330,21 +344,25 @@ export class KafkaMessaging implements IMessaging {
      * @param {string} topic - The name of the Kafka topic to check.
      * @param {number} [timeoutMs=10000] - Maximum time (in milliseconds) to wait for the topic to be ready.
      * @param {number} [checkIntervalMs=200] - Interval (in milliseconds) between readiness checks. Must be ≥ 200ms.
-     * 
+     *
      * @throws {Error} If `checkIntervalMs` is less than 200ms.
      * @throws {Error} If `timeoutMs` is less than or equal to `checkIntervalMs`.
      * @throws {Error} If the admin client cannot be created.
      * @throws {Error} If the topic is not ready within the given timeout.
-     * 
+     *
      * @returns {Promise<void>} Resolves when the topic is ready.
      */
     async waitForTopicReady(topic: string, timeoutMs: number = 10000, checkIntervalMs: number = 200): Promise<void> {
         if (checkIntervalMs < 200) {
-            throw new Error(`Invalid checkIntervalMs: ${checkIntervalMs}. It must be at least 200ms to avoid overwhelming the broker.`);
+            throw new Error(
+                `Invalid checkIntervalMs: ${checkIntervalMs}. It must be at least 200ms to avoid overwhelming the broker.`
+            );
         }
 
         if (timeoutMs <= checkIntervalMs) {
-            throw new Error(`Invalid configuration: timeoutMs (${timeoutMs}) must be greater than checkIntervalMs (${checkIntervalMs}).`);
+            throw new Error(
+                `Invalid configuration: timeoutMs (${timeoutMs}) must be greater than checkIntervalMs (${checkIntervalMs}).`
+            );
         }
 
         const start = Date.now();
@@ -353,12 +371,12 @@ export class KafkaMessaging implements IMessaging {
 
         while (Date.now() - start < timeoutMs) {
             const metadata = await admin.fetchTopicMetadata({ topics: [topic] });
-            const topicMeta = metadata.topics.find(t => t.name === topic);
+            const topicMeta = metadata.topics.find((t) => t.name === topic);
             if (topicMeta && topicMeta.partitions.length > 0) {
                 await admin.disconnect();
                 return;
             }
-            await new Promise(res => setTimeout(res, checkIntervalMs)); // wait 200ms before retry
+            await new Promise((res) => setTimeout(res, checkIntervalMs)); // wait 200ms before retry
         }
 
         await admin.disconnect();
@@ -368,16 +386,19 @@ export class KafkaMessaging implements IMessaging {
     /**
      * Fetches and logs partition offsets for a topic.
      * Uses the shared admin instance to minimize connections.
-     * 
+     *
      * @param topic - The topic to fetch offsets for
      * @returns The partition offset information, or undefined if unavailable
      */
-    async fetchTopicOffsets(topic: string): Promise<Array<{
-        partition: number;
-        offset: string;
-        high: string;
-        low: string;
-    }> | undefined> {
+    async fetchTopicOffsets(topic: string): Promise<
+        | Array<{
+              partition: number;
+              offset: string;
+              high: string;
+              low: string;
+          }>
+        | undefined
+    > {
         const admin = await this.getSharedAdmin();
         if (!admin) return;
 
@@ -393,11 +414,11 @@ export class KafkaMessaging implements IMessaging {
     /**
      * Creates and connects a new Kafka consumer.
      * The consumer is automatically tracked and will be disconnected during shutdown.
-     * 
+     *
      * @param groupId - The consumer group ID
      * @param config - Optional consumer configuration overrides
      * @returns A promise that resolves to the connected consumer, or undefined if Kafka is unavailable
-     * 
+     *
      * @example
      * ```ts
      * const consumer = await messaging.createConsumer('my-group', {
@@ -406,7 +427,6 @@ export class KafkaMessaging implements IMessaging {
      * ```
      */
     async createConsumer(groupId: string, config?: Partial<ConsumerConfig>): Promise<Consumer | undefined> {
-
         // Get kafka instance
         const kafka = this.getKafka();
 
@@ -415,11 +435,11 @@ export class KafkaMessaging implements IMessaging {
 
         let overridenConfig: ConsumerConfig = {
             groupId: `${groupId}`,
-            readUncommitted: true
-        }
+            readUncommitted: true,
+        };
 
         if (config && typeof config == 'object') {
-            overridenConfig = { ...overridenConfig, ...config }
+            overridenConfig = { ...overridenConfig, ...config };
         }
 
         const consumer = kafka.consumer(overridenConfig);
@@ -437,10 +457,10 @@ export class KafkaMessaging implements IMessaging {
     /**
      * Creates and connects a new Kafka producer.
      * The producer is automatically tracked and will be disconnected during shutdown.
-     * 
+     *
      * @param config - Optional producer configuration overrides
      * @returns A promise that resolves to the connected producer, or undefined if Kafka is unavailable
-     * 
+     *
      * @example
      * ```ts
      * const producer = await messaging.createProducer({
@@ -463,10 +483,10 @@ export class KafkaMessaging implements IMessaging {
                 initialRetryTime: 300,
             }
             */
-        }
+        };
 
         if (config && typeof config == 'object') {
-            overridenConfig = { ...overridenConfig, ...config }
+            overridenConfig = { ...overridenConfig, ...config };
         }
 
         const producer = kafka.producer(overridenConfig);
@@ -484,7 +504,7 @@ export class KafkaMessaging implements IMessaging {
     /**
      * Gets or creates the singleton producer instance.
      * Uses a promise-based lock to prevent race conditions when called concurrently.
-     * 
+     *
      * @returns A promise that resolves to the producer instance, or undefined if unavailable.
      */
     async getProducer() {
@@ -512,7 +532,7 @@ export class KafkaMessaging implements IMessaging {
 
     /**
      * Disconnects the singleton producer instance.
-     * 
+     *
      * @returns A promise that resolves when the producer is disconnected
      */
     async disconnectProducer(): Promise<void> {
@@ -526,13 +546,13 @@ export class KafkaMessaging implements IMessaging {
     /**
      * Publishes multiple messages to a Kafka topic in a single batch.
      * More efficient than multiple `publish()` calls for high-throughput scenarios.
-     * 
+     *
      * @typeParam T - The type of the message payload
      * @param topic - The Kafka topic to publish to
      * @param messages - Array of messages to publish
-     * 
+     *
      * @throws {Error} If the batch fails to send
-     * 
+     *
      * @example
      * ```ts
      * await messaging.publishBatch('user-events', [
@@ -555,11 +575,14 @@ export class KafkaMessaging implements IMessaging {
         if (this.#address) baseHeaders.address = this.#address;
 
         const kafkaMessages = messages.map((msg) => ({
-            value: (
-                msg.value instanceof Buffer ?
-                    msg.value : typeof msg.value === 'string' ?
-                        msg.value : (msg.value === null ? null : JSON.stringify(msg.value))
-            ),
+            value:
+                msg.value instanceof Buffer
+                    ? msg.value
+                    : typeof msg.value === 'string'
+                      ? msg.value
+                      : msg.value === null
+                        ? null
+                        : JSON.stringify(msg.value),
             key: msg.key,
             partition: msg.partition,
             timestamp: `${Date.now()}`,
@@ -571,7 +594,9 @@ export class KafkaMessaging implements IMessaging {
                 topic,
                 messages: kafkaMessages,
             });
-            this.logger?.verbose(`📤  Sent batch to KAFKA topic "${topic}" (${messages.length} messages, offset ${res[0].baseOffset})`);
+            this.logger?.verbose(
+                `📤  Sent batch to KAFKA topic "${topic}" (${messages.length} messages, offset ${res[0].baseOffset})`
+            );
         } catch (error) {
             this.logger?.error(`❌  Failed to publish batch to "${topic}":`, error);
             throw error;
@@ -581,13 +606,13 @@ export class KafkaMessaging implements IMessaging {
     /**
      * Publishes a message to the specified Kafka topic.
      * Automatically manages the producer lifecycle and includes service metadata in headers.
-     * 
+     *
      * @typeParam T - The type of the message payload
      * @param topic - The Kafka topic to publish to
      * @param message - The message payload (will be JSON serialized)
-     * 
+     *
      * @throws {Error} If the message fails to send
-     * 
+     *
      * @example
      * ```ts
      * await messaging.publish('user-events', {
@@ -604,28 +629,33 @@ export class KafkaMessaging implements IMessaging {
         // If we don't have a producer, abort
         if (!producer) return this.logger?.error('❌  Could not get producer');
 
-        const headers: IHeaders = {}
+        const headers: IHeaders = {};
 
         if (this.#name) {
-            headers.name = this.#name
+            headers.name = this.#name;
         }
         if (this.#address) {
-            headers.address = this.#address
+            headers.address = this.#address;
         }
 
         try {
             // Send message to the topic
             const res = await producer.send({
                 topic,
-                messages: [{
-                    value: (
-                        message instanceof Buffer ?
-                            message : typeof message === 'string' ?
-                                message : (message === null ? null : JSON.stringify(message))
-                    ),
-                    timestamp: `${Date.now()}`,
-                    headers
-                }],
+                messages: [
+                    {
+                        value:
+                            message instanceof Buffer
+                                ? message
+                                : typeof message === 'string'
+                                  ? message
+                                  : message === null
+                                    ? null
+                                    : JSON.stringify(message),
+                        timestamp: `${Date.now()}`,
+                        headers,
+                    },
+                ],
             });
             this.logger?.verbose(`📤  Sent to KAFKA topic "${topic}" (offset ${res[0].baseOffset})`);
         } catch (error) {
@@ -637,7 +667,7 @@ export class KafkaMessaging implements IMessaging {
     /**
      * Subscribes to a Kafka topic and processes messages with the provided handler.
      * Creates a new consumer for each subscription with an auto-generated group ID.
-     * 
+     *
      * @typeParam T - The expected type of incoming messages
      * @param topic - The Kafka topic to subscribe to
      * @param handler - Callback function invoked for each message. Can be async.
@@ -646,29 +676,33 @@ export class KafkaMessaging implements IMessaging {
      * @param config.onReady - Callback invoked when the consumer is ready
      * @param config.groupId - Override the auto-generated consumer group ID
      * @param config.groupIdPrefix - Prefix for auto-generated group ID (default: service name)
-     * 
+     *
      * @example
      * ```ts
      * // Using auto-generated group ID (e.g., "my-service.user-events")
      * await messaging.subscribe('user-events', handler);
-     * 
+     *
      * // Using custom group ID
-     * await messaging.subscribe('user-events', handler, { 
-     *     groupId: 'my-custom-consumer-group' 
+     * await messaging.subscribe('user-events', handler, {
+     *     groupId: 'my-custom-consumer-group'
      * });
-     * 
+     *
      * // Using custom prefix (e.g., "analytics.user-events")
-     * await messaging.subscribe('user-events', handler, { 
-     *     groupIdPrefix: 'analytics' 
+     * await messaging.subscribe('user-events', handler, {
+     *     groupIdPrefix: 'analytics'
      * });
-     * 
+     *
      * // With offset logging enabled
-     * await messaging.subscribe('user-events', handler, { 
-     *     logOffsets: true 
+     * await messaging.subscribe('user-events', handler, {
+     *     logOffsets: true
      * });
      * ```
      */
-    async subscribe<T = unknown>(topic: string, handler: (message: T, context: KafkaMessagingContext) => Promise<void> | void, config?: KafkaMessagingSubscribeConfig) {
+    async subscribe<T = unknown>(
+        topic: string,
+        handler: (message: T, context: KafkaMessagingContext) => Promise<void> | void,
+        config?: KafkaMessagingSubscribeConfig
+    ) {
         this.logger?.info(`👂  Subscribing KAFKA topic "${topic}"`);
 
         let consumerConfig: Partial<ConsumerConfig> | undefined;
@@ -677,10 +711,20 @@ export class KafkaMessaging implements IMessaging {
         let groupId: string | undefined;
         let groupIdPrefix: string | undefined;
         let logOffsets = false;
-        let onError: ((error: unknown, message: unknown, context: KafkaMessagingContext) => void | Promise<void>) | undefined;
+        let onError:
+            | ((error: unknown, message: unknown, context: KafkaMessagingContext) => void | Promise<void>)
+            | undefined;
 
         if (config) {
-            const { fromBeginning: tmpFromBeginning, onReady: tmpOnReady, groupId: tmpGroupId, groupIdPrefix: tmpGroupIdPrefix, logOffsets: tmpLogOffsets, onError: tmpOnError, ...tmpConsumerConfig } = config
+            const {
+                fromBeginning: tmpFromBeginning,
+                onReady: tmpOnReady,
+                groupId: tmpGroupId,
+                groupIdPrefix: tmpGroupIdPrefix,
+                logOffsets: tmpLogOffsets,
+                onError: tmpOnError,
+                ...tmpConsumerConfig
+            } = config;
             fromBeginning = tmpFromBeginning;
             onReady = tmpOnReady;
             groupId = tmpGroupId;
@@ -702,7 +746,7 @@ export class KafkaMessaging implements IMessaging {
         // Listen to the topic
         await consumer.subscribe({
             topic,
-            fromBeginning
+            fromBeginning,
         });
 
         // Only fetch offsets if explicitly requested (avoids admin overhead)
@@ -710,18 +754,16 @@ export class KafkaMessaging implements IMessaging {
             const partitions = await this.fetchTopicOffsets(topic);
             if (partitions) {
                 partitions.forEach((partition) => {
-                    this.logger?.info(`👂  Start "${topic}" partition: ${partition.partition} | offset: ${partition.offset} | high: ${partition.high} | low: ${partition.low}`);
+                    this.logger?.info(
+                        `👂  Start "${topic}" partition: ${partition.partition} | offset: ${partition.offset} | high: ${partition.high} | low: ${partition.low}`
+                    );
                 });
             }
         }
 
         await consumer.run({
             eachBatchAutoResolve: false,
-            eachBatch: async ({
-                batch,
-                resolveOffset,
-                heartbeat,
-            }) => {
+            eachBatch: async ({ batch, resolveOffset, heartbeat }) => {
                 this.logger?.verbose(`📥  Received from KAFKA topic "${topic}" (${batch.messages.length} messages)`);
                 for (const message of batch.messages) {
                     const context: KafkaMessagingContext = {};
@@ -729,7 +771,7 @@ export class KafkaMessaging implements IMessaging {
                     try {
                         try {
                             // unbufferize header values
-                            Object.keys((message.headers || {})).forEach(key => {
+                            Object.keys(message.headers || {}).forEach((key) => {
                                 if (typeof message.headers?.[key]?.toString === 'function') {
                                     context[key] = message.headers?.[key]?.toString('utf8');
                                 }
@@ -749,10 +791,7 @@ export class KafkaMessaging implements IMessaging {
                             }
                         }
 
-                        const res = handler(
-                            value as T,
-                            context
-                        );
+                        const res = handler(value as T, context);
 
                         if (res) await res;
                         resolveOffset(message.offset);
@@ -766,7 +805,10 @@ export class KafkaMessaging implements IMessaging {
                                 const errorResult = onError(e, value, context);
                                 if (errorResult) await errorResult;
                             } catch (onErrorError) {
-                                this.logger?.error(`KafkaMessaging.subscribe('${topic}', …) onError callback failed:`, onErrorError);
+                                this.logger?.error(
+                                    `KafkaMessaging.subscribe('${topic}', …) onError callback failed:`,
+                                    onErrorError
+                                );
                             }
                         }
                     }
@@ -781,23 +823,23 @@ export class KafkaMessaging implements IMessaging {
     /**
      * Safely disconnects a Kafka client with timeout protection.
      * Prevents hanging if the client fails to disconnect gracefully.
-     * 
+     *
      * @param client - The Kafka client (producer, consumer, or admin) to disconnect
      * @param timeoutMs - Maximum time to wait for disconnection (default: 5000ms)
      * @returns A promise that resolves when disconnected or rejects on timeout
-     * 
+     *
      * @throws {Error} If the disconnect times out
      */
     async safeDisconnect(client: Producer | Consumer | Admin, timeoutMs = 5000): Promise<unknown> {
-        return safeDisconnect(client, timeoutMs)
+        return safeDisconnect(client, timeoutMs);
     }
 
     /**
      * Gracefully shuts down all tracked Kafka clients (producers, consumers, and admins).
      * Should be called during application teardown to release resources.
-     * 
+     *
      * @returns A summary of the shutdown operation including success and error counts
-     * 
+     *
      * @example
      * ```ts
      * process.on('SIGTERM', async () => {
@@ -848,7 +890,9 @@ export class KafkaMessaging implements IMessaging {
             }
         }
         this.logger?.info('KafkaMessaging shutdown complete');
-        this.logger?.info(`Disconnected ${successProducers} producers, ${successConsumers} consumers and ${successAdmins} admins with ${errorCount} errors.`);
+        this.logger?.info(
+            `Disconnected ${successProducers} producers, ${successConsumers} consumers and ${successAdmins} admins with ${errorCount} errors.`
+        );
 
         return {
             successProducers,
@@ -862,7 +906,7 @@ export class KafkaMessaging implements IMessaging {
 /**
  * Safely disconnects a Kafka client with timeout protection.
  * Standalone utility function.
- * 
+ *
  * @param client - The Kafka client to disconnect
  * @param timeoutMs - Maximum time to wait (default: 5000ms)
  * @returns A promise that resolves when disconnected or rejects on timeout
@@ -870,8 +914,6 @@ export class KafkaMessaging implements IMessaging {
 export async function safeDisconnect(client: Producer | Consumer | Admin, timeoutMs = 5000): Promise<unknown> {
     return Promise.race([
         client.disconnect(),
-        new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Disconnect timed out')), timeoutMs)
-        ),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Disconnect timed out')), timeoutMs)),
     ]);
 }

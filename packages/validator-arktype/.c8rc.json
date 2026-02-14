@@ -1,14 +1,9 @@
 {
-  "reporter": [
-    "lcov",
-    "text-summary"
-  ],
-  "check-coverage": true,
-  "statements": 90,
-  "branches": 60,
-  "functions": 90,
-  "lines": 90,
-  "exclude": [
-    "test"
-  ]
+    "reporter": ["lcov", "text-summary"],
+    "check-coverage": true,
+    "statements": 90,
+    "branches": 60,
+    "functions": 90,
+    "lines": 90,
+    "exclude": ["test"]
 }
