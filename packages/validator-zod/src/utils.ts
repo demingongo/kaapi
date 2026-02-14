@@ -12,31 +12,21 @@ function joinPath(path: PropertyKey[]): string {
     if (path.length === 1) {
         const propertyKey = path[0];
 
-        let propertyKeyString = ''
-
-        if (typeof propertyKey === 'symbol') {
-            propertyKeyString = propertyKey.description ?? '';
-        } else {
-            propertyKeyString = String(propertyKey)
-        }
+        const propertyKeyString = typeof propertyKey === 'symbol' ?
+            (propertyKey.description ?? '') : String(propertyKey);
 
         return propertyKeyString || '""';
     }
 
     return path.reduce<string>((acc, propertyKey) => {
-        let propertyKeyString = ''
-
         // handle numeric indices
         if (typeof propertyKey === 'number') {
             return acc + '[' + propertyKey.toString() + ']';
         }
 
         // handle symbols
-        if (typeof propertyKey === 'symbol') {
-            propertyKeyString = propertyKey.description ?? '';
-        } else {
-            propertyKeyString = propertyKey
-        }
+        const propertyKeyString = typeof propertyKey === 'symbol' ?
+            (propertyKey.description ?? '') : String(propertyKey);
 
         // handle quoted values
         if (propertyKeyString.includes('"')) {

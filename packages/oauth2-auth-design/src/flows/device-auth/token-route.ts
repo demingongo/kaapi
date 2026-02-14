@@ -90,6 +90,7 @@ export class DefaultOAuth2DeviceAuthTokenRoute<
 
     constructor() {
         super('/oauth2/token', async (props, req, h) => {
+            // eslint-disable-next-line no-useless-assignment
             let r: OAuth2TokenResponseBody | IOAuth2TokenResponse | OAuth2DeviceCodeTokenErrorBody | null = null
 
             try {

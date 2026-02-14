@@ -1,7 +1,9 @@
 - repository
     - replace lerna by pnpm (more compatibility)
         - step 1: remove lerna @done
-        - step 2: adapt root package.json
+        - step 2: update dependencies and scripts in package.json @done
+        - step 3: adapt code for eslint no-useless-assignment @done
+        - step 4: adapt root package.json
         - 
 
 - wiki:

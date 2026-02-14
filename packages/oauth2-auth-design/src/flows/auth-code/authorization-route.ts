@@ -279,7 +279,9 @@ export class DefaultOAuth2ACAuthorizationRoute<
             const validationError = await this.validateClientParams(props.clientId, props.redirectUri, props, req, h, this.#renderResponse)
             if (validationError) return validationError
 
+            // eslint-disable-next-line no-useless-assignment
             let error: AnyOAuth2ErrorCodeType = OAuth2ErrorCode.SERVER_ERROR
+            // eslint-disable-next-line no-useless-assignment
             let errorMessage = 'something went wrong'
             let statusCode: 400 | 401 = 400
 
@@ -294,7 +296,7 @@ export class DefaultOAuth2ACAuthorizationRoute<
             ) {
                 const code = await this.#generateCode(props, req, h);
                 if (code) {
-                    let fullRedirectUri = '';
+                    let fullRedirectUri: string;
                     if (code.type === 'code' && code.value) {
                         fullRedirectUri = buildRedirectUri(props.redirectUri, {
                             code: code.value,

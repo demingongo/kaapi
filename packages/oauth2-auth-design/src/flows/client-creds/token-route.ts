@@ -70,25 +70,26 @@ export class DefaultOAuth2ClientCredentialsTokenRoute<
     constructor() {
         super('/oauth2/token', async (props, req, h) => {
             if (!props.clientSecret) {
-                return h.response({ error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Token request was missing \'client_secret\'.' }).code(400)
+                return h.response({ error: OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Token request was missing \'client_secret\'.' }).code(400)
             }
 
+            // eslint-disable-next-line no-useless-assignment
             let r: OAuth2TokenResponseBody | IOAuth2TokenResponse | OAuth2ErrorBody | null = null
 
             try {
                 r = await this.#generateToken(props, req)
             } catch (err) {
-                return h.response({ error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: `${err}` }).code(400)
+                return h.response({ error: OAuth2ErrorCode.INVALID_REQUEST, error_description: `${err}` }).code(400)
             }
 
-            if (!r) return h.response({ error:  OAuth2ErrorCode.INVALID_REQUEST }).code(400)
+            if (!r) return h.response({ error: OAuth2ErrorCode.INVALID_REQUEST }).code(400)
 
             if ('error' in r) return h.response(r).code(400)
 
             return h.response(r).code(200)
         })
 
-        this.#generateToken = async () => ({ error:  OAuth2ErrorCode.INVALID_REQUEST })
+        this.#generateToken = async () => ({ error: OAuth2ErrorCode.INVALID_REQUEST })
     }
 
     setPath(path: PathValue): this {

@@ -61,12 +61,12 @@ export class KaapiServer<A = Hapi.ServerApplicationState> {
                     const authSplit = authorization ? authorization.split(/\s+/) : ['', ''];
 
                     const tokenType = authSplit[0];
-                    let token = authSplit[1];
 
                     if (tokenType.toLowerCase() !== settings.tokenType?.toLowerCase()) {
-                        token = '';
                         return Boom.unauthorized(null, settings.tokenType || '');
                     }
+
+                    const token = authSplit[1];
 
                     if (settings.validate) {
                         try {

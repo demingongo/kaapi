@@ -68,13 +68,8 @@ export function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(
     authConfigDefault?: ServerAuthConfig
 ): { routes: RouteMeta[], modifiers?: RouteModifier[] } {
 
-    let sRoutes: KaapiServerRoute<Refs>[] = [];
-
-    if (Array.isArray(serverRoutes)) {
-        sRoutes = serverRoutes
-    } else {
-        sRoutes = [serverRoutes]
-    }
+    const sRoutes: KaapiServerRoute<Refs>[] = Array.isArray(serverRoutes) ?
+        serverRoutes : [serverRoutes];
 
     const routes: RouteMeta[] = []
     const modifiers: RouteModifier[] = []
@@ -96,12 +91,8 @@ export function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(
             return
         }
 
-        let methods: string[] = []
-        if (Array.isArray(sRoute.method)) {
-            methods = sRoute.method
-        } else {
-            methods = [sRoute.method]
-        }
+        const methods: string[] = Array.isArray(sRoute.method) ?
+            sRoute.method : [sRoute.method];
 
         const formattedRoutes: RouteMeta[] = methods.map(
             method => {
@@ -268,12 +259,7 @@ export function formatRequestRoute<Refs extends ReqRef = ReqRefDefaults>(
     }
 
 
-    let methods: string[] = []
-    if (Array.isArray(sRoute.method)) {
-        methods = sRoute.method
-    } else {
-        methods = [sRoute.method]
-    }
+    const methods: string[] = Array.isArray(sRoute.method) ? sRoute.method : [sRoute.method];
 
     const formattedRoutes: RouteMeta[] = methods.map(
         method => {

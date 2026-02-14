@@ -736,13 +736,13 @@ export abstract class OAuth2AuthDesign extends AuthDesign {
                     const authSplit = authorization ? authorization.split(/\s+/) : ['', ''];
 
                     const tokenType = authSplit[0]
-                    let token = authSplit[1]
                     let jwtAccessTokenPayload: JWTPayload | undefined;
 
                     if (tokenType.toLowerCase() !== tokenTypePrefix.toLowerCase()) {
-                        token = ''
                         return Boom.unauthorized(null, tokenTypePrefix)
                     }
+
+                    const token = authSplit[1]
 
                     if (!(await tokenTypeInstance.isValid(request, token)).isValid) {
                         return Boom.unauthorized(null, tokenTypePrefix)

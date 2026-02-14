@@ -100,7 +100,7 @@ export const openIDDesign = new OIDCAuthorizationCode(
                 console.log('state', state)
                 console.log('nonce', nonce)
 
-                let error = ''
+                let error: string;
 
                 if (clientId && email && password) {
                     //#region @TODO: validation + code
@@ -135,7 +135,7 @@ export const openIDDesign = new OIDCAuthorizationCode(
                 console.log('clientSecret', clientSecret)
 
                 if (!clientSecret && !codeVerifier) {
-                    return h.response({ error:  OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Token Request was missing the \'client_secret\' parameter.' }).code(400)
+                    return h.response({ error: OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Token Request was missing the \'client_secret\' parameter.' }).code(400)
                 }
                 try {
                     //#region @TODO: validation + token
@@ -165,7 +165,7 @@ export const openIDDesign = new OIDCAuthorizationCode(
                     console.error(err)
                 }
 
-                return h.response({ error:  OAuth2ErrorCode.INVALID_REQUEST }).code(400)
+                return h.response({ error: OAuth2ErrorCode.INVALID_REQUEST }).code(400)
             }) as OAuth2ACTokenHandler,
         ),
         refreshTokenRoute: new OAuth2RefreshTokenRoute(

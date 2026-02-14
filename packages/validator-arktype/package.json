@@ -41,7 +41,7 @@
   "dependencies": {
     "@hapi/boom": "^10.0.1",
     "@kaapi/kaapi": "workspace:^",
-    "@novice1/api-doc-json-helper": "^1.0.8",
+    "@novice1/api-doc-json-helper": "^1.0.9",
     "arktype": "^2.1.29",
     "tslib": "^2.8.1"
   },

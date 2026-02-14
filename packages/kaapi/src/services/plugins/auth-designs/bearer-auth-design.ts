@@ -89,12 +89,12 @@ export class BearerAuthDesign extends AuthDesign {
                     const authSplit = typeof authorization === 'string' ? authorization.split(/\s+/) : ['', ''];
 
                     const tokenType = authSplit[0]
-                    let token = authSplit[1]
 
                     if (tokenType.toLowerCase() !== 'bearer') {
-                        token = ''
                         return Boom.unauthorized(null, strategyName)
                     }
+
+                    const token = authSplit[1]
 
                     if (settings.validate) {
                         try {

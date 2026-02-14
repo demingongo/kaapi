@@ -89,12 +89,12 @@ export class BasicAuthDesign extends AuthDesign {
                     const authSplit = typeof authorization === 'string' ? authorization.split(/\s+/) : ['', ''];
 
                     const tokenType = authSplit[0]
-                    let token = authSplit[1]
 
                     if (tokenType.toLowerCase() !== 'basic') {
-                        token = ''
                         return Boom.unauthorized(null, strategyName)
                     }
+
+                    const token = authSplit[1]
 
                     const [username, password] = Buffer.from(token, 'base64').toString().split(':', 2);
 
