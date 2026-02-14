@@ -1,3 +1,9 @@
+- repository
+    - replace lerna by pnpm (more compatibility)
+        - step 1: remove lerna @done
+        - step 2: adapt root package.json
+        - 
+
 - wiki:
     - oauth2
         - naming: replace 'setPOSTResponseRenderer' by 'setPOSTErrorRenderer' @done
