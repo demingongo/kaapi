@@ -6,7 +6,9 @@
     "main": "lib/index.js",
     "scripts": {
         "lint": "eslint .",
-        "build": "tsc && node ./scripts/buildDT.mjs"
+        "build": "tsc && node ./scripts/buildDT.mjs",
+        "format": "prettier --write ./",
+        "format:check": "prettier --check ./"
     },
     "keywords": [
         "typescript",

@@ -29,6 +29,8 @@
         "lint": "eslint .",
         "build": "tsc && node ./scripts/buildDT.mjs",
         "doc": "typedoc",
+        "format": "prettier --write ./",
+        "format:check": "prettier --check ./",
         "test:unit": "kaukau -r ts-node/register -f test --ext .spec.ts",
         "test": "kaukau --require ts-node/register --config kaukau.config.mjs"
     },

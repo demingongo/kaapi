@@ -19,6 +19,8 @@
     "scripts": {
         "lint": "eslint .",
         "build": "tsc",
+        "format": "prettier --write ./",
+        "format:check": "prettier --check ./",
         "test:run": "ts-node src/index.ts",
         "test:bin": "node dist/index.js"
     },

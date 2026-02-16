@@ -4,3 +4,4 @@ tsconfig.json
 test
 .c8rc.json
 kaukau.config.mjs
+.prettierignore

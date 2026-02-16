@@ -13,6 +13,8 @@
     "scripts": {
         "lint": "eslint .",
         "build": "tsc && node ./scripts/buildDT.mjs",
+        "format": "prettier --write ./",
+        "format:check": "prettier --check ./",
         "test": "kaukau --require ts-node/register --config kaukau.config.mjs",
         "coverage": "c8 npm test"
     },

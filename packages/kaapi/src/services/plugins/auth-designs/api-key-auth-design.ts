@@ -16,11 +16,11 @@ export type APIKeyAuthOptions<Refs extends ReqRef = ReqRefDefaults> = {
         h: ResponseToolkit<Refs>
     ): Promise<
         | {
-            isValid?: boolean;
-            artifacts?: unknown;
-            credentials?: AuthCredentials;
-            message?: string;
-        }
+              isValid?: boolean;
+              artifacts?: unknown;
+              credentials?: AuthCredentials;
+              message?: string;
+          }
         | Auth
         | Boom.Boom
     >;
@@ -108,8 +108,8 @@ export class APIKeyAuthDesign extends AuthDesign {
                         apiKeyLocation == ApiKeyLocation.cookie
                             ? request.state[key]
                             : apiKeyLocation == ApiKeyLocation.query
-                                ? request.query[key]
-                                : request.raw.req.headers[key.toLowerCase()];
+                              ? request.query[key]
+                              : request.raw.req.headers[key.toLowerCase()];
 
                     let token = authorization;
 

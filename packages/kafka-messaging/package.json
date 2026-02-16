@@ -7,6 +7,8 @@
     "scripts": {
         "lint": "eslint .",
         "build": "tsc",
+        "format": "prettier --write ./",
+        "format:check": "prettier --check ./",
         "test": "kaukau --require ts-node/register --config kaukau.config.mjs --ext mock.spec.ts",
         "test:integration": "kaukau --require ts-node/register --config kaukau.config.mjs --ext integration.spec.ts",
         "test:mock": "kaukau --require ts-node/register --config kaukau.config.mjs --ext mock.spec.ts",

@@ -3,9 +3,8 @@
         - step 1: remove lerna @done
         - step 2: update dependencies and scripts in package.json @done
         - step 3: adapt code for eslint no-useless-assignment @done
-        - step 4: config eslint and prettier
-        - step 5: config eslint and prettier for all packages
-        - step 6: adapt root package.json
+        - step 4: config eslint and prettier for all packages
+        - step 5: adapt root package.json
 
 - wiki:
     - oauth2
