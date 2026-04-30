@@ -1,0 +1,39 @@
+{
+    "name": "@kaapi/logger",
+    "version": "0.0.42",
+    "private": false,
+    "description": "logger",
+    "main": "lib/index.js",
+    "exports": {
+        ".": {
+            "types": "./lib/index.d.ts",
+            "default": "./lib/index.js"
+        }
+    },
+    "scripts": {
+        "lint": "eslint .",
+        "build": "tsc",
+        "format": "prettier --write ./",
+        "format:check": "prettier --check ./",
+        "test": "kaukau --require ts-node/register --config kaukau.config.mjs"
+    },
+    "keywords": [
+        "kaapi",
+        "typescript",
+        "logger",
+        "stream"
+    ],
+    "author": "demingongo",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/demingongo/kaapi.git",
+        "directory": "packages/logger"
+    },
+    "license": "MIT",
+    "dependencies": {
+        "tslib": "^2.8.1"
+    },
+    "devDependencies": {
+        "@types/mocha": "^10.0.10"
+    }
+}
