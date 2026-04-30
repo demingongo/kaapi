@@ -1,0 +1,12 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "type": "command",
+        "windows": "node -e \"try{const d=JSON.parse(require('fs').readFileSync(0,'utf8'));const input=d.tool_input||{};const f=input.path||input.filePath||'';if(f.endsWith('package.json')&&!f.includes('node_modules')){console.log(JSON.stringify({systemMessage:'package.json was modified. If the version or dependencies changed, run /sync-docs to keep .agents/ and .github/copilot-instructions.md in sync.'}))}process.exit(0)}catch(e){process.exit(0)}\"",
+        "linux": "node -e \"try{const d=JSON.parse(require('fs').readFileSync(0,'utf8'));const input=d.tool_input||{};const f=input.path||input.filePath||'';if(f.endsWith('package.json')&&!f.includes('node_modules')){console.log(JSON.stringify({systemMessage:'package.json was modified. If the version or dependencies changed, run /sync-docs to keep .agents/ and .github/copilot-instructions.md in sync.'}))}process.exit(0)}catch(e){process.exit(0)}\"",
+        "osx": "node -e \"try{const d=JSON.parse(require('fs').readFileSync(0,'utf8'));const input=d.tool_input||{};const f=input.path||input.filePath||'';if(f.endsWith('package.json')&&!f.includes('node_modules')){console.log(JSON.stringify({systemMessage:'package.json was modified. If the version or dependencies changed, run /sync-docs to keep .agents/ and .github/copilot-instructions.md in sync.'}))}process.exit(0)}catch(e){process.exit(0)}\""
+      }
+    ]
+  }
+}
