@@ -1,0 +1,38 @@
+import fs from 'node:fs';
+import path, { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+async function copyDtsFiles(src, dest) {
+    await fs.promises.mkdir(dest, { recursive: true });
+    const entries = await fs.promises.readdir(src, { withFileTypes: true });
+
+    for (const entry of entries) {
+        const srcPath = path.join(src, entry.name);
+        const destPath = path.join(dest, entry.name);
+
+        if (entry.isDirectory()) {
+            await copyDtsFiles(srcPath, destPath);
+        } else if (entry.isFile() && entry.name.endsWith('.d.ts')) {
+            await fs.promises.copyFile(srcPath, destPath);
+            console.log(`Copied: ${srcPath} → ${destPath}`);
+        }
+    }
+}
+
+async function buildDT() {
+    console.log('scripts/buildDT');
+
+    const __dirname = dirname(fileURLToPath(import.meta.url));
+
+    await copyDtsFiles(
+        path.join(__dirname, '../src'),
+        path.join(__dirname, '../lib')
+    );
+
+    console.log('buildDT done');
+}
+
+buildDT().catch((err) => {
+    console.error(err);
+    process.exit(1);
+});

@@ -1,0 +1,30 @@
+{
+    "name": "@kaapi/{{NAME}}",
+    "version": "{{VERSION}}",
+    "private": false,
+    "description": "{{DESCRIPTION}}",
+    "main": "lib/index.js",
+    "exports": {
+        ".": {
+            "types": "./lib/index.d.ts",
+            "default": "./lib/index.js"
+        }
+    },
+    "scripts": {
+        "lint": "eslint .",
+        "build": "tsc",
+        "format": "prettier --write ./",
+        "format:check": "prettier --check ./"
+    },
+    "keywords": {{KEYWORDS_JSON}},
+    "author": "demingongo",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/demingongo/kaapi.git",
+        "directory": "packages/{{NAME}}"
+    },
+    "license": "MIT",
+    "dependencies": {
+        "tslib": "^2.8.1"
+    }
+}
