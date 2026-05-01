@@ -31,6 +31,7 @@ Use the templates in `./assets/`. Replace all `{{PLACEHOLDER}}` values before wr
 | `packages/{{NAME}}/tsconfig.json`     | [tsconfig.json.template](./assets/tsconfig.json.template)         | No changes needed                                            |
 | `packages/{{NAME}}/eslint.config.mjs` | [eslint.config.mjs.template](./assets/eslint.config.mjs.template) | No changes needed                                            |
 | `packages/{{NAME}}/src/index.ts`      | [src-index.ts.template](./assets/src-index.ts.template)           | Add a comment with the package purpose                       |
+| `packages/{{NAME}}/README.md`         | [README.md.template](./assets/README.md.template)                 | Package name as title                                        |
 
 ### If "Has declarations.d.ts" → yes
 

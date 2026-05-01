@@ -18,6 +18,7 @@ Full architecture and API references are in `.agents/`:
 - `.agents/packages/oauth2-auth-design.md` — `@kaapi/oauth2-auth-design`: OAuth2/OIDC flows, JWT authority, token types
 - `.agents/packages/cli.md` — `@kaapi/cli`: `FileGenerator`, `kaapi.config.mjs`, CLI scaffolding
 - `.agents/packages/validators.md` — `@kaapi/validator-{arktype,valibot,zod}`: request validation plugins
+- `.agents/packages/logger.md` — `@kaapi/logger`: logger utilities
 
 Read the relevant file before making changes to any package.
 

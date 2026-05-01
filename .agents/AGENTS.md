@@ -18,6 +18,7 @@ This monorepo uses **pnpm workspaces**. Focus on `packages/` — `examples/` con
 | `packages/validator-arktype`  | `@kaapi/validator-arktype`  | 0.0.42  | ArkType-based request validation plugin (ESM-only)                                    |
 | `packages/validator-valibot`  | `@kaapi/validator-valibot`  | 0.0.42  | Valibot-based request validation plugin                                               |
 | `packages/validator-zod`      | `@kaapi/validator-zod`      | 0.0.42  | Zod v4-based request validation plugin                                                |
+| `packages/logger`             | `@kaapi/logger`             | 0.0.42  | Logger utilities for Kaapi                                                            |
 
 ---
 
@@ -35,6 +36,8 @@ This monorepo uses **pnpm workspaces**. Focus on `packages/` — `examples/` con
       └── @kaapi/oauth2-auth-design
               ↑ also depends on
           @kaapi/cli               (for code generation)
+
+@kaapi/logger           ← standalone logger utilities, no internal deps
 ```
 
 All user-facing code imports from `@kaapi/kaapi`, which fully re-exports `@kaapi/server` and `@hapi/hapi`.
@@ -83,6 +86,7 @@ pnpm --filter @kaapi/cli kaapi generate
 | OAuth2/OIDC flows, JWT authority, token types              | [packages/oauth2-auth-design.md](./packages/oauth2-auth-design.md) |
 | `kaapi` CLI, `FileGenerator`, `kaapi.config.mjs`           | [packages/cli.md](./packages/cli.md)                               |
 | Request validation (ArkType / Valibot / Zod)               | [packages/validators.md](./packages/validators.md)                 |
+| Logger utilities                                           | [packages/logger.md](./packages/logger.md)                         |
 
 ---
 
