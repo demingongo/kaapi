@@ -1,6 +1,6 @@
 # `@kaapi/kaapi` — Package Reference
 
-**npm**: `@kaapi/kaapi` · **version**: 0.0.42  
+**npm**: `@kaapi/kaapi` · **version**: 0.0.43  
 **Source**: `packages/kaapi/src/`  
 **Build**: `tsc` → `lib/` · **Format**: CommonJS (`NodeNext`)  
 **Dependencies**: `@hapi/boom`, `@hapi/hapi`, `@hapi/hoek`, `@hapi/inert`, `@kaapi/server`, `@novice1/api-doc-generator`, `@novice1/routing`, `jsontoxml`, `qs`, `swagger-ui-dist`, `winston`, `tslib`
@@ -323,6 +323,21 @@ Full OpenAPI/Postman configuration passed via `KaapiAppOptions.docs`:
 
 Doc builders exposed as `app.openapi` and `app.postman`. Typically you don't call these directly — they are populated automatically as routes are registered with validator schemas.
 
+### `options.id` → operationId
+
+Set `options.id` on any route to control its `operationId` in the generated OpenAPI spec:
+
+```ts
+app.route({
+    method: 'GET',
+    path: '/users/{id}',
+    options: { id: 'getUser' }, // operationId in OpenAPI
+    handler: async (request) => { ... },
+});
+```
+
+This uses the standard Hapi `RouteOptions.id` field — no extra Kaapi-specific configuration needed.
+
 ### Schema Modifiers
 
 Available from `@kaapi/kaapi` for advanced doc customization:
@@ -331,6 +346,47 @@ Available from `@kaapi/kaapi` for advanced doc customization:
 - `ExampleModifier` — sets OpenAPI examples on schemas
 - `ResponseDocsModifier` / `RequestBodyDocsModifier` — modifies response/request schemas in docs
 - `KaapiOpenAPIHelperInterface` / `KaapiOpenAPIHelperClass` — interfaces for custom schema-to-OpenAPI converters
+
+### `RouteModifierObject`
+
+The object returned by the `modifiers()` function in `KaapiPluginConfiguration.docs`:
+
+```ts
+interface RouteModifierObject {
+    /**
+     * If true, the provided responses will override any existing responses
+     * instead of merging with them. Requires you to supply all needed
+     * response definitions (including 200, 500, etc.) explicitly.
+     */
+    overrideResponses?: boolean;
+    requestBody?: RequestBodyDocsModifier;
+    responses?: BaseResponseUtil;
+}
+```
+
+### `applyModifiers(serverRoute, modifiers)`
+
+Helper that wires a `RouteModifierObject` (or a factory function returning one) onto a `KaapiServerRoute` without manually navigating `options.plugins.kaapi.docs`:
+
+```ts
+import { applyModifiers } from '@kaapi/kaapi';
+
+const route = applyModifiers(
+    { method: 'POST', path: '/items', handler: () => ({ ok: true }) },
+    {
+        overrideResponses: true,
+        responses: new ResponseDocsModifier(201, { schema: mySchema }),
+    }
+);
+
+app.route(route);
+```
+
+Also accepts a factory function:
+
+```ts
+applyModifiers(route, () => ({ responses: myResponseModifier }));
+```
 
 ---
 
@@ -359,7 +415,7 @@ declare module '@hapi/hapi' {
 - All of `@hapi/hapi` (Hapi types, decorators, server, etc.)
 - All of `@kaapi/server` (`KaapiServer`, `KaapiServerRoute`, `KaapiServerOptions`, `KaapiAuthOptions`)
 - Selected Winston types (`LoggerOptions`, `Logger`, `Container`, etc.)
-- All doc generators, modifiers, utilities
+- All doc generators, modifiers, utilities (including `applyModifiers`)
 - All plugin interfaces + built-in auth designs
 - `ILogger`, `createLogger`
 - `IMessaging`, `IMessagingContext`, `IPublishMethod`, `ISubscribeMethod`, `IMessagingSubscribeConfig`
