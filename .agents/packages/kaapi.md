@@ -1,6 +1,6 @@
 # `@kaapi/kaapi` — Package Reference
 
-**npm**: `@kaapi/kaapi` · **version**: 0.0.43  
+**npm**: `@kaapi/kaapi` · **version**: 0.0.44  
 **Source**: `packages/kaapi/src/`  
 **Build**: `tsc` → `lib/` · **Format**: CommonJS (`NodeNext`)  
 **Dependencies**: `@hapi/boom`, `@hapi/hapi`, `@hapi/hoek`, `@hapi/inert`, `@kaapi/server`, `@novice1/api-doc-generator`, `@novice1/routing`, `jsontoxml`, `qs`, `swagger-ui-dist`, `winston`, `tslib`
@@ -353,16 +353,12 @@ The object returned by the `modifiers()` function in `KaapiPluginConfiguration.d
 
 ```ts
 interface RouteModifierObject {
-    /**
-     * If true, the provided responses will override any existing responses
-     * instead of merging with them. Requires you to supply all needed
-     * response definitions (including 200, 500, etc.) explicitly.
-     */
-    overrideResponses?: boolean;
     requestBody?: RequestBodyDocsModifier;
     responses?: BaseResponseUtil;
 }
 ```
+
+Provided responses always **replace** any existing responses for the route (override-by-default behaviour).
 
 ### `applyModifiers(serverRoute, modifiers)`
 

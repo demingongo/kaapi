@@ -769,14 +769,6 @@ export function groupResponses(...modifiers: BaseResponseUtil[]) {
 }
 
 export interface RouteModifierObject {
-    /**
-     * If true, the provided responses will override any existing responses for the route
-     * instead of merging with them.
-     * This allows for complete control over the route's responses,
-     * but requires you to provide all necessary response definitions,
-     * including default ones like 200 or 500 if needed.
-     */
-    overrideResponses?: boolean | undefined;
     requestBody?: RequestBodyDocsModifier | undefined;
     responses?: BaseResponseUtil | undefined;
 }

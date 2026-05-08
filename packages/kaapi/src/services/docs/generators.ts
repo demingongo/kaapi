@@ -83,7 +83,6 @@ export type RouteModifier = {
     definition: object;
     name?: string | undefined;
     tags?: string[] | undefined;
-    override?: boolean | undefined;
 };
 
 export function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(
@@ -208,7 +207,6 @@ export function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(
                             definition: docsModifiers.responses,
                             name: route.name,
                             tags: route.tags,
-                            override: docsModifiers.overrideResponses,
                         });
                     } else {
                         throw TypeError(`Expected instance of BaseResponseUtil (at ${method} ${path})`);
@@ -392,7 +390,6 @@ export function formatRequestRoute<Refs extends ReqRef = ReqRefDefaults>(
                         definition: docsModifiers.responses,
                         name: route.name,
                         tags: route.tags,
-                        override: docsModifiers.overrideResponses,
                     });
                 } else {
                     throw TypeError(`Expected instance of BaseResponseUtil (at ${method} ${path})`);
@@ -447,6 +444,11 @@ export interface KaapiDocGenerator {
 
 export class KaapiOpenAPI extends OpenAPI implements KaapiDocGenerator {
     protected routeExtensions: object = {};
+    /**
+     * Used to override responses as we don't want to keep the "default: none"
+     * that is set when no responses are defined.
+     */
+    protected routeExtensionsOverride: object = {};
 
     /**
      * Used when formatting routes (security by route).
@@ -484,6 +486,7 @@ export class KaapiOpenAPI extends OpenAPI implements KaapiDocGenerator {
      */
     removeAll(): ProcessedRoute[] {
         this.routeExtensions = {};
+        this.routeExtensionsOverride = {};
         return super.removeAll();
     }
 
@@ -492,6 +495,10 @@ export class KaapiOpenAPI extends OpenAPI implements KaapiDocGenerator {
      */
     result(): OpenAPIResult {
         let result = super.result();
+        if (Object.keys(this.routeExtensionsOverride).length) {
+            result = deepExtend({}, result);
+            result = deepExtend(result, { paths: this.routeExtensionsOverride });
+        }
         if (Object.keys(this.routeExtensions).length) {
             result = deepExtend({}, result);
             result = deepExtend(result, { paths: this.routeExtensions });
@@ -527,17 +534,16 @@ export class KaapiOpenAPI extends OpenAPI implements KaapiDocGenerator {
         return this;
     }
 
-    modifyRoute(path: string, method: string, definition: object, override?: boolean) {
+    modifyRoute(path: string, method: string, definition: object) {
         if (definition instanceof ResponseDocsModifier) {
-            if (override) {
-                this.routeExtensions = deepExtend(this.routeExtensions, {
-                    [path]: {
-                        [method.toLowerCase()]: {
-                            responses: null,
-                        },
+            // responses will always override existing ones
+            this.routeExtensionsOverride = deepExtend(this.routeExtensionsOverride, {
+                [path]: {
+                    [method.toLowerCase()]: {
+                        responses: null,
                     },
-                });
-            }
+                },
+            });
             this.routeExtensions = deepExtend(this.routeExtensions, {
                 [path]: {
                     [method.toLowerCase()]: {
@@ -546,15 +552,14 @@ export class KaapiOpenAPI extends OpenAPI implements KaapiDocGenerator {
                 },
             });
         } else if (definition instanceof BaseResponseUtil) {
-            if (override) {
-                this.routeExtensions = deepExtend(this.routeExtensions, {
-                    [path]: {
-                        [method.toLowerCase()]: {
-                            responses: null,
-                        },
+            // responses will always override existing ones
+            this.routeExtensionsOverride = deepExtend(this.routeExtensionsOverride, {
+                [path]: {
+                    [method.toLowerCase()]: {
+                        responses: null,
                     },
-                });
-            }
+                },
+            });
             this.routeExtensions = deepExtend(this.routeExtensions, {
                 [path]: {
                     [method.toLowerCase()]: {
@@ -582,7 +587,7 @@ export class KaapiOpenAPI extends OpenAPI implements KaapiDocGenerator {
     addCustom(routes: RouteMeta[], modifiers?: RouteModifier[]): ProcessedRoute[] {
         if (modifiers) {
             for (const o of modifiers) {
-                this.modifyRoute(o.path, o.method, o.definition, o.override);
+                this.modifyRoute(o.path, o.method, o.definition);
             }
         }
         return super.add(routes);

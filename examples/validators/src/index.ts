@@ -352,7 +352,6 @@ const fileFieldSchema: SchemaObject3_1 = {
                                 responses: groupResponses(
                                     new ResponseDocsModifier()
                                         .setCode(200)
-                                        .setDefault(true)
                                         .setDescription('The file itself'),
                                     new ResponseDocsModifier().setCode(400).setDescription('Bad Request')
                                 ),
