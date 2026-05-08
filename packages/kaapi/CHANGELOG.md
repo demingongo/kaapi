@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release
 
-[Unreleased]: https://github.com/demingongo/kaapi/compare/v0.0.43...HEAD
+[Unreleased]: https://github.com/demingongo/kaapi/compare/v0.0.44...HEAD
+[0.0.44]: https://github.com/demingongo/kaapi/compare/v0.0.43...v0.0.44
 [0.0.43]: https://github.com/demingongo/kaapi/compare/v0.0.42...v0.0.43
 [0.0.42]: https://github.com/demingongo/kaapi/commits/v0.0.42
