@@ -8,14 +8,14 @@ import {
     ResponseUtil,
     SchemaObject3_1,
 } from '@novice1/api-doc-generator';
-import {
+import type {
     ExampleObject,
     MediaTypeObject,
     ResponseObject,
     XMLObject,
 } from '@novice1/api-doc-generator/lib/generators/openapi/definitions';
-import { HeaderObject, RequestBodyObject } from '@novice1/api-doc-generator/lib/generators/postman/definitions';
-import { BaseResponseUtil } from '@novice1/api-doc-generator/lib/utils/responses/baseResponseUtils';
+import type { HeaderObject, RequestBodyObject } from '@novice1/api-doc-generator/lib/generators/postman/definitions';
+import type { BaseResponseUtil } from '@novice1/api-doc-generator/lib/utils/responses/baseResponseUtils';
 import jsontoxml from 'jsontoxml';
 
 // -------------------- TYPES --------------------
@@ -766,4 +766,17 @@ export class GroupResponseDocsModifier extends GroupResponseUtil {
 
 export function groupResponses(...modifiers: BaseResponseUtil[]) {
     return new GroupResponseDocsModifier(modifiers);
+}
+
+export interface RouteModifierObject {
+    /**
+     * If true, the provided responses will override any existing responses for the route
+     * instead of merging with them.
+     * This allows for complete control over the route's responses,
+     * but requires you to provide all necessary response definitions,
+     * including default ones like 200 or 500 if needed.
+     */
+    overrideResponses?: boolean | undefined;
+    requestBody?: RequestBodyDocsModifier | undefined;
+    responses?: BaseResponseUtil | undefined;
 }

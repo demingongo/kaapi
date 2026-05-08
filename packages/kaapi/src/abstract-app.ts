@@ -1,5 +1,5 @@
 import type { KaapiOpenAPIHelperClass } from './services/docs/generators';
-import type { RequestBodyDocsModifier } from './services/docs/modifiers';
+import type { RouteModifierObject } from './services/docs/modifiers';
 import { ILogger } from './services/log';
 import {
     IMessaging,
@@ -10,7 +10,6 @@ import {
 } from './services/messaging';
 import { HandlerDecorations, Lifecycle, ReqRef, ReqRefDefaults } from '@hapi/hapi';
 import { KaapiServerRoute, KaapiServer, KaapiServerOptions } from '@kaapi/server';
-import type { BaseResponseUtil } from '@novice1/api-doc-generator/lib/utils/responses/baseResponseUtils';
 
 export interface KaapiPluginConfiguration {
     docs?:
@@ -18,10 +17,7 @@ export interface KaapiPluginConfiguration {
               disabled?: boolean;
               openAPIHelperClass?: KaapiOpenAPIHelperClass;
               helperSchemaProperty?: string;
-              modifiers?: () => {
-                  requestBody?: RequestBodyDocsModifier;
-                  responses?: BaseResponseUtil;
-              };
+              modifiers?: () => RouteModifierObject;
           }
         | false;
 }

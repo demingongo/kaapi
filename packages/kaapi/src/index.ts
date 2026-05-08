@@ -23,3 +23,4 @@ export * from './services/log';
 export * from './services/messaging';
 export * from './abstract-app';
 export * from './app';
+export * from './utils';

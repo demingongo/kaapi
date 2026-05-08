@@ -1,6 +1,11 @@
 import { OpenAPIMixHelper, PostmanMixHelper } from './api-doc-mix-helpers';
 import { deepExtend } from './deep-extend';
-import { PostmanRequestBodyModel, RequestBodyDocsModifier, ResponseDocsModifier } from './modifiers';
+import {
+    PostmanRequestBodyModel,
+    RequestBodyDocsModifier,
+    ResponseDocsModifier,
+    RouteModifierObject,
+} from './modifiers';
 import {
     AccessSetting,
     ReqRef,
@@ -78,6 +83,7 @@ export type RouteModifier = {
     definition: object;
     name?: string | undefined;
     tags?: string[] | undefined;
+    override?: boolean | undefined;
 };
 
 export function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(
@@ -125,7 +131,6 @@ export function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(
                         typeof sRoute.options.auth === 'object' &&
                         !!sRoute.options.auth.mode) ||
                     false,
-                //responses: sRoute.responses
             };
 
             if (typeof sRoute.options != 'function') {
@@ -162,6 +167,9 @@ export function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(
                 route.parameters = routeOptionsValidate
                     ? { ...routeOptionsValidate, body: routeOptionsValidate.payload, files: files }
                     : {};
+                if (sRoute.options?.id) {
+                    route.parameters.operationId = sRoute.options.id;
+                }
                 if (sRoute.options?.notes) {
                     route.parameters.descriptionType = 'text/markdown';
                     if (Array.isArray(sRoute.options.notes)) {
@@ -175,12 +183,7 @@ export function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(
                         ? sRoute.options.payload.allow
                         : [sRoute.options.payload.allow];
                 }
-                let docsModifiers:
-                    | {
-                          requestBody?: RequestBodyDocsModifier | undefined;
-                          responses?: BaseResponseUtil;
-                      }
-                    | undefined = undefined;
+                let docsModifiers: RouteModifierObject | undefined = undefined;
                 if (typeof pluginKaapiDocs.modifiers === 'function') {
                     docsModifiers = pluginKaapiDocs.modifiers();
                 }
@@ -205,6 +208,7 @@ export function formatRoutes<Refs extends ReqRef = ReqRefDefaults>(
                             definition: docsModifiers.responses,
                             name: route.name,
                             tags: route.tags,
+                            override: docsModifiers.overrideResponses,
                         });
                     } else {
                         throw TypeError(`Expected instance of BaseResponseUtil (at ${method} ${path})`);
@@ -347,6 +351,9 @@ export function formatRequestRoute<Refs extends ReqRef = ReqRefDefaults>(
             route.parameters = routeOptionsValidate
                 ? { ...routeOptionsValidate, body: routeOptionsValidate.payload, files: files }
                 : {};
+            if (sRoute.settings?.id) {
+                route.parameters.operationId = sRoute.settings.id;
+            }
             if (sRoute.settings?.notes) {
                 route.parameters.descriptionType = 'text/markdown';
                 if (Array.isArray(sRoute.settings.notes)) {
@@ -360,12 +367,7 @@ export function formatRequestRoute<Refs extends ReqRef = ReqRefDefaults>(
                     ? sRoute.settings.payload.allow
                     : [sRoute.settings.payload.allow];
             }
-            let docsModifiers:
-                | {
-                      requestBody?: RequestBodyDocsModifier | undefined;
-                      responses?: BaseResponseUtil;
-                  }
-                | undefined = undefined;
+            let docsModifiers: RouteModifierObject | undefined = undefined;
             if (typeof pluginKaapiDocs.modifiers === 'function') {
                 docsModifiers = pluginKaapiDocs.modifiers();
             }
@@ -390,6 +392,7 @@ export function formatRequestRoute<Refs extends ReqRef = ReqRefDefaults>(
                         definition: docsModifiers.responses,
                         name: route.name,
                         tags: route.tags,
+                        override: docsModifiers.overrideResponses,
                     });
                 } else {
                     throw TypeError(`Expected instance of BaseResponseUtil (at ${method} ${path})`);
@@ -524,8 +527,17 @@ export class KaapiOpenAPI extends OpenAPI implements KaapiDocGenerator {
         return this;
     }
 
-    modifyRoute(path: string, method: string, definition: object) {
+    modifyRoute(path: string, method: string, definition: object, override?: boolean) {
         if (definition instanceof ResponseDocsModifier) {
+            if (override) {
+                this.routeExtensions = deepExtend(this.routeExtensions, {
+                    [path]: {
+                        [method.toLowerCase()]: {
+                            responses: null,
+                        },
+                    },
+                });
+            }
             this.routeExtensions = deepExtend(this.routeExtensions, {
                 [path]: {
                     [method.toLowerCase()]: {
@@ -534,6 +546,15 @@ export class KaapiOpenAPI extends OpenAPI implements KaapiDocGenerator {
                 },
             });
         } else if (definition instanceof BaseResponseUtil) {
+            if (override) {
+                this.routeExtensions = deepExtend(this.routeExtensions, {
+                    [path]: {
+                        [method.toLowerCase()]: {
+                            responses: null,
+                        },
+                    },
+                });
+            }
             this.routeExtensions = deepExtend(this.routeExtensions, {
                 [path]: {
                     [method.toLowerCase()]: {
@@ -561,7 +582,7 @@ export class KaapiOpenAPI extends OpenAPI implements KaapiDocGenerator {
     addCustom(routes: RouteMeta[], modifiers?: RouteModifier[]): ProcessedRoute[] {
         if (modifiers) {
             for (const o of modifiers) {
-                this.modifyRoute(o.path, o.method, o.definition);
+                this.modifyRoute(o.path, o.method, o.definition, o.override);
             }
         }
         return super.add(routes);

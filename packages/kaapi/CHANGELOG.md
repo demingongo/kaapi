@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.43] - 2026-01-31
+
+### Added
+
+- `options.id` in route settings to set operationId in OpenAPI spec
+- `overrideResponses` in route modifiers to allow overriding responses instead of merging them
+- `applyModifiers` function to apply modifiers to a server route
+
 ## [0.0.42] - 2026-01-24
 
 ### Added
@@ -19,5 +27,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release
 
-[Unreleased]: https://github.com/demingongo/kaapi/compare/v0.0.42...HEAD
+[Unreleased]: https://github.com/demingongo/kaapi/compare/v0.0.43...HEAD
+[0.0.43]: https://github.com/demingongo/kaapi/compare/v0.0.42...v0.0.43
 [0.0.42]: https://github.com/demingongo/kaapi/commits/v0.0.42
