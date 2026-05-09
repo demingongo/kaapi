@@ -453,21 +453,12 @@ importers:
       '@hapi/hapi':
         specifier: ^21.4.4
         version: 21.4.4
-      '@hapi/hoek':
-        specifier: ^11.0.7
-        version: 11.0.7
-      '@hapi/inert':
-        specifier: ^7.1.0
-        version: 7.1.0
       '@kaapi/server':
         specifier: workspace:^
         version: link:../server
       '@novice1/api-doc-generator':
         specifier: ^1.2.6
         version: 1.2.6
-      '@novice1/routing':
-        specifier: ^2.1.0
-        version: 2.1.0
       jsontoxml:
         specifier: ^1.0.1
         version: 1.0.1
@@ -484,6 +475,9 @@ importers:
         specifier: ^3.19.0
         version: 3.19.0
     devDependencies:
+      '@novice1/routing':
+        specifier: ^2.1.0
+        version: 2.1.0
       '@types/jsontoxml':
         specifier: ^1.0.6
         version: 1.0.6

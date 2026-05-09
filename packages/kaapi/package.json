@@ -24,6 +24,7 @@
     },
     "license": "MIT",
     "devDependencies": {
+        "@novice1/routing": "^2.1.0",
         "@types/jsontoxml": "^1.0.6",
         "@types/qs": "^6.14.0",
         "@types/swagger-ui-dist": "^3.30.6"
@@ -31,11 +32,8 @@
     "dependencies": {
         "@hapi/boom": "^10.0.1",
         "@hapi/hapi": "^21.4.4",
-        "@hapi/hoek": "^11.0.7",
-        "@hapi/inert": "^7.1.0",
         "@kaapi/server": "workspace:^",
         "@novice1/api-doc-generator": "^1.2.6",
-        "@novice1/routing": "^2.1.0",
         "jsontoxml": "^1.0.1",
         "qs": "^6.14.2",
         "swagger-ui-dist": "^5.31.0",
