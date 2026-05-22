@@ -400,6 +400,9 @@ const fileFieldSchema: SchemaObject3_1 = {
     // (route "options" as function will only have docs at refreshDocs)
     app.route<{
         Payload: Stream.Readable;
+        Headers: {
+            'content-type': string;
+        };
     }>(
         {
             method: 'POST',

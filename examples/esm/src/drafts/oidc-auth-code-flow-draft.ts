@@ -75,7 +75,7 @@ export default OIDCAuthorizationCodeBuilder.create({ logger })
                                 .code(400);
                         }
 
-                        const session = req.state['kaapisession'];
+                        const session = req.state['kaapisession'] as { user?: string } | undefined;
                         logger.debug('session', session);
                         if (session?.user) {
                             const user = await db.users.findById(session.user);
@@ -111,7 +111,7 @@ export default OIDCAuthorizationCodeBuilder.create({ logger })
                         if (step === 'consent') {
                             if (submit === 'allow') {
                                 // code generation
-                                const session = state.kaapisession;
+                                const session = state.kaapisession as { user?: string } | undefined;
                                 logger.debug('session', session);
                                 if (session?.user) {
                                     // Consider storing intermediate data instead of fully encoding it into the code string (unless encrypted).
@@ -261,17 +261,17 @@ export default OIDCAuthorizationCodeBuilder.create({ logger })
                                 .setTokenType(tokenType)
                                 .setIdToken(
                                     (scope?.split(' ').includes('openid') || undefined) &&
-                                        (
-                                            await createIdToken?.({
-                                                sub: user.id,
-                                                name: (scope?.split(' ').includes('profile') || undefined) && user.name,
-                                                given_name:
-                                                    (scope?.split(' ').includes('profile') || undefined) &&
-                                                    user.given_name,
-                                                email: (scope?.split(' ').includes('email') || undefined) && user.email,
-                                                nonce,
-                                            })
-                                        )?.token
+                                    (
+                                        await createIdToken?.({
+                                            sub: user.id,
+                                            name: (scope?.split(' ').includes('profile') || undefined) && user.name,
+                                            given_name:
+                                                (scope?.split(' ').includes('profile') || undefined) &&
+                                                user.given_name,
+                                            email: (scope?.split(' ').includes('email') || undefined) && user.email,
+                                            nonce,
+                                        })
+                                    )?.token
                                 ); // add id_token if scope has 'openid'
                         }
                     } catch (err) {
@@ -344,16 +344,16 @@ export default OIDCAuthorizationCodeBuilder.create({ logger })
                                 .setTokenType(tokenType)
                                 .setIdToken(
                                     (scope?.split(' ').includes('openid') || undefined) &&
-                                        (
-                                            await createIdToken?.({
-                                                sub: user.id,
-                                                name: (scope?.split(' ').includes('profile') || undefined) && user.name,
-                                                given_name:
-                                                    (scope?.split(' ').includes('profile') || undefined) &&
-                                                    user.given_name,
-                                                email: (scope?.split(' ').includes('email') || undefined) && user.email,
-                                            })
-                                        )?.token
+                                    (
+                                        await createIdToken?.({
+                                            sub: user.id,
+                                            name: (scope?.split(' ').includes('profile') || undefined) && user.name,
+                                            given_name:
+                                                (scope?.split(' ').includes('profile') || undefined) &&
+                                                user.given_name,
+                                            email: (scope?.split(' ').includes('email') || undefined) && user.email,
+                                        })
+                                    )?.token
                                 ); // add id_token if the new scope has 'openid'
                         }
                     } catch (err) {
