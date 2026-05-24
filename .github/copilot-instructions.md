@@ -26,7 +26,7 @@ Read the relevant file before making changes to any package.
 
 ## Key Facts
 
-- All packages are under `@kaapi/` npm scope, currently at version `0.0.44`
+- All packages are under `@kaapi/` npm scope, currently at version `0.0.45`
 - **Import from `@kaapi/kaapi`** — it re-exports everything from `@kaapi/server` and `@hapi/hapi`
 - **All packages are CommonJS** (`NodeNext`) except `@kaapi/validator-arktype` which is **ESM-only** (built with `tsup`)
 - Extensions implement `KaapiPlugin { integrate(t: KaapiTools) }` and register via `app.extend(plugin)`

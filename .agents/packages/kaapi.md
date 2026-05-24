@@ -1,9 +1,10 @@
 # `@kaapi/kaapi` — Package Reference
 
-**npm**: `@kaapi/kaapi` · **version**: 0.0.44  
+**npm**: `@kaapi/kaapi` · **version**: 0.0.45  
 **Source**: `packages/kaapi/src/`  
 **Build**: `tsc` → `lib/` · **Format**: CommonJS (`NodeNext`)  
-**Dependencies**: `@hapi/boom`, `@hapi/hapi`, `@hapi/hoek`, `@hapi/inert`, `@kaapi/server`, `@novice1/api-doc-generator`, `@novice1/routing`, `jsontoxml`, `qs`, `swagger-ui-dist`, `winston`, `tslib`
+**Dependencies**: `@hapi/boom`, `@hapi/hapi`, `@kaapi/server`, `@novice1/api-doc-generator`, `jsontoxml`, `qs`, `swagger-ui-dist`, `tslib`, `winston`  
+**Dev Dependencies**: `@novice1/routing`, `@types/jsontoxml`, `@types/qs`, `@types/swagger-ui-dist`
 
 This is the **primary import** for Kaapi applications. It re-exports everything from `@kaapi/server` and `@hapi/hapi`, so application code only needs to import from `@kaapi/kaapi`.
 

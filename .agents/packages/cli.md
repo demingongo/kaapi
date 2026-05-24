@@ -1,8 +1,8 @@
 # `@kaapi/cli` — Package Reference
 
-**npm**: `@kaapi/cli` · **version**: 0.0.42  
+**npm**: `@kaapi/cli` · **version**: 0.0.45  
 **Source**: `packages/cli/src/`  
-**Build**: `tsc` → `lib/` · **Format**: CommonJS (`NodeNext`)  
+**Build**: `tsc` → `dist/` · **Format**: CommonJS (`NodeNext`)  
 **Binary**: `kaapi` (via `package.json` `bin` field)  
 **Dependencies**: `@clack/prompts`, `lodash`, `mri`, `tslib`
 

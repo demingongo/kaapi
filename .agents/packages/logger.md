@@ -9,7 +9,7 @@ Standalone logger utilities package for Kaapi. No dependency on `@kaapi/kaapi` o
 | Field       | Value                 |
 | ----------- | --------------------- |
 | npm name    | `@kaapi/logger`       |
-| Version     | 0.0.42                |
+| Version     | 0.0.45                |
 | Format      | CommonJS (`NodeNext`) |
 | Entry point | `lib/index.js`        |
 | Source      | `src/index.ts`        |

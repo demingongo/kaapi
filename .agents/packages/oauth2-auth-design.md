@@ -1,6 +1,6 @@
 # `@kaapi/oauth2-auth-design` — Package Reference
 
-**npm**: `@kaapi/oauth2-auth-design` · **version**: 0.0.42  
+**npm**: `@kaapi/oauth2-auth-design` · **version**: 0.0.45  
 **Source**: `packages/oauth2-auth-design/src/`  
 **Build**: `tsc` → `lib/` · **Format**: CommonJS (`NodeNext`)  
 **Dependencies**: `@hapi/boom`, `@hapi/hoek`, `@kaapi/cli`, `@kaapi/kaapi`, `@novice1/api-doc-generator`, `html-entities`, `jose`, `node-jose`, `tslib`
