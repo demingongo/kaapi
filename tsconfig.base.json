@@ -3,7 +3,7 @@
     "compilerOptions": {
         "typeRoots": ["types", "node_modules/@types"],
         
-        "types": ["node"],
+        "types": ["node", "mocha"],
         "module": "NodeNext",
         "lib": ["DOM", "ES6"],
         "target": "ES6",

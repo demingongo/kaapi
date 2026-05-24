@@ -1,6 +1,6 @@
 {
     "name": "@kaapi/kaapi",
-    "version": "0.0.44",
+    "version": "0.0.45",
     "private": false,
     "description": "TypeScript-based framework",
     "main": "lib/index.js",
@@ -24,7 +24,7 @@
     },
     "license": "MIT",
     "devDependencies": {
-        "@novice1/routing": "^2.1.0",
+        "@novice1/routing": "^2.1.1",
         "@types/jsontoxml": "^1.0.6",
         "@types/qs": "^6.15.1",
         "@types/swagger-ui-dist": "^3.30.6"

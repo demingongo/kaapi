@@ -476,8 +476,8 @@ importers:
         version: 3.19.0
     devDependencies:
       '@novice1/routing':
-        specifier: ^2.1.0
-        version: 2.1.0
+        specifier: ^2.1.1
+        version: 2.1.1
       '@types/jsontoxml':
         specifier: ^1.0.6
         version: 1.0.6
@@ -1380,8 +1380,8 @@ packages:
   '@novice1/logger@1.6.1':
     resolution: {integrity: sha512-7w/f4zHiiRrnFi89su4y6gUAshbUX/q7yU4Wduj7fJGgl49fmZeMVb2zyChvvwfMbb0GfF9xgH2vf2bSXQIP5g==}
 
-  '@novice1/routing@2.1.0':
-    resolution: {integrity: sha512-RZZzKPbbABVgIGlXkpZdICgYZhKMYx+rckgujqwYkvds68MiLv+WWxWjaJxBb0YZdw9XrLPS2KTdMqx7Z8rSxw==}
+  '@novice1/routing@2.1.1':
+    resolution: {integrity: sha512-uZ2wb7sMJSvpCHK3uHiogYVtYl/JoVYh53eTR2nrt83knYckTj6su6XuwsZQzUKSu6CECRD06nh+cFLHVJTMrw==}
     engines: {node: '>=16.0.0'}
 
   '@novice1/socket@0.4.6':
@@ -5135,7 +5135,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@novice1/routing@2.1.0':
+  '@novice1/routing@2.1.1':
     dependencies:
       array-flatten: 3.0.0
       express: 5.2.1
