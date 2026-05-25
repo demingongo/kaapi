@@ -1,4 +1,4 @@
-import type { Lifecycle, ReqRef, ReqRefDefaults, Request, ResponseToolkit } from "@kaapi/kaapi";
+import type { AuthDesign, Lifecycle, ReqRef, ReqRefDefaults, Request, ResponseToolkit } from "@kaapi/kaapi";
 import type {
     OAuth2FlowTokenResponse,
     StrategyError,
@@ -95,6 +95,8 @@ export interface KaapiMethods<Refs extends ReqRef = ReqRefDefaults> {
      * @returns A {@link StrategyResult} indicating success or failure.
      */
     verifyToken(request: Request<Refs>): Promise<StrategyResult>;
+
+    toAuthDesign(): AuthDesign;
 }
 
 /**

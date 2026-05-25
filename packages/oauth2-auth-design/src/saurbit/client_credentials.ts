@@ -1,4 +1,11 @@
-import type { ReqRef, ReqRefDefaults, Request as KaapiRequest } from "@kaapi/kaapi";
+import {
+  type ReqRef,
+  type ReqRefDefaults,
+  type Request as KaapiRequest,
+  AuthDesign,
+  type KaapiTools,
+  RouteOptions
+} from "@kaapi/kaapi";
 import {
   ClientCredentialsFlow,
   ClientCredentialsFlowBuilder,
@@ -8,6 +15,8 @@ import {
   StrategyInsufficientScopeError,
   type StrategyResult,
   type StrategyVerifyTokenFunction,
+  UnauthorizedClientError,
+  UnsupportedGrantTypeError,
 } from "@saurbit/oauth2";
 import type {
   AuthSchemeHandler,
@@ -17,6 +26,8 @@ import type {
   OAuth2StrategyOptions
 } from "./types.ts";
 import { createWebStandardRequest } from "./utils.js";
+import { GrantType, OAuth2Util } from "@novice1/api-doc-generator";
+import { BaseAuthUtil } from "@novice1/api-doc-generator/lib/utils/auth/baseAuthUtils.js";
 
 //#region Types and Interfaces
 
@@ -37,6 +48,54 @@ export interface KaapiClientCredentialsFlowOptions<Refs extends ReqRef = ReqRefD
 //#endregion
 
 //#region Classes
+
+/**
+ * Delegate contract consumed by {@link ClientCredentialsAuthDesign}.
+ *
+ * Each method maps directly to the corresponding `AuthDesign` contract,
+ * allowing the implementation to be constructed from a plain object (e.g.
+ * inside `flow.kaapi().toAuthDesign()`).
+ */
+export interface ClientCredentialsAuthDesignOptions {
+  /** Returns the OpenAPI/Postman documentation utility for this auth scheme. */
+  docs(): BaseAuthUtil;
+  /** Registers the Hapi auth scheme and strategy on the server. */
+  integrateStrategy(t: KaapiTools): void;
+  /** Returns the name of the registered Hapi auth strategy. */
+  getStrategyName(): string;
+  /** Optional hook to register the token endpoint route on the server. */
+  integrateHook?(t: KaapiTools): void | Promise<void>;
+}
+
+/**
+ * Concrete {@link AuthDesign} implementation for the OAuth 2.0 Client Credentials flow.
+ *
+ * Delegates all `AuthDesign` contract methods to the {@link ClientCredentialsAuthDesignOptions}
+ * provided at construction time. Obtain an instance via
+ * `flow.kaapi().toAuthDesign()` on a {@link KaapiClientCredentialsFlow}.
+ */
+export class ClientCredentialsAuthDesign extends AuthDesign {
+  #options: ClientCredentialsAuthDesignOptions;
+
+  /** @param options - Delegate implementation for each `AuthDesign` method. */
+  constructor(options: ClientCredentialsAuthDesignOptions) {
+    super();
+    this.#options = options;
+  }
+  /** @inheritdoc */
+  docs(): BaseAuthUtil {
+    return this.#options.docs();
+  }
+  /** @inheritdoc */
+  integrateStrategy(t: KaapiTools): void {
+    return this.#options.integrateStrategy(t);
+  }
+  /** @inheritdoc */
+  getStrategyName(): string {
+    return this.#options.getStrategyName();
+  }
+
+}
 
 /**
  * Kaapi adapter for the OAuth 2.0 Client Credentials flow.
@@ -71,6 +130,88 @@ export class KaapiClientCredentialsFlow<
     verifyToken: async (request: KaapiRequest<Refs>): Promise<StrategyResult> => {
       return await this.#tokenVerifier(request);
     },
+
+    toAuthDesign: (): ClientCredentialsAuthDesign => {
+      const schemeName = this.getSecuritySchemeName();
+      const scopes = this.getScopes();
+      const description = this.getDescription();
+      const tokenEndpoint = this.getTokenEndpoint();
+      const tokenType = this.tokenType;
+      const tokenHandler = this.token.bind(this);
+      const tokenVerifierHandler = this.verifyToken.bind(this);
+
+      return new ClientCredentialsAuthDesign({
+        docs(): OAuth2Util {
+          const docs = new OAuth2Util(schemeName)
+            .setGrantType(GrantType.clientCredentials)
+            .setScopes(scopes || {})
+            .setAccessTokenUrl(tokenEndpoint);
+          if (description) {
+            docs.setDescription(description);
+          }
+          return docs;
+        },
+
+        integrateStrategy(t: KaapiTools): void {
+          // Register the auth scheme for the multiple flows
+          t.scheme(schemeName, (_server) => {
+            return {
+              async authenticate(request, h) {
+                try {
+                  const webStandardRequest = createWebStandardRequest(request);
+                  const result = await tokenVerifierHandler(webStandardRequest);
+                  if (result.success) {
+                    return h.authenticated({ credentials: result.credentials });
+                  }
+                  const Boom = await import("@hapi/boom");
+                  return h.unauthenticated(Boom.unauthorized(result.error.message, tokenType), {
+                    credentials: {},
+                  });
+                } catch (err) {
+                  const Boom = await import("@hapi/boom");
+                  return Boom.internal(err instanceof Error ? err : `${err}`);
+                }
+              },
+            };
+          });
+          t.strategy(schemeName, schemeName);
+        },
+
+        integrateHook(t: KaapiTools): void {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const routesOptions: RouteOptions<any> = {
+            plugins: {
+              kaapi: {
+                docs: false,
+              },
+            },
+          };
+
+          // token
+          t.route({
+            options: routesOptions,
+            path: tokenEndpoint,
+            method: 'POST',
+            handler: async (req, h) => {
+              const result = await tokenHandler(createWebStandardRequest(req));
+              if (result.success) {
+                return result.tokenResponse;
+              }
+              const error = result.error;
+              t.log.error({ error }, "Error");
+              if (error instanceof UnsupportedGrantTypeError || error instanceof UnauthorizedClientError) {
+                return h.response({ error: error.errorCode, errorDescription: error.message }).code(400);
+              }
+              return h.response({ error: "invalid_request" }).code(400);
+            },
+          });
+        },
+
+        getStrategyName(): string {
+          return schemeName;
+        }
+      })
+    }
   };
 
   /**
@@ -202,7 +343,7 @@ export class KaapiClientCredentialsFlowBuilder<
   /**
    * Sets the action to invoke when authorization fails (e.g. missing or invalid token).
    *
-   * @param action - A handler that receives the Kaapi context and the authorization error.
+   * @param action - A {@link FailedAuthorizationAction} invoked with the request, response toolkit, and the authorization error.
    * @returns `this` for chaining.
    */
   failedAuthorizationAction(action: FailedAuthorizationAction<Refs>): this {
@@ -213,9 +354,9 @@ export class KaapiClientCredentialsFlowBuilder<
   /**
    * This method does not have access to the Kaapi context.
    * Use `tokenVerifier` instead to set a handler that receives the Kaapi context.
-   * @deprecated Use `tokenVerifier` instead to set a handler that receives the Kaapi context.
-   * @param handler
-   * @returns
+   * @deprecated Use `tokenVerifier` instead to set a handler that receives the Kaapi {@link KaapiRequest}.
+   * @param handler - Handler that receives a Web Standard {@link Request} and token params.
+   * @returns `this` for chaining.
    */
   override verifyToken(handler: StrategyVerifyTokenFunction<Request>): this {
     this.strategyOptions.verifyToken = async (request, params) => {
@@ -225,7 +366,7 @@ export class KaapiClientCredentialsFlowBuilder<
   }
 
   /**
-   * Sets the token verification handler with full access to the Kaapi `Context`.
+   * Sets the token verification handler with full access to the Kaapi {@link KaapiRequest}.
    *
    * Prefer this over `verifyToken` when you need access to the full typed
    * Kaapi {@link KaapiRequest} during verification.
