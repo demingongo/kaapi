@@ -31,8 +31,6 @@
         "@kaapi/kaapi": "workspace:^",
         "@novice1/socket": "^0.4.6",
         "joi": "^18.2.1",
-        "jose": "^6.2.3",
-        "node-jose": "^2.2.0",
         "tslib": "^2.8.1"
     }
 }

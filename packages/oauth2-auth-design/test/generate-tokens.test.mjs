@@ -1,6 +1,5 @@
 import { expect } from 'chai';
 import { generateKeyPair, exportJWK, SignJWT } from 'jose';
-import { v4 as uuidv4 } from 'uuid';
 
 describe('generate tokens', function () {
     it('should generate a DPoP token', async () => {
@@ -15,7 +14,7 @@ describe('generate tokens', function () {
         // Step 3: Build DPoP payload
         const htm = 'GET';
         const htu = 'http://localhost:3000/';
-        const jti = uuidv4();
+        const jti = crypto.randomUUID();
         const iat = Math.floor(Date.now() / 1000); // seconds
 
         // Step 4: Create and sign DPoP JWT
