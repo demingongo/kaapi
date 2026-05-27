@@ -1,4 +1,4 @@
-import type { Request as KaapiRequest, ReqRef, ReqRefDefaults } from "@kaapi/kaapi";
+import type { Request as KaapiRequest, ReqRef, ReqRefDefaults } from '@kaapi/kaapi';
 
 /** Options for {@link createWebStandardRequest}. */
 export interface WebStandardRequestOptions {
@@ -20,7 +20,10 @@ export interface WebStandardRequestOptions {
  * @param options - Optional settings to control URL construction.
  * @returns A Web Standard {@link Request} ready for consumption by fetch-based libraries.
  */
-export function createWebStandardRequest<Refs extends ReqRef = ReqRefDefaults>(request: KaapiRequest<Refs>, options?: WebStandardRequestOptions): Request {
+export function createWebStandardRequest<Refs extends ReqRef = ReqRefDefaults>(
+    request: KaapiRequest<Refs>,
+    options?: WebStandardRequestOptions
+): Request {
     // Build the absolute URL required by the Request constructor
     const origin = options?.origin ?? request.url.origin; // Use provided origin or fallback to request's origin
     const fullUrl = `${origin}${request.url.pathname}${request.url.search}`;
@@ -28,7 +31,7 @@ export function createWebStandardRequest<Refs extends ReqRef = ReqRefDefaults>(r
     // Build the Web Standard Request options object
     const headers: Record<string, string> = {};
     for (const [key, value] of Object.entries(request.headers)) {
-        if (value) headers[key] = Array.isArray(value) ? value.join(", ") : value;
+        if (value) headers[key] = Array.isArray(value) ? value.join(', ') : value;
     }
     const requestOptions: {
         method: string;
@@ -40,9 +43,9 @@ export function createWebStandardRequest<Refs extends ReqRef = ReqRefDefaults>(r
     };
 
     // Attach the body if it is a mutation request
-    if (["POST", "PUT", "PATCH"].includes(requestOptions.method)) {
+    if (['POST', 'PUT', 'PATCH'].includes(requestOptions.method)) {
         // Check if the content-type matches URL-encoded form data
-        const isUrlEncoded = request.headers["content-type"]?.includes("application/x-www-form-urlencoded");
+        const isUrlEncoded = request.headers['content-type']?.includes('application/x-www-form-urlencoded');
 
         if (isUrlEncoded && request.payload) {
             // Convert Hapi's parsed key-value payload object into a standard URL search string
@@ -55,11 +58,13 @@ export function createWebStandardRequest<Refs extends ReqRef = ReqRefDefaults>(r
             requestOptions.body = searchParams.toString();
 
             // Explicitly set the proper Web standard header value
-            requestOptions.headers.set("content-type", "application/x-www-form-urlencoded");
+            requestOptions.headers.set('content-type', 'application/x-www-form-urlencoded');
         } else {
             // If parsed JSON/object, stringify it; if buffer/stream, pass directly
             requestOptions.body =
-                request.payload && typeof request.payload === "object" ? JSON.stringify(request.payload) : request.payload;
+                request.payload && typeof request.payload === 'object'
+                    ? JSON.stringify(request.payload)
+                    : request.payload;
         }
     }
 

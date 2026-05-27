@@ -17,3 +17,7 @@ export * from './utils/jwt-utils';
 export * from './utils/replay-store';
 export * from './utils/token-types';
 export * from './utils/verify-code-verifier';
+
+export * from './saurbit/types';
+export * from './saurbit/utils';
+export * from './saurbit/client_credentials';

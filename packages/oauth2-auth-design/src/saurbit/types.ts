@@ -1,18 +1,21 @@
-import type { AuthDesign, Lifecycle, ReqRef, ReqRefDefaults, Request, ResponseToolkit } from "@kaapi/kaapi";
+import type { AuthDesign, Lifecycle, ReqRef, ReqRefDefaults, Request, ResponseToolkit } from '@kaapi/kaapi';
 import type {
     OAuth2FlowTokenResponse,
     StrategyError,
     StrategyOptions,
     StrategyResult,
     StrategyVerifyTokenFunction,
-} from "@saurbit/oauth2";
+} from '@saurbit/oauth2';
 
 /**
  * Hapi lifecycle handler used as an OAuth2 auth scheme entry point.
  *
  * @template Refs - Kaapi request reference types for the application.
  */
-export type AuthSchemeHandler<Refs extends ReqRef = ReqRefDefaults> = (request: Request<Refs>, h: ResponseToolkit<Refs>) => Lifecycle.ReturnValue<Refs>
+export type AuthSchemeHandler<Refs extends ReqRef = ReqRefDefaults> = (
+    request: Request<Refs>,
+    h: ResponseToolkit<Refs>
+) => Lifecycle.ReturnValue<Refs>;
 
 /**
  * Kaapi-adapted variant of `StrategyOptions`.
@@ -22,8 +25,10 @@ export type AuthSchemeHandler<Refs extends ReqRef = ReqRefDefaults> = (request: 
  *
  * @template Refs - Kaapi request reference types for the application.
  */
-export interface KaapiStrategyOptions<Refs extends ReqRef = ReqRefDefaults>
-    extends Omit<StrategyOptions, "verifyToken"> {
+export interface KaapiStrategyOptions<Refs extends ReqRef = ReqRefDefaults> extends Omit<
+    StrategyOptions,
+    'verifyToken'
+> {
     /** Handler to verify an extracted access token. Receives the typed Kaapi {@link Request}. */
     verifyToken?: StrategyVerifyTokenFunction<Request<Refs>>;
 }
@@ -53,8 +58,10 @@ export interface FailedAuthorizationAction<Refs extends ReqRef = ReqRefDefaults>
  *
  * @template Refs - Kaapi request reference types for the application.
  */
-export interface OAuth2StrategyOptions<Refs extends ReqRef = ReqRefDefaults>
-    extends Omit<KaapiStrategyOptions<Refs>, "tokenType"> {
+export interface KaapiOAuth2StrategyOptions<Refs extends ReqRef = ReqRefDefaults> extends Omit<
+    KaapiStrategyOptions<Refs>,
+    'tokenType'
+> {
     /**
      * Action to invoke when token verification or scope enforcement fails.
      * Defaults to throwing an HTTP 401 exception when not provided.
