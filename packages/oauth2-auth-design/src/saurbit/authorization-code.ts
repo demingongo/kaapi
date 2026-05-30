@@ -228,7 +228,7 @@ export interface KaapiOIDCAuthorizationCodeMethods<Refs extends ReqRef = ReqRefD
 
 //#region Constants
 
-const renderLoginForm = ({ errorMessage, usernameField, passwordField }: { errorMessage?: string; usernameField: string; passwordField: string }) => {
+const renderLoginForm = ({ errorMessage, usernameField, passwordField }: { errorMessage?: string; usernameField: string; passwordField: string }): string => {
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -325,6 +325,100 @@ const renderLoginForm = ({ errorMessage, usernameField, passwordField }: { error
 
     <div class="actions">
       <button class="btn" type="submit">Sign in</button>
+    </div>
+  </form>
+</body>
+</html>`;
+};
+
+const renderConsentForm = ({ scopes }: { scopes: string[] }): string => {
+    const scopeItems = scopes
+        .map(s => `      <li class="scope-item">
+        <svg class="scope-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+        </svg>
+        <span>${s}</span>
+      </li>`)
+        .join('\n');
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Authorize access</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #111827;
+      --accent: #6366f1;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --ring: rgba(99,102,241,.35);
+      --danger: #ef4444;
+      --danger-ring: rgba(239,68,68,.35);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; display: grid; place-items: center;
+      background: radial-gradient(1200px 600px at 20% 0%, #1f2937, var(--bg));
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: var(--text);
+    }
+    .card {
+      width: 92%; max-width: 380px; padding: 26px 24px; border-radius: 16px;
+      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      border: 1px solid rgba(255,255,255,.08);
+      box-shadow: 0 20px 50px rgba(0,0,0,.35);
+      backdrop-filter: blur(8px);
+    }
+    .title { font-size: 1.25rem; font-weight: 600; letter-spacing: .2px; margin: 0 0 4px; }
+    .subtitle { color: var(--muted); font-size: .95rem; margin: 0 0 18px; }
+    .scopes-label { font-size: .85rem; color: var(--muted); margin: 0 0 10px; }
+    .scopes {
+      list-style: none; margin: 0 0 20px; padding: 0;
+      background: #0b1220; border: 1px solid rgba(255,255,255,.08);
+      border-radius: 12px; overflow: hidden;
+    }
+    .scope-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px; font-size: .9rem;
+      border-bottom: 1px solid rgba(255,255,255,.05);
+    }
+    .scope-item:last-child { border-bottom: none; }
+    .scope-icon { width: 16px; height: 16px; color: var(--accent); flex-shrink: 0; }
+    .actions { display: flex; gap: 10px; }
+    .btn {
+      appearance: none; border: none; cursor: pointer;
+      flex: 1; padding: 12px 16px; border-radius: 12px; font-weight: 600; font-size: .95rem;
+      transition: transform .05s, filter .2s;
+    }
+    .btn:active { transform: translateY(1px); }
+    .btn-allow {
+      background: linear-gradient(135deg, #7c3aed, var(--accent));
+      color: white;
+      box-shadow: 0 10px 20px var(--ring);
+    }
+    .btn-allow:hover { filter: brightness(1.05); }
+    .btn-deny {
+      background: rgba(239,68,68,.12);
+      color: #f87171;
+      border: 1px solid rgba(239,68,68,.3);
+    }
+    .btn-deny:hover { background: rgba(239,68,68,.2); }
+  </style>
+</head>
+<body>
+  <form class="card" method="POST">
+    <p class="title">Authorize access</p>
+    <p class="subtitle">This application is requesting the following permissions:</p>
+    <p class="scopes-label">Requested scopes</p>
+    <ul class="scopes">
+${scopeItems}
+    </ul>
+    <div class="actions">
+      <button class="btn btn-deny" type="submit" name="consent" value="deny">Deny</button>
+      <button class="btn btn-allow" type="submit" name="consent" value="allow">Allow</button>
     </div>
   </form>
 </body>
@@ -697,7 +791,12 @@ export class KaapiAuthorizationCodeFlow<
                             }
 
                             if (result.type === "continue") {
-                                // TODO: handle consent page rendering
+                                return h.response(
+                                    renderConsentForm({
+                                        scopes: result.continueResponse.scope
+                                    }))
+                                    .type('text/html')
+                                    .code(200);
                             }
 
                             if (result.type === "unauthenticated") {
