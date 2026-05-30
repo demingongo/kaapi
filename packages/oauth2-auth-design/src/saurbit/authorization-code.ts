@@ -417,6 +417,9 @@ export class KaapiAuthorizationCodeFlow<
         request: KaapiRequest<AuthRefs>,
     ) => Promise<AuthReqData>;
 
+    #usernameField?: string | undefined;
+    #passwordField?: string | undefined;
+
     protected onPostAuth?: RouteExtObject<ReqRefDefaults> | RouteExtObject<ReqRefDefaults>[] | undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     protected onInitiateAuthorization?: KaapiAuthorizationCodeLifecycleMethod<any, any, AuthorizationCodeInitiationResponse> | undefined;
@@ -511,6 +514,8 @@ export class KaapiAuthorizationCodeFlow<
             const onPostAuth = this.onPostAuth;
             const onInitiateAuthorization = this.onInitiateAuthorization;
             const onProcessAuthorization = this.onProcessAuthorization;
+            const usernameField = this.getUsernameField();
+            const passwordField = this.getPasswordField();
 
 
             const supported = this.getTokenEndpointAuthMethods();
@@ -608,31 +613,31 @@ export class KaapiAuthorizationCodeFlow<
                         path: authEndpoint,
                         method: 'GET',
                         handler: async (req, h) => {
-                            try {
-                                const result = await initAuthorization(req);
+                            //try {
+                            const result = await initAuthorization(req);
 
-                                // handle post initiation logic (e.g. rendering login page, handling errors, etc.) in the onInitiateAuthorization lifecycle method
-                                if (onInitiateAuthorization) {
-                                    return await onInitiateAuthorization.call(h, req, h, result);
-                                }
-
-                                // default handling if not handled in post handling
-                                if (result.success) {
-                                    return h.response(
-                                        renderLoginForm({
-                                            usernameField: 'username',
-                                            passwordField: 'password'
-                                        }))
-                                        .type('text/html')
-                                        .code(200);
-                                }
-                                return h.response({ error: "invalid_request" }).code(400);
-                            } catch (_error) {
-                                // TODO: error handling or ...
-
-                                // default error handling if not handled in error handling
-                                return h.response({ error: "server_error" }).code(500);
+                            // handle post initiation logic (e.g. rendering login page, handling errors, etc.) in the onInitiateAuthorization lifecycle method
+                            if (onInitiateAuthorization) {
+                                return await onInitiateAuthorization.call(h, req, h, result);
                             }
+
+                            // default handling if not handled in post handling
+                            if (result.success) {
+                                return h.response(
+                                    renderLoginForm({
+                                        usernameField,
+                                        passwordField
+                                    }))
+                                    .type('text/html')
+                                    .code(200);
+                            }
+                            return h.response({ error: "invalid_request" }).code(400);
+                            //} catch (_error) {
+                            //    // TODO: error handling or ...
+                            //
+                            //    // default error handling if not handled in error handling
+                            //    return h.response({ error: "server_error" }).code(500);
+                            //}
                         },
                     });
 
@@ -647,83 +652,83 @@ export class KaapiAuthorizationCodeFlow<
                         path: authEndpoint,
                         method: 'POST',
                         handler: async (req, h) => {
-                            try {
-                                const result = await processAuthorization(req as unknown as KaapiRequest<AuthRefs>);
+                            //try {
+                            const result = await processAuthorization(req as unknown as KaapiRequest<AuthRefs>);
 
-                                // handle post initiation logic (e.g. rendering login page, handling errors, etc.) in the onProcessAuthorization lifecycle method
-                                if (onProcessAuthorization) {
-                                    return await onProcessAuthorization.call(h, req, h, result);
+                            // handle post initiation logic (e.g. rendering login page, handling errors, etc.) in the onProcessAuthorization lifecycle method
+                            if (onProcessAuthorization) {
+                                return await onProcessAuthorization.call(h, req, h, result);
+                            }
+
+                            // default handling if not handled in post handling
+                            if (result.type === "error") {
+                                const error = result.error;
+                                if (result.redirectable) {
+                                    const qs = [
+                                        `error=${encodeURIComponent(error instanceof AccessDeniedError ? error.errorCode : "invalid_request")}`,
+                                        `error_description=${encodeURIComponent(
+                                            error instanceof AccessDeniedError ? error.message : "Invalid request"
+                                        )}`,
+                                        result.state ? `state=${encodeURIComponent(result.state)}` : null,
+                                    ]
+                                        .filter(Boolean)
+                                        .join("&");
+                                    return h.redirect(`${result.redirectUri}?${qs}`);
                                 }
-
-                                // default handling if not handled in post handling
-                                if (result.type === "error") {
-                                    const error = result.error;
-                                    if (result.redirectable) {
-                                        const qs = [
-                                            `error=${encodeURIComponent(error instanceof AccessDeniedError ? error.errorCode : "invalid_request")}`,
-                                            `error_description=${encodeURIComponent(
-                                                error instanceof AccessDeniedError ? error.message : "Invalid request"
-                                            )}`,
-                                            result.state ? `state=${encodeURIComponent(result.state)}` : null,
-                                        ]
-                                            .filter(Boolean)
-                                            .join("&");
-                                        return h.redirect(`${result.redirectUri}?${qs}`);
-                                    }
-                                    return h.response(
-                                        renderLoginForm({
-                                            errorMessage: error.message,
-                                            usernameField: 'username',
-                                            passwordField: 'password'
-                                        }))
-                                        .type('text/html')
-                                        .code(400);
-                                }
-
-                                if (result.type === "code") {
-                                    const {
-                                        code,
-                                        context: { state, redirectUri },
-                                    } = result.authorizationCodeResponse;
-                                    const searchParams = new URLSearchParams();
-                                    searchParams.set("code", code);
-                                    if (state) searchParams.set("state", state);
-                                    return h.redirect(`${redirectUri}?${searchParams.toString()}`);
-                                }
-
-                                if (result.type === "continue") {
-                                    // TODO: handle consent page rendering
-                                }
-
-                                if (result.type === "unauthenticated") {
-                                    return h.response(
-                                        renderLoginForm({
-                                            errorMessage: result.message || "Authentication failed. Please try again.",
-                                            usernameField: 'username',
-                                            passwordField: 'password'
-                                        }))
-                                        .type('text/html')
-                                        .code(400);
-                                }
-                            } catch (_error) {
-                                // TODO: error handling or ...
-
-                                // default error handling if not handled in error handling
                                 return h.response(
                                     renderLoginForm({
-                                        errorMessage: "An unexpected error occurred. Please try again later.",
-                                        usernameField: 'username',
-                                        passwordField: 'password'
+                                        errorMessage: error.message,
+                                        usernameField,
+                                        passwordField
                                     }))
                                     .type('text/html')
-                                    .code(500);
+                                    .code(400);
                             }
+
+                            if (result.type === "code") {
+                                const {
+                                    code,
+                                    context: { state, redirectUri },
+                                } = result.authorizationCodeResponse;
+                                const searchParams = new URLSearchParams();
+                                searchParams.set("code", code);
+                                if (state) searchParams.set("state", state);
+                                return h.redirect(`${redirectUri}?${searchParams.toString()}`);
+                            }
+
+                            if (result.type === "continue") {
+                                // TODO: handle consent page rendering
+                            }
+
+                            if (result.type === "unauthenticated") {
+                                return h.response(
+                                    renderLoginForm({
+                                        errorMessage: result.message || "Authentication failed. Please try again.",
+                                        usernameField,
+                                        passwordField
+                                    }))
+                                    .type('text/html')
+                                    .code(400);
+                            }
+                            //} catch (_error) {
+                            //    // TODO: error handling or ...
+                            //
+                            //    // default error handling if not handled in error handling
+                            //    return h.response(
+                            //        renderLoginForm({
+                            //            errorMessage: "An unexpected error occurred. Please try again later.",
+                            //            usernameField,
+                            //            passwordField
+                            //        }))
+                            //        .type('text/html')
+                            //        .code(500);
+                            //}
 
                             return h.response(
                                 renderLoginForm({
                                     errorMessage: "Could not process the request. Please try again.",
-                                    usernameField: 'username',
-                                    passwordField: 'password'
+                                    usernameField,
+                                    passwordField
                                 }))
                                 .type('text/html')
                                 .code(400);
@@ -737,23 +742,6 @@ export class KaapiAuthorizationCodeFlow<
             });
         }
     };
-
-    setOnPostAuth(onPostAuth: RouteExtObject<ReqRefDefaults> | RouteExtObject<ReqRefDefaults>[] | undefined): void {
-        this.onPostAuth = onPostAuth;
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    setOnInitiateAuthorization<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
-        (onInitiateAuthorization: KaapiAuthorizationCodeLifecycleMethod<R, V, AuthorizationCodeInitiationResponse> | undefined): void {
-        this.onInitiateAuthorization = onInitiateAuthorization;
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    setOnProcessAuthorization<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
-        (onProcessAuthorization: KaapiAuthorizationCodeLifecycleMethod<R, V, AuthorizationCodeProcessResponse> | undefined): void {
-        this.onProcessAuthorization = onProcessAuthorization;
-    }
-
 
     constructor(options: KaapiAuthorizationCodeFlowOptions<AuthReqData, Refs, AuthRefs>) {
         const { strategyOptions, ...flowOptions } = options;
@@ -816,6 +804,38 @@ export class KaapiAuthorizationCodeFlow<
      */
     kaapi(): Readonly<KaapiAuthorizationCodeMethods<Refs, AuthRefs>> {
         return Object.freeze(this.#kaapi);
+    }
+
+    setOnPostAuth(onPostAuth: RouteExtObject<ReqRefDefaults> | RouteExtObject<ReqRefDefaults>[] | undefined): void {
+        this.onPostAuth = onPostAuth;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    setOnInitiateAuthorization<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
+        (onInitiateAuthorization: KaapiAuthorizationCodeLifecycleMethod<R, V, AuthorizationCodeInitiationResponse> | undefined): void {
+        this.onInitiateAuthorization = onInitiateAuthorization;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    setOnProcessAuthorization<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
+        (onProcessAuthorization: KaapiAuthorizationCodeLifecycleMethod<R, V, AuthorizationCodeProcessResponse> | undefined): void {
+        this.onProcessAuthorization = onProcessAuthorization;
+    }
+
+    setUsernameField(usernameField: string): void {
+        this.#usernameField = usernameField;
+    }
+
+    setPasswordField(passwordField: string): void {
+        this.#passwordField = passwordField;
+    }
+
+    getUsernameField(): string {
+        return this.#usernameField || 'username';
+    }
+
+    getPasswordField(): string {
+        return this.#passwordField || 'password';
     }
 }
 
