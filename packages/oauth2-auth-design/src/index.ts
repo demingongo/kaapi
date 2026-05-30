@@ -20,4 +20,4 @@ export * from './utils/verify-code-verifier';
 
 export * from './saurbit/types';
 export * from './saurbit/utils';
-export * from './saurbit/client_credentials';
+export * from './saurbit/client-credentials';

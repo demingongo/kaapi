@@ -236,31 +236,31 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
                         ttl: this.tokenTtl,
                         createJwtAccessToken: jwtAuthority
                             ? async (payload) => {
-                                  return await createJwtAccessToken(
-                                      jwtAuthority,
-                                      {
-                                          aud: t.postman?.getHostValue() || '',
-                                          iss: t.postman?.getHostValue() || '',
-                                          sub: clientId,
-                                          ...payload,
-                                      },
-                                      this.tokenTtl
-                                  );
-                              }
+                                return await createJwtAccessToken(
+                                    jwtAuthority,
+                                    {
+                                        aud: t.postman?.getHostValue() || '',
+                                        iss: t.postman?.getHostValue() || '',
+                                        sub: clientId,
+                                        ...payload,
+                                    },
+                                    this.tokenTtl
+                                );
+                            }
                             : undefined,
                         createIdToken:
                             jwtAuthority && hasOpenIDScope()
                                 ? async (payload) => {
-                                      return await createIdToken(
-                                          jwtAuthority,
-                                          {
-                                              aud: clientId,
-                                              iss: t.postman?.getHostValue() || '',
-                                              ...payload,
-                                          },
-                                          this.tokenTtl
-                                      );
-                                  }
+                                    return await createIdToken(
+                                        jwtAuthority,
+                                        {
+                                            aud: clientId,
+                                            iss: t.postman?.getHostValue() || '',
+                                            ...payload,
+                                        },
+                                        this.tokenTtl
+                                    );
+                                }
                                 : undefined,
                     };
                     if (clientSecret) {
@@ -365,37 +365,37 @@ export class OAuth2AuthorizationCode extends OAuth2AuthDesign implements OAuth2S
                         ttl: this.tokenTtl,
                         createJwtAccessToken: jwtAuthority
                             ? async (payload) => {
-                                  return await createJwtAccessToken(
-                                      jwtAuthority,
-                                      {
-                                          aud: t.postman?.getHostValue() || '',
-                                          iss: t.postman?.getHostValue() || '',
-                                          sub: clientId,
-                                          scope,
-                                          ...payload,
-                                      },
-                                      this.tokenTtl
-                                  );
-                              }
+                                return await createJwtAccessToken(
+                                    jwtAuthority,
+                                    {
+                                        aud: t.postman?.getHostValue() || '',
+                                        iss: t.postman?.getHostValue() || '',
+                                        sub: clientId,
+                                        scope,
+                                        ...payload,
+                                    },
+                                    this.tokenTtl
+                                );
+                            }
                             : undefined,
                         createIdToken:
                             jwtAuthority && hasOpenIDScope()
                                 ? async (payload) => {
-                                      return await createIdToken(
-                                          jwtAuthority,
-                                          {
-                                              aud: clientId,
-                                              iss: t.postman?.getHostValue() || '',
-                                              ...payload,
-                                          },
-                                          this.tokenTtl
-                                      );
-                                  }
+                                    return await createIdToken(
+                                        jwtAuthority,
+                                        {
+                                            aud: clientId,
+                                            iss: t.postman?.getHostValue() || '',
+                                            ...payload,
+                                        },
+                                        this.tokenTtl
+                                    );
+                                }
                                 : undefined,
                         verifyJwt: jwtAuthority
                             ? async (token) => {
-                                  return await verifyJwt(jwtAuthority, token);
-                              }
+                                return await verifyJwt(jwtAuthority, token);
+                            }
                             : undefined,
                     };
 
