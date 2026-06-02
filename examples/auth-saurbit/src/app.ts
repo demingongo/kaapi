@@ -8,6 +8,7 @@ import {
   SERVER_BIND_ADDRESS,
 } from "./config";
 import { clientCredentialsFlow } from "./security/oauth2/client-credentials";
+import { authorizationCodeFlow } from "./security/oauth2/authorization-code";
 import Boom from "@hapi/boom";
 import { Kaapi } from "@kaapi/kaapi";
 import hapiScalar from "hapi-scalar";
@@ -109,6 +110,7 @@ if (isLocalBind) {
 await app.extend([
   // to use the Client Credentials security scheme
   clientCredentialsFlow.kaapi().toAuthDesign(),
+  authorizationCodeFlow.kaapi().toAuthDesign(),
   // to serve Scalar UI for API docs
   {
     async integrate(t) {
@@ -134,7 +136,10 @@ await app.extend([
 //#region Set default auth strategy for all routes
 
 app.base().auth.default({
-  strategies: [clientCredentialsFlow.getSecuritySchemeName()],
+  strategies: [
+    clientCredentialsFlow.getSecuritySchemeName(),
+    authorizationCodeFlow.getSecuritySchemeName(),
+  ],
   mode: "try"
 });
 

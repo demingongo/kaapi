@@ -9,7 +9,7 @@ export const healthRoute = applyModifiers<{ AuthCredentialsExtra: { app: { id: s
       auth: {
         mode: "required",
         access: {
-          entity: "app",
+          // entity: "app",
           scope: "health:read",
         }
       },
