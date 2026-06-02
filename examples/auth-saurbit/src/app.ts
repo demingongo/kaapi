@@ -9,6 +9,7 @@ import {
 } from "./config";
 import { clientCredentialsFlow } from "./security/oauth2/client-credentials";
 import { authorizationCodeFlow } from "./security/oauth2/authorization-code";
+import { authorizationCodeWithConsentFlow } from "./security/oauth2/authorization-code-with-consent";
 import Boom from "@hapi/boom";
 import { Kaapi } from "@kaapi/kaapi";
 import hapiScalar from "hapi-scalar";
@@ -111,6 +112,7 @@ await app.extend([
   // to use the Client Credentials security scheme
   clientCredentialsFlow.kaapi().toAuthDesign(),
   authorizationCodeFlow.kaapi().toAuthDesign(),
+  authorizationCodeWithConsentFlow.kaapi().toAuthDesign(),
   // to serve Scalar UI for API docs
   {
     async integrate(t) {
@@ -139,6 +141,7 @@ app.base().auth.default({
   strategies: [
     clientCredentialsFlow.getSecuritySchemeName(),
     authorizationCodeFlow.getSecuritySchemeName(),
+    authorizationCodeWithConsentFlow.getSecuritySchemeName(),
   ],
   mode: "try"
 });
