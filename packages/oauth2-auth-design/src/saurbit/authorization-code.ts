@@ -746,9 +746,6 @@ export class KaapiAuthorizationCodeFlow<
                                 docs: false,
                             },
                         },
-                        ext: {
-                            onPreHandler: onPreHandler,
-                        }
                     };
 
                     // token
@@ -777,7 +774,12 @@ export class KaapiAuthorizationCodeFlow<
 
                     // authorization endpoint
                     t.route({
-                        options: routesOptions,
+                        options: {
+                            ...routesOptions,
+                            ext: {
+                                onPreHandler: onPreHandler,
+                            }
+                        },
                         path: authEndpoint,
                         method: 'GET',
                         handler: async (req, h) => {
@@ -816,11 +818,10 @@ export class KaapiAuthorizationCodeFlow<
 
                     t.route({
                         options: {
-                            plugins: {
-                                kaapi: {
-                                    docs: false,
-                                },
-                            },
+                            ...routesOptions,
+                            ext: {
+                                onPreHandler: onPreHandler,
+                            }
                         },
                         path: authEndpoint,
                         method: 'POST',
