@@ -1,5 +1,7 @@
 import {
     AccessDeniedError,
+    AuthorizationCodeEndpointContext,
+    AuthorizationCodeEndpointContinueResponse,
     type AuthorizationCodeEndpointResponse,
     AuthorizationCodeFlow,
     AuthorizationCodeFlowBuilder,
@@ -10,6 +12,7 @@ import {
     evaluateStrategy,
     InvalidRequestError,
     type OAuth2FlowTokenResponse,
+    OIDCAuthorizationCodeEndpointContext,
     type OIDCAuthorizationCodeEndpointResponse,
     type OIDCAuthorizationCodeFlowOptions,
     type OIDCAuthorizationCodeInitiationResponse,
@@ -55,6 +58,22 @@ export interface KaapiAuthorizationCodeLifecycleMethod<R extends ReqRef = ReqRef
     ): V
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export interface LoginFormRenderer<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>, Result = AuthorizationCodeInitiationResponse | AuthorizationCodeProcessResponse | OIDCAuthorizationCodeInitiationResponse | OIDCAuthorizationCodeProcessResponse> {
+    (request: KaapiRequest<R>, h: ResponseToolkit<R>, result: Result, ctxt: { statusCode: number, usernameField: string, passwordField: string, errorMessage?: string }): V;
+}
+
+
+export type AuthorizationCodeConsentFormRenderer<
+    R extends ReqRef = ReqRefDefaults,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>,
+    C extends AuthorizationCodeEndpointContext = AuthorizationCodeEndpointContext,
+> = LoginFormRenderer<R, V, {
+    type: "continue";
+    continueResponse: AuthorizationCodeEndpointContinueResponse<C>;
+}>;
+
 /**
  * Configuration options for {@link KaapiAuthorizationCodeFlow}.
  *
@@ -74,6 +93,42 @@ export interface KaapiAuthorizationCodeFlowOptions<
     strategyOptions: KaapiOAuth2StrategyOptions<Refs>;
     /** Handler called on POST requests to parse and return the authorization request data from the Kaapi request. */
     parseAuthorizationEndpointData: (request: KaapiRequest<AuthRefs>) => Promise<AuthReqData>;
+
+    /**
+     * Optional lifecycle method called before the authorization endpoint handlers (GET and POST).
+     */
+    onPreHandler?: RouteExtObject<ReqRefDefaults> | RouteExtObject<ReqRefDefaults>[] | undefined;
+    /**
+     * Optional lifecycle method called after initiating the authorization endpoint (GET).
+     */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onInitiateAuthorization?: KaapiAuthorizationCodeLifecycleMethod<any, any, AuthorizationCodeInitiationResponse> | undefined;
+    /**
+     * Optional lifecycle method called after processing the authorization endpoint (POST).
+     */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onProcessAuthorization?: KaapiAuthorizationCodeLifecycleMethod<any, any, AuthorizationCodeProcessResponse> | undefined;
+
+    /**
+     * Optional field name for the username in the default login form. Defaults to "username" if not provided.
+     */
+    usernameField?: string | undefined;
+    /**
+     * Optional field name for the password in the default login form. Defaults to "password" if not provided.
+     */
+    passwordField?: string | undefined;
+
+    /**
+     * Optional custom form renderer for the authorization endpoint. If not provided, a default login form will be rendered for GET requests, and a simple success/error response will be returned for POST requests.
+     */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    loginFormRenderer?: LoginFormRenderer<any, any, AuthorizationCodeInitiationResponse | AuthorizationCodeProcessResponse> | undefined;
+
+    /**
+     * Optional custom consent form renderer for the authorization endpoint. If not provided, a default consent form will be rendered when the authorization endpoint returns a "continue" response, prompting the user to allow or deny the requested scopes.
+     */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    consentFormRenderer?: AuthorizationCodeConsentFormRenderer<any, any, AuthorizationCodeEndpointContext> | undefined;
 }
 
 /**
@@ -139,6 +194,13 @@ export interface KaapiAuthorizationCodeMethods<Refs extends ReqRef = ReqRefDefau
 //#endregion
 
 //#region OpenID Connect Types and Interfaces
+
+export type OIDCAuthorizationCodeConsentFormRenderer<
+    R extends ReqRef = ReqRefDefaults,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>,
+    C extends OIDCAuthorizationCodeEndpointContext = OIDCAuthorizationCodeEndpointContext,
+> = AuthorizationCodeConsentFormRenderer<R, V, C>;
 
 /**
  * Configuration options for {@link KaapiOIDCAuthorizationCodeFlow}.
@@ -228,8 +290,8 @@ export interface KaapiOIDCAuthorizationCodeMethods<Refs extends ReqRef = ReqRefD
 
 //#region Constants
 
-const renderLoginForm = ({ errorMessage, usernameField, passwordField }: { errorMessage?: string; usernameField: string; passwordField: string }): string => {
-    return `<!DOCTYPE html>
+const renderDefaultLoginForm: LoginFormRenderer = (_request, h, _result, { statusCode, errorMessage, usernameField, passwordField }) => {
+    const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -329,10 +391,12 @@ const renderLoginForm = ({ errorMessage, usernameField, passwordField }: { error
   </form>
 </body>
 </html>`;
+
+    return h.response(html).type('text/html').code(statusCode);
 };
 
-const renderConsentForm = ({ scopes }: { scopes: string[] }): string => {
-    const scopeItems = scopes
+const renderDefaultConsentForm: AuthorizationCodeConsentFormRenderer = (_request, h, { continueResponse: { scope } }, { statusCode }) => {
+    const scopeItems = scope
         .map(s => `      <li class="scope-item">
         <svg class="scope-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
@@ -341,7 +405,7 @@ const renderConsentForm = ({ scopes }: { scopes: string[] }): string => {
       </li>`)
         .join('\n');
 
-    return `<!DOCTYPE html>
+    const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -423,6 +487,11 @@ ${scopeItems}
   </form>
 </body>
 </html>`;
+
+
+    return h.response(html)
+        .type('text/html')
+        .code(statusCode)
 };
 
 //#endregion
@@ -511,14 +580,18 @@ export class KaapiAuthorizationCodeFlow<
         request: KaapiRequest<AuthRefs>,
     ) => Promise<AuthReqData>;
 
-    #usernameField?: string | undefined;
-    #passwordField?: string | undefined;
+    readonly #usernameField?: string | undefined;
+    readonly #passwordField?: string | undefined;
 
-    protected onPostAuth?: RouteExtObject<ReqRefDefaults> | RouteExtObject<ReqRefDefaults>[] | undefined;
+    readonly #onPreHandler?: RouteExtObject<ReqRefDefaults> | RouteExtObject<ReqRefDefaults>[] | undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    protected onInitiateAuthorization?: KaapiAuthorizationCodeLifecycleMethod<any, any, AuthorizationCodeInitiationResponse> | undefined;
+    readonly #onInitiateAuthorization?: KaapiAuthorizationCodeLifecycleMethod<any, any, AuthorizationCodeInitiationResponse> | undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    protected onProcessAuthorization?: KaapiAuthorizationCodeLifecycleMethod<any, any, AuthorizationCodeProcessResponse> | undefined;
+    readonly #onProcessAuthorization?: KaapiAuthorizationCodeLifecycleMethod<any, any, AuthorizationCodeProcessResponse> | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    readonly #loginFormRenderer?: LoginFormRenderer<any, any, AuthorizationCodeInitiationResponse | AuthorizationCodeProcessResponse> | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    readonly #consentFormRenderer?: AuthorizationCodeConsentFormRenderer<any, any, AuthorizationCodeEndpointContext> | undefined;
 
     readonly #kaapi: KaapiAuthorizationCodeMethods<Refs, AuthRefs> = {
         authorizeMiddleware: (scopes?: string[]): AuthSchemeHandler<Refs> => {
@@ -605,12 +678,13 @@ export class KaapiAuthorizationCodeFlow<
             const tokenVerifierHandler = this.#kaapi.verifyToken.bind(this);
             const initAuthorization = this.kaapi().initiateAuthorization.bind(this);
             const processAuthorization = this.kaapi().processAuthorization.bind(this);
-            const onPostAuth = this.onPostAuth;
-            const onInitiateAuthorization = this.onInitiateAuthorization;
-            const onProcessAuthorization = this.onProcessAuthorization;
+            const onPreHandler = this.#onPreHandler;
+            const onInitiateAuthorization = this.#onInitiateAuthorization;
+            const onProcessAuthorization = this.#onProcessAuthorization;
             const usernameField = this.getUsernameField();
             const passwordField = this.getPasswordField();
-
+            const renderLoginForm = this.#loginFormRenderer || renderDefaultLoginForm;
+            const renderConsentForm = this.#consentFormRenderer || renderDefaultConsentForm;
 
             const supported = this.getTokenEndpointAuthMethods();
 
@@ -673,7 +747,7 @@ export class KaapiAuthorizationCodeFlow<
                             },
                         },
                         ext: {
-                            onPostAuth: onPostAuth,
+                            onPreHandler: onPreHandler,
                         }
                     };
 
@@ -717,13 +791,18 @@ export class KaapiAuthorizationCodeFlow<
 
                             // default handling if not handled in post handling
                             if (result.success) {
-                                return h.response(
-                                    renderLoginForm({
+                                return renderLoginForm(
+                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                    req as any,
+                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                    h as any,
+                                    result,
+                                    {
+                                        statusCode: 200,
                                         usernameField,
                                         passwordField
-                                    }))
-                                    .type('text/html')
-                                    .code(200);
+                                    }
+                                );
                             }
                             return h.response({ error: "invalid_request" }).code(400);
                             //} catch (_error) {
@@ -769,14 +848,19 @@ export class KaapiAuthorizationCodeFlow<
                                         .join("&");
                                     return h.redirect(`${result.redirectUri}?${qs}`);
                                 }
-                                return h.response(
-                                    renderLoginForm({
+                                return renderLoginForm(
+                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                    req as any,
+                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                    h as any,
+                                    result,
+                                    {
+                                        statusCode: 400,
                                         errorMessage: error.message,
                                         usernameField,
                                         passwordField
-                                    }))
-                                    .type('text/html')
-                                    .code(400);
+                                    }
+                                );
                             }
 
                             if (result.type === "code") {
@@ -791,23 +875,34 @@ export class KaapiAuthorizationCodeFlow<
                             }
 
                             if (result.type === "continue") {
-                                return h.response(
-                                    renderConsentForm({
-                                        scopes: result.continueResponse.scope
-                                    }))
-                                    .type('text/html')
-                                    .code(200);
+                                return renderConsentForm(
+                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                    req as any,
+                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                    h as any,
+                                    result,
+                                    {
+                                        statusCode: 200,
+                                        usernameField,
+                                        passwordField
+                                    }
+                                );
                             }
 
                             if (result.type === "unauthenticated") {
-                                return h.response(
-                                    renderLoginForm({
+                                return renderLoginForm(
+                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                    req as any,
+                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                    h as any,
+                                    result,
+                                    {
+                                        statusCode: 400,
                                         errorMessage: result.message || "Authentication failed. Please try again.",
                                         usernameField,
                                         passwordField
-                                    }))
-                                    .type('text/html')
-                                    .code(400);
+                                    }
+                                );
                             }
                             //} catch (_error) {
                             //    // TODO: error handling or ...
@@ -823,14 +918,19 @@ export class KaapiAuthorizationCodeFlow<
                             //        .code(500);
                             //}
 
-                            return h.response(
-                                renderLoginForm({
+                            return renderLoginForm(
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                req as any,
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                h as any,
+                                result,
+                                {
+                                    statusCode: 400,
                                     errorMessage: "Could not process the request. Please try again.",
                                     usernameField,
                                     passwordField
-                                }))
-                                .type('text/html')
-                                .code(400);
+                                }
+                            );
                         },
                     });
                 },
@@ -873,6 +973,16 @@ export class KaapiAuthorizationCodeFlow<
         };
 
         this.#authorizeMiddleware = this.#createAuthorizeMiddleware([]);
+
+        this.#onPreHandler = options.onPreHandler;
+        this.#onInitiateAuthorization = options.onInitiateAuthorization;
+        this.#onProcessAuthorization = options.onProcessAuthorization;
+
+        this.#usernameField = options.usernameField;
+        this.#passwordField = options.passwordField;
+
+        this.#loginFormRenderer = options.loginFormRenderer;
+        this.#consentFormRenderer = options.consentFormRenderer;
     }
 
     #createAuthorizeMiddleware(scopes: string[]): AuthSchemeHandler<Refs> {
@@ -903,30 +1013,6 @@ export class KaapiAuthorizationCodeFlow<
      */
     kaapi(): Readonly<KaapiAuthorizationCodeMethods<Refs, AuthRefs>> {
         return Object.freeze(this.#kaapi);
-    }
-
-    setOnPostAuth(onPostAuth: RouteExtObject<ReqRefDefaults> | RouteExtObject<ReqRefDefaults>[] | undefined): void {
-        this.onPostAuth = onPostAuth;
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    setOnInitiateAuthorization<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
-        (onInitiateAuthorization: KaapiAuthorizationCodeLifecycleMethod<R, V, AuthorizationCodeInitiationResponse> | undefined): void {
-        this.onInitiateAuthorization = onInitiateAuthorization;
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    setOnProcessAuthorization<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
-        (onProcessAuthorization: KaapiAuthorizationCodeLifecycleMethod<R, V, AuthorizationCodeProcessResponse> | undefined): void {
-        this.onProcessAuthorization = onProcessAuthorization;
-    }
-
-    setUsernameField(usernameField: string): void {
-        this.#usernameField = usernameField;
-    }
-
-    setPasswordField(passwordField: string): void {
-        this.#passwordField = passwordField;
     }
 
     getUsernameField(): string {
@@ -971,6 +1057,17 @@ export class KaapiAuthorizationCodeFlowBuilder<
     protected parseAuthorizationEndpointDataHandler: (
         request: KaapiRequest<AuthRefs>,
     ) => Promise<AuthReqData>;
+    protected onPreHandler?: RouteExtObject<ReqRefDefaults> | RouteExtObject<ReqRefDefaults>[] | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    protected onInitiateAuthorization?: KaapiAuthorizationCodeLifecycleMethod<any, any, AuthorizationCodeInitiationResponse> | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    protected onProcessAuthorization?: KaapiAuthorizationCodeLifecycleMethod<any, any, AuthorizationCodeProcessResponse> | undefined;
+    protected usernameField?: string | undefined;
+    protected passwordField?: string | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    protected loginFormRenderer?: LoginFormRenderer<any, any, AuthorizationCodeInitiationResponse | AuthorizationCodeProcessResponse> | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    protected consentFormRenderer?: AuthorizationCodeConsentFormRenderer<any, any, any> | undefined;
 
     constructor(options: KaapiAuthorizationCodeFlowBuilderOptions<AuthReqData, Refs, AuthRefs>) {
         const { strategyOptions, parseAuthorizationEndpointData, ...flowOptions } = options;
@@ -1050,6 +1147,84 @@ export class KaapiAuthorizationCodeFlowBuilder<
     }
 
     /**
+     * Sets lifecycle handlers for the authorization endpoint, which are invoked before the main GET and POST handlers.
+     * @param onPreHandler A lifecycle method or array of methods that are invoked before the main GET and POST handlers.
+     * @returns `this` for chaining.
+     */
+    setOnPreHandler(onPreHandler: RouteExtObject<ReqRefDefaults> | RouteExtObject<ReqRefDefaults>[] | undefined): this {
+        this.onPreHandler = onPreHandler;
+        return this;
+    }
+
+    /**
+     * Sets the handler for post-processing the result of the authorization initiation step (GET request to the authorization endpoint).
+     * @param onInitiateAuthorization A lifecycle method that receives the Kaapi request, response toolkit, and the result of the initiation step, allowing you to handle rendering a login page, handling errors, etc.
+     * @returns `this` for chaining.
+     */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    setOnInitiateAuthorization<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
+        (onInitiateAuthorization: KaapiAuthorizationCodeLifecycleMethod<R, V, AuthorizationCodeInitiationResponse> | undefined): this {
+        this.onInitiateAuthorization = onInitiateAuthorization;
+        return this;
+    }
+
+    /**
+     * Sets the handler for post-processing the result of the authorization processing step (POST request to the authorization endpoint).
+     * @param onProcessAuthorization A lifecycle method that receives the Kaapi request, response toolkit, and the result of the processing step, allowing you to handle rendering a login page, handling errors, etc.
+     * @returns `this` for chaining.
+     */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    setOnProcessAuthorization<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
+        (onProcessAuthorization: KaapiAuthorizationCodeLifecycleMethod<R, V, AuthorizationCodeProcessResponse> | undefined): this {
+        this.onProcessAuthorization = onProcessAuthorization;
+        return this;
+    }
+
+    /**
+     * Sets the field name to use for the username in the default authorization endpoint form.
+     * @param usernameField The name of the field to use for the username.
+     * @returns `this` for chaining.
+     */
+    setUsernameField(usernameField: string): this {
+        this.usernameField = usernameField;
+        return this;
+    }
+
+    /**
+     * Sets the field name to use for the password in the default authorization endpoint form.
+     * @param passwordField The name of the field to use for the password.
+     * @returns `this` for chaining.
+     */
+    setPasswordField(passwordField: string): this {
+        this.passwordField = passwordField;
+        return this;
+    }
+
+    /**
+     * Sets a custom form renderer for the authorization endpoint. If not provided, a default login form will be rendered for GET requests, and a simple success/error response will be returned for POST requests.
+     * @param renderer A custom form renderer function.
+     * @returns `this` for chaining.
+     */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    setLoginFormRenderer<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>(renderer: LoginFormRenderer<R, V, AuthorizationCodeInitiationResponse | AuthorizationCodeProcessResponse>): this {
+        this.loginFormRenderer = renderer;
+        return this;
+    }
+
+    /**
+     * Sets a custom consent form renderer for the authorization endpoint. If not provided, a default consent form will be rendered when the authorization processing step returns a "continue" result.
+     * @param renderer A custom consent form renderer function.
+     * @returns `this` for chaining.
+     */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    setConsentFormRenderer<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>, C extends AuthorizationCodeEndpointContext = AuthorizationCodeEndpointContext>(renderer: AuthorizationCodeConsentFormRenderer<R, V, C>): this {
+        this.consentFormRenderer = renderer;
+        return this;
+    }
+
+
+
+    /**
      * Builds and returns a configured {@link KaapiAuthorizationCodeFlow} instance.
      *
      * @returns A new `KaapiAuthorizationCodeFlow`.
@@ -1059,6 +1234,13 @@ export class KaapiAuthorizationCodeFlowBuilder<
             ...this.buildParams(),
             strategyOptions: this.strategyOptions,
             parseAuthorizationEndpointData: this.parseAuthorizationEndpointDataHandler,
+            onPreHandler: this.onPreHandler,
+            onInitiateAuthorization: this.onInitiateAuthorization,
+            onProcessAuthorization: this.onProcessAuthorization,
+            usernameField: this.usernameField,
+            passwordField: this.passwordField,
+            loginFormRenderer: this.loginFormRenderer,
+            consentFormRenderer: this.consentFormRenderer,
         };
         return new KaapiAuthorizationCodeFlow<Refs, AuthReqData, AuthRefs>(params);
     }

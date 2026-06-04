@@ -18,9 +18,11 @@ declare module "@saurbit/oauth2" {
          * allowing the user to be prompted for consent only once per session. 
          * In a real implementation, you would want to use a proper session management solution instead of this simple cookie setter.
          */
+        /*
         sessionCookieSetter?: {
             set(value: string): void;
         };
+        */
     }
 }
 
@@ -36,9 +38,11 @@ interface ParsedData extends AuthorizationCodeReqData {
      * allowing the user to be prompted for consent only once per session. 
      * In a real implementation, you would want to use a proper session management solution instead of this simple cookie setter.
      */
+    /*
     sessionCookieSetter?: {
         set(value: string): void;
     };
+    */
 }
 
 // Simple in-memory session storage for demonstration (not for production use)
@@ -87,11 +91,13 @@ export const authorizationCodeWithConsentFlow = new KaapiAuthorizationCodeFlowBu
             password,
             consent,
             sessionCookie,
+            /*
             sessionCookieSetter: {
                 set(value: string) {
                     req.raw.res.setHeader('Set-Cookie', `session=${value}; Path=/; HttpOnly; SameSite=Strict`);
                 }
             },
+            */
         };
     }
 })
@@ -142,7 +148,7 @@ export const authorizationCodeWithConsentFlow = new KaapiAuthorizationCodeFlowBu
                                 email: user.email,
                                 username: user.username,
                                 consentStatus: parsedData.consent, // carry the consent decision  forward
-                                sessionCookieSetter: parsedData.sessionCookieSetter, // carry the sessionCookieSetter forward
+                                // sessionCookieSetter: parsedData.sessionCookieSetter, // carry the sessionCookieSetter forward
                             },
                         };
                     }
@@ -158,7 +164,7 @@ export const authorizationCodeWithConsentFlow = new KaapiAuthorizationCodeFlowBu
                 id: user.id,
                 email: user.email,
                 username: user.username,
-                sessionCookieSetter: parsedData.sessionCookieSetter, // carry the sessionCookieSetter forward
+                // sessionCookieSetter: parsedData.sessionCookieSetter, // carry the sessionCookieSetter forward
             },
         };
     })
@@ -187,6 +193,7 @@ export const authorizationCodeWithConsentFlow = new KaapiAuthorizationCodeFlowBu
             return { type: "code", code };
         }
 
+        /*
         if (user.sessionCookieSetter && !user.consentStatus) {
             // create a session and set a cookie to track it
             const sessionId = crypto.randomUUID();
@@ -196,6 +203,7 @@ export const authorizationCodeWithConsentFlow = new KaapiAuthorizationCodeFlowBu
             };
             user.sessionCookieSetter?.set(sessionId); // set cookie with same expiration as session
         }
+        */
 
         return { type: "continue" };
     })
@@ -428,5 +436,79 @@ export const authorizationCodeWithConsentFlow = new KaapiAuthorizationCodeFlowBu
             );
         }
         return { isValid: false };
+    })
+    .setLoginFormRenderer((_request, h, _result, { statusCode, errorMessage, usernameField, passwordField }) => {
+        const html = ` <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <title>Sign in</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      </head>
+      <body>
+        <h1>Sign in</h1>
+        ${errorMessage ? `<p style="color:red">${errorMessage}</p>` : ""}
+        <form method="POST">
+          <label for="${usernameField}">${usernameField}</label>
+          <input
+            id="${usernameField}"
+            name="${usernameField}"
+            type="text"
+            autocomplete="username"
+            required
+          />
+          <label for="${passwordField}">${passwordField}</label>
+          <input
+            id="${passwordField}"
+            name="${passwordField}"
+            type="password"
+            autocomplete="current-password"
+            required
+          />
+          <button type="submit" name="sign_in">Sign in</button>
+        </form>
+      </body>
+    </html>`;
+
+        return h.response(html).code(statusCode).type("text/html");
+    })
+    .setConsentFormRenderer((request, h, { continueResponse: { scope, context: { client }, user } }, { statusCode }) => {
+        const html = ` <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <title>Consent</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      </head>
+      <body>
+        <h1>Consent</h1>
+        <p>User: <b>${user.email}</b></p>
+
+        <p><b>${client.id}</b> is requesting the following permissions:</p>
+        <form method="POST">
+          ${scope
+                ? `<ul>
+                ${scope.map((s) => `<li>${s}</li>`).join("")}
+              </ul>`
+                : ""}
+          <button type="submit" name="consent" value="allow">Allow</button>
+          <button type="submit" name="consent" value="deny">Deny</button>
+        </form>
+      </body>
+    </html>`;
+
+        const response = h.response(html).code(statusCode).type("text/html");
+
+        if (!request.state.session) {
+            // create a session and set a cookie to track it
+            const sessionId = crypto.randomUUID();
+            sessionStorage[sessionId] = {
+                userId: user.id,
+                expiresAt: Date.now() + 300000, // 5 minutes
+            };
+            response.state('session', sessionId);
+        }
+
+        return response;
     })
     .build();

@@ -113,6 +113,16 @@ await app.extend([
   clientCredentialsFlow.kaapi().toAuthDesign(),
   authorizationCodeFlow.kaapi().toAuthDesign(),
   authorizationCodeWithConsentFlow.kaapi().toAuthDesign(),
+  // to use cookie-based sessions (for the Authorization Code flows in this example)
+  {
+    async integrate(t) {
+      t.server.state('session', {
+        ttl: 24 * 60 * 60 * 1000, // 1 day lifetime
+        isHttpOnly: true,        // Prevents client-side JS access
+        encoding: 'base64json'   // Automatically serializes objects
+      });
+    }
+  },
   // to serve Scalar UI for API docs
   {
     async integrate(t) {
