@@ -35,16 +35,15 @@ import {
     type ReqRef,
     type ReqRefDefaults,
     type Request as KaapiRequest,
-    AuthDesign,
     type KaapiTools,
-    RouteOptions,
-    RouteExtObject,
-    Lifecycle,
-    MergeRefs,
-    ResponseToolkit,
+    type RouteOptions,
+    type RouteExtObject,
+    type Lifecycle,
+    type MergeRefs,
+    type ResponseToolkit,
 } from '@kaapi/kaapi';
-import { BaseAuthUtil } from "@novice1/api-doc-generator/lib/utils/auth/baseAuthUtils.js";
 import { ClientAuthentication, GrantType, OAuth2Util } from "@novice1/api-doc-generator";
+import { OAuth2AuthDesign } from "./common.js";
 
 //#region Types and Interfaces
 
@@ -499,58 +498,6 @@ ${scopeItems}
 //#region Classes
 
 /**
- * Delegate contract consumed by {@link AuthorizationCodeAuthDesign}.
- *
- * Each method maps directly to the corresponding `AuthDesign` contract,
- * allowing the implementation to be constructed from a plain object (e.g.
- * inside `flow.kaapi().toAuthDesign()`).
- */
-export interface AuthorizationCodeAuthDesignOptions {
-    /** Returns the OpenAPI/Postman documentation utility for this auth scheme. */
-    docs(): BaseAuthUtil;
-    /** Registers the Hapi auth scheme and strategy on the server. */
-    integrateStrategy(t: KaapiTools): void;
-    /** Returns the name of the registered Hapi auth strategy. */
-    getStrategyName(): string;
-    /** Optional hook to register the token endpoint route on the server. */
-    integrateHook?(t: KaapiTools): void | Promise<void>;
-}
-
-/**
- * Concrete {@link AuthDesign} implementation for the OAuth 2.0 Authorization Code flow.
- *
- * Delegates all `AuthDesign` contract methods to the {@link AuthorizationCodeAuthDesignOptions}
- * provided at construction time. Obtain an instance via
- * `flow.kaapi().toAuthDesign()` on a {@link KaapiAuthorizationCodeFlow}.
- */
-export class AuthorizationCodeAuthDesign extends AuthDesign {
-    #options: AuthorizationCodeAuthDesignOptions;
-
-    /** @param options - Delegate implementation for each `AuthDesign` method. */
-    constructor(options: AuthorizationCodeAuthDesignOptions) {
-        super();
-        this.#options = options;
-    }
-    /** @inheritdoc */
-    docs(): BaseAuthUtil {
-        return this.#options.docs();
-    }
-    /** @inheritdoc */
-    integrateStrategy(t: KaapiTools): void {
-        return this.#options.integrateStrategy(t);
-    }
-    /** @inheritdoc */
-    getStrategyName(): string {
-        return this.#options.getStrategyName();
-    }
-
-    /** @inheritdoc */
-    integrateHook(t: KaapiTools): void | Promise<void> {
-        return this.#options.integrateHook ? this.#options.integrateHook(t) : undefined;
-    }
-}
-
-/**
  * Kaapi adapter for the OAuth 2.0 Authorization Code flow.
  *
  * Wraps {@link AuthorizationCodeFlow} to integrate natively with Kaapi's `Request`,
@@ -688,7 +635,7 @@ export class KaapiAuthorizationCodeFlow<
 
             const supported = this.getTokenEndpointAuthMethods();
 
-            return new AuthorizationCodeAuthDesign({
+            return new OAuth2AuthDesign({
                 docs(): OAuth2Util {
                     const docs = new OAuth2Util(schemeName)
                         .setGrantType(GrantType.authorizationCodeWithPkce)

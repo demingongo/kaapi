@@ -1,4 +1,5 @@
-import type { AuthDesign, Lifecycle, ReqRef, ReqRefDefaults, Request, ResponseToolkit } from '@kaapi/kaapi';
+import type { AuthDesign, KaapiTools, Lifecycle, ReqRef, ReqRefDefaults, Request, ResponseToolkit } from '@kaapi/kaapi';
+import type { BaseAuthUtil } from '@novice1/api-doc-generator/lib/utils/auth/baseAuthUtils';
 import type {
     OAuth2FlowTokenResponse,
     StrategyError,
@@ -121,4 +122,15 @@ export interface KaapiAdapted<Refs extends ReqRef = ReqRefDefaults> {
      * The returned object is frozen; use its methods directly inside Kaapi route handlers.
      */
     kaapi(): KaapiMethods<Refs>;
+}
+
+export interface OAuth2AuthDesignOptions {
+    /** Returns the OpenAPI/Postman documentation utility for this auth scheme. */
+    docs(): BaseAuthUtil;
+    /** Registers the Hapi auth scheme and strategy on the server. */
+    integrateStrategy(t: KaapiTools): void;
+    /** Returns the name of the registered Hapi auth strategy. */
+    getStrategyName(): string;
+    /** Optional hook to register the token endpoint route on the server. */
+    integrateHook?(t: KaapiTools): void | Promise<void>;
 }

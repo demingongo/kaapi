@@ -10,12 +10,10 @@ import {
     type ReqRef,
     type ReqRefDefaults,
     type Request as KaapiRequest,
-    AuthDesign,
     type KaapiTools,
     RouteOptions,
 } from '@kaapi/kaapi';
 import { GrantType, OAuth2Util } from '@novice1/api-doc-generator';
-import { BaseAuthUtil } from '@novice1/api-doc-generator/lib/utils/auth/baseAuthUtils.js';
 import {
     ClientCredentialsFlow,
     ClientCredentialsFlowBuilder,
@@ -28,6 +26,7 @@ import {
     UnauthorizedClientError,
     UnsupportedGrantTypeError,
 } from '@saurbit/oauth2';
+import { OAuth2AuthDesign } from './common.js';
 
 //#region Types and Interfaces
 
@@ -50,58 +49,6 @@ export interface KaapiClientCredentialsFlowOptions<Refs extends ReqRef = ReqRefD
 //#endregion
 
 //#region Classes
-
-/**
- * Delegate contract consumed by {@link ClientCredentialsAuthDesign}.
- *
- * Each method maps directly to the corresponding `AuthDesign` contract,
- * allowing the implementation to be constructed from a plain object (e.g.
- * inside `flow.kaapi().toAuthDesign()`).
- */
-export interface ClientCredentialsAuthDesignOptions {
-    /** Returns the OpenAPI/Postman documentation utility for this auth scheme. */
-    docs(): BaseAuthUtil;
-    /** Registers the Hapi auth scheme and strategy on the server. */
-    integrateStrategy(t: KaapiTools): void;
-    /** Returns the name of the registered Hapi auth strategy. */
-    getStrategyName(): string;
-    /** Optional hook to register the token endpoint route on the server. */
-    integrateHook?(t: KaapiTools): void | Promise<void>;
-}
-
-/**
- * Concrete {@link AuthDesign} implementation for the OAuth 2.0 Client Credentials flow.
- *
- * Delegates all `AuthDesign` contract methods to the {@link ClientCredentialsAuthDesignOptions}
- * provided at construction time. Obtain an instance via
- * `flow.kaapi().toAuthDesign()` on a {@link KaapiClientCredentialsFlow}.
- */
-export class ClientCredentialsAuthDesign extends AuthDesign {
-    #options: ClientCredentialsAuthDesignOptions;
-
-    /** @param options - Delegate implementation for each `AuthDesign` method. */
-    constructor(options: ClientCredentialsAuthDesignOptions) {
-        super();
-        this.#options = options;
-    }
-    /** @inheritdoc */
-    docs(): BaseAuthUtil {
-        return this.#options.docs();
-    }
-    /** @inheritdoc */
-    integrateStrategy(t: KaapiTools): void {
-        return this.#options.integrateStrategy(t);
-    }
-    /** @inheritdoc */
-    getStrategyName(): string {
-        return this.#options.getStrategyName();
-    }
-
-    /** @inheritdoc */
-    integrateHook(t: KaapiTools): void | Promise<void> {
-        return this.#options.integrateHook ? this.#options.integrateHook(t) : undefined;
-    }
-}
 
 /**
  * Kaapi adapter for the OAuth 2.0 Client Credentials flow.
@@ -135,7 +82,7 @@ export class KaapiClientCredentialsFlow<Refs extends ReqRef = ReqRefDefaults>
             return await this.#tokenVerifier(request);
         },
 
-        toAuthDesign: (): ClientCredentialsAuthDesign => {
+        toAuthDesign: (): OAuth2AuthDesign => {
             const schemeName = this.getSecuritySchemeName();
             const scopes = this.getScopes();
             const description = this.getDescription();
@@ -144,7 +91,7 @@ export class KaapiClientCredentialsFlow<Refs extends ReqRef = ReqRefDefaults>
             const tokenHandler = this.token.bind(this);
             const tokenVerifierHandler = this.#kaapi.verifyToken.bind(this);
 
-            return new ClientCredentialsAuthDesign({
+            return new OAuth2AuthDesign({
                 docs(): OAuth2Util {
                     const docs = new OAuth2Util(schemeName)
                         .setGrantType(GrantType.clientCredentials)

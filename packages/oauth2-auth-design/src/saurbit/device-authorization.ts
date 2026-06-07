@@ -19,23 +19,22 @@ import type {
   FailedAuthorizationAction,
   KaapiAdapted,
   KaapiMethods,
-  KaapiOAuth2StrategyOptions,
+  KaapiOAuth2StrategyOptions
 } from "./types.ts";
 import { createWebStandardRequest } from './utils.js';
 import {
   type ReqRef,
   type ReqRefDefaults,
   type Request as KaapiRequest,
-  AuthDesign,
   type KaapiTools,
-  RouteOptions,
-  RouteExtObject,
-  Lifecycle,
-  MergeRefs,
-  ResponseToolkit,
+  type RouteOptions,
+  type RouteExtObject,
+  type Lifecycle,
+  type MergeRefs,
+  type ResponseToolkit,
 } from '@kaapi/kaapi';
-import { BaseAuthUtil } from "@novice1/api-doc-generator/lib/utils/auth/baseAuthUtils.js";
 import { ClientAuthentication, OAuth2Util } from "@novice1/api-doc-generator";
+import { OAuth2AuthDesign } from "./common.js";
 
 
 //#region Types and Interfaces
@@ -122,58 +121,6 @@ export interface KaapiDeviceAuthorizationMethods<Refs extends ReqRef = ReqRefDef
 //#endregion
 
 //#region Classes
-
-/**
- * Delegate contract consumed by {@link DeviceAuthorizationAuthDesign}.
- *
- * Each method maps directly to the corresponding `AuthDesign` contract,
- * allowing the implementation to be constructed from a plain object (e.g.
- * inside `flow.kaapi().toAuthDesign()`).
- */
-export interface DeviceAuthorizationAuthDesignOptions {
-  /** Returns the OpenAPI/Postman documentation utility for this auth scheme. */
-  docs(): BaseAuthUtil;
-  /** Registers the Hapi auth scheme and strategy on the server. */
-  integrateStrategy(t: KaapiTools): void;
-  /** Returns the name of the registered Hapi auth strategy. */
-  getStrategyName(): string;
-  /** Optional hook to register the token endpoint route on the server. */
-  integrateHook?(t: KaapiTools): void | Promise<void>;
-}
-
-/**
- * Concrete {@link AuthDesign} implementation for the OAuth 2.0 Device Authorization flow.
- *
- * Delegates all `AuthDesign` contract methods to the {@link DeviceAuthorizationAuthDesignOptions}
- * provided at construction time. Obtain an instance via
- * `flow.kaapi().toAuthDesign()` on a {@link KaapiDeviceAuthorizationFlow}.
- */
-export class DeviceAuthorizationAuthDesign extends AuthDesign {
-  #options: DeviceAuthorizationAuthDesignOptions;
-
-  /** @param options - Delegate implementation for each `AuthDesign` method. */
-  constructor(options: DeviceAuthorizationAuthDesignOptions) {
-    super();
-    this.#options = options;
-  }
-  /** @inheritdoc */
-  docs(): BaseAuthUtil {
-    return this.#options.docs();
-  }
-  /** @inheritdoc */
-  integrateStrategy(t: KaapiTools): void {
-    return this.#options.integrateStrategy(t);
-  }
-  /** @inheritdoc */
-  getStrategyName(): string {
-    return this.#options.getStrategyName();
-  }
-
-  /** @inheritdoc */
-  integrateHook(t: KaapiTools): void | Promise<void> {
-    return this.#options.integrateHook ? this.#options.integrateHook(t) : undefined;
-  }
-}
 
 /**
  * Kaapi adapter for the OAuth 2.0 Device Authorization flow.
@@ -266,7 +213,7 @@ export class KaapiDeviceAuthorizationFlow<
 
       const supported = this.getTokenEndpointAuthMethods();
 
-      return new DeviceAuthorizationAuthDesign({
+      return new OAuth2AuthDesign({
         docs(): OAuth2Util {
           const docs = new OAuth2Util(schemeName)
             .setGrantType("urn:ietf:params:oauth:grant-type:device_code")
