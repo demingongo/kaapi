@@ -1,6 +1,7 @@
 import { AuthDesign, KaapiTools } from "@kaapi/kaapi";
 import type { OAuth2AuthDesignOptions } from "./types";
 import type { BaseAuthUtil } from "@novice1/api-doc-generator/lib/utils/auth/baseAuthUtils";
+import { OAuth2Util, SecuritySchemeObject } from "@novice1/api-doc-generator";
 
 /**
  * Concrete {@link AuthDesign} implementation for the OAuth 2.0 flow.
@@ -32,5 +33,25 @@ export class OAuth2AuthDesign extends AuthDesign {
     /** @inheritdoc */
     integrateHook(t: KaapiTools): void | Promise<void> {
         return this.#options.integrateHook ? this.#options.integrateHook(t) : undefined;
+    }
+}
+
+export class OIDCAuthUtil extends OAuth2Util {
+
+    protected discoveryUrl?: string;
+
+    setDiscoveryUrl(url: string): this {
+        this.discoveryUrl = url;
+        return this;
+    }
+
+    toOpenAPI(): Record<string, SecuritySchemeObject> {
+        const host = this.getHost();
+        return {
+            [this.securitySchemeName]: {
+                type: 'openIdConnect',
+                openIdConnectUrl: `${host || ''}${this.discoveryUrl || '/.well-known/openid-configuration'}`,
+            },
+        };
     }
 }
