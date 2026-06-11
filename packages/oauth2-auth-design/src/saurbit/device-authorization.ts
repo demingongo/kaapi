@@ -8,6 +8,9 @@ import {
   evaluateStrategy,
   InvalidRequestError,
   type OAuth2FlowTokenResponse,
+  OIDCDeviceAuthorizationFlow,
+  OIDCDeviceAuthorizationFlowBuilder,
+  OIDCDeviceAuthorizationFlowOptions,
   StrategyInsufficientScopeError,
   type StrategyResult,
   type StrategyVerifyTokenFunction,
@@ -117,6 +120,48 @@ export interface KaapiDeviceAuthorizationMethods<Refs extends ReqRef = ReqRefDef
     request: KaapiRequest<R>,
   ): Promise<DeviceAuthorizationEndpointResponse>;
 }
+
+//#endregion
+
+//#region OIDC Types and Interfaces
+
+/**
+ * Configuration options for {@link KaapiDeviceAuthorizationFlow}.
+ *
+ * Extends the base `DeviceAuthorizationFlowOptions` with Kaapi-specific strategy options
+ * for token verification and failed-authorization handling.
+ *
+ * @template E - The Kaapi `Env` type for the application.
+ */
+export interface KaapiOIDCDeviceAuthorizationFlowOptions<
+  Refs extends ReqRef = ReqRefDefaults,
+> extends Omit<OIDCDeviceAuthorizationFlowOptions, "strategyOptions"> {
+  /** Kaapi-specific strategy options, including token verification and failed authorization handling. */
+  strategyOptions: KaapiOAuth2StrategyOptions<Refs>;
+
+  /**
+     * Optional lifecycle method called before the authorization endpoint handlers (GET and POST).
+     */
+  onPreHandler?: RouteExtObject<ReqRefDefaults> | RouteExtObject<ReqRefDefaults>[] | undefined;
+
+  /**
+   * Optional lifecycle method called after processing the authorization endpoint (POST).
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onProcessAuthorization?: KaapiDeviceAuthorizationLifecycleMethod<any, any> | undefined;
+
+}
+
+/**
+ * Builder options for {@link KaapiDeviceAuthorizationFlowBuilder}.
+ *
+ * All fields from {@link KaapiDeviceAuthorizationFlowOptions} are optional.
+ *
+ * @template Refs - The Kaapi `ReqRef` type for the application.
+ */
+export type KaapiOIDCDeviceAuthorizationFlowBuilderOptions<
+  Refs extends ReqRef = ReqRefDefaults,
+> = Partial<KaapiOIDCDeviceAuthorizationFlowOptions<Refs>>;
 
 //#endregion
 
@@ -502,6 +547,393 @@ export class KaapiDeviceAuthorizationFlowBuilder<
       strategyOptions: this.strategyOptions,
     };
     return new KaapiDeviceAuthorizationFlow<Refs, AuthRefs>(params);
+  }
+}
+
+//#endregion
+
+//#region OIDC Classes
+
+/**
+ * Kaapi adapter for the OAuth 2.0 Device Authorization flow.
+ *
+ * Wraps {@link OIDCDeviceAuthorizationFlow} to integrate natively with Kaapi's `Context`,
+ * providing a token endpoint handler, middleware for protecting routes, and
+ * convenience methods for the device authorization endpoint.
+ * This flow is intended for input-constrained devices (e.g. smart TVs, CLIs)
+ * that cannot easily handle a browser-based redirect.
+ *
+ * Use {@link KaapiOIDCDeviceAuthorizationFlowBuilder} for a fluent configuration API.
+ *
+ * @template E - The Kaapi `Env` type for the application.
+ */
+export class KaapiOIDCDeviceAuthorizationFlow<
+  Refs extends ReqRef = ReqRefDefaults,
+  AuthRefs extends ReqRef = ReqRefDefaults
+> extends OIDCDeviceAuthorizationFlow implements KaapiAdapted<Refs> {
+  readonly #tokenVerifier: (
+    request: KaapiRequest<Refs>,
+  ) => Promise<StrategyResult>;
+  readonly #authorizeMiddleware: AuthSchemeHandler<Refs>;
+
+  readonly #failedAuthorizationAction: FailedAuthorizationAction<Refs>;
+
+  readonly #onPreHandler?: RouteExtObject<ReqRefDefaults> | RouteExtObject<ReqRefDefaults>[] | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  readonly #onProcessAuthorization?: KaapiDeviceAuthorizationLifecycleMethod<any, any> | undefined;
+
+  readonly #kaapi: KaapiDeviceAuthorizationMethods<Refs, AuthRefs> = {
+    authorizeMiddleware: (scopes?: string[]): AuthSchemeHandler<Refs> => {
+      return scopes?.length ? this.#createAuthorizeMiddleware(scopes) : this.#authorizeMiddleware;
+    },
+    token: async (request: KaapiRequest<Refs>): Promise<OAuth2FlowTokenResponse> => {
+      return await this.token(createWebStandardRequest(request));
+    },
+
+    verifyToken: async (request: KaapiRequest<Refs>): Promise<StrategyResult> => {
+      return await this.#tokenVerifier(request);
+    },
+
+    processAuthorization: async (
+      request: KaapiRequest<AuthRefs>,
+    ): Promise<DeviceAuthorizationProcessResponse> => {
+      return await this.processAuthorization(
+        createWebStandardRequest(request),
+      );
+    },
+
+    handleAuthorizationEndpoint: async <R extends ReqRef = ReqRefDefaults>(
+      request: KaapiRequest<R>,
+    ): Promise<DeviceAuthorizationEndpointResponse> => {
+      if (request.method === "post") {
+        // In a real implementation, you would authenticate the user here,
+        // and if authentication is successful, generate a device code,
+        // and return it to the client in the response.
+
+        const result = await this.kaapi().processAuthorization(
+          request as unknown as KaapiRequest<AuthRefs>,
+        );
+
+        if (result.type === "error") {
+          return result;
+        }
+
+        return {
+          ...result,
+          method: "POST",
+        };
+      }
+
+      return {
+        type: "error",
+        error: new InvalidRequestError("Unsupported HTTP method"),
+      };
+    },
+
+    toAuthDesign: () => {
+      const schemeName = this.getSecuritySchemeName();
+      const scopes = this.getScopes();
+      const description = this.getDescription();
+      const tokenEndpoint = this.getTokenEndpoint();
+      const tokenType = this.tokenType;
+      const authEndpoint = this.getAuthorizationEndpoint();
+      const tokenHandler = this.token.bind(this);
+      const tokenVerifierHandler = this.#kaapi.verifyToken.bind(this);
+      const processAuthorization = this.kaapi().processAuthorization.bind(this);
+      const onPreHandler = this.#onPreHandler;
+      const onProcessAuthorization = this.#onProcessAuthorization;
+
+      const supported = this.getTokenEndpointAuthMethods();
+
+      return new OAuth2AuthDesign({
+        docs(): OAuth2Util {
+          const docs = new OAuth2Util(schemeName)
+            .setGrantType("urn:ietf:params:oauth:grant-type:device_code")
+            .setScopes(scopes || {})
+            .setAccessTokenUrl(tokenEndpoint);
+          if (description) {
+            docs.setDescription(description);
+          }
+
+          if (
+            supported.includes('client_secret_post') ||
+            supported.includes('none') ||
+            supported.includes('client_secret_jwt') ||
+            supported.includes('private_key_jwt')
+          ) {
+            docs.setClientAuthentication(ClientAuthentication.body);
+          } else if (supported.includes('client_secret_basic')) {
+            docs.setClientAuthentication(ClientAuthentication.header);
+          }
+
+          docs.setAuthUrl(authEndpoint);
+
+          return docs;
+        },
+
+        integrateStrategy(t: KaapiTools): void {
+          // Register the auth scheme for the multiple flows
+          t.scheme(schemeName, (_server) => {
+            return {
+              async authenticate(request, h) {
+                try {
+                  const result = await tokenVerifierHandler(request as unknown as KaapiRequest<Refs>);
+                  if (result.success) {
+                    return h.authenticated({ credentials: result.credentials });
+                  }
+                  const Boom = await import('@hapi/boom');
+                  return h.unauthenticated(Boom.unauthorized(result.error.message, tokenType), {
+                    credentials: {},
+                  });
+                } catch (err) {
+                  const Boom = await import('@hapi/boom');
+                  return Boom.internal(err instanceof Error ? err : `${err}`);
+                }
+              },
+            };
+          });
+          t.strategy(schemeName, schemeName);
+        },
+
+        integrateHook(t: KaapiTools): void {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const routesOptions: RouteOptions<any> = {
+            plugins: {
+              kaapi: {
+                docs: false,
+              },
+            },
+          };
+
+          // token
+          t.route({
+            options: routesOptions,
+            path: tokenEndpoint,
+            method: 'POST',
+            handler: async (req, h) => {
+              const result = await tokenHandler(createWebStandardRequest(req));
+              if (result.success) {
+                return result.tokenResponse;
+              }
+              const error = result.error;
+              t.log.error({ error }, 'Error');
+              if (
+                error instanceof UnsupportedGrantTypeError ||
+                error instanceof UnauthorizedClientError
+              ) {
+                return h
+                  .response({ error: error.errorCode, errorDescription: error.message })
+                  .code(400);
+              }
+              return h.response({ error: 'invalid_request' }).code(400);
+            },
+          });
+
+          t.route({
+            options: {
+              ...routesOptions,
+              ext: {
+                onPreHandler: onPreHandler,
+              }
+            },
+            path: authEndpoint,
+            method: 'POST',
+            handler: async (req, h) => {
+              const result = await processAuthorization(req as unknown as KaapiRequest<AuthRefs>);
+
+              // handle post initiation logic (e.g. returning device code, handling errors, etc.) in the onProcessAuthorization lifecycle method
+              if (onProcessAuthorization) {
+                return await onProcessAuthorization.call(h, req, h, result);
+              }
+
+              // default handling if not handled in post handling
+              if (result.type === "error") {
+                const error = result.error;
+                return h.response({
+                  error: error instanceof AccessDeniedError ? error.errorCode : "invalid_request",
+                  error_description: error instanceof AccessDeniedError ? error.message : "Invalid request",
+                  error_uri: error.errorUri,
+                }).code(400);
+              }
+
+              return h.response(result.deviceCodeResponse).code(200);
+            },
+          });
+        },
+
+        getStrategyName(): string {
+          return schemeName;
+        },
+      });
+    }
+  };
+
+  constructor(options: KaapiOIDCDeviceAuthorizationFlowOptions<Refs>) {
+    const { strategyOptions, ...flowOptions } = options;
+
+    super({
+      ...flowOptions,
+      strategyOptions: {},
+    });
+
+    this.#failedAuthorizationAction = strategyOptions.failedAuthorizationAction ?? (async () => {
+      const Boom = await import('@hapi/boom');
+      return Boom.unauthorized(null, this.tokenType);
+    });
+
+    this.#tokenVerifier = async (request: KaapiRequest<Refs>) => {
+      const honoVerifyToken = strategyOptions.verifyToken;
+      const verifyToken: StrategyVerifyTokenFunction | undefined = honoVerifyToken
+        ? async (_, params) => {
+          return await honoVerifyToken(request, params);
+        }
+        : undefined;
+
+      return await evaluateStrategy(createWebStandardRequest(request), {
+        ...strategyOptions,
+        verifyToken,
+        tokenType: this._tokenType,
+      });
+    };
+
+    this.#authorizeMiddleware = this.#createAuthorizeMiddleware([]);
+
+    this.#onPreHandler = options.onPreHandler;
+    this.#onProcessAuthorization = options.onProcessAuthorization;
+  }
+
+  #createAuthorizeMiddleware(scopes: string[]): AuthSchemeHandler<Refs> {
+    return async (request, h) => {
+      const result = await this.kaapi().verifyToken(request);
+
+      if (result.success) {
+        if (
+          scopes.length &&
+          !scopes.every((n) => result.credentials?.scope?.includes(n))
+        ) {
+          return this.#failedAuthorizationAction(
+            request,
+            h,
+            new StrategyInsufficientScopeError("Insufficient scope"),
+          );
+        }
+        return h.authenticated({ credentials: result.credentials });
+      }
+      return this.#failedAuthorizationAction(request, h, result.error);
+    };
+  }
+
+  /**
+   * Returns a frozen object of Kaapi-adapted methods for use inside Kaapi route handlers.
+   *
+   * @returns A readonly {@link KaapiAuthorizationCodeMethods} instance.
+   */
+  kaapi(): Readonly<KaapiDeviceAuthorizationMethods<Refs, AuthRefs>> {
+    return Object.freeze(this.#kaapi);
+  }
+}
+
+//#endregion
+
+//#region Builders
+
+/**
+ * Fluent builder for {@link KaapiOIDCDeviceAuthorizationFlow}.
+ *
+ * Provides a chainable API to configure all aspects of the Device Authorization flow
+ * for Kaapi, including device code generation, token polling, token verification,
+ * and scope enforcement.
+ *
+ * @template E - The Kaapi `Env` type for the application.
+ *
+ * @example
+ * ```ts
+ * const flow = KaapiOIDCDeviceAuthorizationFlowBuilder
+ *   .create()
+ *   .setTokenEndpoint("/token")
+ *   .tokenVerifier((c, { token }) => verifyJwt(token))
+ *   .build();
+ * ```
+ */
+export class KaapiOIDCDeviceAuthorizationFlowBuilder<
+  Refs extends ReqRef = ReqRefDefaults,
+  AuthRefs extends ReqRef = ReqRefDefaults
+> extends OIDCDeviceAuthorizationFlowBuilder {
+  protected strategyOptions: KaapiOAuth2StrategyOptions<Refs> = {};
+
+  constructor(options?: KaapiOIDCDeviceAuthorizationFlowBuilderOptions<Refs>) {
+    const { strategyOptions, ...flowOptions } = options || {};
+    super({
+      ...flowOptions,
+      strategyOptions: {},
+    });
+    this.strategyOptions = strategyOptions || {};
+  }
+
+  /**
+   * Creates a new `KaapiOIDCDeviceAuthorizationFlowBuilder` instance.
+   *
+   * @param options - Optional initial builder options.
+   * @returns A new builder instance.
+   */
+  static create<
+    Refs extends ReqRef = ReqRefDefaults,
+  >(
+    options?: KaapiOIDCDeviceAuthorizationFlowBuilderOptions<Refs>,
+  ): KaapiOIDCDeviceAuthorizationFlowBuilder<Refs> {
+    return new KaapiOIDCDeviceAuthorizationFlowBuilder<Refs>(options);
+  }
+
+  /**
+   * Sets the action to invoke when authorization fails (e.g. missing or invalid token).
+   *
+   * @param action - A handler that receives the Kaapi context and the authorization error.
+   * @returns `this` for chaining.
+   */
+  failedAuthorizationAction(action: FailedAuthorizationAction<Refs>): this {
+    this.strategyOptions.failedAuthorizationAction = action;
+    return this;
+  }
+
+  /**
+   * This method does not have access to the Kaapi context.
+   * Use `tokenVerifier` instead to set a handler that receives the Kaapi context.
+   * @deprecated Use `tokenVerifier` instead to set a handler that receives the Kaapi context.
+   * @param handler
+   * @returns
+   */
+  override verifyToken(handler: StrategyVerifyTokenFunction<Request>): this {
+    this.strategyOptions.verifyToken = async (request, params) => {
+      return await handler(createWebStandardRequest(request), params);
+    };
+    return this;
+  }
+
+  /**
+     * Sets the token verification handler with full access to the Kaapi `Request`.
+     *
+     * Prefer this over `verifyToken` when you need to access Kaapi
+     * request variables, environment bindings, or other request state during verification.
+     *
+     * @param handler - Async function that receives the Kaapi request and token params, and returns a strategy result.
+     * @returns `this` for chaining.
+     */
+  tokenVerifier(handler: StrategyVerifyTokenFunction<KaapiRequest<Refs>>): this {
+    this.strategyOptions.verifyToken = handler;
+    return this;
+  }
+
+  /**
+   * Builds and returns a configured {@link KaapiOIDCDeviceAuthorizationFlow} instance.
+   *
+   * @returns A new `KaapiOIDCDeviceAuthorizationFlow`.
+   */
+  override build(): KaapiOIDCDeviceAuthorizationFlow<Refs, AuthRefs> {
+    const params: KaapiOIDCDeviceAuthorizationFlowOptions<Refs> = {
+      ...this.buildParams(),
+      strategyOptions: this.strategyOptions,
+    };
+    return new KaapiOIDCDeviceAuthorizationFlow<Refs, AuthRefs>(params);
   }
 }
 
