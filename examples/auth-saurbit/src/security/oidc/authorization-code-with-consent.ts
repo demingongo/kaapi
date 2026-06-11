@@ -2,7 +2,11 @@ import { AuthorizationCodeReqData } from "@saurbit/oauth2";
 import { REGISTERED_USERS, VALID_CLIENTS } from "../../data/users";
 import { jwksAuthority } from "../jwks";
 import Boom from "@hapi/boom";
-import { KaapiAuthorizationCodeFlow, KaapiAuthorizationCodeFlowBuilder } from "@kaapi/oauth2-auth-design";
+import {
+  KaapiOIDCAuthorizationCodeFlow,
+  KaapiOIDCAuthorizationCodeFlowBuilder,
+  verifyCodeVerifier
+} from "@kaapi/oauth2-auth-design";
 import { ReqRefDefaults } from "@kaapi/kaapi";
 
 declare module "@saurbit/oauth2" {
@@ -11,18 +15,6 @@ declare module "@saurbit/oauth2" {
     email: string;
     username: string;
     consentStatus?: "allow" | "deny" | undefined;
-
-    /**
-     * A utility for setting a cookie to track the user's session and consent decision. 
-     * This is used to persist the user's consent decision across multiple requests during the authorization code flow, 
-     * allowing the user to be prompted for consent only once per session. 
-     * In a real implementation, you would want to use a proper session management solution instead of this simple cookie setter.
-     */
-    /*
-    sessionCookieSetter?: {
-        set(value: string): void;
-    };
-    */
   }
 }
 
@@ -31,18 +23,6 @@ interface ParsedData extends AuthorizationCodeReqData {
   password?: string;
   consent?: "allow" | "deny";
   sessionCookie?: string;
-
-  /**
-   * A utility for setting a cookie to track the user's session and consent decision. 
-   * This is used to persist the user's consent decision across multiple requests during the authorization code flow, 
-   * allowing the user to be prompted for consent only once per session. 
-   * In a real implementation, you would want to use a proper session management solution instead of this simple cookie setter.
-   */
-  /*
-  sessionCookieSetter?: {
-      set(value: string): void;
-  };
-  */
 }
 
 // Simple in-memory session storage for demonstration (not for production use)
@@ -62,6 +42,7 @@ const codeStorage: Record<
     userId: string;
     expiresAt: number;
     codeChallenge?: string;
+    nonce?: string;
   }
 > = {};
 
@@ -136,8 +117,8 @@ const generateConsentFormHtml = ({ userEmail, clientName, scope }: { userEmail: 
     </html>`;
 };
 
-export const authorizationCodeWithConsentFlow: KaapiAuthorizationCodeFlow<ReqRefDefaults, ParsedData, ReqRefDefaults> = new KaapiAuthorizationCodeFlowBuilder<ReqRefDefaults, ParsedData>({
-  securitySchemeName: "authorization_code_with_consent",
+export const oidcAuthorizationCodeFlow: KaapiOIDCAuthorizationCodeFlow<ReqRefDefaults, ParsedData, ReqRefDefaults> = new KaapiOIDCAuthorizationCodeFlowBuilder<ReqRefDefaults, ParsedData>({
+  securitySchemeName: "oidc_auth_code",
   parseAuthorizationEndpointData: async (req) => {
     const payload = req.payload as Record<string, unknown>;
     const username = typeof payload?.username === "string" ? payload.username : undefined;
@@ -150,13 +131,6 @@ export const authorizationCodeWithConsentFlow: KaapiAuthorizationCodeFlow<ReqRef
       password,
       consent,
       sessionCookie,
-      /*
-      sessionCookieSetter: {
-          set(value: string) {
-              req.raw.res.setHeader('Set-Cookie', `session=${value}; Path=/; HttpOnly; SameSite=Strict`);
-          }
-      },
-      */
     };
   }
 })
@@ -167,10 +141,13 @@ export const authorizationCodeWithConsentFlow: KaapiAuthorizationCodeFlow<ReqRef
     "health:read": "Access to health check endpoint.",
   })
   .setDescription("Example OpenID Connect Authorization Code Flow")
-  .setTokenEndpoint("/oauth2/v1.1/token")
-  .setAuthorizationEndpoint("/oauth2/v1.1/authorize")
+  .setTokenEndpoint("/oidc/v1.0/token")
+  .setAuthorizationEndpoint("/oidc/v1.0/authorize")
   .noneAuthenticationMethod()
   .setAccessTokenLifetime(3600)
+  .setOpenIdConfiguration({
+    claims_supported: ["sub", "aud", "iss", "exp", "iat", "nbf", "name", "email", "username"],
+  })
   .getClientForAuthentication((data) => {
     const client = VALID_CLIENTS.find((c) => c.client_id === data.clientId && !c.internal);
     if (!client) return undefined;
@@ -247,21 +224,10 @@ export const authorizationCodeWithConsentFlow: KaapiAuthorizationCodeFlow<ReqRef
         userId: `${user.id}`,
         expiresAt: Date.now() + 60000,
         codeChallenge: grantContext.codeChallenge,
+        nonce: grantContext.nonce,
       };
       return { type: "code", code };
     }
-
-    /*
-    if (user.sessionCookieSetter && !user.consentStatus) {
-        // create a session and set a cookie to track it
-        const sessionId = crypto.randomUUID();
-        sessionStorage[sessionId] = {
-            userId: user.id,
-            expiresAt: Date.now() + 300000, // 5 minutes
-        };
-        user.sessionCookieSetter?.set(sessionId); // set cookie with same expiration as session
-    }
-    */
 
     return { type: "continue" };
   })
@@ -279,14 +245,7 @@ export const authorizationCodeWithConsentFlow: KaapiAuthorizationCodeFlow<ReqRef
 
       if (tokenRequest.codeVerifier && codeData.codeChallenge) {
         // Public client — verify PKCE code_verifier against the stored code_challenge
-        const data = new TextEncoder().encode(tokenRequest.codeVerifier);
-        const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-        const hashArray = new Uint8Array(hashBuffer);
-        const base64url = btoa(String.fromCharCode(...hashArray))
-          .replace(/\+/g, "-")
-          .replace(/\//g, "_")
-          .replace(/=+$/, "");
-        if (base64url !== codeData.codeChallenge) return undefined;
+        if (!verifyCodeVerifier(tokenRequest.codeVerifier, codeData.codeChallenge)) return undefined;
       } else {
         return undefined;
       }
@@ -305,7 +264,8 @@ export const authorizationCodeWithConsentFlow: KaapiAuthorizationCodeFlow<ReqRef
           userId: codeData.userId,
           username: user.username,
           userEmail: user.email,
-          userFullName: user.fullName
+          userFullName: user.fullName,
+          nonce: codeData.nonce,
         },
       };
     }
@@ -385,6 +345,7 @@ export const authorizationCodeWithConsentFlow: KaapiAuthorizationCodeFlow<ReqRef
       username: `${grantContext.client.metadata?.username}`,
       name: accessScope.includes("profile") ? `${grantContext.client.metadata?.userFullName}` : undefined,
       email: accessScope.includes("email") ? `${grantContext.client.metadata?.userEmail}` : undefined,
+      nonce: grantContext.client.metadata?.nonce ? `${grantContext.client.metadata?.nonce}` : undefined,
       ...registeredClaims,
     });
 
@@ -532,7 +493,7 @@ export const authorizationCodeWithConsentFlow: KaapiAuthorizationCodeFlow<ReqRef
             } else {
               const user = REGISTERED_USERS.find((u) => u.id === session.userId);
               if (user) {
-                const processedAuthorization = await authorizationCodeWithConsentFlow.kaapi().processAuthorization(request);
+                const processedAuthorization = await oidcAuthorizationCodeFlow.kaapi().processAuthorization(request);
                 // Render consent page if we have a valid session
                 if (processedAuthorization.type === "continue") {
                   return h.response(

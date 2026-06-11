@@ -13,6 +13,7 @@ import { authorizationCodeWithConsentFlow } from "./security/oauth2/authorizatio
 import Boom from "@hapi/boom";
 import { Kaapi } from "@kaapi/kaapi";
 import hapiScalar from "hapi-scalar";
+import { oidcAuthorizationCodeFlow } from "./security/oidc/authorization-code-with-consent";
 
 //#region Create and configure Kaapi app
 
@@ -113,6 +114,7 @@ await app.extend([
   clientCredentialsFlow.kaapi().toAuthDesign(),
   authorizationCodeFlow.kaapi().toAuthDesign(),
   authorizationCodeWithConsentFlow.kaapi().toAuthDesign(),
+  oidcAuthorizationCodeFlow.kaapi().toAuthDesign(),
   // to use cookie-based sessions (for the Authorization Code flows in this example)
   {
     async integrate(t) {
@@ -152,6 +154,7 @@ app.base().auth.default({
     clientCredentialsFlow.getSecuritySchemeName(),
     authorizationCodeFlow.getSecuritySchemeName(),
     authorizationCodeWithConsentFlow.getSecuritySchemeName(),
+    oidcAuthorizationCodeFlow.getSecuritySchemeName(),
   ],
   mode: "try"
 });

@@ -47,6 +47,10 @@ import {
 import { ClientAuthentication, GrantType, OAuth2Util } from "@novice1/api-doc-generator";
 import { OAuth2AuthDesign, OIDCAuthUtil } from "./common.js";
 
+// @TODO: 
+// - OIDC integrateHook => discovery endpoint with custom or default handler.
+// - OIDC integrateHook => jwks endpoint with custom handler.
+
 //#region Types and Interfaces
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1366,6 +1370,8 @@ export class KaapiOIDCAuthorizationCodeFlow<
 
             const discoveryUrl = this.getDiscoveryUrl();
 
+            const getDiscoveryConfiguration = (req?: Request | undefined) => this.getDiscoveryConfiguration(req)
+
             // const supported = this.getTokenEndpointAuthMethods();
             // const scopes = this.getScopes();
 
@@ -1584,6 +1590,14 @@ export class KaapiOIDCAuthorizationCodeFlow<
                                 }
                             );
                         },
+                    });
+
+                    // discovery endpoint
+                    t.route({
+                        options: routesOptions,
+                        path: discoveryUrl,
+                        method: 'GET',
+                        handler: async (req) => getDiscoveryConfiguration(createWebStandardRequest(req)),
                     });
                 },
 
