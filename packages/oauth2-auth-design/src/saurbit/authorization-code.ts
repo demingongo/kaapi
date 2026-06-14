@@ -32,7 +32,7 @@ import type {
     KaapiMethods,
     KaapiOAuth2StrategyOptions
 } from "./types.ts";
-import { createWebStandardRequest } from './utils.js';
+import { createWebStandardRequest, WebStandardRequestOptions } from './utils.js';
 import {
     type ReqRef,
     type ReqRefDefaults,
@@ -46,10 +46,6 @@ import {
 } from '@kaapi/kaapi';
 import { ClientAuthentication, GrantType, OAuth2Util } from "@novice1/api-doc-generator";
 import { OAuth2AuthDesign, OIDCAuthUtil } from "./common.js";
-
-// @TODO: 
-// - OIDC integrateHook => discovery endpoint with custom or default handler.
-// - OIDC integrateHook => jwks endpoint with custom handler.
 
 //#region Types and Interfaces
 
@@ -67,6 +63,8 @@ export interface KaapiAuthorizationCodeLifecycleMethod<R extends ReqRef = ReqRef
 export interface LoginFormRenderer<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>, Result = AuthorizationCodeInitiationResponse | AuthorizationCodeProcessResponse | OIDCAuthorizationCodeInitiationResponse | OIDCAuthorizationCodeProcessResponse> {
     (request: KaapiRequest<R>, h: ResponseToolkit<R>, result: Result, ctxt: { statusCode: number, usernameField: string, passwordField: string, errorMessage?: string }): V;
 }
+
+
 
 
 export type AuthorizationCodeConsentFormRenderer<
@@ -236,6 +234,20 @@ export interface KaapiOIDCAuthorizationCodeFlowOptions<
     onProcessAuthorization?: KaapiAuthorizationCodeLifecycleMethod<any, any, OIDCAuthorizationCodeProcessResponse> | undefined;
 
     /**
+     * Optional lifecycle method called when the discovery endpoint is requested. 
+     * If not provided, a route handler has to be registered to handle the discovery requests, and the flow won't be able to provide a default discovery response.
+     */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onDiscoveryRequest?: Lifecycle.Method<any, any> | undefined;
+
+    /**
+     * Optional lifecycle method called when the JWKS endpoint is requested.
+     * If not provided, a route handler has to be registered to handle the JWKS requests, and the flow won't be able to provide a default JWKS response.
+     */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onJwksRequest?: Lifecycle.Method<any, any> | undefined;
+
+    /**
      * Optional field name for the username in the default login form. Defaults to "username" if not provided.
      */
     usernameField?: string | undefined;
@@ -317,6 +329,21 @@ export interface KaapiOIDCAuthorizationCodeMethods<Refs extends ReqRef = ReqRefD
     handleAuthorizationEndpoint<R extends ReqRef = ReqRefDefaults & AuthRefs>(
         request: KaapiRequest<R>,
     ): Promise<OIDCAuthorizationCodeEndpointResponse>;
+
+    /**
+     * Retrieves the OpenID Connect discovery configuration document.
+     * 
+     * Builds the standard provider metadata fields from the flow's configuration and merges in any static 
+     * overrides set via openIdConfiguration. Relative endpoint URLs are resolved against the request's origin 
+     * (or the discovery URL's origin if no request is provided).
+     * 
+     * @param request - Optional Kaapi request object used to determine the full base URL for relative endpoints.
+     * @param options - Optional WebStandardRequestOptions object used to customize the request.
+     */
+    getDiscoveryConfiguration<R extends ReqRef = ReqRefDefaults>(
+        request?: KaapiRequest<R>,
+        options?: WebStandardRequestOptions
+    ): Record<string, string | string[] | undefined>;
 }
 
 //#endregion
@@ -1272,6 +1299,10 @@ export class KaapiOIDCAuthorizationCodeFlow<
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     readonly #onProcessAuthorization?: KaapiAuthorizationCodeLifecycleMethod<any, any, OIDCAuthorizationCodeProcessResponse> | undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    readonly #onDiscoveryRequest?: Lifecycle.Method<any, any> | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    readonly #onJwksRequest?: Lifecycle.Method<any, any> | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     readonly #loginFormRenderer?: LoginFormRenderer<any, any, OIDCAuthorizationCodeInitiationResponse | OIDCAuthorizationCodeProcessResponse> | undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     readonly #consentFormRenderer?: AuthorizationCodeConsentFormRenderer<any, any, OIDCAuthorizationCodeEndpointContext> | undefined;
@@ -1350,6 +1381,10 @@ export class KaapiOIDCAuthorizationCodeFlow<
             };
         },
 
+        getDiscoveryConfiguration: <R extends ReqRef = ReqRefDefaults>(request?: KaapiRequest<R>, options?: WebStandardRequestOptions): Record<string, string | string[] | undefined> => {
+            return this.getDiscoveryConfiguration(request ? createWebStandardRequest(request, options) : undefined);
+        },
+
         toAuthDesign: () => {
             const schemeName = this.getSecuritySchemeName();
             const description = this.getDescription();
@@ -1363,14 +1398,15 @@ export class KaapiOIDCAuthorizationCodeFlow<
             const onPreHandler = this.#onPreHandler;
             const onInitiateAuthorization = this.#onInitiateAuthorization;
             const onProcessAuthorization = this.#onProcessAuthorization;
+            const onDiscoveryRequest = this.#onDiscoveryRequest;
+            const onJwksRequest = this.#onJwksRequest;
             const usernameField = this.getUsernameField();
             const passwordField = this.getPasswordField();
             const renderLoginForm = this.#loginFormRenderer || renderDefaultLoginForm;
             const renderConsentForm = this.#consentFormRenderer || renderDefaultConsentForm;
 
             const discoveryUrl = this.getDiscoveryUrl();
-
-            const getDiscoveryConfiguration = (req?: Request | undefined) => this.getDiscoveryConfiguration(req)
+            const jwksEndpoint = this.getJwksEndpoint();
 
             // const supported = this.getTokenEndpointAuthMethods();
             // const scopes = this.getScopes();
@@ -1593,12 +1629,24 @@ export class KaapiOIDCAuthorizationCodeFlow<
                     });
 
                     // discovery endpoint
-                    t.route({
-                        options: routesOptions,
-                        path: discoveryUrl,
-                        method: 'GET',
-                        handler: async (req) => getDiscoveryConfiguration(createWebStandardRequest(req)),
-                    });
+                    if (onDiscoveryRequest) {
+                        t.route({
+                            options: routesOptions,
+                            path: discoveryUrl,
+                            method: 'GET',
+                            handler: async (req, h) => await onDiscoveryRequest.call(h, req, h),
+                        });
+                    }
+
+                    // jwks endpoint
+                    if (onJwksRequest) {
+                        t.route({
+                            options: routesOptions,
+                            path: jwksEndpoint,
+                            method: 'GET',
+                            handler: async (req, h) => await onJwksRequest.call(h, req, h),
+                        });
+                    }
                 },
 
                 getStrategyName(): string {
@@ -1643,6 +1691,8 @@ export class KaapiOIDCAuthorizationCodeFlow<
         this.#onPreHandler = options.onPreHandler;
         this.#onInitiateAuthorization = options.onInitiateAuthorization;
         this.#onProcessAuthorization = options.onProcessAuthorization;
+        this.#onDiscoveryRequest = options.onDiscoveryRequest;
+        this.#onJwksRequest = options.onJwksRequest;
 
         this.#usernameField = options.usernameField;
         this.#passwordField = options.passwordField;
@@ -1675,9 +1725,9 @@ export class KaapiOIDCAuthorizationCodeFlow<
     /**
      * Returns a frozen object of Kaapi-adapted methods for use inside Kaapi route handlers.
      *
-     * @returns A readonly {@link KaapiAuthorizationCodeMethods} instance.
+     * @returns A readonly {@link KaapiOIDCAuthorizationCodeMethods} instance.
      */
-    kaapi(): Readonly<KaapiAuthorizationCodeMethods<Refs, AuthRefs>> {
+    kaapi(): Readonly<KaapiOIDCAuthorizationCodeMethods<Refs, AuthRefs>> {
         return Object.freeze(this.#kaapi);
     }
 
@@ -1728,6 +1778,10 @@ export class KaapiOIDCAuthorizationCodeFlowBuilder<
     protected onInitiateAuthorization?: KaapiAuthorizationCodeLifecycleMethod<any, any, OIDCAuthorizationCodeInitiationResponse> | undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     protected onProcessAuthorization?: KaapiAuthorizationCodeLifecycleMethod<any, any, OIDCAuthorizationCodeProcessResponse> | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    protected onDiscoveryRequest?: Lifecycle.Method<any, any> | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    protected onJwksRequest?: Lifecycle.Method<any, any> | undefined;
     protected usernameField?: string | undefined;
     protected passwordField?: string | undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1847,6 +1901,30 @@ export class KaapiOIDCAuthorizationCodeFlowBuilder<
     }
 
     /**
+     * Sets the handler for the OpenID Connect discovery endpoint, which is invoked on GET requests to the discovery URL.
+     * @param onDiscoveryRequest A lifecycle method that receives the Kaapi request, response toolkit, and allows you to handle the discovery request.
+     * @returns `this` for chaining.
+     */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    setOnDiscoveryRequest<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
+        (onDiscoveryRequest: Lifecycle.Method<R, V> | undefined): this {
+        this.onDiscoveryRequest = onDiscoveryRequest;
+        return this;
+    }
+
+    /**
+     * Sets the handler for the JWKS endpoint, which is invoked on GET requests to the JWKS endpoint URL.
+     * @param onJwksRequest A lifecycle method that receives the Kaapi request, response toolkit, and allows you to handle the JWKS request.
+     * @returns `this` for chaining.
+     */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    setOnJwksRequest<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
+        (onJwksRequest: Lifecycle.Method<R, V> | undefined): this {
+        this.onJwksRequest = onJwksRequest;
+        return this;
+    }
+
+    /**
      * Sets the field name to use for the username in the default authorization endpoint form.
      * @param usernameField The name of the field to use for the username.
      * @returns `this` for chaining.
@@ -1903,6 +1981,8 @@ export class KaapiOIDCAuthorizationCodeFlowBuilder<
             onPreHandler: this.onPreHandler,
             onInitiateAuthorization: this.onInitiateAuthorization,
             onProcessAuthorization: this.onProcessAuthorization,
+            onDiscoveryRequest: this.onDiscoveryRequest,
+            onJwksRequest: this.onJwksRequest,
             usernameField: this.usernameField,
             passwordField: this.passwordField,
             loginFormRenderer: this.loginFormRenderer,

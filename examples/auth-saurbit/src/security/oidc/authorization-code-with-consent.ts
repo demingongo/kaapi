@@ -8,6 +8,7 @@ import {
   verifyCodeVerifier
 } from "@kaapi/oauth2-auth-design";
 import { ReqRefDefaults } from "@kaapi/kaapi";
+import { EXTERNAL_URI } from "../../config";
 
 declare module "@saurbit/oauth2" {
   interface AuthorizationCodeUser {
@@ -141,6 +142,8 @@ export const oidcAuthorizationCodeFlow: KaapiOIDCAuthorizationCodeFlow<ReqRefDef
     "health:read": "Access to health check endpoint.",
   })
   .setDescription("Example OpenID Connect Authorization Code Flow")
+  .setDiscoveryUrl("/oidc/v1.0/.well-known/openid-configuration")
+  .setJwksEndpoint("/oidc/v1.0/jwks")
   .setTokenEndpoint("/oidc/v1.0/token")
   .setAuthorizationEndpoint("/oidc/v1.0/authorize")
   .noneAuthenticationMethod()
@@ -531,6 +534,14 @@ export const oidcAuthorizationCodeFlow: KaapiOIDCAuthorizationCodeFlow<ReqRefDef
         }
       }
       return h.continue;
-    }
+    },
+  })
+  .setOnDiscoveryRequest((request) => {
+    return oidcAuthorizationCodeFlow.kaapi().getDiscoveryConfiguration(request, {
+      origin: EXTERNAL_URI, // Use the externally accessible URI for discovery to ensure correct endpoint URLs are provided to clients
+    });
+  })
+  .setOnJwksRequest(async () => {
+    return await jwksAuthority.getJwksEndpointResponse();
   })
   .build();
