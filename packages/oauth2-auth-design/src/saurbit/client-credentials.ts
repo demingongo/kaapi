@@ -12,6 +12,7 @@ import {
     type Request as KaapiRequest,
     type KaapiTools,
     RouteOptions,
+    Lifecycle,
 } from '@kaapi/kaapi';
 import { GrantType, OAuth2Util } from '@novice1/api-doc-generator';
 import {
@@ -67,6 +68,20 @@ export interface KaapiOIDCClientCredentialsFlowOptions<Refs extends ReqRef = Req
 > {
     /** Kaapi-specific strategy options, including token verification and failed authorization handling. */
     strategyOptions: KaapiOAuth2StrategyOptions<Refs>;
+
+    /**
+     * Optional lifecycle method called when the discovery endpoint is requested. 
+     * If not provided, a route handler has to be registered to handle the discovery requests, and the flow won't be able to provide a default discovery response.
+     */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onDiscoveryRequest?: Lifecycle.Method<any, any> | undefined;
+
+    /**
+     * Optional lifecycle method called when the JWKS endpoint is requested.
+     * If not provided, a route handler has to be registered to handle the JWKS requests, and the flow won't be able to provide a default JWKS response.
+     */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onJwksRequest?: Lifecycle.Method<any, any> | undefined;
 }
 
 //#endregion
@@ -394,6 +409,11 @@ export class KaapiOIDCClientCredentialsFlow<Refs extends ReqRef = ReqRefDefaults
 
     readonly #failedAuthorizationAction: FailedAuthorizationAction<Refs>;
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    readonly #onDiscoveryRequest?: Lifecycle.Method<any, any> | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    readonly #onJwksRequest?: Lifecycle.Method<any, any> | undefined;
+
     readonly #kaapi: KaapiMethods<Refs> = {
         authorizeMiddleware: (scopes?: string[]): AuthSchemeHandler<Refs> => {
             return scopes?.length ? this.#createAuthorizeMiddleware(scopes) : this.#authorizeMiddleware;
@@ -414,6 +434,10 @@ export class KaapiOIDCClientCredentialsFlow<Refs extends ReqRef = ReqRefDefaults
             const tokenType = this.tokenType;
             const tokenHandler = this.token.bind(this);
             const tokenVerifierHandler = this.#kaapi.verifyToken.bind(this);
+            const onDiscoveryRequest = this.#onDiscoveryRequest;
+            const onJwksRequest = this.#onJwksRequest;
+            const discoveryUrl = this.getDiscoveryUrl();
+            const jwksEndpoint = this.getJwksEndpoint();
 
             return new OAuth2AuthDesign({
                 docs(): OAuth2Util {
@@ -484,6 +508,26 @@ export class KaapiOIDCClientCredentialsFlow<Refs extends ReqRef = ReqRefDefaults
                             return h.response({ error: 'invalid_request' }).code(400);
                         },
                     });
+
+                    // discovery endpoint
+                    if (onDiscoveryRequest) {
+                        t.route({
+                            options: routesOptions,
+                            path: discoveryUrl,
+                            method: 'GET',
+                            handler: async (req, h) => await onDiscoveryRequest.call(h, req, h),
+                        });
+                    }
+
+                    // jwks endpoint
+                    if (onJwksRequest) {
+                        t.route({
+                            options: routesOptions,
+                            path: jwksEndpoint,
+                            method: 'GET',
+                            handler: async (req, h) => await onJwksRequest.call(h, req, h),
+                        });
+                    }
                 },
 
                 getStrategyName(): string {
@@ -527,6 +571,9 @@ export class KaapiOIDCClientCredentialsFlow<Refs extends ReqRef = ReqRefDefaults
         };
 
         this.#authorizeMiddleware = this.#createAuthorizeMiddleware([]);
+
+        this.#onDiscoveryRequest = options.onDiscoveryRequest;
+        this.#onJwksRequest = options.onJwksRequest;
     }
 
     /**

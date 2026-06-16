@@ -150,6 +150,20 @@ export interface KaapiOIDCDeviceAuthorizationFlowOptions<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onProcessAuthorization?: KaapiDeviceAuthorizationLifecycleMethod<any, any> | undefined;
 
+  /**
+   * Optional lifecycle method called when the discovery endpoint is requested. 
+   * If not provided, a route handler has to be registered to handle the discovery requests, and the flow won't be able to provide a default discovery response.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onDiscoveryRequest?: Lifecycle.Method<any, any> | undefined;
+
+  /**
+   * Optional lifecycle method called when the JWKS endpoint is requested.
+   * If not provided, a route handler has to be registered to handle the JWKS requests, and the flow won't be able to provide a default JWKS response.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onJwksRequest?: Lifecycle.Method<any, any> | undefined;
+
 }
 
 /**
@@ -581,6 +595,10 @@ export class KaapiOIDCDeviceAuthorizationFlow<
   readonly #onPreHandler?: RouteExtObject<ReqRefDefaults> | RouteExtObject<ReqRefDefaults>[] | undefined;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   readonly #onProcessAuthorization?: KaapiDeviceAuthorizationLifecycleMethod<any, any> | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  readonly #onDiscoveryRequest?: Lifecycle.Method<any, any> | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  readonly #onJwksRequest?: Lifecycle.Method<any, any> | undefined;
 
   readonly #kaapi: KaapiDeviceAuthorizationMethods<Refs, AuthRefs> = {
     authorizeMiddleware: (scopes?: string[]): AuthSchemeHandler<Refs> => {
@@ -642,6 +660,10 @@ export class KaapiOIDCDeviceAuthorizationFlow<
       const processAuthorization = this.kaapi().processAuthorization.bind(this);
       const onPreHandler = this.#onPreHandler;
       const onProcessAuthorization = this.#onProcessAuthorization;
+      const onDiscoveryRequest = this.#onDiscoveryRequest;
+      const onJwksRequest = this.#onJwksRequest;
+      const discoveryUrl = this.getDiscoveryUrl();
+      const jwksEndpoint = this.getJwksEndpoint();
 
       const supported = this.getTokenEndpointAuthMethods();
 
@@ -759,6 +781,26 @@ export class KaapiOIDCDeviceAuthorizationFlow<
               return h.response(result.deviceCodeResponse).code(200);
             },
           });
+
+          // discovery endpoint
+          if (onDiscoveryRequest) {
+            t.route({
+              options: routesOptions,
+              path: discoveryUrl,
+              method: 'GET',
+              handler: async (req, h) => await onDiscoveryRequest.call(h, req, h),
+            });
+          }
+
+          // jwks endpoint
+          if (onJwksRequest) {
+            t.route({
+              options: routesOptions,
+              path: jwksEndpoint,
+              method: 'GET',
+              handler: async (req, h) => await onJwksRequest.call(h, req, h),
+            });
+          }
         },
 
         getStrategyName(): string {
@@ -800,6 +842,8 @@ export class KaapiOIDCDeviceAuthorizationFlow<
 
     this.#onPreHandler = options.onPreHandler;
     this.#onProcessAuthorization = options.onProcessAuthorization;
+    this.#onDiscoveryRequest = options.onDiscoveryRequest;
+    this.#onJwksRequest = options.onJwksRequest;
   }
 
   #createAuthorizeMiddleware(scopes: string[]): AuthSchemeHandler<Refs> {

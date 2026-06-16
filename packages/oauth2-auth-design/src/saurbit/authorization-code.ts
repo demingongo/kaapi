@@ -792,7 +792,6 @@ export class KaapiAuthorizationCodeFlow<
                         path: authEndpoint,
                         method: 'GET',
                         handler: async (req, h) => {
-                            //try {
                             const result = await initAuthorization(req);
 
                             // handle post initiation logic (e.g. rendering login page, handling errors, etc.) in the onInitiateAuthorization lifecycle method
@@ -816,12 +815,6 @@ export class KaapiAuthorizationCodeFlow<
                                 );
                             }
                             return h.response({ error: "invalid_request" }).code(400);
-                            //} catch (_error) {
-                            //    // TODO: error handling or ...
-                            //
-                            //    // default error handling if not handled in error handling
-                            //    return h.response({ error: "server_error" }).code(500);
-                            //}
                         },
                     });
 
@@ -835,7 +828,6 @@ export class KaapiAuthorizationCodeFlow<
                         path: authEndpoint,
                         method: 'POST',
                         handler: async (req, h) => {
-                            //try {
                             const result = await processAuthorization(req as unknown as KaapiRequest<AuthRefs>);
 
                             // handle post initiation logic (e.g. rendering login page, handling errors, etc.) in the onProcessAuthorization lifecycle method
@@ -914,19 +906,6 @@ export class KaapiAuthorizationCodeFlow<
                                     }
                                 );
                             }
-                            //} catch (_error) {
-                            //    // TODO: error handling or ...
-                            //
-                            //    // default error handling if not handled in error handling
-                            //    return h.response(
-                            //        renderLoginForm({
-                            //            errorMessage: "An unexpected error occurred. Please try again later.",
-                            //            usernameField,
-                            //            passwordField
-                            //        }))
-                            //        .type('text/html')
-                            //        .code(500);
-                            //}
 
                             return renderLoginForm(
                                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1490,7 +1469,6 @@ export class KaapiOIDCAuthorizationCodeFlow<
                         path: authEndpoint,
                         method: 'GET',
                         handler: async (req, h) => {
-                            //try {
                             const result = await initAuthorization(req);
 
                             // handle post initiation logic (e.g. rendering login page, handling errors, etc.) in the onInitiateAuthorization lifecycle method
@@ -1514,15 +1492,10 @@ export class KaapiOIDCAuthorizationCodeFlow<
                                 );
                             }
                             return h.response({ error: "invalid_request" }).code(400);
-                            //} catch (_error) {
-                            //    // TODO: error handling or ...
-                            //
-                            //    // default error handling if not handled in error handling
-                            //    return h.response({ error: "server_error" }).code(500);
-                            //}
                         },
                     });
 
+                    // authorization endpoint POST handler
                     t.route({
                         options: {
                             ...routesOptions,
