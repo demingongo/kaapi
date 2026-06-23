@@ -25,3 +25,5 @@ export * from './saurbit/types';
 export * from './saurbit/utils';
 export * from './saurbit/authorization-code';
 export * from './saurbit/client-credentials';
+export * from './saurbit/device-authorization';
+

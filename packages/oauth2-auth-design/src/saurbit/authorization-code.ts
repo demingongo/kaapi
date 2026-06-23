@@ -22,17 +22,18 @@ import {
     StrategyInsufficientScopeError,
     type StrategyResult,
     type StrategyVerifyTokenFunction,
-    UnauthorizedClientError,
-    UnsupportedGrantTypeError,
 } from "@saurbit/oauth2";
 import type {
     AuthSchemeHandler,
     FailedAuthorizationAction,
     KaapiAdapted,
     KaapiMethods,
-    KaapiOAuth2StrategyOptions
+    KaapiOAuth2StrategyOptions,
+    KaapiOIDCAdapted,
+    KaapiOIDCMethods,
+    WebStandardRequestOptions
 } from "./types.ts";
-import { createWebStandardRequest, WebStandardRequestOptions } from './utils.js';
+import { createWebStandardRequest, createTokenEndpointHandler } from './utils.js';
 import {
     type ReqRef,
     type ReqRefDefaults,
@@ -299,7 +300,7 @@ export interface KaapiOIDCAuthorizationCodeFlowBuilderOptions<
  * @template Refs - The Kaapi `ReqRef` type for the application.
  * @template AuthRefs - The Kaapi `ReqRef` type for the authorization data.
  */
-export interface KaapiOIDCAuthorizationCodeMethods<Refs extends ReqRef = ReqRefDefaults, AuthRefs extends ReqRef = ReqRefDefaults> extends KaapiMethods<Refs> {
+export interface KaapiOIDCAuthorizationCodeMethods<Refs extends ReqRef = ReqRefDefaults, AuthRefs extends ReqRef = ReqRefDefaults> extends KaapiOIDCMethods<Refs> {
     /**
      * This method is a convenience method that combines the logic of initiating (GET) the authorization code flow for Kaapi.
      * It checks the HTTP method of the request and calls the appropriate method to handle the authorization endpoint logic.
@@ -329,21 +330,6 @@ export interface KaapiOIDCAuthorizationCodeMethods<Refs extends ReqRef = ReqRefD
     handleAuthorizationEndpoint<R extends ReqRef = ReqRefDefaults & AuthRefs>(
         request: KaapiRequest<R>,
     ): Promise<OIDCAuthorizationCodeEndpointResponse>;
-
-    /**
-     * Retrieves the OpenID Connect discovery configuration document.
-     * 
-     * Builds the standard provider metadata fields from the flow's configuration and merges in any static 
-     * overrides set via openIdConfiguration. Relative endpoint URLs are resolved against the request's origin 
-     * (or the discovery URL's origin if no request is provided).
-     * 
-     * @param request - Optional Kaapi request object used to determine the full base URL for relative endpoints.
-     * @param options - Optional WebStandardRequestOptions object used to customize the request.
-     */
-    getDiscoveryConfiguration<R extends ReqRef = ReqRefDefaults>(
-        request?: KaapiRequest<R>,
-        options?: WebStandardRequestOptions
-    ): Record<string, string | string[] | undefined>;
 }
 
 //#endregion
@@ -762,23 +748,7 @@ export class KaapiAuthorizationCodeFlow<
                         options: routesOptions,
                         path: tokenEndpoint,
                         method: 'POST',
-                        handler: async (req, h) => {
-                            const result = await tokenHandler(createWebStandardRequest(req));
-                            if (result.success) {
-                                return result.tokenResponse;
-                            }
-                            const error = result.error;
-                            t.log.error({ error }, 'Error');
-                            if (
-                                error instanceof UnsupportedGrantTypeError ||
-                                error instanceof UnauthorizedClientError
-                            ) {
-                                return h
-                                    .response({ error: error.errorCode, errorDescription: error.message })
-                                    .code(400);
-                            }
-                            return h.response({ error: 'invalid_request' }).code(400);
-                        },
+                        handler: createTokenEndpointHandler(t, tokenHandler),
                     });
 
                     // authorization endpoint
@@ -1257,7 +1227,7 @@ export class KaapiOIDCAuthorizationCodeFlow<
     AuthReqData extends AuthorizationCodeReqData = AuthorizationCodeReqData,
     AuthRefs extends ReqRef = ReqRefDefaults
 
-> extends OIDCAuthorizationCodeFlow<AuthReqData> implements KaapiAdapted<Refs> {
+> extends OIDCAuthorizationCodeFlow<AuthReqData> implements KaapiOIDCAdapted<Refs> {
     readonly #tokenVerifier: (
         request: KaapiRequest<Refs>,
     ) => Promise<StrategyResult>;
@@ -1439,23 +1409,7 @@ export class KaapiOIDCAuthorizationCodeFlow<
                         options: routesOptions,
                         path: tokenEndpoint,
                         method: 'POST',
-                        handler: async (req, h) => {
-                            const result = await tokenHandler(createWebStandardRequest(req));
-                            if (result.success) {
-                                return result.tokenResponse;
-                            }
-                            const error = result.error;
-                            t.log.error({ error }, 'Error');
-                            if (
-                                error instanceof UnsupportedGrantTypeError ||
-                                error instanceof UnauthorizedClientError
-                            ) {
-                                return h
-                                    .response({ error: error.errorCode, errorDescription: error.message })
-                                    .code(400);
-                            }
-                            return h.response({ error: 'invalid_request' }).code(400);
-                        },
+                        handler: createTokenEndpointHandler(t, tokenHandler),
                     });
 
                     // authorization endpoint

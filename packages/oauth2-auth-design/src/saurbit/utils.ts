@@ -1,10 +1,6 @@
-import type { Request as KaapiRequest, ReqRef, ReqRefDefaults } from '@kaapi/kaapi';
-
-/** Options for {@link createWebStandardRequest}. */
-export interface WebStandardRequestOptions {
-    /** Override the origin used to build the absolute URL. Defaults to the request's own origin. */
-    origin?: string;
-}
+import type { Request as KaapiRequest, KaapiTools, Lifecycle, ReqRef, ReqRefDefaults } from '@kaapi/kaapi';
+import { OAuth2FlowTokenResponse, UnauthorizedClientError, UnsupportedGrantTypeError } from '@saurbit/oauth2';
+import { WebStandardRequestOptions } from './types';
 
 /**
  * Converts a Kaapi (Hapi) {@link KaapiRequest} into a Web Standard {@link Request}.
@@ -70,4 +66,25 @@ export function createWebStandardRequest<Refs extends ReqRef = ReqRefDefaults>(
 
     // Create the native Web Standard Request instance
     return new Request(fullUrl, requestOptions);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function createTokenEndpointHandler(t: KaapiTools, tokenHandler: (request: Request) => Promise<OAuth2FlowTokenResponse>): Lifecycle.Method<any, Lifecycle.ReturnValue<any>> {
+    return async (req, h) => {
+        const result = await tokenHandler(createWebStandardRequest(req));
+        if (result.success) {
+            return result.tokenResponse;
+        }
+        const error = result.error;
+        t.log.error({ error }, 'Error');
+        if (
+            error instanceof UnsupportedGrantTypeError ||
+            error instanceof UnauthorizedClientError
+        ) {
+            return h
+                .response({ error: error.errorCode, errorDescription: error.message })
+                .code(400);
+        }
+        return h.response({ error: 'invalid_request' }).code(400);
+    }
 }

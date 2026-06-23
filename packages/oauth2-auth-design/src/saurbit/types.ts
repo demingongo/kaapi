@@ -107,6 +107,23 @@ export interface KaapiMethods<Refs extends ReqRef = ReqRefDefaults> {
     toAuthDesign(): AuthDesign;
 }
 
+export interface KaapiOIDCMethods<Refs extends ReqRef = ReqRefDefaults> extends KaapiMethods<Refs> {
+    /**
+     * Retrieves the OpenID Connect discovery configuration document.
+     * 
+     * Builds the standard provider metadata fields from the flow's configuration and merges in any static 
+     * overrides set via openIdConfiguration. Relative endpoint URLs are resolved against the request's origin 
+     * (or the discovery URL's origin if no request is provided).
+     * 
+     * @param request - Optional Kaapi request object used to determine the full base URL for relative endpoints.
+     * @param options - Optional WebStandardRequestOptions object used to customize the request.
+     */
+    getDiscoveryConfiguration<R extends ReqRef = ReqRefDefaults>(
+        request?: Request<R>,
+        options?: WebStandardRequestOptions
+    ): Record<string, string | string[] | undefined>;
+}
+
 /**
  * Marker interface implemented by all Kaapi-adapted OAuth2 flow classes.
  *
@@ -124,6 +141,15 @@ export interface KaapiAdapted<Refs extends ReqRef = ReqRefDefaults> {
     kaapi(): KaapiMethods<Refs>;
 }
 
+export interface KaapiOIDCAdapted<Refs extends ReqRef = ReqRefDefaults> extends KaapiAdapted<Refs> {
+    /**
+     * Returns the Kaapi-adapted method surface for this flow.
+     *
+     * The returned object is frozen; use its methods directly inside Kaapi route handlers.
+     */
+    kaapi(): KaapiOIDCMethods<Refs>;
+}
+
 export interface OAuth2AuthDesignOptions {
     /** Returns the OpenAPI/Postman documentation utility for this auth scheme. */
     docs(): BaseAuthUtil;
@@ -133,4 +159,10 @@ export interface OAuth2AuthDesignOptions {
     getStrategyName(): string;
     /** Optional hook to register the token endpoint route on the server. */
     integrateHook?(t: KaapiTools): void | Promise<void>;
+}
+
+/** Options for {@link createWebStandardRequest}. */
+export interface WebStandardRequestOptions {
+    /** Override the origin used to build the absolute URL. Defaults to the request's own origin. */
+    origin?: string;
 }

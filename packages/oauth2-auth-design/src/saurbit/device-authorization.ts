@@ -14,17 +14,18 @@ import {
   StrategyInsufficientScopeError,
   type StrategyResult,
   type StrategyVerifyTokenFunction,
-  UnauthorizedClientError,
-  UnsupportedGrantTypeError,
 } from "@saurbit/oauth2";
 import type {
   AuthSchemeHandler,
   FailedAuthorizationAction,
   KaapiAdapted,
   KaapiMethods,
-  KaapiOAuth2StrategyOptions
+  KaapiOAuth2StrategyOptions,
+  KaapiOIDCAdapted,
+  KaapiOIDCMethods,
+  WebStandardRequestOptions
 } from "./types.ts";
-import { createWebStandardRequest } from './utils.js';
+import { createWebStandardRequest, createTokenEndpointHandler } from './utils.js';
 import {
   type ReqRef,
   type ReqRefDefaults,
@@ -176,6 +177,20 @@ export interface KaapiOIDCDeviceAuthorizationFlowOptions<
 export type KaapiOIDCDeviceAuthorizationFlowBuilderOptions<
   Refs extends ReqRef = ReqRefDefaults,
 > = Partial<KaapiOIDCDeviceAuthorizationFlowOptions<Refs>>;
+
+/**
+ * Kaapi-adapted methods for the Device Authorization flow.
+ *
+ * Extends the base {@link KaapiMethods} with device-specific endpoint helpers that
+ * accept a Kaapi `Context` instead of a raw `Request`.
+ * Obtained via {@link KaapiDeviceAuthorizationFlow.hono}.
+ *
+ * @template Refs - The Kaapi `ReqRef` type for the application.
+ */
+export interface KaapiOIDCDeviceAuthorizationMethods<Refs extends ReqRef = ReqRefDefaults, AuthRefs extends ReqRef = ReqRefDefaults>
+  extends KaapiDeviceAuthorizationMethods<Refs, AuthRefs>, KaapiOIDCMethods<Refs> {
+
+}
 
 //#endregion
 
@@ -337,23 +352,7 @@ export class KaapiDeviceAuthorizationFlow<
             options: routesOptions,
             path: tokenEndpoint,
             method: 'POST',
-            handler: async (req, h) => {
-              const result = await tokenHandler(createWebStandardRequest(req));
-              if (result.success) {
-                return result.tokenResponse;
-              }
-              const error = result.error;
-              t.log.error({ error }, 'Error');
-              if (
-                error instanceof UnsupportedGrantTypeError ||
-                error instanceof UnauthorizedClientError
-              ) {
-                return h
-                  .response({ error: error.errorCode, errorDescription: error.message })
-                  .code(400);
-              }
-              return h.response({ error: 'invalid_request' }).code(400);
-            },
+            handler: createTokenEndpointHandler(t, tokenHandler),
           });
 
           t.route({
@@ -584,7 +583,7 @@ export class KaapiDeviceAuthorizationFlowBuilder<
 export class KaapiOIDCDeviceAuthorizationFlow<
   Refs extends ReqRef = ReqRefDefaults,
   AuthRefs extends ReqRef = ReqRefDefaults
-> extends OIDCDeviceAuthorizationFlow implements KaapiAdapted<Refs> {
+> extends OIDCDeviceAuthorizationFlow implements KaapiOIDCAdapted<Refs> {
   readonly #tokenVerifier: (
     request: KaapiRequest<Refs>,
   ) => Promise<StrategyResult>;
@@ -600,7 +599,7 @@ export class KaapiOIDCDeviceAuthorizationFlow<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   readonly #onJwksRequest?: Lifecycle.Method<any, any> | undefined;
 
-  readonly #kaapi: KaapiDeviceAuthorizationMethods<Refs, AuthRefs> = {
+  readonly #kaapi: KaapiOIDCDeviceAuthorizationMethods<Refs, AuthRefs> = {
     authorizeMiddleware: (scopes?: string[]): AuthSchemeHandler<Refs> => {
       return scopes?.length ? this.#createAuthorizeMiddleware(scopes) : this.#authorizeMiddleware;
     },
@@ -646,6 +645,10 @@ export class KaapiOIDCDeviceAuthorizationFlow<
         type: "error",
         error: new InvalidRequestError("Unsupported HTTP method"),
       };
+    },
+
+    getDiscoveryConfiguration: <R extends ReqRef = ReqRefDefaults>(request?: KaapiRequest<R>, options?: WebStandardRequestOptions): Record<string, string | string[] | undefined> => {
+      return this.getDiscoveryConfiguration(request ? createWebStandardRequest(request, options) : undefined);
     },
 
     toAuthDesign: () => {
@@ -732,23 +735,7 @@ export class KaapiOIDCDeviceAuthorizationFlow<
             options: routesOptions,
             path: tokenEndpoint,
             method: 'POST',
-            handler: async (req, h) => {
-              const result = await tokenHandler(createWebStandardRequest(req));
-              if (result.success) {
-                return result.tokenResponse;
-              }
-              const error = result.error;
-              t.log.error({ error }, 'Error');
-              if (
-                error instanceof UnsupportedGrantTypeError ||
-                error instanceof UnauthorizedClientError
-              ) {
-                return h
-                  .response({ error: error.errorCode, errorDescription: error.message })
-                  .code(400);
-              }
-              return h.response({ error: 'invalid_request' }).code(400);
-            },
+            handler: createTokenEndpointHandler(t, tokenHandler),
           });
 
           t.route({
@@ -870,9 +857,9 @@ export class KaapiOIDCDeviceAuthorizationFlow<
   /**
    * Returns a frozen object of Kaapi-adapted methods for use inside Kaapi route handlers.
    *
-   * @returns A readonly {@link KaapiAuthorizationCodeMethods} instance.
+   * @returns A readonly {@link KaapiOIDCDeviceAuthorizationMethods} instance.
    */
-  kaapi(): Readonly<KaapiDeviceAuthorizationMethods<Refs, AuthRefs>> {
+  kaapi(): Readonly<KaapiOIDCDeviceAuthorizationMethods<Refs, AuthRefs>> {
     return Object.freeze(this.#kaapi);
   }
 }

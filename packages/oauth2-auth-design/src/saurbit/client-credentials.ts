@@ -4,8 +4,11 @@ import type {
     KaapiAdapted,
     KaapiMethods,
     KaapiOAuth2StrategyOptions,
+    KaapiOIDCAdapted,
+    KaapiOIDCMethods,
+    WebStandardRequestOptions
 } from './types.ts';
-import { createWebStandardRequest } from './utils.js';
+import { createWebStandardRequest, createTokenEndpointHandler } from './utils.js';
 import {
     type ReqRef,
     type ReqRefDefaults,
@@ -27,8 +30,6 @@ import {
     StrategyInsufficientScopeError,
     type StrategyResult,
     type StrategyVerifyTokenFunction,
-    UnauthorizedClientError,
-    UnsupportedGrantTypeError,
 } from '@saurbit/oauth2';
 import { OAuth2AuthDesign } from './common.js';
 
@@ -180,23 +181,7 @@ export class KaapiClientCredentialsFlow<Refs extends ReqRef = ReqRefDefaults>
                         options: routesOptions,
                         path: tokenEndpoint,
                         method: 'POST',
-                        handler: async (req, h) => {
-                            const result = await tokenHandler(createWebStandardRequest(req));
-                            if (result.success) {
-                                return result.tokenResponse;
-                            }
-                            const error = result.error;
-                            t.log.error({ error }, 'Error');
-                            if (
-                                error instanceof UnsupportedGrantTypeError ||
-                                error instanceof UnauthorizedClientError
-                            ) {
-                                return h
-                                    .response({ error: error.errorCode, errorDescription: error.message })
-                                    .code(400);
-                            }
-                            return h.response({ error: 'invalid_request' }).code(400);
-                        },
+                        handler: createTokenEndpointHandler(t, tokenHandler),
                     });
                 },
 
@@ -403,7 +388,7 @@ export class KaapiClientCredentialsFlowBuilder<
  */
 export class KaapiOIDCClientCredentialsFlow<Refs extends ReqRef = ReqRefDefaults>
     extends OIDCClientCredentialsFlow
-    implements KaapiAdapted<Refs> {
+    implements KaapiOIDCAdapted<Refs> {
     readonly #tokenVerifier: (request: KaapiRequest<Refs>) => Promise<StrategyResult>;
     readonly #authorizeMiddleware: AuthSchemeHandler<Refs>;
 
@@ -414,7 +399,7 @@ export class KaapiOIDCClientCredentialsFlow<Refs extends ReqRef = ReqRefDefaults
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     readonly #onJwksRequest?: Lifecycle.Method<any, any> | undefined;
 
-    readonly #kaapi: KaapiMethods<Refs> = {
+    readonly #kaapi: KaapiOIDCMethods<Refs> = {
         authorizeMiddleware: (scopes?: string[]): AuthSchemeHandler<Refs> => {
             return scopes?.length ? this.#createAuthorizeMiddleware(scopes) : this.#authorizeMiddleware;
         },
@@ -424,6 +409,10 @@ export class KaapiOIDCClientCredentialsFlow<Refs extends ReqRef = ReqRefDefaults
 
         verifyToken: async (request: KaapiRequest<Refs>): Promise<StrategyResult> => {
             return await this.#tokenVerifier(request);
+        },
+
+        getDiscoveryConfiguration: <R extends ReqRef = ReqRefDefaults>(request?: KaapiRequest<R>, options?: WebStandardRequestOptions): Record<string, string | string[] | undefined> => {
+            return this.getDiscoveryConfiguration(request ? createWebStandardRequest(request, options) : undefined);
         },
 
         toAuthDesign: (): OAuth2AuthDesign => {
@@ -490,23 +479,7 @@ export class KaapiOIDCClientCredentialsFlow<Refs extends ReqRef = ReqRefDefaults
                         options: routesOptions,
                         path: tokenEndpoint,
                         method: 'POST',
-                        handler: async (req, h) => {
-                            const result = await tokenHandler(createWebStandardRequest(req));
-                            if (result.success) {
-                                return result.tokenResponse;
-                            }
-                            const error = result.error;
-                            t.log.error({ error }, 'Error');
-                            if (
-                                error instanceof UnsupportedGrantTypeError ||
-                                error instanceof UnauthorizedClientError
-                            ) {
-                                return h
-                                    .response({ error: error.errorCode, errorDescription: error.message })
-                                    .code(400);
-                            }
-                            return h.response({ error: 'invalid_request' }).code(400);
-                        },
+                        handler: createTokenEndpointHandler(t, tokenHandler),
                     });
 
                     // discovery endpoint
@@ -604,9 +577,9 @@ export class KaapiOIDCClientCredentialsFlow<Refs extends ReqRef = ReqRefDefaults
     /**
      * Returns a frozen object of Kaapi-adapted methods for use inside Kaapi route handlers.
      *
-     * @returns A readonly {@link KaapiMethods} instance.
+     * @returns A readonly {@link KaapiOIDCMethods} instance.
      */
-    kaapi(): Readonly<KaapiMethods<Refs>> {
+    kaapi(): Readonly<KaapiOIDCMethods<Refs>> {
         return Object.freeze(this.#kaapi);
     }
 }
