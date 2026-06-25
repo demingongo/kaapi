@@ -434,7 +434,7 @@ export class KaapiOIDCClientCredentialsFlow<Refs extends ReqRef = ReqRefDefaults
                     );
                 },
 
-                integrateHook(t: KaapiTools): void {
+                integrateHook(t: KaapiTools, skipCommonRoutes: boolean = false): void {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     const routesOptions: RouteOptions<any> = {
                         plugins: {
@@ -444,32 +444,34 @@ export class KaapiOIDCClientCredentialsFlow<Refs extends ReqRef = ReqRefDefaults
                         },
                     };
 
-                    // token
-                    t.route({
-                        options: routesOptions,
-                        path: tokenEndpoint,
-                        method: 'POST',
-                        handler: createTokenEndpointHandler(t, tokenHandler),
-                    });
-
-                    // discovery endpoint
-                    if (onDiscoveryRequest) {
+                    if (!skipCommonRoutes) {
+                        // token
                         t.route({
                             options: routesOptions,
-                            path: discoveryUrl,
-                            method: 'GET',
-                            handler: async (req, h) => await onDiscoveryRequest(req, h),
+                            path: tokenEndpoint,
+                            method: 'POST',
+                            handler: createTokenEndpointHandler(t, tokenHandler),
                         });
-                    }
 
-                    // jwks endpoint
-                    if (onJwksRequest) {
-                        t.route({
-                            options: routesOptions,
-                            path: jwksEndpoint,
-                            method: 'GET',
-                            handler: async (req, h) => await onJwksRequest(req, h),
-                        });
+                        // discovery endpoint
+                        if (onDiscoveryRequest) {
+                            t.route({
+                                options: routesOptions,
+                                path: discoveryUrl,
+                                method: 'GET',
+                                handler: async (req, h) => await onDiscoveryRequest(req, h),
+                            });
+                        }
+
+                        // jwks endpoint
+                        if (onJwksRequest) {
+                            t.route({
+                                options: routesOptions,
+                                path: jwksEndpoint,
+                                method: 'GET',
+                                handler: async (req, h) => await onJwksRequest(req, h),
+                            });
+                        }
                     }
                 },
 

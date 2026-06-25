@@ -662,7 +662,7 @@ export class KaapiAuthorizationCodeFlow<
             };
         },
 
-        toAuthDesign: () => {
+        toAuthDesign: (): OAuth2AuthDesign => {
             const schemeName = this.getSecuritySchemeName();
             const scopes = this.getScopes();
             const description = this.getDescription();
@@ -1319,7 +1319,7 @@ export class KaapiOIDCAuthorizationCodeFlow<
             return this.getDiscoveryConfiguration(request ? createWebStandardRequest(request, options) : undefined);
         },
 
-        toAuthDesign: () => {
+        toAuthDesign: (): OAuth2AuthDesign => {
             const schemeName = this.getSecuritySchemeName();
             const description = this.getDescription();
             const tokenEndpoint = this.getTokenEndpoint();
@@ -1364,7 +1364,7 @@ export class KaapiOIDCAuthorizationCodeFlow<
                     );
                 },
 
-                integrateHook(t: KaapiTools): void {
+                integrateHook(t: KaapiTools, skipCommonRoutes: boolean = false): void {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     const routesOptions: RouteOptions<any> = {
                         plugins: {
@@ -1374,13 +1374,35 @@ export class KaapiOIDCAuthorizationCodeFlow<
                         },
                     };
 
-                    // token
-                    t.route({
-                        options: routesOptions,
-                        path: tokenEndpoint,
-                        method: 'POST',
-                        handler: createTokenEndpointHandler(t, tokenHandler),
-                    });
+                    if (!skipCommonRoutes) {
+                        // token
+                        t.route({
+                            options: routesOptions,
+                            path: tokenEndpoint,
+                            method: 'POST',
+                            handler: createTokenEndpointHandler(t, tokenHandler),
+                        });
+
+                        // discovery endpoint
+                        if (onDiscoveryRequest) {
+                            t.route({
+                                options: routesOptions,
+                                path: discoveryUrl,
+                                method: 'GET',
+                                handler: async (req, h) => await onDiscoveryRequest(req, h),
+                            });
+                        }
+
+                        // jwks endpoint
+                        if (onJwksRequest) {
+                            t.route({
+                                options: routesOptions,
+                                path: jwksEndpoint,
+                                method: 'GET',
+                                handler: async (req, h) => await onJwksRequest(req, h),
+                            });
+                        }
+                    }
 
                     // authorization endpoint
                     t.route({
@@ -1524,26 +1546,6 @@ export class KaapiOIDCAuthorizationCodeFlow<
                             );
                         },
                     });
-
-                    // discovery endpoint
-                    if (onDiscoveryRequest) {
-                        t.route({
-                            options: routesOptions,
-                            path: discoveryUrl,
-                            method: 'GET',
-                            handler: async (req, h) => await onDiscoveryRequest(req, h),
-                        });
-                    }
-
-                    // jwks endpoint
-                    if (onJwksRequest) {
-                        t.route({
-                            options: routesOptions,
-                            path: jwksEndpoint,
-                            method: 'GET',
-                            handler: async (req, h) => await onJwksRequest(req, h),
-                        });
-                    }
                 },
 
                 getStrategyName(): string {

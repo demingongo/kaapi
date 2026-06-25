@@ -8,6 +8,34 @@ import type {
     StrategyVerifyTokenFunction,
 } from '@saurbit/oauth2';
 
+export interface OAuth2AuthDesignOptions {
+    /** Returns the OpenAPI/Postman documentation utility for this auth scheme. */
+    docs(): BaseAuthUtil;
+    /** Registers the Hapi auth scheme and strategy on the server. */
+    integrateStrategy(t: KaapiTools): void;
+    /** Returns the name of the registered Hapi auth strategy. */
+    getStrategyName(): string;
+    /** Optional hook to register the token endpoint route on the server. */
+    integrateHook?(t: KaapiTools, skipCommonRoutes?: boolean): void | Promise<void>;
+}
+
+export interface IOAuth2AuthDesign extends AuthDesign {
+    /** Returns the name of the registered Hapi auth strategy. */
+    getStrategyName(): string;
+    /** Optional hook to register the token endpoint route on the server. */
+    integrateHook(t: KaapiTools, skipCommonRoutes?: boolean): void | Promise<void>;
+}
+
+export interface MultipleOAuth2AuthDesignOptions extends Omit<OAuth2AuthDesignOptions, 'getStrategyName'> {
+    /** Returns the name of the registered Hapi auth strategies. */
+    getStrategyName(): string[];
+}
+
+export interface IMultipleOAuth2AuthDesign extends Omit<IOAuth2AuthDesign, 'getStrategyName'> {
+    /** Returns the name of the registered Hapi auth strategies. */
+    getStrategyName(): string[];
+}
+
 /**
  * Hapi lifecycle handler used as an OAuth2 auth scheme entry point.
  *
@@ -104,7 +132,7 @@ export interface KaapiMethods<Refs extends ReqRef = ReqRefDefaults> {
      */
     verifyToken(request: Request<Refs>): Promise<StrategyResult>;
 
-    toAuthDesign(): AuthDesign;
+    toAuthDesign(): IOAuth2AuthDesign;
 }
 
 export interface KaapiOIDCMethods<Refs extends ReqRef = ReqRefDefaults> extends KaapiMethods<Refs> {
@@ -122,6 +150,10 @@ export interface KaapiOIDCMethods<Refs extends ReqRef = ReqRefDefaults> extends 
         request?: Request<R>,
         options?: WebStandardRequestOptions
     ): Record<string, string | string[] | undefined>;
+}
+
+export interface MultipleKaapiOIDCMethods<Refs extends ReqRef = ReqRefDefaults> extends Omit<KaapiOIDCMethods<Refs>, 'toAuthDesign'> {
+    toAuthDesign(): IMultipleOAuth2AuthDesign;
 }
 
 /**
@@ -148,17 +180,6 @@ export interface KaapiOIDCAdapted<Refs extends ReqRef = ReqRefDefaults> extends 
      * The returned object is frozen; use its methods directly inside Kaapi route handlers.
      */
     kaapi(): KaapiOIDCMethods<Refs>;
-}
-
-export interface OAuth2AuthDesignOptions {
-    /** Returns the OpenAPI/Postman documentation utility for this auth scheme. */
-    docs(): BaseAuthUtil;
-    /** Registers the Hapi auth scheme and strategy on the server. */
-    integrateStrategy(t: KaapiTools): void;
-    /** Returns the name of the registered Hapi auth strategy. */
-    getStrategyName(): string;
-    /** Optional hook to register the token endpoint route on the server. */
-    integrateHook?(t: KaapiTools): void | Promise<void>;
 }
 
 /** Options for {@link createWebStandardRequest}. */

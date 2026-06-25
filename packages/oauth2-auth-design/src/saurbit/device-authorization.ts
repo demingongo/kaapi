@@ -272,7 +272,7 @@ export class KaapiDeviceAuthorizationFlow<
       };
     },
 
-    toAuthDesign: () => {
+    toAuthDesign: (): OAuth2AuthDesign => {
       const schemeName = this.getSecuritySchemeName();
       const scopes = this.getScopes();
       const description = this.getDescription();
@@ -354,7 +354,7 @@ export class KaapiDeviceAuthorizationFlow<
 
               // handle post initiation logic (e.g. returning device code, handling errors, etc.) in the onProcessAuthorization lifecycle method
               if (onProcessAuthorization) {
-                return await onProcessAuthorization.call(h, req, h, result);
+                return await onProcessAuthorization(req, h, result);
               }
 
               // default handling if not handled in post handling
@@ -636,7 +636,7 @@ export class KaapiOIDCDeviceAuthorizationFlow<
       return this.getDiscoveryConfiguration(request ? createWebStandardRequest(request, options) : undefined);
     },
 
-    toAuthDesign: () => {
+    toAuthDesign: (): OAuth2AuthDesign => {
       const schemeName = this.getSecuritySchemeName();
       const scopes = this.getScopes();
       const description = this.getDescription();
@@ -690,7 +690,7 @@ export class KaapiOIDCDeviceAuthorizationFlow<
           );
         },
 
-        integrateHook(t: KaapiTools): void {
+        integrateHook(t: KaapiTools, skipCommonRoutes: boolean = false): void {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const routesOptions: RouteOptions<any> = {
             plugins: {
@@ -700,14 +700,37 @@ export class KaapiOIDCDeviceAuthorizationFlow<
             },
           };
 
-          // token
-          t.route({
-            options: routesOptions,
-            path: tokenEndpoint,
-            method: 'POST',
-            handler: createTokenEndpointHandler(t, tokenHandler),
-          });
+          if (!skipCommonRoutes) {
+            // token
+            t.route({
+              options: routesOptions,
+              path: tokenEndpoint,
+              method: 'POST',
+              handler: createTokenEndpointHandler(t, tokenHandler),
+            });
 
+            // discovery endpoint
+            if (onDiscoveryRequest) {
+              t.route({
+                options: routesOptions,
+                path: discoveryUrl,
+                method: 'GET',
+                handler: async (req, h) => await onDiscoveryRequest(req, h),
+              });
+            }
+
+            // jwks endpoint
+            if (onJwksRequest) {
+              t.route({
+                options: routesOptions,
+                path: jwksEndpoint,
+                method: 'GET',
+                handler: async (req, h) => await onJwksRequest(req, h),
+              });
+            }
+          }
+
+          // authorization endpoint POST handler
           t.route({
             options: {
               ...routesOptions,
@@ -722,7 +745,7 @@ export class KaapiOIDCDeviceAuthorizationFlow<
 
               // handle post initiation logic (e.g. returning device code, handling errors, etc.) in the onProcessAuthorization lifecycle method
               if (onProcessAuthorization) {
-                return await onProcessAuthorization.call(h, req, h, result);
+                return await onProcessAuthorization(req, h, result);
               }
 
               // default handling if not handled in post handling
@@ -738,26 +761,6 @@ export class KaapiOIDCDeviceAuthorizationFlow<
               return h.response(result.deviceCodeResponse).code(200);
             },
           });
-
-          // discovery endpoint
-          if (onDiscoveryRequest) {
-            t.route({
-              options: routesOptions,
-              path: discoveryUrl,
-              method: 'GET',
-              handler: async (req, h) => await onDiscoveryRequest(req, h),
-            });
-          }
-
-          // jwks endpoint
-          if (onJwksRequest) {
-            t.route({
-              options: routesOptions,
-              path: jwksEndpoint,
-              method: 'GET',
-              handler: async (req, h) => await onJwksRequest.call(h, req, h),
-            });
-          }
         },
 
         getStrategyName(): string {
