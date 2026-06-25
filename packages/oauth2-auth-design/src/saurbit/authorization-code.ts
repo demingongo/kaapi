@@ -33,7 +33,7 @@ import type {
     KaapiOIDCMethods,
     WebStandardRequestOptions
 } from "./types.ts";
-import { createWebStandardRequest, createTokenEndpointHandler } from './utils.js';
+import { createWebStandardRequest, createTokenEndpointHandler, createSchemeAndStrategy } from './utils.js';
 import {
     type ReqRef,
     type ReqRefDefaults,
@@ -710,27 +710,12 @@ export class KaapiAuthorizationCodeFlow<
                 },
 
                 integrateStrategy(t: KaapiTools): void {
-                    // Register the auth scheme for the multiple flows
-                    t.scheme(schemeName, (_server) => {
-                        return {
-                            async authenticate(request, h) {
-                                try {
-                                    const result = await tokenVerifierHandler(request as unknown as KaapiRequest<Refs>);
-                                    if (result.success) {
-                                        return h.authenticated({ credentials: result.credentials });
-                                    }
-                                    const Boom = await import('@hapi/boom');
-                                    return h.unauthenticated(Boom.unauthorized(result.error.message, tokenType), {
-                                        credentials: {},
-                                    });
-                                } catch (err) {
-                                    const Boom = await import('@hapi/boom');
-                                    return Boom.internal(err instanceof Error ? err : `${err}`);
-                                }
-                            },
-                        };
-                    });
-                    t.strategy(schemeName, schemeName);
+                    createSchemeAndStrategy(
+                        t,
+                        schemeName,
+                        tokenType,
+                        tokenVerifierHandler,
+                    );
                 },
 
                 integrateHook(t: KaapiTools): void {
@@ -766,7 +751,7 @@ export class KaapiAuthorizationCodeFlow<
 
                             // handle post initiation logic (e.g. rendering login page, handling errors, etc.) in the onInitiateAuthorization lifecycle method
                             if (onInitiateAuthorization) {
-                                return await onInitiateAuthorization.call(h, req, h, result);
+                                return await onInitiateAuthorization(req, h, result);
                             }
 
                             // default handling if not handled in post handling
@@ -802,7 +787,7 @@ export class KaapiAuthorizationCodeFlow<
 
                             // handle post initiation logic (e.g. rendering login page, handling errors, etc.) in the onProcessAuthorization lifecycle method
                             if (onProcessAuthorization) {
-                                return await onProcessAuthorization.call(h, req, h, result);
+                                return await onProcessAuthorization(req, h, result);
                             }
 
                             // default handling if not handled in post handling
@@ -1371,27 +1356,12 @@ export class KaapiOIDCAuthorizationCodeFlow<
                 },
 
                 integrateStrategy(t: KaapiTools): void {
-                    // Register the auth scheme for the multiple flows
-                    t.scheme(schemeName, (_server) => {
-                        return {
-                            async authenticate(request, h) {
-                                try {
-                                    const result = await tokenVerifierHandler(request as unknown as KaapiRequest<Refs>);
-                                    if (result.success) {
-                                        return h.authenticated({ credentials: result.credentials });
-                                    }
-                                    const Boom = await import('@hapi/boom');
-                                    return h.unauthenticated(Boom.unauthorized(result.error.message, tokenType), {
-                                        credentials: {},
-                                    });
-                                } catch (err) {
-                                    const Boom = await import('@hapi/boom');
-                                    return Boom.internal(err instanceof Error ? err : `${err}`);
-                                }
-                            },
-                        };
-                    });
-                    t.strategy(schemeName, schemeName);
+                    createSchemeAndStrategy(
+                        t,
+                        schemeName,
+                        tokenType,
+                        tokenVerifierHandler,
+                    );
                 },
 
                 integrateHook(t: KaapiTools): void {
@@ -1427,7 +1397,7 @@ export class KaapiOIDCAuthorizationCodeFlow<
 
                             // handle post initiation logic (e.g. rendering login page, handling errors, etc.) in the onInitiateAuthorization lifecycle method
                             if (onInitiateAuthorization) {
-                                return await onInitiateAuthorization.call(h, req, h, result);
+                                return await onInitiateAuthorization(req, h, result);
                             }
 
                             // default handling if not handled in post handling
@@ -1464,7 +1434,7 @@ export class KaapiOIDCAuthorizationCodeFlow<
 
                             // handle post initiation logic (e.g. rendering login page, handling errors, etc.) in the onProcessAuthorization lifecycle method
                             if (onProcessAuthorization) {
-                                return await onProcessAuthorization.call(h, req, h, result);
+                                return await onProcessAuthorization(req, h, result);
                             }
 
                             // default handling if not handled in post handling
@@ -1561,7 +1531,7 @@ export class KaapiOIDCAuthorizationCodeFlow<
                             options: routesOptions,
                             path: discoveryUrl,
                             method: 'GET',
-                            handler: async (req, h) => await onDiscoveryRequest.call(h, req, h),
+                            handler: async (req, h) => await onDiscoveryRequest(req, h),
                         });
                     }
 
@@ -1571,7 +1541,7 @@ export class KaapiOIDCAuthorizationCodeFlow<
                             options: routesOptions,
                             path: jwksEndpoint,
                             method: 'GET',
-                            handler: async (req, h) => await onJwksRequest.call(h, req, h),
+                            handler: async (req, h) => await onJwksRequest(req, h),
                         });
                     }
                 },

@@ -25,7 +25,7 @@ import type {
   KaapiOIDCMethods,
   WebStandardRequestOptions
 } from "./types.ts";
-import { createWebStandardRequest, createTokenEndpointHandler } from './utils.js';
+import { createWebStandardRequest, createTokenEndpointHandler, createSchemeAndStrategy } from './utils.js';
 import {
   type ReqRef,
   type ReqRefDefaults,
@@ -314,27 +314,12 @@ export class KaapiDeviceAuthorizationFlow<
         },
 
         integrateStrategy(t: KaapiTools): void {
-          // Register the auth scheme for the multiple flows
-          t.scheme(schemeName, (_server) => {
-            return {
-              async authenticate(request, h) {
-                try {
-                  const result = await tokenVerifierHandler(request as unknown as KaapiRequest<Refs>);
-                  if (result.success) {
-                    return h.authenticated({ credentials: result.credentials });
-                  }
-                  const Boom = await import('@hapi/boom');
-                  return h.unauthenticated(Boom.unauthorized(result.error.message, tokenType), {
-                    credentials: {},
-                  });
-                } catch (err) {
-                  const Boom = await import('@hapi/boom');
-                  return Boom.internal(err instanceof Error ? err : `${err}`);
-                }
-              },
-            };
-          });
-          t.strategy(schemeName, schemeName);
+          createSchemeAndStrategy(
+            t,
+            schemeName,
+            tokenType,
+            tokenVerifierHandler,
+          );
         },
 
         integrateHook(t: KaapiTools): void {
@@ -697,27 +682,12 @@ export class KaapiOIDCDeviceAuthorizationFlow<
         },
 
         integrateStrategy(t: KaapiTools): void {
-          // Register the auth scheme for the multiple flows
-          t.scheme(schemeName, (_server) => {
-            return {
-              async authenticate(request, h) {
-                try {
-                  const result = await tokenVerifierHandler(request as unknown as KaapiRequest<Refs>);
-                  if (result.success) {
-                    return h.authenticated({ credentials: result.credentials });
-                  }
-                  const Boom = await import('@hapi/boom');
-                  return h.unauthenticated(Boom.unauthorized(result.error.message, tokenType), {
-                    credentials: {},
-                  });
-                } catch (err) {
-                  const Boom = await import('@hapi/boom');
-                  return Boom.internal(err instanceof Error ? err : `${err}`);
-                }
-              },
-            };
-          });
-          t.strategy(schemeName, schemeName);
+          createSchemeAndStrategy(
+            t,
+            schemeName,
+            tokenType,
+            tokenVerifierHandler,
+          );
         },
 
         integrateHook(t: KaapiTools): void {
@@ -775,7 +745,7 @@ export class KaapiOIDCDeviceAuthorizationFlow<
               options: routesOptions,
               path: discoveryUrl,
               method: 'GET',
-              handler: async (req, h) => await onDiscoveryRequest.call(h, req, h),
+              handler: async (req, h) => await onDiscoveryRequest(req, h),
             });
           }
 
