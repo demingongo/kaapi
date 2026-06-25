@@ -1,5 +1,5 @@
 import { AuthDesign, KaapiTools } from "@kaapi/kaapi";
-import type { IMultipleOAuth2AuthDesign, IOAuth2AuthDesign, MultipleOAuth2AuthDesignOptions, OAuth2AuthDesignOptions } from "./types";
+import type { IOAuth2MultipleFlowsAuthDesign, IOAuth2AuthDesign, OAuth2MultipleFlowsAuthDesignOptions, OAuth2AuthDesignOptions } from "./types";
 import type { BaseAuthUtil } from "@novice1/api-doc-generator/lib/utils/auth/baseAuthUtils";
 import { OAuth2Util, SecuritySchemeObject } from "@novice1/api-doc-generator";
 
@@ -36,11 +36,11 @@ export class OAuth2AuthDesign extends AuthDesign implements IOAuth2AuthDesign {
     }
 }
 
-export class MultipleOAuth2AuthDesign extends AuthDesign implements IMultipleOAuth2AuthDesign {
-    #options: MultipleOAuth2AuthDesignOptions;
+export class OAuth2MultipleFlowsAuthDesign extends AuthDesign implements IOAuth2MultipleFlowsAuthDesign {
+    #options: OAuth2MultipleFlowsAuthDesignOptions;
 
     /** @param options - Delegate implementation for each `AuthDesign` method. */
-    constructor(options: MultipleOAuth2AuthDesignOptions) {
+    constructor(options: OAuth2MultipleFlowsAuthDesignOptions) {
         super();
         this.#options = options;
     }

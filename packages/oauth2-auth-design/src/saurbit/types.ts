@@ -26,12 +26,12 @@ export interface IOAuth2AuthDesign extends AuthDesign {
     integrateHook(t: KaapiTools, skipCommonRoutes?: boolean): void | Promise<void>;
 }
 
-export interface MultipleOAuth2AuthDesignOptions extends Omit<OAuth2AuthDesignOptions, 'getStrategyName'> {
+export interface OAuth2MultipleFlowsAuthDesignOptions extends Omit<OAuth2AuthDesignOptions, 'getStrategyName'> {
     /** Returns the name of the registered Hapi auth strategies. */
     getStrategyName(): string[];
 }
 
-export interface IMultipleOAuth2AuthDesign extends Omit<IOAuth2AuthDesign, 'getStrategyName'> {
+export interface IOAuth2MultipleFlowsAuthDesign extends Omit<IOAuth2AuthDesign, 'getStrategyName'> {
     /** Returns the name of the registered Hapi auth strategies. */
     getStrategyName(): string[];
 }
@@ -152,8 +152,8 @@ export interface KaapiOIDCMethods<Refs extends ReqRef = ReqRefDefaults> extends 
     ): Record<string, string | string[] | undefined>;
 }
 
-export interface MultipleKaapiOIDCMethods<Refs extends ReqRef = ReqRefDefaults> extends Omit<KaapiOIDCMethods<Refs>, 'toAuthDesign'> {
-    toAuthDesign(): IMultipleOAuth2AuthDesign;
+export interface KaapiOIDCMultipleFlowsMethods<Refs extends ReqRef = ReqRefDefaults> extends Omit<KaapiOIDCMethods<Refs>, 'toAuthDesign'> {
+    toAuthDesign(): IOAuth2MultipleFlowsAuthDesign;
 }
 
 /**

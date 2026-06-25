@@ -7,13 +7,10 @@ import {
   PORT,
   SERVER_BIND_ADDRESS,
 } from "./config";
-import { clientCredentialsFlow } from "./security/oauth2/client-credentials";
-import { authorizationCodeFlow } from "./security/oauth2/authorization-code";
-import { authorizationCodeWithConsentFlow } from "./security/oauth2/authorization-code-with-consent";
 import Boom from "@hapi/boom";
 import { Kaapi } from "@kaapi/kaapi";
 import hapiScalar from "hapi-scalar";
-import { oidcAuthorizationCodeFlow } from "./security/oidc/authorization-code-with-consent";
+import { multipleFlows } from "./security/oidc/multiple-flows";
 
 //#region Create and configure Kaapi app
 
@@ -110,11 +107,8 @@ if (isLocalBind) {
 //#region Extend server with plugins
 
 await app.extend([
-  // to use the Client Credentials security scheme
-  clientCredentialsFlow.kaapi().toAuthDesign(),
-  authorizationCodeFlow.kaapi().toAuthDesign(),
-  authorizationCodeWithConsentFlow.kaapi().toAuthDesign(),
-  oidcAuthorizationCodeFlow.kaapi().toAuthDesign(),
+  // to use the OAuth2 security scheme
+  multipleFlows.kaapi().toAuthDesign(),
   // to use cookie-based sessions (for the Authorization Code flows in this example)
   {
     async integrate(t) {
@@ -151,10 +145,7 @@ await app.extend([
 
 app.base().auth.default({
   strategies: [
-    clientCredentialsFlow.getSecuritySchemeName(),
-    authorizationCodeFlow.getSecuritySchemeName(),
-    authorizationCodeWithConsentFlow.getSecuritySchemeName(),
-    oidcAuthorizationCodeFlow.getSecuritySchemeName(),
+    ...multipleFlows.getSecuritySchemeNames()
   ],
   mode: "try"
 });

@@ -1,8 +1,8 @@
+import { KaapiOIDCClientCredentialsFlowBuilder } from "@kaapi/oauth2-auth-design";
 import { VALID_CLIENTS } from "../../data/users";
 import { jwksAuthority } from "../jwks";
-import { OIDCClientCredentialsFlowBuilder } from "@saurbit/oauth2";
 
-export const flow = new OIDCClientCredentialsFlowBuilder({
+export const flow = new KaapiOIDCClientCredentialsFlowBuilder({
   securitySchemeName: "clientCredentials",
 })
   .setScopes({

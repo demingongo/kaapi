@@ -8,10 +8,10 @@ import {
   StrategyInternalError,
   StrategyResult,
 } from "@saurbit/oauth2";
-import { AuthSchemeHandler, KaapiOIDCAdapted, MultipleKaapiOIDCMethods, WebStandardRequestOptions } from "./types";
+import { AuthSchemeHandler, KaapiOIDCAdapted, KaapiOIDCMultipleFlowsMethods, WebStandardRequestOptions } from "./types";
 import { KaapiTools, Lifecycle, ReqRef, ReqRefDefaults, Request, RouteOptions } from "@kaapi/kaapi";
 import { createTokenEndpointHandler, createWebStandardRequest } from "./utils";
-import { MultipleOAuth2AuthDesign, OIDCAuthUtil } from "./common";
+import { OAuth2MultipleFlowsAuthDesign, OIDCAuthUtil } from "./common";
 
 /**
  * A Kaapi-adapted OIDC flow.
@@ -51,7 +51,7 @@ export class KaapiOIDCMultipleFlows<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   readonly #onJwksRequest?: Lifecycle.Method<any, any> | undefined;
 
-  readonly #kaapi: MultipleKaapiOIDCMethods<Refs> = {
+  readonly #kaapi: KaapiOIDCMultipleFlowsMethods<Refs> = {
     authorizeMiddleware: (scopes?: string[]): AuthSchemeHandler<Refs> => {
       const middlewares = this.flows.map((flow) => flow.kaapi().authorizeMiddleware(scopes));
       return async (request, h) => {
@@ -109,7 +109,7 @@ export class KaapiOIDCMultipleFlows<
       return this.getDiscoveryConfiguration(request ? createWebStandardRequest(request, options) : undefined);
     },
 
-    toAuthDesign: (): MultipleOAuth2AuthDesign => {
+    toAuthDesign: (): OAuth2MultipleFlowsAuthDesign => {
       const schemeName = this.getSecuritySchemeName();
       const description = this.getDescription();
       const tokenEndpoint = this.getTokenEndpoint();
@@ -122,7 +122,7 @@ export class KaapiOIDCMultipleFlows<
 
       const authDesigns = this.flows.map((flow) => flow.kaapi().toAuthDesign());
 
-      return new MultipleOAuth2AuthDesign({
+      return new OAuth2MultipleFlowsAuthDesign({
         docs(): OIDCAuthUtil {
           const docs = new OIDCAuthUtil(schemeName)
             .setDiscoveryUrl(discoveryUrl);
@@ -209,9 +209,13 @@ export class KaapiOIDCMultipleFlows<
   /**
    * Returns a frozen object of Kaapi-adapted methods that fan out across all registered flows.
    *
-   * @returns A readonly {@link MultipleKaapiOIDCMethods} instance.
+   * @returns A readonly {@link KaapiOIDCMultipleFlowsMethods} instance.
    */
-  kaapi(): Readonly<MultipleKaapiOIDCMethods<Refs>> {
+  kaapi(): Readonly<KaapiOIDCMultipleFlowsMethods<Refs>> {
     return Object.freeze(this.#kaapi);
+  }
+
+  getSecuritySchemeNames(): string[] {
+    return this.flows.map((flow) => flow.getSecuritySchemeName());
   }
 }
