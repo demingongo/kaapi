@@ -27,6 +27,11 @@ export interface KaapiOIDCFlow<
 > extends OIDCFlow, KaapiOIDCAdapted<Refs> {
 }
 
+/**
+ * Constructor arguments for {@link KaapiOIDCMultipleFlows}.
+ *
+ * @template Refs - The Kaapi `ReqRef` type for the application.
+ */
 export interface KaapiOIDCMultipleFlowsArgs<Refs extends ReqRef = ReqRefDefaults> {
   flows: KaapiOIDCFlow<Refs>[];
   discoveryUrl: string;
@@ -222,6 +227,14 @@ export class KaapiOIDCMultipleFlows<
   }
 }
 
+/**
+ * Builder arguments for {@link KaapiOIDCMultipleFlowsBuilder}.
+ *
+ * All fields from {@link KaapiOIDCMultipleFlowsArgs} are optional; the `flows` array
+ * is omitted because flows are added via {@link KaapiOIDCMultipleFlowsBuilder.addFlow}.
+ *
+ * @template Refs - The Kaapi `ReqRef` type for the application.
+ */
 export type KaapiOIDCMultipleFlowsBuilderArgs<Refs extends ReqRef = ReqRefDefaults> = Omit<Partial<KaapiOIDCMultipleFlowsArgs<Refs>>, 'flows'>;
 
 export class KaapiOIDCMultipleFlowsBuilder<Refs extends ReqRef = ReqRefDefaults> {
@@ -241,6 +254,9 @@ export class KaapiOIDCMultipleFlowsBuilder<Refs extends ReqRef = ReqRefDefaults>
     return new KaapiOIDCMultipleFlowsBuilder<Refs>(args);
   }
 
+  /**
+   * @param args - Optional initial builder arguments.
+   */
   constructor(args?: KaapiOIDCMultipleFlowsBuilderArgs<Refs>) {
     if (args) {
       if (args.discoveryUrl) {

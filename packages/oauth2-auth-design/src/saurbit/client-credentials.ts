@@ -360,10 +360,11 @@ export class KaapiClientCredentialsFlowBuilder<
 //#region OIDC Classes
 
 /**
- * Kaapi adapter for the OAuth 2.0 Client Credentials flow.
+ * Kaapi adapter for the OAuth 2.0 OIDC Client Credentials flow.
  *
  * Wraps {@link OIDCClientCredentialsFlow} to integrate natively with Kaapi's {@link KaapiRequest},
- * providing a token endpoint handler and an auth scheme handler for protecting routes.
+ * providing a token endpoint handler, an auth scheme handler for protecting routes, and
+ * OpenID Connect discovery and JWKS endpoint support.
  * This flow is intended for machine-to-machine authentication where no user
  * interaction is required.
  *

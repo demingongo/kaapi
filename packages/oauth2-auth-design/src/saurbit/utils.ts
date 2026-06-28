@@ -68,6 +68,18 @@ export function createWebStandardRequest<Refs extends ReqRef = ReqRefDefaults>(
     return new Request(fullUrl, requestOptions);
 }
 
+/**
+ * Creates a Hapi route handler that delegates token issuance to an OAuth 2.0 flow's
+ * `token` method and formats the response according to the OAuth 2.0 specification.
+ *
+ * Converts the incoming Kaapi `Request` to a Web Standard `Request` before calling
+ * the token handler, and maps flow errors to appropriate HTTP 400 responses.
+ *
+ * @param t - The Kaapi tools object used for logging.
+ * @param tokenHandler - Async function that processes a Web Standard `Request` and returns
+ *   an {@link OAuth2FlowTokenResponse}.
+ * @returns A Hapi lifecycle method suitable for use as a route handler.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function createTokenEndpointHandler(t: KaapiTools, tokenHandler: (request: Request) => Promise<OAuth2FlowTokenResponse>): Lifecycle.Method<any, Lifecycle.ReturnValue<any>> {
     return async (req, h) => {
@@ -89,6 +101,19 @@ export function createTokenEndpointHandler(t: KaapiTools, tokenHandler: (request
     }
 }
 
+/**
+ * Registers a Hapi auth scheme and a default strategy on the server for an OAuth 2.0 flow.
+ *
+ * The scheme's `authenticate` hook extracts and verifies the bearer token using
+ * `tokenVerifierHandler`. On success it calls `h.authenticated`; on failure it
+ * returns an unauthenticated response with a `WWW-Authenticate` challenge.
+ *
+ * @param t - The Kaapi tools object used to call `t.scheme` and `t.strategy`.
+ * @param schemeName - Name for both the Hapi auth scheme and the strategy.
+ * @param tokenType - Token type string included in the `WWW-Authenticate` challenge (e.g. `"Bearer"`).
+ * @param tokenVerifierHandler - Async function that verifies the token extracted from the
+ *   incoming {@link KaapiRequest} and returns a {@link StrategyResult}.
+ */
 export function createSchemeAndStrategy<Refs extends ReqRef = ReqRefDefaults>(t: KaapiTools, schemeName: string, tokenType: string, tokenVerifierHandler: (request: KaapiRequest<Refs>) => Promise<StrategyResult>): void {
     // Register the auth scheme for the multiple flows
     t.scheme(schemeName, (_server) => {

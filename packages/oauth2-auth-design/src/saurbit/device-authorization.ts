@@ -43,6 +43,15 @@ import { OAuth2AuthDesign } from "./common.js";
 
 //#region Types and Interfaces
 
+/**
+ * Lifecycle method signature for post-processing Device Authorization flow endpoint results.
+ *
+ * Called after the authorization endpoint processing logic completes, allowing
+ * custom handling of the result — e.g. returning a device code response or handling errors.
+ *
+ * @template R - The Kaapi `ReqRef` type for the application.
+ * @template V - The expected return value type.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface KaapiDeviceAuthorizationLifecycleMethod<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>> {
   (
@@ -59,7 +68,7 @@ export interface KaapiDeviceAuthorizationLifecycleMethod<R extends ReqRef = ReqR
  * Extends the base `DeviceAuthorizationFlowOptions` with Kaapi-specific strategy options
  * for token verification and failed-authorization handling.
  *
- * @template E - The Kaapi `Env` type for the application.
+ * @template Refs - The Kaapi `ReqRef` type for the application.
  */
 export interface KaapiDeviceAuthorizationFlowOptions<
   Refs extends ReqRef = ReqRefDefaults,
@@ -95,10 +104,11 @@ export type KaapiDeviceAuthorizationFlowBuilderOptions<
  * Kaapi-adapted methods for the Device Authorization flow.
  *
  * Extends the base {@link KaapiMethods} with device-specific endpoint helpers that
- * accept a Kaapi `Context` instead of a raw `Request`.
- * Obtained via {@link KaapiDeviceAuthorizationFlow.hono}.
+ * accept a Kaapi `Request` instead of a raw Web `Request`.
+ * Obtained via {@link KaapiDeviceAuthorizationFlow.kaapi}.
  *
  * @template Refs - The Kaapi `ReqRef` type for the application.
+ * @template AuthRefs - The Kaapi `ReqRef` type for the authorization data.
  */
 export interface KaapiDeviceAuthorizationMethods<Refs extends ReqRef = ReqRefDefaults, AuthRefs extends ReqRef = ReqRefDefaults> extends KaapiMethods<Refs> {
   /**
@@ -127,12 +137,12 @@ export interface KaapiDeviceAuthorizationMethods<Refs extends ReqRef = ReqRefDef
 //#region OIDC Types and Interfaces
 
 /**
- * Configuration options for {@link KaapiDeviceAuthorizationFlow}.
+ * Configuration options for {@link KaapiOIDCDeviceAuthorizationFlow}.
  *
- * Extends the base `DeviceAuthorizationFlowOptions` with Kaapi-specific strategy options
+ * Extends the base `OIDCDeviceAuthorizationFlowOptions` with Kaapi-specific strategy options
  * for token verification and failed-authorization handling.
  *
- * @template E - The Kaapi `Env` type for the application.
+ * @template Refs - The Kaapi `ReqRef` type for the application.
  */
 export interface KaapiOIDCDeviceAuthorizationFlowOptions<
   Refs extends ReqRef = ReqRefDefaults,
@@ -179,13 +189,14 @@ export type KaapiOIDCDeviceAuthorizationFlowBuilderOptions<
 > = Partial<KaapiOIDCDeviceAuthorizationFlowOptions<Refs>>;
 
 /**
- * Kaapi-adapted methods for the Device Authorization flow.
+ * Kaapi-adapted methods for the OIDC Device Authorization flow.
  *
- * Extends the base {@link KaapiMethods} with device-specific endpoint helpers that
- * accept a Kaapi `Context` instead of a raw `Request`.
- * Obtained via {@link KaapiDeviceAuthorizationFlow.hono}.
+ * Extends {@link KaapiDeviceAuthorizationMethods} and {@link KaapiOIDCMethods} with
+ * device-specific endpoint helpers and OpenID Connect discovery support.
+ * Obtained via {@link KaapiOIDCDeviceAuthorizationFlow.kaapi}.
  *
  * @template Refs - The Kaapi `ReqRef` type for the application.
+ * @template AuthRefs - The Kaapi `ReqRef` type for the authorization data.
  */
 export interface KaapiOIDCDeviceAuthorizationMethods<Refs extends ReqRef = ReqRefDefaults, AuthRefs extends ReqRef = ReqRefDefaults>
   extends KaapiDeviceAuthorizationMethods<Refs, AuthRefs>, KaapiOIDCMethods<Refs> {
@@ -199,7 +210,7 @@ export interface KaapiOIDCDeviceAuthorizationMethods<Refs extends ReqRef = ReqRe
 /**
  * Kaapi adapter for the OAuth 2.0 Device Authorization flow.
  *
- * Wraps {@link DeviceAuthorizationFlow} to integrate natively with Kaapi's `Context`,
+ * Wraps {@link DeviceAuthorizationFlow} to integrate natively with Kaapi's `Request`,
  * providing a token endpoint handler, middleware for protecting routes, and
  * convenience methods for the device authorization endpoint.
  * This flow is intended for input-constrained devices (e.g. smart TVs, CLIs)
@@ -207,7 +218,8 @@ export interface KaapiOIDCDeviceAuthorizationMethods<Refs extends ReqRef = ReqRe
  *
  * Use {@link KaapiDeviceAuthorizationFlowBuilder} for a fluent configuration API.
  *
- * @template E - The Kaapi `Env` type for the application.
+ * @template Refs - The Kaapi `ReqRef` type for the application.
+ * @template AuthRefs - The Kaapi `ReqRef` type for the authorization request.
  */
 export class KaapiDeviceAuthorizationFlow<
   Refs extends ReqRef = ReqRefDefaults,
@@ -437,7 +449,7 @@ export class KaapiDeviceAuthorizationFlow<
   /**
    * Returns a frozen object of Kaapi-adapted methods for use inside Kaapi route handlers.
    *
-   * @returns A readonly {@link KaapiAuthorizationCodeMethods} instance.
+   * @returns A readonly {@link KaapiDeviceAuthorizationMethods} instance.
    */
   kaapi(): Readonly<KaapiDeviceAuthorizationMethods<Refs, AuthRefs>> {
     return Object.freeze(this.#kaapi);
@@ -455,7 +467,8 @@ export class KaapiDeviceAuthorizationFlow<
  * for Kaapi, including device code generation, token polling, token verification,
  * and scope enforcement.
  *
- * @template E - The Kaapi `Env` type for the application.
+ * @template Refs - The Kaapi `ReqRef` type for the application.
+ * @template AuthRefs - The Kaapi `ReqRef` type for the authorization request.
  *
  * @example
  * ```ts
@@ -472,6 +485,9 @@ export class KaapiDeviceAuthorizationFlowBuilder<
 > extends DeviceAuthorizationFlowBuilder {
   protected strategyOptions: KaapiOAuth2StrategyOptions<Refs> = {};
 
+  /**
+   * @param options - Optional partial builder options.
+   */
   constructor(options?: KaapiDeviceAuthorizationFlowBuilderOptions<Refs>) {
     const { strategyOptions, ...flowOptions } = options || {};
     super({
@@ -509,9 +525,9 @@ export class KaapiDeviceAuthorizationFlowBuilder<
   /**
    * This method does not have access to the Kaapi context.
    * Use `tokenVerifier` instead to set a handler that receives the Kaapi context.
-   * @deprecated Use `tokenVerifier` instead to set a handler that receives the Kaapi context.
-   * @param handler
-   * @returns
+   * @deprecated Use `tokenVerifier` instead to set a handler that receives the Kaapi {@link KaapiRequest}.
+   * @param handler - Handler that receives a Web Standard {@link Request} and token params.
+   * @returns `this` for chaining.
    */
   override verifyToken(handler: StrategyVerifyTokenFunction<Request>): this {
     this.strategyOptions.verifyToken = async (request, params) => {
@@ -553,17 +569,19 @@ export class KaapiDeviceAuthorizationFlowBuilder<
 //#region OIDC Classes
 
 /**
- * Kaapi adapter for the OAuth 2.0 Device Authorization flow.
+ * Kaapi adapter for the OAuth 2.0 OIDC Device Authorization flow.
  *
- * Wraps {@link OIDCDeviceAuthorizationFlow} to integrate natively with Kaapi's `Context`,
- * providing a token endpoint handler, middleware for protecting routes, and
- * convenience methods for the device authorization endpoint.
+ * Wraps {@link OIDCDeviceAuthorizationFlow} to integrate natively with Kaapi's `Request`,
+ * providing a token endpoint handler, middleware for protecting routes,
+ * convenience methods for the device authorization endpoint, and
+ * OpenID Connect discovery and JWKS endpoint support.
  * This flow is intended for input-constrained devices (e.g. smart TVs, CLIs)
  * that cannot easily handle a browser-based redirect.
  *
  * Use {@link KaapiOIDCDeviceAuthorizationFlowBuilder} for a fluent configuration API.
  *
- * @template E - The Kaapi `Env` type for the application.
+ * @template Refs - The Kaapi `ReqRef` type for the application.
+ * @template AuthRefs - The Kaapi `ReqRef` type for the authorization request.
  */
 export class KaapiOIDCDeviceAuthorizationFlow<
   Refs extends ReqRef = ReqRefDefaults,
@@ -844,11 +862,12 @@ export class KaapiOIDCDeviceAuthorizationFlow<
 /**
  * Fluent builder for {@link KaapiOIDCDeviceAuthorizationFlow}.
  *
- * Provides a chainable API to configure all aspects of the Device Authorization flow
+ * Provides a chainable API to configure all aspects of the OIDC Device Authorization flow
  * for Kaapi, including device code generation, token polling, token verification,
- * and scope enforcement.
+ * scope enforcement, and OpenID Connect discovery configuration.
  *
- * @template E - The Kaapi `Env` type for the application.
+ * @template Refs - The Kaapi `ReqRef` type for the application.
+ * @template AuthRefs - The Kaapi `ReqRef` type for the authorization request.
  *
  * @example
  * ```ts
@@ -865,6 +884,9 @@ export class KaapiOIDCDeviceAuthorizationFlowBuilder<
 > extends OIDCDeviceAuthorizationFlowBuilder {
   protected strategyOptions: KaapiOAuth2StrategyOptions<Refs> = {};
 
+  /**
+   * @param options - Optional partial builder options.
+   */
   constructor(options?: KaapiOIDCDeviceAuthorizationFlowBuilderOptions<Refs>) {
     const { strategyOptions, ...flowOptions } = options || {};
     super({
@@ -902,9 +924,9 @@ export class KaapiOIDCDeviceAuthorizationFlowBuilder<
   /**
    * This method does not have access to the Kaapi context.
    * Use `tokenVerifier` instead to set a handler that receives the Kaapi context.
-   * @deprecated Use `tokenVerifier` instead to set a handler that receives the Kaapi context.
-   * @param handler
-   * @returns
+   * @deprecated Use `tokenVerifier` instead to set a handler that receives the Kaapi {@link KaapiRequest}.
+   * @param handler - Handler that receives a Web Standard {@link Request} and token params.
+   * @returns `this` for chaining.
    */
   override verifyToken(handler: StrategyVerifyTokenFunction<Request>): this {
     this.strategyOptions.verifyToken = async (request, params) => {

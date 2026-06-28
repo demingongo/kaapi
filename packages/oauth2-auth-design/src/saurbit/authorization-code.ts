@@ -50,6 +50,16 @@ import { OAuth2AuthDesign, OIDCAuthUtil } from "./common.js";
 
 //#region Types and Interfaces
 
+/**
+ * Lifecycle method signature for post-processing Authorization Code flow endpoint results.
+ *
+ * Called after the authorization endpoint logic completes (either initiation or processing),
+ * allowing custom handling of the result — e.g. rendering a login page or redirecting.
+ *
+ * @template R - The Kaapi `ReqRef` type for the application.
+ * @template V - The expected return value type.
+ * @template Result - The flow endpoint result type passed to this handler.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface KaapiAuthorizationCodeLifecycleMethod<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>, Result = AuthorizationCodeInitiationResponse | AuthorizationCodeProcessResponse | OIDCAuthorizationCodeInitiationResponse | OIDCAuthorizationCodeProcessResponse> {
     (
@@ -60,6 +70,22 @@ export interface KaapiAuthorizationCodeLifecycleMethod<R extends ReqRef = ReqRef
     ): V
 }
 
+/**
+ * Custom renderer for the login form displayed at the authorization endpoint.
+ *
+ * Called on GET requests to the authorization endpoint (or after a failed POST),
+ * allowing full control over how the login page is rendered.
+ *
+ * @template R - The Kaapi `ReqRef` type for the application.
+ * @template V - The expected return value type.
+ * @template Result - The flow endpoint result type passed to this handler.
+ *
+ * @param request - The Kaapi request object.
+ * @param h - The Hapi response toolkit.
+ * @param result - The result from the authorization endpoint logic.
+ * @param ctxt - Rendering context including HTTP status code, field names, and an optional error message.
+ * @returns A Hapi lifecycle return value (typically an HTML response).
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface LoginFormRenderer<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>, Result = AuthorizationCodeInitiationResponse | AuthorizationCodeProcessResponse | OIDCAuthorizationCodeInitiationResponse | OIDCAuthorizationCodeProcessResponse> {
     (request: KaapiRequest<R>, h: ResponseToolkit<R>, result: Result, ctxt: { statusCode: number, usernameField: string, passwordField: string, errorMessage?: string }): V;
@@ -68,6 +94,14 @@ export interface LoginFormRenderer<R extends ReqRef = ReqRefDefaults, V extends 
 
 
 
+/**
+ * Custom renderer for the consent form displayed when the authorization endpoint
+ * returns a `"continue"` response, prompting the user to allow or deny the requested scopes.
+ *
+ * @template R - The Kaapi `ReqRef` type for the application.
+ * @template V - The expected return value type.
+ * @template C - The authorization code endpoint context type.
+ */
 export type AuthorizationCodeConsentFormRenderer<
     R extends ReqRef = ReqRefDefaults,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -959,10 +993,20 @@ export class KaapiAuthorizationCodeFlow<
         return Object.freeze(this.#kaapi);
     }
 
+    /**
+     * Returns the username field name used in the login form.
+     *
+     * @returns The configured username field name, or `"username"` if not set.
+     */
     getUsernameField(): string {
         return this.#usernameField || 'username';
     }
 
+    /**
+     * Returns the password field name used in the login form.
+     *
+     * @returns The configured password field name, or `"password"` if not set.
+     */
     getPasswordField(): string {
         return this.#passwordField || 'password';
     }
@@ -1013,6 +1057,9 @@ export class KaapiAuthorizationCodeFlowBuilder<
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     protected consentFormRenderer?: AuthorizationCodeConsentFormRenderer<any, any, any> | undefined;
 
+    /**
+     * @param options - Initial builder options. `parseAuthorizationEndpointData` is required.
+     */
     constructor(options: KaapiAuthorizationCodeFlowBuilderOptions<AuthReqData, Refs, AuthRefs>) {
         const { strategyOptions, parseAuthorizationEndpointData, ...flowOptions } = options;
         super({
@@ -1195,11 +1242,11 @@ export class KaapiAuthorizationCodeFlowBuilder<
 //#region OIDC Classes
 
 /**
- * Kaapi adapter for the OAuth 2.0 Authorization Code flow.
+ * Kaapi adapter for the OAuth 2.0 OIDC Authorization Code flow.
  *
  * Wraps {@link OIDCAuthorizationCodeFlow} to integrate natively with Kaapi's `Request`,
  * providing middleware for route protection and convenience methods for the
- * authorization and token endpoints.
+ * authorization and token endpoints, including OpenID Connect discovery support.
  *
  * Use {@link KaapiOIDCAuthorizationCodeFlowBuilder} for a fluent configuration API.
  *
@@ -1630,10 +1677,20 @@ export class KaapiOIDCAuthorizationCodeFlow<
         return Object.freeze(this.#kaapi);
     }
 
+    /**
+     * Returns the username field name used in the login form.
+     *
+     * @returns The configured username field name, or `"username"` if not set.
+     */
     getUsernameField(): string {
         return this.#usernameField || 'username';
     }
 
+    /**
+     * Returns the password field name used in the login form.
+     *
+     * @returns The configured password field name, or `"password"` if not set.
+     */
     getPasswordField(): string {
         return this.#passwordField || 'password';
     }
@@ -1688,6 +1745,9 @@ export class KaapiOIDCAuthorizationCodeFlowBuilder<
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     protected consentFormRenderer?: AuthorizationCodeConsentFormRenderer<any, any, any> | undefined;
 
+    /**
+     * @param options - Initial builder options. `parseAuthorizationEndpointData` is required.
+     */
     constructor(options: KaapiOIDCAuthorizationCodeFlowBuilderOptions<AuthReqData, Refs, AuthRefs>) {
         const { strategyOptions, parseAuthorizationEndpointData, ...flowOptions } = options;
         super({

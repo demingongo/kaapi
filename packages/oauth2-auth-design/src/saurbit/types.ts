@@ -8,6 +8,12 @@ import type {
     StrategyVerifyTokenFunction,
 } from '@saurbit/oauth2';
 
+/**
+ * Delegate options for {@link OAuth2AuthDesign}.
+ *
+ * Provides callbacks that implement each method of the `AuthDesign` contract
+ * for a single OAuth 2.0 flow.
+ */
 export interface OAuth2AuthDesignOptions {
     /** Returns the OpenAPI/Postman documentation utility for this auth scheme. */
     docs(): BaseAuthUtil;
@@ -19,6 +25,12 @@ export interface OAuth2AuthDesignOptions {
     integrateHook?(t: KaapiTools, skipCommonRoutes?: boolean): void | Promise<void>;
 }
 
+/**
+ * `AuthDesign` contract for a single OAuth 2.0 flow.
+ *
+ * Extends the base `AuthDesign` with the `getStrategyName` accessor and an optional
+ * `integrateHook` for registering token-endpoint routes on the server.
+ */
 export interface IOAuth2AuthDesign extends AuthDesign {
     /** Returns the name of the registered Hapi auth strategy. */
     getStrategyName(): string;
@@ -26,11 +38,23 @@ export interface IOAuth2AuthDesign extends AuthDesign {
     integrateHook(t: KaapiTools, skipCommonRoutes?: boolean): void | Promise<void>;
 }
 
+/**
+ * Delegate options for {@link OAuth2MultipleFlowsAuthDesign}.
+ *
+ * Like {@link OAuth2AuthDesignOptions} but `getStrategyName` returns an array of
+ * strategy names — one per registered flow.
+ */
 export interface OAuth2MultipleFlowsAuthDesignOptions extends Omit<OAuth2AuthDesignOptions, 'getStrategyName'> {
     /** Returns the name of the registered Hapi auth strategies. */
     getStrategyName(): string[];
 }
 
+/**
+ * `AuthDesign` contract for multiple concurrent OAuth 2.0 flows.
+ *
+ * Like {@link IOAuth2AuthDesign} but `getStrategyName` returns an array of
+ * strategy names — one per registered flow.
+ */
 export interface IOAuth2MultipleFlowsAuthDesign extends Omit<IOAuth2AuthDesign, 'getStrategyName'> {
     /** Returns the name of the registered Hapi auth strategies. */
     getStrategyName(): string[];
@@ -152,6 +176,14 @@ export interface KaapiOIDCMethods<Refs extends ReqRef = ReqRefDefaults> extends 
     ): Record<string, string | string[] | undefined>;
 }
 
+/**
+ * Kaapi-adapted methods for aggregated OIDC flows.
+ *
+ * Extends {@link KaapiOIDCMethods} but overrides `toAuthDesign` to return
+ * an {@link IOAuth2MultipleFlowsAuthDesign} that covers all registered flows.
+ *
+ * @template Refs - Kaapi request reference types for the application.
+ */
 export interface KaapiOIDCMultipleFlowsMethods<Refs extends ReqRef = ReqRefDefaults> extends Omit<KaapiOIDCMethods<Refs>, 'toAuthDesign'> {
     toAuthDesign(): IOAuth2MultipleFlowsAuthDesign;
 }
@@ -182,7 +214,12 @@ export interface KaapiOIDCAdapted<Refs extends ReqRef = ReqRefDefaults> extends 
     kaapi(): KaapiOIDCMethods<Refs>;
 }
 
-/** Options for {@link createWebStandardRequest}. */
+/**
+ * Options for {@link createWebStandardRequest}.
+ *
+ * Allows overriding the request origin used when constructing the absolute URL
+ * for the converted Web Standard `Request`.
+ */
 export interface WebStandardRequestOptions {
     /** Override the origin used to build the absolute URL. Defaults to the request's own origin. */
     origin?: string;
