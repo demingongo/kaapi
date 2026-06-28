@@ -27,6 +27,20 @@ export interface KaapiOIDCFlow<
 > extends OIDCFlow, KaapiOIDCAdapted<Refs> {
 }
 
+export interface KaapiOIDCMultipleFlowsArgs<Refs extends ReqRef = ReqRefDefaults> {
+  flows: KaapiOIDCFlow<Refs>[];
+  discoveryUrl: string;
+  securitySchemeName: string;
+  jwksEndpoint?: string;
+  tokenEndpoint?: string;
+  openidConfiguration?: Record<string, string | string[] | undefined>;
+  description?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onDiscoveryRequest?: Lifecycle.Method<any, any> | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onJwksRequest?: Lifecycle.Method<any, any> | undefined;
+}
+
 /**
  * Kaapi adapter that aggregates multiple OIDC flows behind a single interface.
  *
@@ -188,19 +202,7 @@ export class KaapiOIDCMultipleFlows<
     },
   };
 
-  constructor(args: {
-    flows: KaapiOIDCFlow<Refs>[];
-    discoveryUrl: string;
-    jwksEndpoint?: string;
-    tokenEndpoint?: string;
-    openidConfiguration?: Record<string, string | string[] | undefined>;
-    securitySchemeName: string;
-    description?: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onDiscoveryRequest?: Lifecycle.Method<any, any> | undefined;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onJwksRequest?: Lifecycle.Method<any, any> | undefined;
-  }) {
+  constructor(args: KaapiOIDCMultipleFlowsArgs<Refs>) {
     super(args);
     this.#onDiscoveryRequest = args.onDiscoveryRequest;
     this.#onJwksRequest = args.onJwksRequest;
@@ -217,5 +219,167 @@ export class KaapiOIDCMultipleFlows<
 
   getSecuritySchemeNames(): string[] {
     return this.flows.map((flow) => flow.getSecuritySchemeName());
+  }
+}
+
+export type KaapiOIDCMultipleFlowsBuilderArgs<Refs extends ReqRef = ReqRefDefaults> = Omit<Partial<KaapiOIDCMultipleFlowsArgs<Refs>>, 'flows'>;
+
+export class KaapiOIDCMultipleFlowsBuilder<Refs extends ReqRef = ReqRefDefaults> {
+  #flows: KaapiOIDCFlow<Refs>[] = [];
+  #discoveryUrl: string = '/.well-known/openid-configuration';
+  #securitySchemeName: string = 'OIDC Multiple Flows';
+  #jwksEndpoint?: string;
+  #tokenEndpoint?: string;
+  #openidConfiguration?: Record<string, string | string[] | undefined>;
+  #description?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  #onDiscoveryRequest?: Lifecycle.Method<any, any> | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  #onJwksRequest?: Lifecycle.Method<any, any> | undefined;
+
+  static create<Refs extends ReqRef = ReqRefDefaults>(args?: KaapiOIDCMultipleFlowsBuilderArgs<Refs>): KaapiOIDCMultipleFlowsBuilder<Refs> {
+    return new KaapiOIDCMultipleFlowsBuilder<Refs>(args);
+  }
+
+  constructor(args?: KaapiOIDCMultipleFlowsBuilderArgs<Refs>) {
+    if (args) {
+      if (args.discoveryUrl) {
+        this.#discoveryUrl = args.discoveryUrl;
+      }
+      if (args.securitySchemeName) {
+        this.#securitySchemeName = args.securitySchemeName;
+      }
+      if (args.jwksEndpoint) {
+        this.#jwksEndpoint = args.jwksEndpoint;
+      }
+      if (args.tokenEndpoint) {
+        this.#tokenEndpoint = args.tokenEndpoint;
+      }
+      if (args.openidConfiguration) {
+        this.#openidConfiguration = args.openidConfiguration;
+      }
+      if (args.description) {
+        this.#description = args.description;
+      }
+      if (args.onDiscoveryRequest) {
+        this.#onDiscoveryRequest = args.onDiscoveryRequest;
+      }
+      if (args.onJwksRequest) {
+        this.#onJwksRequest = args.onJwksRequest;
+      }
+    }
+  }
+
+  /**
+   * @param flow - OIDC flow to add to the multiple flows instance. Can be called multiple times to register multiple flows.
+   * @returns The builder instance for chaining.
+   */
+  addFlow(flow: KaapiOIDCFlow<Refs>): this {
+    this.#flows.push(flow);
+    return this;
+  }
+
+  /**
+   * @param flows - Array of OIDC flows to add to the multiple flows instance.
+   * @returns The builder instance for chaining.
+   */
+  addFlows(flows: KaapiOIDCFlow<Refs>[]): this {
+    this.#flows.push(...flows);
+    return this;
+  }
+
+  /**
+   * @param url - URL of the OpenID Connect discovery document. Defaults to `/.well-known/openid-configuration` if not set.
+   * @returns The builder instance for chaining.
+   */
+  setDiscoveryUrl(url: string): this {
+    if (url.trim().length) {
+      this.#discoveryUrl = url;
+    }
+    return this;
+  }
+
+  /**
+   * @param name - Name of the OpenAPI security scheme entry. Defaults to "OIDC Multiple Flows" if not set.
+   * @returns The builder instance for chaining.
+   */
+  setSecuritySchemeName(name: string): this {
+    if (name.trim().length) {
+      this.#securitySchemeName = name;
+    }
+    return this;
+  }
+
+  /**
+   * @param endpoint - URL of the JWKS endpoint.
+   * @returns The builder instance for chaining.
+   */
+  setJwksEndpoint(endpoint: string): this {
+    this.#jwksEndpoint = endpoint;
+    return this;
+  }
+
+  /**
+   * @param endpoint - URL of the token endpoint.
+   * @returns The builder instance for chaining.
+   */
+  setTokenEndpoint(endpoint: string): this {
+    this.#tokenEndpoint = endpoint;
+    return this;
+  }
+
+  /**
+   * @param config - Optional overrides merged into the discovery document.
+   * @returns The builder instance for chaining.
+   */
+  setOpenidConfiguration(config: Record<string, string | string[] | undefined>): this {
+    this.#openidConfiguration = config;
+    return this;
+  }
+
+  /**
+   * @param description - Human-readable description for the OpenAPI security scheme.
+   * @returns The builder instance for chaining.
+   */
+  setDescription(description: string): this {
+    this.#description = description;
+    return this;
+  }
+
+  /**
+   * @param handler - Handler function for the discovery request lifecycle event.
+   * @returns The builder instance for chaining.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onDiscoveryRequest(handler: Lifecycle.Method<any, any>): this {
+    this.#onDiscoveryRequest = handler;
+    return this;
+  }
+
+  /**
+   * @param handler - Handler function for the JWKS request lifecycle event.
+   * @returns The builder instance for chaining.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onJwksRequest(handler: Lifecycle.Method<any, any>): this {
+    this.#onJwksRequest = handler;
+    return this;
+  }
+
+  /**
+   * Creates a new KaapiOIDCMultipleFlows instance.
+   */
+  build(): KaapiOIDCMultipleFlows<Refs> {
+    return new KaapiOIDCMultipleFlows<Refs>({
+      flows: this.#flows,
+      discoveryUrl: this.#discoveryUrl,
+      securitySchemeName: this.#securitySchemeName,
+      jwksEndpoint: this.#jwksEndpoint,
+      tokenEndpoint: this.#tokenEndpoint,
+      openidConfiguration: this.#openidConfiguration,
+      description: this.#description,
+      onDiscoveryRequest: this.#onDiscoveryRequest,
+      onJwksRequest: this.#onJwksRequest,
+    });
   }
 }
