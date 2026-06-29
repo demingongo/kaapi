@@ -883,6 +883,13 @@ export class KaapiOIDCDeviceAuthorizationFlowBuilder<
   AuthRefs extends ReqRef = ReqRefDefaults
 > extends OIDCDeviceAuthorizationFlowBuilder {
   protected strategyOptions: KaapiOAuth2StrategyOptions<Refs> = {};
+  protected onPreHandler?: RouteExtObject<ReqRefDefaults> | RouteExtObject<ReqRefDefaults>[] | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  protected onProcessAuthorization?: KaapiDeviceAuthorizationLifecycleMethod<any, any> | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  protected onDiscoveryRequest?: Lifecycle.Method<any, any> | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  protected onJwksRequest?: Lifecycle.Method<any, any> | undefined;
 
   /**
    * @param options - Optional partial builder options.
@@ -946,6 +953,52 @@ export class KaapiOIDCDeviceAuthorizationFlowBuilder<
      */
   tokenVerifier(handler: StrategyVerifyTokenFunction<KaapiRequest<Refs>>): this {
     this.strategyOptions.verifyToken = handler;
+    return this;
+  }
+
+  /**
+   * Sets lifecycle handlers for the authorization endpoint, which are invoked before the main POST handler.
+   * @param onPreHandler A lifecycle method or array of methods that are invoked before the main POST handler.
+   * @returns `this` for chaining.
+   */
+  setOnPreHandler(onPreHandler: RouteExtObject<ReqRefDefaults> | RouteExtObject<ReqRefDefaults>[] | undefined): this {
+    this.onPreHandler = onPreHandler;
+    return this;
+  }
+
+  /**
+   * Sets the handler for post-processing the result of the authorization processing step (POST request to the authorization endpoint).
+   * @param onProcessAuthorization A lifecycle method that receives the Kaapi request, response toolkit, and the result of the processing step.
+   * @returns `this` for chaining.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  setOnProcessAuthorization<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
+    (onProcessAuthorization: KaapiDeviceAuthorizationLifecycleMethod<R, V> | undefined): this {
+    this.onProcessAuthorization = onProcessAuthorization;
+    return this;
+  }
+
+  /**
+     * Sets the handler for the OpenID Connect discovery endpoint, which is invoked on GET requests to the discovery URL.
+     * @param onDiscoveryRequest A lifecycle method that receives the Kaapi request, response toolkit, and allows you to handle the discovery request.
+     * @returns `this` for chaining.
+     */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  setOnDiscoveryRequest<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
+    (onDiscoveryRequest: Lifecycle.Method<R, V> | undefined): this {
+    this.onDiscoveryRequest = onDiscoveryRequest;
+    return this;
+  }
+
+  /**
+   * Sets the handler for the JWKS endpoint, which is invoked on GET requests to the JWKS endpoint URL.
+   * @param onJwksRequest A lifecycle method that receives the Kaapi request, response toolkit, and allows you to handle the JWKS request.
+   * @returns `this` for chaining.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  setOnJwksRequest<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
+    (onJwksRequest: Lifecycle.Method<R, V> | undefined): this {
+    this.onJwksRequest = onJwksRequest;
     return this;
   }
 

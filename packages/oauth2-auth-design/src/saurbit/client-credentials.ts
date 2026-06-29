@@ -587,6 +587,11 @@ export class KaapiOIDCClientCredentialsFlowBuilder<
 > extends OIDCClientCredentialsFlowBuilder {
     protected strategyOptions: KaapiOAuth2StrategyOptions<Refs> = {};
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    protected onDiscoveryRequest?: Lifecycle.Method<any, any> | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    protected onJwksRequest?: Lifecycle.Method<any, any> | undefined;
+
     /**
      * @param options - Optional partial builder options.
      */
@@ -647,6 +652,30 @@ export class KaapiOIDCClientCredentialsFlowBuilder<
      */
     tokenVerifier(handler: StrategyVerifyTokenFunction<KaapiRequest<Refs>>): this {
         this.strategyOptions.verifyToken = handler;
+        return this;
+    }
+
+    /**
+     * Sets the handler for the OpenID Connect discovery endpoint, which is invoked on GET requests to the discovery URL.
+     * @param onDiscoveryRequest A lifecycle method that receives the Kaapi request, response toolkit, and allows you to handle the discovery request.
+     * @returns `this` for chaining.
+     */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    setOnDiscoveryRequest<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
+        (onDiscoveryRequest: Lifecycle.Method<R, V> | undefined): this {
+        this.onDiscoveryRequest = onDiscoveryRequest;
+        return this;
+    }
+
+    /**
+     * Sets the handler for the JWKS endpoint, which is invoked on GET requests to the JWKS endpoint URL.
+     * @param onJwksRequest A lifecycle method that receives the Kaapi request, response toolkit, and allows you to handle the JWKS request.
+     * @returns `this` for chaining.
+     */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    setOnJwksRequest<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
+        (onJwksRequest: Lifecycle.Method<R, V> | undefined): this {
+        this.onJwksRequest = onJwksRequest;
         return this;
     }
 
