@@ -85,6 +85,7 @@ const flow: KaapiOIDCClientCredentialsFlow = KaapiOIDCClientCredentialsFlowBuild
 
         const { token: accessToken } = await jwksAuthority.sign({
             scope: grantContext.scope.join(" "),
+            type: 'machine',
             ...registeredClaims,
         });
         return { accessToken };
