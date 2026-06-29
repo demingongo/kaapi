@@ -588,9 +588,9 @@ export class KaapiOIDCClientCredentialsFlowBuilder<
     protected strategyOptions: KaapiOAuth2StrategyOptions<Refs> = {};
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    protected onDiscoveryRequest?: Lifecycle.Method<any, any> | undefined;
+    protected onDiscoveryRequestHandler?: Lifecycle.Method<any, any> | undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    protected onJwksRequest?: Lifecycle.Method<any, any> | undefined;
+    protected onJwksRequestHandler?: Lifecycle.Method<any, any> | undefined;
 
     /**
      * @param options - Optional partial builder options.
@@ -657,25 +657,25 @@ export class KaapiOIDCClientCredentialsFlowBuilder<
 
     /**
      * Sets the handler for the OpenID Connect discovery endpoint, which is invoked on GET requests to the discovery URL.
-     * @param onDiscoveryRequest A lifecycle method that receives the Kaapi request, response toolkit, and allows you to handle the discovery request.
+     * @param handler A lifecycle method that receives the Kaapi request, response toolkit, and allows you to handle the discovery request.
      * @returns `this` for chaining.
      */
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    setOnDiscoveryRequest<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
-        (onDiscoveryRequest: Lifecycle.Method<R, V> | undefined): this {
-        this.onDiscoveryRequest = onDiscoveryRequest;
+    onDiscoveryRequest<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
+        (handler: Lifecycle.Method<R, V> | undefined): this {
+        this.onDiscoveryRequestHandler = handler;
         return this;
     }
 
     /**
      * Sets the handler for the JWKS endpoint, which is invoked on GET requests to the JWKS endpoint URL.
-     * @param onJwksRequest A lifecycle method that receives the Kaapi request, response toolkit, and allows you to handle the JWKS request.
+     * @param handler A lifecycle method that receives the Kaapi request, response toolkit, and allows you to handle the JWKS request.
      * @returns `this` for chaining.
      */
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    setOnJwksRequest<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
-        (onJwksRequest: Lifecycle.Method<R, V> | undefined): this {
-        this.onJwksRequest = onJwksRequest;
+    onJwksRequest<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
+        (handler: Lifecycle.Method<R, V> | undefined): this {
+        this.onJwksRequestHandler = handler;
         return this;
     }
 
@@ -687,6 +687,8 @@ export class KaapiOIDCClientCredentialsFlowBuilder<
     override build(): KaapiOIDCClientCredentialsFlow<Refs> {
         const params: KaapiOIDCClientCredentialsFlowOptions<Refs> = {
             ...this.buildParams(),
+            onDiscoveryRequest: this.onDiscoveryRequestHandler,
+            onJwksRequest: this.onJwksRequestHandler,
             strategyOptions: this.strategyOptions,
         };
         return new KaapiOIDCClientCredentialsFlow<Refs>(params);

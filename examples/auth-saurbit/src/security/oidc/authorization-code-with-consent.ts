@@ -479,7 +479,7 @@ export const oidcAuthorizationCodeFlow: KaapiOIDCAuthorizationCodeFlow<ReqRefDef
 
     return response;
   })
-  .setOnPreHandler({
+  .onPreHandler({
     method: async (request, h) => {
       if (request.method != "get") {
         return h.continue;
@@ -536,12 +536,12 @@ export const oidcAuthorizationCodeFlow: KaapiOIDCAuthorizationCodeFlow<ReqRefDef
       return h.continue;
     },
   })
-  .setOnDiscoveryRequest((request) => {
+  .onDiscoveryRequest((request) => {
     return oidcAuthorizationCodeFlow.kaapi().getDiscoveryConfiguration(request, {
       origin: EXTERNAL_URI, // Use the externally accessible URI for discovery to ensure correct endpoint URLs are provided to clients
     });
   })
-  .setOnJwksRequest(async () => {
+  .onJwksRequest(async () => {
     return await jwksAuthority.getJwksEndpointResponse();
   })
   .build();

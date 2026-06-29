@@ -94,10 +94,10 @@ const flow: KaapiOIDCClientCredentialsFlow = KaapiOIDCClientCredentialsFlowBuild
         'Client credentials grant flow. [More info](https://www.oauth.com/oauth2-servers/access-tokens/client-credentials/)'
     )
     .setScopes(ALLOWED_SCOPES)
-    .setOnDiscoveryRequest(async (request) => {
+    .onDiscoveryRequest(async (request) => {
         return flow.kaapi().getDiscoveryConfiguration(request, {});
     })
-    .setOnJwksRequest(async () => {
+    .onJwksRequest(async () => {
         return await jwksAuthority.getJwksEndpointResponse();
     })
     .build();

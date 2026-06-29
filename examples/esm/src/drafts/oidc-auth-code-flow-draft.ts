@@ -395,7 +395,7 @@ const flow: KaapiOIDCAuthorizationCodeFlow<ReqRefDefaults, {
 
         return response;
     })
-    .setOnPreHandler({
+    .onPreHandler({
         method: async (request, h) => {
             if (request.method != "get") {
                 return h.continue;
@@ -440,10 +440,10 @@ const flow: KaapiOIDCAuthorizationCodeFlow<ReqRefDefaults, {
         'This API uses OAuth 2 with the authorization code grant flow. [More info](https://oauth.net/2/grant-types/authorization-code/)'
     )
     .setScopes(ALLOWED_SCOPES)
-    .setOnDiscoveryRequest(async (request) => {
+    .onDiscoveryRequest(async (request) => {
         return flow.kaapi().getDiscoveryConfiguration(request, {});
     })
-    .setOnJwksRequest(async () => {
+    .onJwksRequest(async () => {
         return await jwksAuthority.getJwksEndpointResponse();
     })
     .build();
