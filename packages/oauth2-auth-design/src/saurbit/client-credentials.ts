@@ -5,6 +5,7 @@ import type {
     KaapiMethods,
     KaapiOAuth2StrategyOptions,
     KaapiOIDCAdapted,
+    KaapiOIDCFlowBuilder,
     KaapiOIDCMethods,
     WebStandardRequestOptions
 } from './types.ts';
@@ -584,7 +585,7 @@ export class KaapiOIDCClientCredentialsFlow<Refs extends ReqRef = ReqRefDefaults
  */
 export class KaapiOIDCClientCredentialsFlowBuilder<
     Refs extends ReqRef = ReqRefDefaults,
-> extends OIDCClientCredentialsFlowBuilder {
+> extends OIDCClientCredentialsFlowBuilder implements KaapiOIDCFlowBuilder {
     protected strategyOptions: KaapiOAuth2StrategyOptions<Refs> = {};
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

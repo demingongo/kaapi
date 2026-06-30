@@ -8,7 +8,7 @@ import {
   StrategyInternalError,
   StrategyResult,
 } from "@saurbit/oauth2";
-import { AuthSchemeHandler, KaapiOIDCAdapted, KaapiOIDCMultipleFlowsMethods, WebStandardRequestOptions } from "./types";
+import { AuthSchemeHandler, KaapiOIDCAdapted, KaapiOIDCFlowBuilder, KaapiOIDCMultipleFlowsMethods, WebStandardRequestOptions } from "./types";
 import { KaapiTools, Lifecycle, ReqRef, ReqRefDefaults, Request, RouteOptions } from "@kaapi/kaapi";
 import { createTokenEndpointHandler, createWebStandardRequest } from "./utils";
 import { OAuth2MultipleFlowsAuthDesign, OIDCAuthUtil } from "./common";
@@ -237,7 +237,7 @@ export class KaapiOIDCMultipleFlows<
  */
 export type KaapiOIDCMultipleFlowsBuilderArgs<Refs extends ReqRef = ReqRefDefaults> = Omit<Partial<KaapiOIDCMultipleFlowsArgs<Refs>>, 'flows'>;
 
-export class KaapiOIDCMultipleFlowsBuilder<Refs extends ReqRef = ReqRefDefaults> {
+export class KaapiOIDCMultipleFlowsBuilder<Refs extends ReqRef = ReqRefDefaults> implements KaapiOIDCFlowBuilder {
   #flows: KaapiOIDCFlow<Refs>[] = [];
   #discoveryUrl: string = '/.well-known/openid-configuration';
   #securitySchemeName: string = 'OIDC Multiple Flows';

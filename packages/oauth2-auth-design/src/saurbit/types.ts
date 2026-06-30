@@ -224,3 +224,19 @@ export interface WebStandardRequestOptions {
     /** Override the origin used to build the absolute URL. Defaults to the request's own origin. */
     origin?: string;
 }
+
+export interface KaapiOIDCFlowBuilder {
+    /**
+     * @param handler - Handler function for the discovery request lifecycle event.
+     * @returns The builder instance for chaining.
+     */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onDiscoveryRequest(handler: Lifecycle.Method<any, any>): this;
+
+    /**
+     * @param handler - Handler function for the JWKS request lifecycle event.
+     * @returns The builder instance for chaining.
+     */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onJwksRequest(handler: Lifecycle.Method<any, any>): this;
+}

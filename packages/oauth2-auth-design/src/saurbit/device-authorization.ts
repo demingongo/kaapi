@@ -22,6 +22,7 @@ import type {
   KaapiMethods,
   KaapiOAuth2StrategyOptions,
   KaapiOIDCAdapted,
+  KaapiOIDCFlowBuilder,
   KaapiOIDCMethods,
   WebStandardRequestOptions
 } from "./types.ts";
@@ -881,7 +882,7 @@ export class KaapiOIDCDeviceAuthorizationFlow<
 export class KaapiOIDCDeviceAuthorizationFlowBuilder<
   Refs extends ReqRef = ReqRefDefaults,
   AuthRefs extends ReqRef = ReqRefDefaults
-> extends OIDCDeviceAuthorizationFlowBuilder {
+> extends OIDCDeviceAuthorizationFlowBuilder implements KaapiOIDCFlowBuilder {
   protected strategyOptions: KaapiOAuth2StrategyOptions<Refs> = {};
   protected onPreHandlerHandler?: RouteExtObject<ReqRefDefaults> | RouteExtObject<ReqRefDefaults>[] | undefined;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

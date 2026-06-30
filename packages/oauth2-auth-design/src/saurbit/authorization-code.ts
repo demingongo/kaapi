@@ -30,6 +30,7 @@ import type {
     KaapiMethods,
     KaapiOAuth2StrategyOptions,
     KaapiOIDCAdapted,
+    KaapiOIDCFlowBuilder,
     KaapiOIDCMethods,
     WebStandardRequestOptions
 } from "./types.ts";
@@ -1724,7 +1725,7 @@ export class KaapiOIDCAuthorizationCodeFlowBuilder<
     Refs extends ReqRef = ReqRefDefaults,
     AuthReqData extends AuthorizationCodeReqData = AuthorizationCodeReqData,
     AuthRefs extends ReqRef = ReqRefDefaults
-> extends OIDCAuthorizationCodeFlowBuilder<AuthReqData> {
+> extends OIDCAuthorizationCodeFlowBuilder<AuthReqData> implements KaapiOIDCFlowBuilder {
     protected strategyOptions: KaapiOAuth2StrategyOptions<Refs> = {};
     protected parseAuthorizationEndpointDataHandler: (
         request: KaapiRequest<AuthRefs>,
