@@ -485,6 +485,9 @@ export class KaapiDeviceAuthorizationFlowBuilder<
   AuthRefs extends ReqRef = ReqRefDefaults
 > extends DeviceAuthorizationFlowBuilder {
   protected strategyOptions: KaapiOAuth2StrategyOptions<Refs> = {};
+  protected preHandler?: RouteExtObject<ReqRefDefaults> | RouteExtObject<ReqRefDefaults>[] | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  protected processAuthorizationHandler?: KaapiDeviceAuthorizationLifecycleMethod<any, any> | undefined;
 
   /**
    * @param options - Optional partial builder options.
@@ -552,6 +555,28 @@ export class KaapiDeviceAuthorizationFlowBuilder<
   }
 
   /**
+   * Sets lifecycle handlers for the authorization endpoint, which are invoked before the main POST handler.
+   * @param onPreHandler A lifecycle method or array of methods that are invoked before the main POST handler.
+   * @returns `this` for chaining.
+   */
+  onPreHandler(onPreHandler: RouteExtObject<ReqRefDefaults> | RouteExtObject<ReqRefDefaults>[] | undefined): this {
+    this.preHandler = onPreHandler;
+    return this;
+  }
+
+  /**
+   * Sets the handler for post-processing the result of the authorization processing step (POST request to the authorization endpoint).
+   * @param handler A lifecycle method that receives the Kaapi request, response toolkit, and the result of the processing step.
+   * @returns `this` for chaining.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onProcessAuthorization<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
+    (handler: KaapiDeviceAuthorizationLifecycleMethod<R, V> | undefined): this {
+    this.processAuthorizationHandler = handler;
+    return this;
+  }
+
+  /**
    * Builds and returns a configured {@link KaapiDeviceAuthorizationFlow} instance.
    *
    * @returns A new `KaapiDeviceAuthorizationFlow`.
@@ -559,6 +584,8 @@ export class KaapiDeviceAuthorizationFlowBuilder<
   override build(): KaapiDeviceAuthorizationFlow<Refs, AuthRefs> {
     const params: KaapiDeviceAuthorizationFlowOptions<Refs> = {
       ...this.buildParams(),
+      onPreHandler: this.preHandler,
+      onProcessAuthorization: this.processAuthorizationHandler,
       strategyOptions: this.strategyOptions,
     };
     return new KaapiDeviceAuthorizationFlow<Refs, AuthRefs>(params);
@@ -884,13 +911,13 @@ export class KaapiOIDCDeviceAuthorizationFlowBuilder<
   AuthRefs extends ReqRef = ReqRefDefaults
 > extends OIDCDeviceAuthorizationFlowBuilder implements KaapiOIDCFlowBuilder {
   protected strategyOptions: KaapiOAuth2StrategyOptions<Refs> = {};
-  protected onPreHandlerHandler?: RouteExtObject<ReqRefDefaults> | RouteExtObject<ReqRefDefaults>[] | undefined;
+  protected preHandler?: RouteExtObject<ReqRefDefaults> | RouteExtObject<ReqRefDefaults>[] | undefined;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  protected onProcessAuthorizationHandler?: KaapiDeviceAuthorizationLifecycleMethod<any, any> | undefined;
+  protected processAuthorizationHandler?: KaapiDeviceAuthorizationLifecycleMethod<any, any> | undefined;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  protected onDiscoveryRequestHandler?: Lifecycle.Method<any, any> | undefined;
+  protected discoveryRequestHandler?: Lifecycle.Method<any, any> | undefined;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  protected onJwksRequestHandler?: Lifecycle.Method<any, any> | undefined;
+  protected jwksRequestHandler?: Lifecycle.Method<any, any> | undefined;
 
   /**
    * @param options - Optional partial builder options.
@@ -963,7 +990,7 @@ export class KaapiOIDCDeviceAuthorizationFlowBuilder<
    * @returns `this` for chaining.
    */
   onPreHandler(onPreHandler: RouteExtObject<ReqRefDefaults> | RouteExtObject<ReqRefDefaults>[] | undefined): this {
-    this.onPreHandlerHandler = onPreHandler;
+    this.preHandler = onPreHandler;
     return this;
   }
 
@@ -975,7 +1002,7 @@ export class KaapiOIDCDeviceAuthorizationFlowBuilder<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onProcessAuthorization<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
     (handler: KaapiDeviceAuthorizationLifecycleMethod<R, V> | undefined): this {
-    this.onProcessAuthorizationHandler = handler;
+    this.processAuthorizationHandler = handler;
     return this;
   }
 
@@ -987,7 +1014,7 @@ export class KaapiOIDCDeviceAuthorizationFlowBuilder<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onDiscoveryRequest<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
     (handler: Lifecycle.Method<R, V> | undefined): this {
-    this.onDiscoveryRequestHandler = handler;
+    this.discoveryRequestHandler = handler;
     return this;
   }
 
@@ -999,7 +1026,7 @@ export class KaapiOIDCDeviceAuthorizationFlowBuilder<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onJwksRequest<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
     (handler: Lifecycle.Method<R, V> | undefined): this {
-    this.onJwksRequestHandler = handler;
+    this.jwksRequestHandler = handler;
     return this;
   }
 
@@ -1011,10 +1038,10 @@ export class KaapiOIDCDeviceAuthorizationFlowBuilder<
   override build(): KaapiOIDCDeviceAuthorizationFlow<Refs, AuthRefs> {
     const params: KaapiOIDCDeviceAuthorizationFlowOptions<Refs> = {
       ...this.buildParams(),
-      onDiscoveryRequest: this.onDiscoveryRequestHandler,
-      onJwksRequest: this.onJwksRequestHandler,
-      onPreHandler: this.onPreHandlerHandler,
-      onProcessAuthorization: this.onProcessAuthorizationHandler,
+      onDiscoveryRequest: this.discoveryRequestHandler,
+      onJwksRequest: this.jwksRequestHandler,
+      onPreHandler: this.preHandler,
+      onProcessAuthorization: this.processAuthorizationHandler,
       strategyOptions: this.strategyOptions,
     };
     return new KaapiOIDCDeviceAuthorizationFlow<Refs, AuthRefs>(params);

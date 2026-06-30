@@ -589,9 +589,9 @@ export class KaapiOIDCClientCredentialsFlowBuilder<
     protected strategyOptions: KaapiOAuth2StrategyOptions<Refs> = {};
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    protected onDiscoveryRequestHandler?: Lifecycle.Method<any, any> | undefined;
+    protected discoveryRequestHandler?: Lifecycle.Method<any, any> | undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    protected onJwksRequestHandler?: Lifecycle.Method<any, any> | undefined;
+    protected jwksRequestHandler?: Lifecycle.Method<any, any> | undefined;
 
     /**
      * @param options - Optional partial builder options.
@@ -664,7 +664,7 @@ export class KaapiOIDCClientCredentialsFlowBuilder<
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onDiscoveryRequest<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
         (handler: Lifecycle.Method<R, V> | undefined): this {
-        this.onDiscoveryRequestHandler = handler;
+        this.discoveryRequestHandler = handler;
         return this;
     }
 
@@ -676,7 +676,7 @@ export class KaapiOIDCClientCredentialsFlowBuilder<
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onJwksRequest<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
         (handler: Lifecycle.Method<R, V> | undefined): this {
-        this.onJwksRequestHandler = handler;
+        this.jwksRequestHandler = handler;
         return this;
     }
 
@@ -688,8 +688,8 @@ export class KaapiOIDCClientCredentialsFlowBuilder<
     override build(): KaapiOIDCClientCredentialsFlow<Refs> {
         const params: KaapiOIDCClientCredentialsFlowOptions<Refs> = {
             ...this.buildParams(),
-            onDiscoveryRequest: this.onDiscoveryRequestHandler,
-            onJwksRequest: this.onJwksRequestHandler,
+            onDiscoveryRequest: this.discoveryRequestHandler,
+            onJwksRequest: this.jwksRequestHandler,
             strategyOptions: this.strategyOptions,
         };
         return new KaapiOIDCClientCredentialsFlow<Refs>(params);

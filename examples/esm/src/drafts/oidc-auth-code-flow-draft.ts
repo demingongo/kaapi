@@ -45,8 +45,8 @@ const flow: KaapiOIDCAuthorizationCodeFlow<ReqRefDefaults, {
         const payload = req.payload as Record<string, unknown>;
         const email = typeof payload?.email === "string" ? payload.email : undefined;
         const password = typeof payload?.password === "string" ? payload.password : undefined;
-        const consent = payload.step === 'consent' && typeof payload?.submit === "string" && ["allow", "deny"].includes(payload.submit) ? (payload.submit as "allow" | "deny") : undefined;
-        const sessionCookie = typeof req.state.kaapisession === "string" ? req.state.kaapisession : undefined;
+        const consent = payload?.step === 'consent' && typeof payload?.submit === "string" && ["allow", "deny"].includes(payload.submit) ? (payload.submit as "allow" | "deny") : undefined;
+        const sessionCookie = req.state.kaapisession ? req.state.kaapisession : undefined;
 
         return {
             email,
@@ -118,7 +118,7 @@ const flow: KaapiOIDCAuthorizationCodeFlow<ReqRefDefaults, {
                     userName: user.name,
                     userGivenName: user.given_name,
                     userEmail: user.email,
-                    scope: scope,
+                    scope: typeof scope === 'string' ? scope.split(' ') : [],
                     nonce: nonce
                 },
             };
@@ -371,6 +371,7 @@ const flow: KaapiOIDCAuthorizationCodeFlow<ReqRefDefaults, {
                 user: user.id as string,
                 expiresAt: Date.now() + 10_000,
             });
+            console.log('Authorization code generated and stored:', code);
             return { type: "code", code };
         }
 
@@ -401,7 +402,7 @@ const flow: KaapiOIDCAuthorizationCodeFlow<ReqRefDefaults, {
                 return h.continue;
             }
 
-            const session = request.state.kaapisession && typeof request.state.kaapisession === "object" ? request.state.kaapisession as { user: string } : undefined;
+            const session = request.state.kaapisession as { user: string } | undefined;
             if (session) {
                 try {
                     const user = await db.users.findById(session.user);

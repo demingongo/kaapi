@@ -1046,11 +1046,11 @@ export class KaapiAuthorizationCodeFlowBuilder<
     protected parseAuthorizationEndpointDataHandler: (
         request: KaapiRequest<AuthRefs>,
     ) => Promise<AuthReqData>;
-    protected onPreHandler?: RouteExtObject<ReqRefDefaults> | RouteExtObject<ReqRefDefaults>[] | undefined;
+    protected preHandler?: RouteExtObject<ReqRefDefaults> | RouteExtObject<ReqRefDefaults>[] | undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    protected onInitiateAuthorization?: KaapiAuthorizationCodeLifecycleMethod<any, any, AuthorizationCodeInitiationResponse> | undefined;
+    protected initiateAuthorization?: KaapiAuthorizationCodeLifecycleMethod<any, any, AuthorizationCodeInitiationResponse> | undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    protected onProcessAuthorization?: KaapiAuthorizationCodeLifecycleMethod<any, any, AuthorizationCodeProcessResponse> | undefined;
+    protected processAuthorization?: KaapiAuthorizationCodeLifecycleMethod<any, any, AuthorizationCodeProcessResponse> | undefined;
     protected usernameField?: string | undefined;
     protected passwordField?: string | undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1140,35 +1140,35 @@ export class KaapiAuthorizationCodeFlowBuilder<
 
     /**
      * Sets lifecycle handlers for the authorization endpoint, which are invoked before the main GET and POST handlers.
-     * @param onPreHandler A lifecycle method or array of methods that are invoked before the main GET and POST handlers.
+     * @param handler A lifecycle method or array of methods that are invoked before the main GET and POST handlers.
      * @returns `this` for chaining.
      */
-    setOnPreHandler(onPreHandler: RouteExtObject<ReqRefDefaults> | RouteExtObject<ReqRefDefaults>[] | undefined): this {
-        this.onPreHandler = onPreHandler;
+    onPreHandler(handler: RouteExtObject<ReqRefDefaults> | RouteExtObject<ReqRefDefaults>[] | undefined): this {
+        this.preHandler = handler;
         return this;
     }
 
     /**
      * Sets the handler for post-processing the result of the authorization initiation step (GET request to the authorization endpoint).
-     * @param onInitiateAuthorization A lifecycle method that receives the Kaapi request, response toolkit, and the result of the initiation step, allowing you to handle rendering a login page, handling errors, etc.
+     * @param handler A lifecycle method that receives the Kaapi request, response toolkit, and the result of the initiation step, allowing you to handle rendering a login page, handling errors, etc.
      * @returns `this` for chaining.
      */
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    setOnInitiateAuthorization<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
-        (onInitiateAuthorization: KaapiAuthorizationCodeLifecycleMethod<R, V, AuthorizationCodeInitiationResponse> | undefined): this {
-        this.onInitiateAuthorization = onInitiateAuthorization;
+    onInitiateAuthorization<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
+        (handler: KaapiAuthorizationCodeLifecycleMethod<R, V, AuthorizationCodeInitiationResponse> | undefined): this {
+        this.initiateAuthorization = handler;
         return this;
     }
 
     /**
      * Sets the handler for post-processing the result of the authorization processing step (POST request to the authorization endpoint).
-     * @param onProcessAuthorization A lifecycle method that receives the Kaapi request, response toolkit, and the result of the processing step, allowing you to handle rendering a login page, handling errors, etc.
+     * @param handler A lifecycle method that receives the Kaapi request, response toolkit, and the result of the processing step, allowing you to handle rendering a login page, handling errors, etc.
      * @returns `this` for chaining.
      */
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    setOnProcessAuthorization<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
-        (onProcessAuthorization: KaapiAuthorizationCodeLifecycleMethod<R, V, AuthorizationCodeProcessResponse> | undefined): this {
-        this.onProcessAuthorization = onProcessAuthorization;
+    onProcessAuthorization<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
+        (handler: KaapiAuthorizationCodeLifecycleMethod<R, V, AuthorizationCodeProcessResponse> | undefined): this {
+        this.processAuthorization = handler;
         return this;
     }
 
@@ -1226,9 +1226,9 @@ export class KaapiAuthorizationCodeFlowBuilder<
             ...this.buildParams(),
             strategyOptions: this.strategyOptions,
             parseAuthorizationEndpointData: this.parseAuthorizationEndpointDataHandler,
-            onPreHandler: this.onPreHandler,
-            onInitiateAuthorization: this.onInitiateAuthorization,
-            onProcessAuthorization: this.onProcessAuthorization,
+            onPreHandler: this.preHandler,
+            onInitiateAuthorization: this.initiateAuthorization,
+            onProcessAuthorization: this.processAuthorization,
             usernameField: this.usernameField,
             passwordField: this.passwordField,
             loginFormRenderer: this.loginFormRenderer,
@@ -1730,15 +1730,15 @@ export class KaapiOIDCAuthorizationCodeFlowBuilder<
     protected parseAuthorizationEndpointDataHandler: (
         request: KaapiRequest<AuthRefs>,
     ) => Promise<AuthReqData>;
-    protected onPreHandlerHandler?: RouteExtObject<ReqRefDefaults> | RouteExtObject<ReqRefDefaults>[] | undefined;
+    protected preHandler?: RouteExtObject<ReqRefDefaults> | RouteExtObject<ReqRefDefaults>[] | undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    protected onInitiateAuthorizationHandler?: KaapiAuthorizationCodeLifecycleMethod<any, any, OIDCAuthorizationCodeInitiationResponse> | undefined;
+    protected initiateAuthorizationHandler?: KaapiAuthorizationCodeLifecycleMethod<any, any, OIDCAuthorizationCodeInitiationResponse> | undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    protected onProcessAuthorizationHandler?: KaapiAuthorizationCodeLifecycleMethod<any, any, OIDCAuthorizationCodeProcessResponse> | undefined;
+    protected processAuthorizationHandler?: KaapiAuthorizationCodeLifecycleMethod<any, any, OIDCAuthorizationCodeProcessResponse> | undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    protected onDiscoveryRequestHandler?: Lifecycle.Method<any, any> | undefined;
+    protected discoveryRequestHandler?: Lifecycle.Method<any, any> | undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    protected onJwksRequestHandler?: Lifecycle.Method<any, any> | undefined;
+    protected jwksRequestHandler?: Lifecycle.Method<any, any> | undefined;
     protected usernameField?: string | undefined;
     protected passwordField?: string | undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1832,7 +1832,7 @@ export class KaapiOIDCAuthorizationCodeFlowBuilder<
      * @returns `this` for chaining.
      */
     onPreHandler(handler: RouteExtObject<ReqRefDefaults> | RouteExtObject<ReqRefDefaults>[] | undefined): this {
-        this.onPreHandlerHandler = handler;
+        this.preHandler = handler;
         return this;
     }
 
@@ -1844,7 +1844,7 @@ export class KaapiOIDCAuthorizationCodeFlowBuilder<
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onInitiateAuthorization<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
         (handler: KaapiAuthorizationCodeLifecycleMethod<R, V, OIDCAuthorizationCodeInitiationResponse> | undefined): this {
-        this.onInitiateAuthorizationHandler = handler;
+        this.initiateAuthorizationHandler = handler;
         return this;
     }
 
@@ -1856,7 +1856,7 @@ export class KaapiOIDCAuthorizationCodeFlowBuilder<
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onProcessAuthorization<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
         (handler: KaapiAuthorizationCodeLifecycleMethod<R, V, OIDCAuthorizationCodeProcessResponse> | undefined): this {
-        this.onProcessAuthorizationHandler = handler;
+        this.processAuthorizationHandler = handler;
         return this;
     }
 
@@ -1868,7 +1868,7 @@ export class KaapiOIDCAuthorizationCodeFlowBuilder<
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onDiscoveryRequest<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
         (handler: Lifecycle.Method<R, V> | undefined): this {
-        this.onDiscoveryRequestHandler = handler;
+        this.discoveryRequestHandler = handler;
         return this;
     }
 
@@ -1880,7 +1880,7 @@ export class KaapiOIDCAuthorizationCodeFlowBuilder<
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onJwksRequest<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
         (handler: Lifecycle.Method<R, V> | undefined): this {
-        this.onJwksRequestHandler = handler;
+        this.jwksRequestHandler = handler;
         return this;
     }
 
@@ -1938,11 +1938,11 @@ export class KaapiOIDCAuthorizationCodeFlowBuilder<
             ...this.buildParams(),
             strategyOptions: this.strategyOptions,
             parseAuthorizationEndpointData: this.parseAuthorizationEndpointDataHandler,
-            onPreHandler: this.onPreHandlerHandler,
-            onInitiateAuthorization: this.onInitiateAuthorizationHandler,
-            onProcessAuthorization: this.onProcessAuthorizationHandler,
-            onDiscoveryRequest: this.onDiscoveryRequestHandler,
-            onJwksRequest: this.onJwksRequestHandler,
+            onPreHandler: this.preHandler,
+            onInitiateAuthorization: this.initiateAuthorizationHandler,
+            onProcessAuthorization: this.processAuthorizationHandler,
+            onDiscoveryRequest: this.discoveryRequestHandler,
+            onJwksRequest: this.jwksRequestHandler,
             usernameField: this.usernameField,
             passwordField: this.passwordField,
             loginFormRenderer: this.loginFormRenderer,
