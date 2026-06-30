@@ -515,7 +515,7 @@ export const authorizationCodeWithConsentFlow: KaapiAuthorizationCodeFlow<ReqRef
 
     return response;
   })
-  .setOnPreHandler({
+  .onPreHandler({
     method: async (request, h) => {
       if (request.method != "get") {
         return h.continue;
