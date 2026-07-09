@@ -1,14 +1,15 @@
-import { ClientSecretBasic, ClientSecretPost, createInMemoryReplayStore, DPoPTokenType, NoneAuthMethod } from '@saurbit/oauth2';
+import { ClientSecretBasic, ClientSecretPost, createInMemoryReplayStore, DPoPTokenType, JwtPayload, NoneAuthMethod } from '@saurbit/oauth2';
 import db from './database';
 import { decode, encode } from './encoder';
-import logger from './logger';
 import renderHtml from './render-html';
 import {
     KaapiOIDCAuthorizationCodeFlowBuilder,
+    verifyCodeVerifier,
 } from '@kaapi/oauth2-auth-design';
 import { jwksAuthority } from '../plugins/jwks';
+import Boom from '@hapi/boom';
 
-interface RefreshPayload {
+interface RefreshPayload extends JwtPayload {
     client_id?: string;
     scope?: string;
     sub?: string;
@@ -27,8 +28,8 @@ export default KaapiOIDCAuthorizationCodeFlowBuilder.create({
         const payload = req.payload as Record<string, unknown>;
         const email = typeof payload?.email === "string" ? payload.email : undefined;
         const password = typeof payload?.password === "string" ? payload.password : undefined;
-        const consent = typeof payload?.consent === "string" && ["allow", "deny"].includes(payload.consent) ? (payload.consent as "allow" | "deny") : undefined;
-        const sessionCookie = typeof req.state.session === "string" ? req.state.session : undefined;
+        const consent = payload?.step === 'consent' && typeof payload?.submit === "string" && ["allow", "deny"].includes(payload.submit) ? (payload.submit as "allow" | "deny") : undefined;
+        const sessionCookie = req.state.kaapisession && typeof req.state.kaapisession === "object" ? req.state.kaapisession : undefined;
 
         return {
             email,
@@ -111,286 +112,254 @@ export default KaapiOIDCAuthorizationCodeFlowBuilder.create({
         const response = h.response(html).code(statusCode).type("text/html");
 
         if (!request.state.session) {
-            // create a session and set a cookie to track it
-            const sessionId = crypto.randomUUID();
-            sessionStorage[sessionId] = {
-                userId: user.id,
-                expiresAt: Date.now() + 300000, // 5 minutes
-            };
-            response.state('kaapisession', sessionId);
+            // set a cookie to track session
+            response.state('kaapisession', { user: user.id });
         }
 
         return response;
     })
-    .authorizationRoute<object, { Payload: { email?: string; password?: string; step?: string; submit?: string } }>(
-        (route) =>
-            route
-                .setPath('/oauth2/v2/authorize') // optional, default '/oauth2/authorize'
-                .setUsernameField('email')
-                .setPasswordField('password')
-                .setGETResponseRenderer(async (context, params, req) => {
-                    // db query
-                    const client = await db.clients.findById(params.clientId);
-
-                    // client not found
-                    if (!client) {
-                        return await renderHtml('authorization-page', {
-                            context: { ...context, error: 'invalid_client' },
-                            params,
-                            req,
-                        });
-                    }
-
-                    const session = req.state['kaapisession'] as { user?: string } | undefined;
-                    logger.debug('session', session);
-                    if (session?.user) {
-                        const user = await db.users.findById(session.user);
-                        if (user) {
-                            return renderHtml('consent-page', { params });
-                        }
-                    }
-
-                    return await renderHtml('authorization-page', { context, params, req });
-                })
-                .setPOSTErrorRenderer(async (context, params, req) => {
-                    return await renderHtml('authorization-page', { context, params, req });
-                })
-                .generateCode(
-                    async (
-                        { clientId, codeChallenge, scope, nonce },
-                        { payload: { email, password, step, submit }, state },
-                        h
-                    ) => {
-                        // db query
-                        const client = await db.clients.findById(clientId);
-
-                        // client not found
-                        if (!client) {
-                            return null;
-                        }
-
-                        if (step === 'consent') {
-                            if (submit === 'allow') {
-                                // code generation
-                                const session = state.kaapisession as { user?: string } | undefined;
-                                logger.debug('session', session);
-                                if (session?.user) {
-                                    // Consider storing intermediate data instead of fully encoding it into the code string (unless encrypted).
-                                    return {
-                                        type: 'code',
-                                        value: encode({ clientId, codeChallenge, scope, nonce, user: session.user }),
-                                    };
-                                }
-                            }
-                            return { type: 'deny' };
-                        }
-
-                        // invalid payload
-                        if (!email || !password) return null;
-
-                        // db query + password validation + code generation
-                        const user = await db.users.findByCredentials(email, password);
-                        if (user) {
-                            h.state('kaapisession', { user: user.id });
-                            return { type: 'continue' };
-                        }
-
-                        return null;
-                    }
-                )
-                .finalizeAuthorization(async (ctx, params, _req, h) => {
-                    const matcher = createMatchAuthCodeResult({
-                        code: async () => h.redirect(`${ctx.fullRedirectUri}`),
-                        continue: async () => renderHtml('consent-page', { params }),
-                        deny: async () => h.redirect(`${ctx.fullRedirectUri}`), // use the prepared uri by the framwork
-                    });
-
-                    return matcher(ctx.authorizationResult);
-                })
-    )
-    .tokenRoute((route) =>
-        route
-            .setPath('/oauth2/v2/token') // optional, default '/oauth2/token'
-            .generateToken(
-                async (
-                    {
-                        clientId,
-                        clientSecret,
-                        ttl,
-                        tokenType,
-                        createJwtAccessToken,
-                        createIdToken,
-                        code,
-                        codeVerifier,
-                        verifyCodeVerifier,
-                    },
-                    _req
-                ) => {
-                    const decodedCode = decode(code);
-                    const scope = decodedCode.scope;
-                    const codeChallenge = decodedCode.codeChallenge;
-                    const userId = decodedCode.user;
-                    const nonce = decodedCode.nonce;
-
-                    // db query
-                    const client = await db.clients.findById(clientId);
-                    const user = await db.users.findById(userId);
-
-                    // client or user not found
-                    if (!client || !user) {
-                        return null;
-                    }
-
-                    // secret or code verifier validation
-                    if (clientSecret) {
-                        if (client.secret != clientSecret) {
-                            return { error: 'invalid_client' };
-                        }
-                    } else if (codeVerifier) {
-                        if (!verifyCodeVerifier(codeVerifier, codeChallenge)) {
-                            return {
-                                error: OAuth2ErrorCode.INVALID_REQUEST,
-                                error_description: 'Invalid code exchange',
-                            };
-                        }
-                    } else {
-                        return {
-                            error: OAuth2ErrorCode.INVALID_REQUEST,
-                            error_description: "Token Request was missing the 'client_secret' parameter.",
-                        };
-                    }
-
-                    // no token ttl
-                    if (!ttl) {
-                        return { error: OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Missing ttl' };
-                    }
-
-                    try {
-                        if (createJwtAccessToken) {
-                            const { token: accessToken } = await createJwtAccessToken({
-                                sub: user.id,
-                                type: 'user',
-                            });
-                            const refreshToken =
-                                (scope?.split(' ').includes('offline_access') || undefined) &&
-                                (await createJwtAccessToken({
-                                    sub: user.id,
-                                    client_id: clientId,
-                                    scope,
-                                    exp: Date.now() / 1000 + 604_800, // 7 days
-
-                                    type: 'refresh',
-                                }));
-                            return new OAuth2TokenResponse({ access_token: accessToken })
-                                .setExpiresIn(ttl)
-                                .setRefreshToken(refreshToken?.token)
-                                .setScope(scope?.split(' '))
-                                .setTokenType(tokenType)
-                                .setIdToken(
-                                    (scope?.split(' ').includes('openid') || undefined) &&
-                                    (
-                                        await createIdToken?.({
-                                            sub: user.id,
-                                            name: (scope?.split(' ').includes('profile') || undefined) && user.name,
-                                            given_name:
-                                                (scope?.split(' ').includes('profile') || undefined) &&
-                                                user.given_name,
-                                            email: (scope?.split(' ').includes('email') || undefined) && user.email,
-                                            nonce,
-                                        })
-                                    )?.token
-                                ); // add id_token if scope has 'openid'
-                        }
-                    } catch (err) {
-                        logger.error(err);
-                    }
-
-                    return null;
+    .getUserForAuthentication(async (_ctxt, parsedData) => {
+        if (parsedData.sessionCookie) {
+            const session = parsedData.sessionCookie;
+            if (session && 'user' in session) {
+                const user = await db.users.findById(`${session.user}`);
+                if (user) {
+                    return {
+                        type: "authenticated",
+                        user: {
+                            id: user.id,
+                            name: user.name,
+                            email: user.email,
+                            given_name: user.given_name,
+                            consentStatus: parsedData.consent, // carry the consent decision  forward
+                        },
+                    };
                 }
-            )
-    )
-    .refreshTokenRoute((route) =>
-        route
-            .setPath('/oauth2/v2/token') // optional, default '/oauth2/token'
-            .generateToken(
-                async (
-                    { clientId, refreshToken, scope, ttl, tokenType, createJwtAccessToken, createIdToken, verifyJwt },
-                    _req
-                ) => {
-                    try {
-                        // verify refresh token
-                        const payload = await verifyJwt?.<RefreshPayload>(refreshToken);
-                        if (
-                            !payload ||
-                            !(
-                                payload.client_id &&
-                                payload.client_id === clientId &&
-                                payload.sub &&
-                                payload.type === 'refresh'
-                            )
-                        ) {
-                            return { error: OAuth2ErrorCode.INVALID_REQUEST };
-                        }
+            }
+        }
 
-                        // db query
-                        const client = await db.clients.findById(clientId);
-                        const user = await db.users.findById(payload.sub);
+        const user = await db.users.findByCredentials(`${parsedData.email}`, `${parsedData.password}`);
+        if (!user) return undefined;
+        return {
+            type: "authenticated",
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                given_name: user.given_name
+            },
+        };
+    })
+    .generateAuthorizationCode(({ client, codeChallenge, nonce, scope }, user) => {
+        if (!user.id) {
+            return undefined;
+        }
 
-                        // client or user not found
-                        if (!client || !user) {
-                            return { error: OAuth2ErrorCode.INVALID_REQUEST };
-                        }
+        if (user.consentStatus === "deny") {
+            return { type: "deny" };
+        }
 
-                        if (!ttl) {
-                            return { error: OAuth2ErrorCode.INVALID_REQUEST, error_description: 'Missing ttl' };
-                        }
+        if (user.consentStatus === "allow") {
+            const code = encode({ clientId: client.id, codeChallenge, scope, nonce, user: user.id })
+            return { type: "code", code };
+        }
 
-                        const newScope = scope || payload.scope;
-
-                        if (createJwtAccessToken) {
-                            const { token: accessToken } = await createJwtAccessToken({
-                                sub: user.id,
-                                type: 'user',
-                            });
-                            const newRefreshToken =
-                                (!newScope ||
-                                    (newScope && newScope?.split(' ').includes('offline_access')) ||
-                                    undefined) &&
-                                (await createJwtAccessToken({
-                                    sub: user.id,
-                                    client_id: clientId,
-                                    scope: newScope,
-                                    exp: Date.now() / 1000 + 604_800, // 7 days
-
-                                    type: 'refresh',
-                                } as Required<RefreshPayload>));
-                            return new OAuth2TokenResponse({ access_token: accessToken })
-                                .setExpiresIn(ttl)
-                                .setRefreshToken(newRefreshToken?.token)
-                                .setScope(newScope?.split(' '))
-                                .setTokenType(tokenType)
-                                .setIdToken(
-                                    (scope?.split(' ').includes('openid') || undefined) &&
-                                    (
-                                        await createIdToken?.({
-                                            sub: user.id,
-                                            name: (scope?.split(' ').includes('profile') || undefined) && user.name,
-                                            given_name:
-                                                (scope?.split(' ').includes('profile') || undefined) &&
-                                                user.given_name,
-                                            email: (scope?.split(' ').includes('email') || undefined) && user.email,
-                                        })
-                                    )?.token
-                                ); // add id_token if the new scope has 'openid'
-                        }
-                    } catch (err) {
-                        logger.error(err);
-                    }
-
-                    return null;
+        return { type: "continue" };
+    })
+    .getClient(async (info) => {
+        // db query
+        const client = await db.clients.findById(info.clientId);
+        if (!client) return undefined;
+        if (info.grantType === 'authorization_code') {
+            const { code, clientSecret, codeVerifier } = info
+            const decodedCode = decode(code);
+            const scope = decodedCode.scope;
+            const codeChallenge = decodedCode.codeChallenge;
+            const userId = decodedCode.user;
+            const nonce = decodedCode.nonce;
+            // db query
+            const user = await db.users.findById(userId);
+            // client or user not found
+            if (!client || !user) {
+                return;
+            }
+            // secret or code verifier validation
+            if (clientSecret) {
+                if (client.secret != clientSecret) {
+                    return;
                 }
-            )
-    )
+            } else if (codeVerifier) {
+                if (!verifyCodeVerifier(codeVerifier, codeChallenge)) {
+                    return;
+                }
+            } else {
+                return;
+            }
+            return {
+                grants: ['authorization_code', 'refresh_token'],
+                id: client.id,
+                scopes: ['openid', 'profile', 'email', 'offline_access', 'read', 'write', 'admin', 'api.read'],
+                redirectUris: [],
+                metadata: {
+                    accessScope: scope,
+                    nonce,
+                    userId,
+                    name: user.name,
+                    email: user.email,
+                    given_name: user.given_name
+                }
+            }
+        } else if (info.grantType === 'refresh_token') {
+            // todo
+            const refreshTokenData = await jwksAuthority.verify<RefreshPayload>(info.refreshToken);
+
+            const createBoomError = (errorCode: string, errorDescription: string) => {
+                const errorResponse = Boom.badRequest(errorCode);
+                errorResponse.output.payload.error = errorCode;
+                errorResponse.output.payload.error_description = errorDescription;
+                return errorResponse;
+            };
+
+            // validate the refresh token and its association with the client
+            if (!refreshTokenData) throw createBoomError("invalid_grant", "Invalid refresh token");
+
+            if (refreshTokenData.client_id !== info.clientId)
+                throw createBoomError("invalid_grant", "Invalid client for refresh token");
+
+
+            const user = await db.users.findById(`${refreshTokenData.sub}`);
+            if (!user) return undefined;
+
+            const olderScope = refreshTokenData.scope ? refreshTokenData.scope.split(' ') : [];
+
+            // narrow the scope if the client requests a subset
+            const requestedScope = Array.isArray(info.scope) ? info.scope : [];
+            const accessScope = requestedScope.length
+                ? olderScope.filter((s) => requestedScope.includes(s))
+                : olderScope;
+
+            return {
+                grants: ['authorization_code', 'refresh_token'],
+                id: client.id,
+                scopes: ['openid', 'profile', 'email', 'offline_access', 'read', 'write', 'admin', 'api.read'],
+                redirectUris: [],
+                metadata: {
+                    accessScope: accessScope,
+                    userId: refreshTokenData.sub,
+                    name: user.name,
+                    email: user.email,
+                    given_name: user.given_name
+                }
+            };
+        }
+        return;
+    })
+    .generateAccessToken(async ({ client, accessTokenLifetime, origin }) => {
+
+        // db query
+        const user = await db.users.findById(`${client.metadata?.userId}`);
+        if (!user) {
+            return;
+        }
+
+        const accessScope = Array.isArray(client.metadata?.accessScope) ? client.metadata.accessScope : [];
+        const registeredClaims = {
+            exp: Math.floor(Date.now() / 1000) + accessTokenLifetime,
+            iat: Math.floor(Date.now() / 1000),
+            nbf: Math.floor(Date.now() / 1000),
+            iss: origin,
+            aud: client.id,
+            jti: crypto.randomUUID(),
+            sub: `${user.id}`,
+        };
+
+        const { token: accessToken } = await jwksAuthority.sign({
+            scope: accessScope.join(" "),
+            ...registeredClaims,
+        });
+
+        const { token: idToken } = await jwksAuthority.sign({
+            name: accessScope.includes("profile") ? `${user.name}` : undefined,
+            given_name: accessScope.includes("profile") ? `${user.given_name}` : undefined,
+            email: accessScope.includes("email") ? `${user.email}` : undefined,
+            ...registeredClaims,
+        });
+
+        // generate the refresh token if the "offline_access" scope was requested,
+        // and store it in the refresh token storage with an expiration time
+        const { token: refreshToken } = await (async () => {
+            if (accessScope.includes("offline_access")) {
+                return await jwksAuthority.sign({
+                    scope: accessScope.join(" "),
+                    ...registeredClaims,
+                    client_id: registeredClaims.aud,
+                    exp: Date.now() / 1000 + 604_800, // 7 days
+                    type: 'refresh',
+                })
+            }
+            return { token: undefined };
+        })();
+
+        return {
+            accessToken,
+            scope: accessScope,
+            idToken,
+            refreshToken,
+        };
+    })
+    .generateAccessTokenFromRefreshToken(async ({ accessTokenLifetime, client, origin, scope }) => {
+        // db query
+        const user = await db.users.findById(`${client.metadata?.userId}`);
+        if (!user) {
+            return;
+        }
+
+        const accessScope = scope || (Array.isArray(client.metadata?.accessScope) ? client.metadata.accessScope : []);
+
+        const registeredClaims = {
+            exp: Math.floor(Date.now() / 1000) + accessTokenLifetime,
+            iat: Math.floor(Date.now() / 1000),
+            nbf: Math.floor(Date.now() / 1000),
+            iss: origin,
+            aud: client.id,
+            jti: crypto.randomUUID(),
+            sub: `${user.id}`,
+        };
+
+        const { token: accessToken } = await jwksAuthority.sign({
+            scope: accessScope.join(" "),
+            ...registeredClaims,
+        });
+
+        const { token: idToken } = await jwksAuthority.sign({
+            name: accessScope.includes("profile") ? `${user.name}` : undefined,
+            given_name: accessScope.includes("profile") ? `${user.given_name}` : undefined,
+            email: accessScope.includes("email") ? `${user.email}` : undefined,
+            ...registeredClaims,
+        });
+
+        // generate the refresh token if the "offline_access" scope was requested,
+        // and store it in the refresh token storage with an expiration time
+        const { token: newRefreshToken } = await (async () => {
+            if (accessScope.includes("offline_access")) {
+                return await jwksAuthority.sign({
+                    scope: accessScope.join(" "),
+                    ...registeredClaims,
+                    client_id: registeredClaims.aud,
+                    exp: Date.now() / 1000 + 604_800, // 7 days
+                    type: 'refresh',
+                })
+            }
+            return { token: undefined };
+        })();
+
+        return {
+            accessToken,
+            scope: accessScope,
+            idToken,
+            refreshToken: newRefreshToken,
+        };
+    })
     .setDescription(
         'This API uses OAuth 2 with the authorization code grant flow. [More info](https://oauth.net/2/grant-types/authorization-code/)'
     )

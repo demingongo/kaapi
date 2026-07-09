@@ -158,7 +158,6 @@ export default KaapiOIDCDeviceAuthorizationFlowBuilder.create({
         });
 
         const { token: idToken } = await jwksAuthority.sign({
-            username: `${client.metadata?.username}`,
             name: accessScope.includes("profile") ? `${user.name}` : undefined,
             given_name: accessScope.includes("profile") ? `${user.given_name}` : undefined,
             email: accessScope.includes("email") ? `${user.email}` : undefined,
@@ -172,6 +171,7 @@ export default KaapiOIDCDeviceAuthorizationFlowBuilder.create({
                 return await jwksAuthority.sign({
                     scope: accessScope.join(" "),
                     ...registeredClaims,
+                    client_id: registeredClaims.aud,
                     exp: Date.now() / 1000 + 604_800, // 7 days
                     type: 'refresh',
                 })
@@ -224,7 +224,6 @@ export default KaapiOIDCDeviceAuthorizationFlowBuilder.create({
         });
 
         const { token: idToken } = await jwksAuthority.sign({
-            username: `${client.metadata?.username}`,
             name: accessScope.includes("profile") ? `${user.name}` : undefined,
             given_name: accessScope.includes("profile") ? `${user.given_name}` : undefined,
             email: accessScope.includes("email") ? `${user.email}` : undefined,
@@ -238,6 +237,7 @@ export default KaapiOIDCDeviceAuthorizationFlowBuilder.create({
                 return await jwksAuthority.sign({
                     scope: accessScope.join(" "),
                     ...registeredClaims,
+                    client_id: registeredClaims.aud,
                     exp: Date.now() / 1000 + 604_800, // 7 days
                     type: 'refresh',
                 })
