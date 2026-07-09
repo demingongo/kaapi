@@ -1,12 +1,7 @@
 // plugins/customAuthDesign.ts
-//import oidcDeviceAuthFlowDraft from '../drafts/oidc-device-auth-flow-draft';
+
 import multipleFlows from './multiple-flows';
 import { APIKeyAuthDesign, BasicAuthDesign, BearerAuthDesign, GroupAuthDesign } from '@kaapi/kaapi';
-
-//import { authenticationCodeDesign } from '../oauth2Plugins';
-//import { openIDDesignV1 } from '../open-id-design-v1';
-//import { clientCredentialsDesignV1 } from '../oauth2-cc-v1';
-//import oidcDe from '../drafts/oidc-device-auth-flow-draft'
 
 export const basicAuthDesign = new BasicAuthDesign({
     //strategyName: 'API Key',
@@ -70,10 +65,5 @@ export const customAuthDesign = new GroupAuthDesign([
     basicAuthDesign,
     apiKeyAuthDesign,
     bearerAuthDesign,
-    //oidcDeviceAuthFlowDraft.build()
-    multipleFlows,
-    //OIDCMultiFlowsDesignV2,
-    //openIDDesignV1,
-    //clientCredentialsDesignV1
-    //authenticationCodeDesign
+    multipleFlows.kaapi().toAuthDesign(),
 ]);

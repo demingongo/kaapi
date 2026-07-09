@@ -45,7 +45,7 @@ export const flow = new KaapiOIDCClientCredentialsFlowBuilder({
     });
     return { accessToken };
   })
-  .verifyToken(async (_, { token }) => {
+  .tokenVerifier(async (_, { token }) => {
     try {
       const payload = await jwksAuthority.verify(token);
       if (payload && typeof payload.scope === "string") {

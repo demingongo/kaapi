@@ -1,11 +1,13 @@
 import {
   AccessDeniedError,
+  AuthorizationPendingError,
   type DeviceAuthorizationEndpointResponse,
   DeviceAuthorizationFlow,
   DeviceAuthorizationFlowBuilder,
   type DeviceAuthorizationFlowOptions,
   type DeviceAuthorizationProcessResponse,
   evaluateStrategy,
+  ExpiredTokenError,
   InvalidRequestError,
   type OAuth2FlowTokenResponse,
   OIDCDeviceAuthorizationFlow,
@@ -87,6 +89,16 @@ export interface KaapiDeviceAuthorizationFlowOptions<
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onProcessAuthorization?: KaapiDeviceAuthorizationLifecycleMethod<any, any> | undefined;
+
+  /**
+   * Optional device code lifetime in seconds for the device authorization flow. Default is 300 seconds (5 minutes).
+   */
+  deviceCodeLifetime?: number;
+
+  /**
+   * Optional polling interval in seconds for the device authorization flow. Default is 5 seconds.
+   */
+  pollingInterval?: number;
 
 }
 
@@ -176,6 +188,16 @@ export interface KaapiOIDCDeviceAuthorizationFlowOptions<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onJwksRequest?: Lifecycle.Method<any, any> | undefined;
 
+  /**
+   * Optional device code lifetime in seconds for the device authorization flow. Default is 300 seconds (5 minutes).
+   */
+  deviceCodeLifetime?: number;
+
+  /**
+   * Optional polling interval in seconds for the device authorization flow. Default is 5 seconds.
+   */
+  pollingInterval?: number;
+
 }
 
 /**
@@ -237,6 +259,10 @@ export class KaapiDeviceAuthorizationFlow<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   readonly #onProcessAuthorization?: KaapiDeviceAuthorizationLifecycleMethod<any, any> | undefined;
 
+  readonly #deviceCodeLifetime: number = 300; // default 5 minutes
+
+  readonly #pollingInterval: number = 5; // default 5 seconds
+
   readonly #kaapi: KaapiDeviceAuthorizationMethods<Refs, AuthRefs> = {
     authorizeMiddleware: (scopes?: string[]): AuthSchemeHandler<Refs> => {
       return scopes?.length ? this.#createAuthorizeMiddleware(scopes) : this.#authorizeMiddleware;
@@ -297,6 +323,8 @@ export class KaapiDeviceAuthorizationFlow<
       const processAuthorization = this.kaapi().processAuthorization.bind(this);
       const onPreHandler = this.#onPreHandler;
       const onProcessAuthorization = this.#onProcessAuthorization;
+      const deviceCodeLifetime = this.#deviceCodeLifetime;
+      const pollingInterval = this.#pollingInterval;
 
       const supported = this.getTokenEndpointAuthMethods();
 
@@ -374,13 +402,22 @@ export class KaapiDeviceAuthorizationFlow<
               if (result.type === "error") {
                 const error = result.error;
                 return h.response({
-                  error: error instanceof AccessDeniedError ? error.errorCode : "invalid_request",
-                  error_description: error instanceof AccessDeniedError ? error.message : "Invalid request",
+                  error: error instanceof AccessDeniedError || error instanceof ExpiredTokenError || error instanceof AuthorizationPendingError ? error.errorCode : "invalid_request",
+                  error_description: error instanceof AccessDeniedError || error instanceof ExpiredTokenError || error instanceof AuthorizationPendingError ? error.message : "Invalid request",
                   error_uri: error.errorUri,
                 }).code(400);
               }
 
-              return h.response(result.deviceCodeResponse).code(200);
+              const deviceCodeResponse = result.deviceCodeResponse;
+
+              return h.response({
+                device_code: deviceCodeResponse.deviceCode,
+                user_code: deviceCodeResponse.userCode,
+                verification_uri: `${deviceCodeResponse.verificationEndpoint}`,
+                verification_uri_complete: `${deviceCodeResponse.verificationEndpointComplete}`,
+                expires_in: deviceCodeLifetime,
+                interval: pollingInterval,
+              }).code(200);
             },
           });
         },
@@ -424,6 +461,20 @@ export class KaapiDeviceAuthorizationFlow<
 
     this.#onPreHandler = options.onPreHandler;
     this.#onProcessAuthorization = options.onProcessAuthorization;
+
+    if (typeof options.deviceCodeLifetime === 'number') {
+      if (options.deviceCodeLifetime <= 0) {
+        throw new Error("deviceCodeLifetime must be a positive number");
+      }
+      this.#deviceCodeLifetime = options.deviceCodeLifetime;
+    }
+
+    if (typeof options.pollingInterval === 'number') {
+      if (options.pollingInterval <= 0) {
+        throw new Error("pollingInterval must be a positive number");
+      }
+      this.#pollingInterval = options.pollingInterval;
+    }
   }
 
   #createAuthorizeMiddleware(scopes: string[]): AuthSchemeHandler<Refs> {
@@ -488,6 +539,8 @@ export class KaapiDeviceAuthorizationFlowBuilder<
   protected preHandler?: RouteExtObject<ReqRefDefaults> | RouteExtObject<ReqRefDefaults>[] | undefined;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   protected processAuthorizationHandler?: KaapiDeviceAuthorizationLifecycleMethod<any, any> | undefined;
+  protected deviceCodeLifetime?: number | undefined;
+  protected pollingInterval?: number | undefined;
 
   /**
    * @param options - Optional partial builder options.
@@ -577,6 +630,32 @@ export class KaapiDeviceAuthorizationFlowBuilder<
   }
 
   /**
+   * Sets the lifetime of the device code in seconds.
+   * @param seconds The lifetime of the device code in seconds.
+   * @returns `this` for chaining.
+   */
+  setDeviceCodeLifetime(seconds: number): this {
+    if (seconds <= 0) {
+      throw new Error("deviceCodeLifetime must be a positive number");
+    }
+    this.deviceCodeLifetime = seconds;
+    return this;
+  }
+
+  /**
+   * Sets the polling interval in seconds for the client to poll the token endpoint.
+   * @param seconds The polling interval in seconds for the client to poll the token endpoint.
+   * @returns `this` for chaining.
+   */
+  setPollingInterval(seconds: number): this {
+    if (seconds <= 0) {
+      throw new Error("pollingInterval must be a positive number");
+    }
+    this.pollingInterval = seconds;
+    return this;
+  }
+
+  /**
    * Builds and returns a configured {@link KaapiDeviceAuthorizationFlow} instance.
    *
    * @returns A new `KaapiDeviceAuthorizationFlow`.
@@ -586,6 +665,8 @@ export class KaapiDeviceAuthorizationFlowBuilder<
       ...this.buildParams(),
       onPreHandler: this.preHandler,
       onProcessAuthorization: this.processAuthorizationHandler,
+      deviceCodeLifetime: this.deviceCodeLifetime,
+      pollingInterval: this.pollingInterval,
       strategyOptions: this.strategyOptions,
     };
     return new KaapiDeviceAuthorizationFlow<Refs, AuthRefs>(params);
@@ -629,6 +710,10 @@ export class KaapiOIDCDeviceAuthorizationFlow<
   readonly #onDiscoveryRequest?: Lifecycle.Method<any, any> | undefined;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   readonly #onJwksRequest?: Lifecycle.Method<any, any> | undefined;
+
+  readonly #deviceCodeLifetime: number = 300; // default 5 minutes
+
+  readonly #pollingInterval: number = 5; // default 5 seconds
 
   readonly #kaapi: KaapiOIDCDeviceAuthorizationMethods<Refs, AuthRefs> = {
     authorizeMiddleware: (scopes?: string[]): AuthSchemeHandler<Refs> => {
@@ -698,6 +783,8 @@ export class KaapiOIDCDeviceAuthorizationFlow<
       const onJwksRequest = this.#onJwksRequest;
       const discoveryUrl = this.getDiscoveryUrl();
       const jwksEndpoint = this.getJwksEndpoint();
+      const deviceCodeLifetime = this.#deviceCodeLifetime;
+      const pollingInterval = this.#pollingInterval;
 
       const supported = this.getTokenEndpointAuthMethods();
 
@@ -804,7 +891,16 @@ export class KaapiOIDCDeviceAuthorizationFlow<
                 }).code(400);
               }
 
-              return h.response(result.deviceCodeResponse).code(200);
+              const deviceCodeResponse = result.deviceCodeResponse;
+
+              return h.response({
+                device_code: deviceCodeResponse.deviceCode,
+                user_code: deviceCodeResponse.userCode,
+                verification_uri: `${deviceCodeResponse.verificationEndpoint}`,
+                verification_uri_complete: `${deviceCodeResponse.verificationEndpointComplete}`,
+                expires_in: deviceCodeLifetime,
+                interval: pollingInterval,
+              }).code(200);
             },
           });
         },
@@ -850,6 +946,20 @@ export class KaapiOIDCDeviceAuthorizationFlow<
     this.#onProcessAuthorization = options.onProcessAuthorization;
     this.#onDiscoveryRequest = options.onDiscoveryRequest;
     this.#onJwksRequest = options.onJwksRequest;
+
+    if (typeof options.deviceCodeLifetime === 'number') {
+      if (options.deviceCodeLifetime <= 0) {
+        throw new Error("deviceCodeLifetime must be a positive number");
+      }
+      this.#deviceCodeLifetime = options.deviceCodeLifetime;
+    }
+
+    if (typeof options.pollingInterval === 'number') {
+      if (options.pollingInterval <= 0) {
+        throw new Error("pollingInterval must be a positive number");
+      }
+      this.#pollingInterval = options.pollingInterval;
+    }
   }
 
   #createAuthorizeMiddleware(scopes: string[]): AuthSchemeHandler<Refs> {
@@ -918,6 +1028,8 @@ export class KaapiOIDCDeviceAuthorizationFlowBuilder<
   protected discoveryRequestHandler?: Lifecycle.Method<any, any> | undefined;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   protected jwksRequestHandler?: Lifecycle.Method<any, any> | undefined;
+  protected deviceCodeLifetime?: number | undefined;
+  protected pollingInterval?: number | undefined;
 
   /**
    * @param options - Optional partial builder options.
@@ -1031,6 +1143,32 @@ export class KaapiOIDCDeviceAuthorizationFlowBuilder<
   }
 
   /**
+   * Sets the lifetime of the device code in seconds.
+   * @param seconds The lifetime of the device code in seconds.
+   * @returns `this` for chaining.
+   */
+  setDeviceCodeLifetime(seconds: number): this {
+    if (seconds <= 0) {
+      throw new Error("deviceCodeLifetime must be a positive number");
+    }
+    this.deviceCodeLifetime = seconds;
+    return this;
+  }
+
+  /**
+   * Sets the polling interval in seconds for the client to poll the token endpoint.
+   * @param seconds The polling interval in seconds for the client to poll the token endpoint.
+   * @returns `this` for chaining.
+   */
+  setPollingInterval(seconds: number): this {
+    if (seconds <= 0) {
+      throw new Error("pollingInterval must be a positive number");
+    }
+    this.pollingInterval = seconds;
+    return this;
+  }
+
+  /**
    * Builds and returns a configured {@link KaapiOIDCDeviceAuthorizationFlow} instance.
    *
    * @returns A new `KaapiOIDCDeviceAuthorizationFlow`.
@@ -1042,6 +1180,8 @@ export class KaapiOIDCDeviceAuthorizationFlowBuilder<
       onJwksRequest: this.jwksRequestHandler,
       onPreHandler: this.preHandler,
       onProcessAuthorization: this.processAuthorizationHandler,
+      deviceCodeLifetime: this.deviceCodeLifetime,
+      pollingInterval: this.pollingInterval,
       strategyOptions: this.strategyOptions,
     };
     return new KaapiOIDCDeviceAuthorizationFlow<Refs, AuthRefs>(params);

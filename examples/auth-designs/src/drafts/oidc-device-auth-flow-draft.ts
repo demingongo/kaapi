@@ -1,259 +1,253 @@
+import { BearerTokenType, JwtPayload, NoneAuthMethod } from '@saurbit/oauth2';
+import { jwksAuthority } from '../plugins/jwks';
 import db from './database';
 import { decode, encode } from './encoder';
-import logger from './logger';
 import { generateCode, VERIFICATION_URI } from './utils';
 import {
-    BearerToken,
-    DeviceFlowOAuth2ErrorCode,
-    NoneAuthMethod,
-    OAuth2ErrorCode,
-    OAuth2TokenResponse,
-    OIDCDeviceAuthorizationBuilder,
+    KaapiOIDCDeviceAuthorizationFlowBuilder,
 } from '@kaapi/oauth2-auth-design';
 
-interface RefreshPayload {
+interface RefreshPayload extends JwtPayload {
     client_id?: string;
     scope?: string;
     sub?: string;
     type?: 'refresh';
 }
 
-const tokenType = new BearerToken();
+const tokenType = new BearerTokenType();
 
-export default OIDCDeviceAuthorizationBuilder.create({ logger })
-    .setTokenType(tokenType) // optional, default BearerToken
-    .setTokenTTL(600) // 10m
-    .addClientAuthenticationMethod(new NoneAuthMethod()) // client authentication methods
-    .useAccessTokenJwks(true) // activates JWT access token verification with JWKS
-    .validate(async (_, { jwtAccessTokenPayload }) => {
-        // db query
-        const user =
-            jwtAccessTokenPayload?.type === 'user' && jwtAccessTokenPayload.sub
-                ? await db.users.findById(`${jwtAccessTokenPayload.sub}`)
-                : undefined;
+const getClient = async (clientId: string) => {
+    // db query
+    const client = await db.clients.findById(clientId);
 
-        // not found
-        if (!user) {
-            return { isValid: false };
-        }
-
-        // authorized
+    // client not found
+    if (client) {
         return {
-            isValid: true,
-            credentials: {
-                user: {
-                    sub: user.id,
-                    name: user.name,
-                    given_name: user.given_name,
-                    email: user.email,
-                    type: 'user',
+            grants: ['device_code'],
+            id: client.id,
+            redirectUris: [],
+            scopes: ['openid', 'profile', 'email', 'offline_access'],
+            redirect_uris: client.redirect_uris,
+            metadata: {
+                name: client.name,
+            }
+        };
+    }
+
+    return;
+}
+
+export default KaapiOIDCDeviceAuthorizationFlowBuilder.create({})
+    .setTokenType(tokenType) // optional, default BearerToken
+    .setAccessTokenLifetime(600) // 10m
+    .setVerificationEndpoint(VERIFICATION_URI)
+    .setDeviceCodeLifetime(900) // 15m
+    .setPollingInterval(5) // 5s
+    .addClientAuthenticationMethod(new NoneAuthMethod()) // client authentication methods
+    .tokenVerifier(async (_req, { token }) => {
+        try {
+            const payload = await jwksAuthority.verify(token);
+            if (payload) {
+                // db query
+                const user = payload?.type === 'user' && payload.sub
+                    ? await db.users.findById(`${payload.sub}`)
+                    : undefined;
+                // not found
+                if (!user) {
+                    return { isValid: false };
+                }
+
+                // authorized
+                return {
+                    isValid: true,
+                    credentials: {
+                        user: {
+                            sub: user.id,
+                            name: user.name,
+                            given_name: user.given_name,
+                            email: user.email,
+                            type: 'user',
+                        },
+                    },
+                };
+            }
+        } catch (error) {
+            console.error(
+                {
+                    error: error instanceof Error ? { name: error.name, message: error.message } : error,
                 },
-            },
+                "Token verification error:"
+            );
+        }
+        return { isValid: false };
+    })
+    .setAuthorizationEndpoint('/oauth2/devicecode')
+    .getClientForAuthentication(async ({ clientId }) => await getClient(clientId))
+    .generateDeviceCode(async ({ client, scope }) => {
+        // generate codes
+        const userCode = generateCode(6);
+        const deviceCode = encode({ clientId: client.id, scope, code: generateCode(24) });
+
+        // save in db
+        await db.deviceTokens.insertOne({
+            id: deviceCode,
+            userCode,
+            expiresAt: Date.now() + 900_000,
+        });
+
+        return {
+            deviceCode: deviceCode,
+            userCode: userCode,
         };
     })
-    .authorizationRoute((route) =>
-        route
-            .setPath('/oauth2/devicecode') // optional, default '/oauth2/authorize'
-            .generateCode(async ({ clientId, scope }, _request) => {
-                // db query
-                const client = await db.clients.findById(clientId);
+    .setTokenEndpoint('/oauth2/token')
+    .getClient(async ({ clientId }) => await getClient(clientId))
+    .generateAccessToken(async ({ client, deviceCode, accessTokenLifetime, origin }) => {
+        const decodedCode = decode(deviceCode);
 
-                // client not found
-                if (!client) {
-                    return null;
-                }
+        // db query
+        const deviceToken = await db.deviceTokens.findById(deviceCode);
 
-                // generate codes
-                const userCode = generateCode(6);
-                const deviceCode = encode({ clientId, scope, code: generateCode(24) });
+        // device token not found
+        if (!deviceToken) {
+            return;
+        }
 
-                const searchParams = new URLSearchParams();
-                searchParams.append('user_code', userCode);
+        // device token expired
+        if (deviceToken.expiresAt <= Date.now()) {
+            db.deviceTokens.deleteOneWithId(deviceToken.id);
+            return {
+                type: 'error',
+                error: 'expired_token',
+                errorDescription: 'The device code has expired. Please initiate a new device authorization request.',
+            }
+        }
+        // device token authorization pending
+        if (!deviceToken.userId) {
+            return {
+                type: 'error',
+                error: 'authorization_pending',
+                errorDescription: 'The device code has not been authorized yet. Please complete the device authorization process.',
+            }
+        }
 
-                // save in db
-                await db.deviceTokens.insertOne({
-                    id: deviceCode,
-                    userCode,
-                    expiresAt: Date.now() + 900_000,
-                });
+        // db query
+        const user = await db.users.findById(deviceToken.userId);
+        if (!user) {
+            return;
+        }
 
-                return {
-                    device_code: deviceCode,
-                    expires_in: 900, // 15min
-                    interval: 5, // 5s
-                    user_code: userCode,
-                    verification_uri: VERIFICATION_URI,
-                    verification_uri_complete: `${VERIFICATION_URI}?${searchParams.toString()}`,
-                };
-            })
-    )
-    .tokenRoute((route) =>
-        route
-            .setPath('/oauth2/token') // optional, default '/oauth2/token'
-            .generateToken(
-                async ({ clientId, ttl, tokenType, createJwtAccessToken, createIdToken, deviceCode }, _req) => {
-                    const decodedCode = decode(deviceCode);
-                    const scope = decodedCode.scope;
+        const accessScope = Array.isArray(decodedCode.scope) ? decodedCode.scope : [];
+        const registeredClaims = {
+            exp: Math.floor(Date.now() / 1000) + accessTokenLifetime,
+            iat: Math.floor(Date.now() / 1000),
+            nbf: Math.floor(Date.now() / 1000),
+            iss: origin,
+            aud: client.id,
+            jti: crypto.randomUUID(),
+            sub: `${user.id}`,
+        };
 
-                    if (!ttl) {
-                        return { error: DeviceFlowOAuth2ErrorCode.ACCESS_DENIED, error_description: 'Missing ttl' };
-                    }
+        const { token: accessToken } = await jwksAuthority.sign({
+            scope: accessScope.join(" "),
+            ...registeredClaims,
+        });
 
-                    // db query
-                    const client = await db.clients.findById(clientId);
-                    const deviceToken = await db.deviceTokens.findById(deviceCode);
+        const { token: idToken } = await jwksAuthority.sign({
+            username: `${client.metadata?.username}`,
+            name: accessScope.includes("profile") ? `${user.name}` : undefined,
+            given_name: accessScope.includes("profile") ? `${user.given_name}` : undefined,
+            email: accessScope.includes("email") ? `${user.email}` : undefined,
+            ...registeredClaims,
+        });
 
-                    // client not found
-                    if (!client) {
-                        return {
-                            error: DeviceFlowOAuth2ErrorCode.ACCESS_DENIED,
-                            error_description: "Bad 'clientId' parameter.",
-                        };
-                    }
-                    // device token not found
-                    if (!deviceToken) {
-                        return null;
-                    }
-                    // device token expired
-                    if (deviceToken.expiresAt <= Date.now()) {
-                        db.deviceTokens.deleteOneWithId(deviceToken.id);
-                        return { error: DeviceFlowOAuth2ErrorCode.EXPIRED_TOKEN };
-                    }
-                    // device token authorization pending
-                    if (!deviceToken.userId) {
-                        return { error: DeviceFlowOAuth2ErrorCode.AUTHORIZATION_PENDING };
-                    }
+        // generate the refresh token if the "offline_access" scope was requested,
+        // and store it in the refresh token storage with an expiration time
+        const { token: refreshToken } = await (async () => {
+            if (accessScope.includes("offline_access")) {
+                return await jwksAuthority.sign({
+                    scope: accessScope.join(" "),
+                    ...registeredClaims,
+                    exp: Date.now() / 1000 + 604_800, // 7 days
+                    type: 'refresh',
+                })
+            }
+            return { token: undefined };
+        })();
 
-                    // db query
-                    const user = await db.users.findById(deviceToken.userId);
-                    if (!user) {
-                        return null;
-                    }
-
-                    try {
-                        if (createJwtAccessToken) {
-                            const { token: accessToken } = await createJwtAccessToken({
-                                sub: user.id,
-                                type: 'user',
-                            });
-                            const refreshToken =
-                                (scope?.split(' ').includes('offline_access') || undefined) &&
-                                (await createJwtAccessToken({
-                                    sub: user.id,
-                                    client_id: client.id,
-                                    scope,
-                                    exp: Date.now() / 1000 + 604_800, // 7 days
-                                    type: 'refresh',
-                                }));
-                            return new OAuth2TokenResponse({ access_token: accessToken })
-                                .setExpiresIn(ttl)
-                                .setRefreshToken(refreshToken?.token)
-                                .setScope(scope?.split(' '))
-                                .setTokenType(tokenType)
-                                .setIdToken(
-                                    (scope?.split(' ').includes('openid') || undefined) &&
-                                        (
-                                            await createIdToken?.({
-                                                sub: user.id,
-                                                name: (scope?.split(' ').includes('profile') || undefined) && user.name,
-                                                given_name:
-                                                    (scope?.split(' ').includes('profile') || undefined) &&
-                                                    user.given_name,
-                                                email: (scope?.split(' ').includes('email') || undefined) && user.email,
-                                            })
-                                        )?.token
-                                ); // add id_token if scope has 'openid'
-                        }
-                    } catch (err) {
-                        console.error(err);
-                    }
-
-                    return null;
-                }
+        return {
+            accessToken,
+            scope: accessScope,
+            idToken,
+            refreshToken,
+        };
+    })
+    .generateAccessTokenFromRefreshToken(async ({ accessTokenLifetime, client, origin, refreshToken, scope }) => {
+        const payload = await jwksAuthority.verify<RefreshPayload>(refreshToken);
+        if (
+            !payload ||
+            !(
+                payload.client_id &&
+                payload.client_id === client.id &&
+                payload.sub &&
+                payload.type === 'refresh'
             )
-    )
-    .refreshTokenRoute((route) =>
-        route
-            .setPath('/oauth2/token') // optional, default '/oauth2/token'
-            .generateToken(
-                async (
-                    { clientId, refreshToken, scope, ttl, tokenType, createJwtAccessToken, createIdToken, verifyJwt },
-                    _req
-                ) => {
-                    try {
-                        // verify refresh token
-                        const payload = await verifyJwt?.<RefreshPayload>(refreshToken);
-                        if (
-                            !payload ||
-                            !(
-                                payload.client_id &&
-                                payload.client_id === clientId &&
-                                payload.sub &&
-                                payload.type === 'refresh'
-                            )
-                        ) {
-                            return { error: DeviceFlowOAuth2ErrorCode.ACCESS_DENIED };
-                        }
+        ) {
+            return;
+        }
 
-                        // db query
-                        const client = await db.clients.findById(clientId);
-                        const user = await db.users.findById(payload.sub);
+        // db query
+        const user = await db.users.findById(payload.sub);
+        if (!user) {
+            return;
+        }
 
-                        // client or user not found
-                        if (!client || !user) {
-                            return { error: DeviceFlowOAuth2ErrorCode.ACCESS_DENIED };
-                        }
+        const accessScope = scope || payload.scope?.split(' ') || [];
 
-                        if (!ttl) {
-                            return { error: OAuth2ErrorCode.ACCESS_DENIED, error_description: 'Missing ttl' };
-                        }
+        const registeredClaims = {
+            exp: Math.floor(Date.now() / 1000) + accessTokenLifetime,
+            iat: Math.floor(Date.now() / 1000),
+            nbf: Math.floor(Date.now() / 1000),
+            iss: origin,
+            aud: client.id,
+            jti: crypto.randomUUID(),
+            sub: `${user.id}`,
+        };
 
-                        const newScope = scope || payload.scope;
+        const { token: accessToken } = await jwksAuthority.sign({
+            scope: accessScope.join(" "),
+            ...registeredClaims,
+        });
 
-                        if (createJwtAccessToken) {
-                            const { token: accessToken } = await createJwtAccessToken({
-                                sub: user.id,
-                                type: 'user',
-                            });
-                            const newRefreshToken =
-                                (!newScope ||
-                                    (newScope && newScope?.split(' ').includes('offline_access')) ||
-                                    undefined) &&
-                                (await createJwtAccessToken({
-                                    sub: user.id,
-                                    client_id: clientId,
-                                    scope: newScope,
-                                    exp: Date.now() / 1000 + 604_800, // 7 days
+        const { token: idToken } = await jwksAuthority.sign({
+            username: `${client.metadata?.username}`,
+            name: accessScope.includes("profile") ? `${user.name}` : undefined,
+            given_name: accessScope.includes("profile") ? `${user.given_name}` : undefined,
+            email: accessScope.includes("email") ? `${user.email}` : undefined,
+            ...registeredClaims,
+        });
 
-                                    type: 'refresh',
-                                } as Required<RefreshPayload>));
-                            return new OAuth2TokenResponse({ access_token: accessToken })
-                                .setExpiresIn(ttl)
-                                .setRefreshToken(newRefreshToken?.token)
-                                .setScope(newScope?.split(' '))
-                                .setTokenType(tokenType)
-                                .setIdToken(
-                                    (scope?.split(' ').includes('openid') || undefined) &&
-                                        (
-                                            await createIdToken?.({
-                                                sub: user.id,
-                                                name: (scope?.split(' ').includes('profile') || undefined) && user.name,
-                                                given_name:
-                                                    (scope?.split(' ').includes('profile') || undefined) &&
-                                                    user.given_name,
-                                                email: (scope?.split(' ').includes('email') || undefined) && user.email,
-                                            })
-                                        )?.token
-                                ); // add id_token if the new scope has 'openid'
-                        }
-                    } catch (err) {
-                        logger.error(err);
-                    }
+        // generate the refresh token if the "offline_access" scope was requested,
+        // and store it in the refresh token storage with an expiration time
+        const { token: newRefreshToken } = await (async () => {
+            if (accessScope.includes("offline_access")) {
+                return await jwksAuthority.sign({
+                    scope: accessScope.join(" "),
+                    ...registeredClaims,
+                    exp: Date.now() / 1000 + 604_800, // 7 days
+                    type: 'refresh',
+                })
+            }
+            return { token: undefined };
+        })();
 
-                    return null;
-                }
-            )
-    )
+        return {
+            accessToken,
+            scope: accessScope,
+            idToken,
+            refreshToken: newRefreshToken,
+        };
+    })
     .setDescription(
         'This API uses OAuth 2 with the device authorization grant flow. [More info](https://www.oauth.com/oauth2-servers/device-flow/)'
     )
@@ -262,5 +256,4 @@ export default OIDCDeviceAuthorizationBuilder.create({ logger })
         profile: 'Access to basic profile information such as name and picture.',
         email: "Access to the user's email address and its verification status.",
         offline_access: 'Request a refresh token to access resources when the user is offline.',
-    });
-//.build() // Optionally build this as a standalone flow
+    }).build();

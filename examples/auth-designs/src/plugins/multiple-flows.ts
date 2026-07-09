@@ -1,28 +1,18 @@
 import oidcAuthCodeFlowDraft from '../drafts/oidc-auth-code-flow-draft';
 import oidcClientCredentialsFlowDraft from '../drafts/oidc-client-credentials-flow-draft';
-//import oidcAuthCodeFlow from './flow-builders/oidc-auth-code-flow';
-//import oidcClientCredentialsFlow from './flow-builders/oidc-client-credentials-flow';
-import oidcDeviceFlow from './flow-builders/oidc-device-flow';
-import { createInMemoryKeyStore, MultipleFlowsBuilder } from '@kaapi/oauth2-auth-design';
+import oidcDeviceFlow from '../drafts/oidc-device-auth-flow-draft';
+import { KaapiOIDCMultipleFlowsBuilder } from '@kaapi/oauth2-auth-design';
+import { jwksAuthority } from './jwks';
 
-const mflow = MultipleFlowsBuilder.create()
-    .tokenEndpoint('/oauth2/v2/token')
-    .jwksRoute((route) => route.setPath('/oauth2/v2/keys')) // activates jwks uri
-    .setPublicKeyExpiry(86400) // 24h
-    .setJwksKeyStore(createInMemoryKeyStore()) // store for JWKS
-    .setJwksRotatorOptions({
-        intervalMs: 7.884e9, // 91 days
-        timestampStore: createInMemoryKeyStore(),
+const mflow = KaapiOIDCMultipleFlowsBuilder.create()
+    .setTokenEndpoint('/oauth2/v2/token')
+    .setJwksEndpoint('/oauth2/v2/keys') // activates jwks uri
+    .onJwksRequest(async () => {
+        return await jwksAuthority.getJwksEndpointResponse();
     })
-    .add(oidcAuthCodeFlowDraft)
-    .add(oidcClientCredentialsFlowDraft)
-    .add(oidcDeviceFlow)
+    .addFlow(oidcAuthCodeFlowDraft)
+    .addFlow(oidcClientCredentialsFlowDraft)
+    .addFlow(oidcDeviceFlow)
     .build();
-
-mflow.checkAndRotateKeys().catch(console.error);
-
-setInterval(() => {
-    mflow.checkAndRotateKeys().catch(console.error);
-}, 3600 * 1000); // 1h
 
 export default mflow;
