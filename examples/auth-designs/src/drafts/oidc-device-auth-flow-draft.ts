@@ -37,7 +37,11 @@ const getClient = async (clientId: string) => {
     return;
 }
 
-export default KaapiOIDCDeviceAuthorizationFlowBuilder.create({})
+export default KaapiOIDCDeviceAuthorizationFlowBuilder.create({
+    onJwksRequest: async () => {
+        return await jwksAuthority.getJwksEndpointResponse();
+    }
+})
     .setTokenType(tokenType) // optional, default BearerToken
     .setAccessTokenLifetime(600) // 10m
     .setVerificationEndpoint(VERIFICATION_URI)

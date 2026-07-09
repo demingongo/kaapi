@@ -8,6 +8,9 @@ import { jwksAuthority } from '../plugins/jwks';
 export default KaapiOIDCClientCredentialsFlowBuilder.create({
     jwksEndpoint: '/.well-known/jwks.json',
     tokenEndpoint: '/oauth2/token',
+    onJwksRequest: async () => {
+        return await jwksAuthority.getJwksEndpointResponse();
+    }
 })
     .setTokenType(new BearerTokenType()) // optional, default BearerToken
     .setAccessTokenLifetime(600) // 10m

@@ -1,18 +1,12 @@
+import { ClientSecretBasic, ClientSecretPost, createInMemoryReplayStore, DPoPTokenType, NoneAuthMethod } from '@saurbit/oauth2';
 import db from './database';
 import { decode, encode } from './encoder';
 import logger from './logger';
 import renderHtml from './render-html';
 import {
-    ClientSecretBasic,
-    ClientSecretPost,
-    createInMemoryReplayStore,
-    createMatchAuthCodeResult,
-    DPoPToken,
-    NoneAuthMethod,
-    OAuth2ErrorCode,
-    OAuth2TokenResponse,
-    OIDCAuthorizationCodeBuilder,
+    KaapiOIDCAuthorizationCodeFlowBuilder,
 } from '@kaapi/oauth2-auth-design';
+import { jwksAuthority } from '../plugins/jwks';
 
 interface RefreshPayload {
     client_id?: string;
@@ -21,19 +15,41 @@ interface RefreshPayload {
     type?: 'refresh';
 }
 
-const tokenType = new DPoPToken() // DPoP support
-    .setTTL(300) // default 300s
+const tokenType = new DPoPTokenType(jwksAuthority.verify.bind(jwksAuthority)) // DPoP support
+    .setTokenLifetime(300) // default 300s
     .setReplayDetector(createInMemoryReplayStore()) // cache DPoP tokens
     .validateTokenRequest(() => ({ isValid: true })); // for testing without validating dpop
 
-export default OIDCAuthorizationCodeBuilder.create({ logger })
+export default KaapiOIDCAuthorizationCodeFlowBuilder.create({
+    usernameField: 'email',
+    passwordField: 'password',
+    parseAuthorizationEndpointData: async (req) => {
+        const payload = req.payload as Record<string, unknown>;
+        const email = typeof payload?.email === "string" ? payload.email : undefined;
+        const password = typeof payload?.password === "string" ? payload.password : undefined;
+        const consent = typeof payload?.consent === "string" && ["allow", "deny"].includes(payload.consent) ? (payload.consent as "allow" | "deny") : undefined;
+        const sessionCookie = typeof req.state.session === "string" ? req.state.session : undefined;
+
+        return {
+            email,
+            password,
+            consent,
+            sessionCookie,
+        };
+    },
+    authorizationEndpoint: '/oauth2/v2/authorize',
+    tokenEndpoint: '/oauth2/v2/token',
+    onJwksRequest: async () => {
+        return await jwksAuthority.getJwksEndpointResponse();
+    },
+})
     .setTokenType(tokenType) // optional, default BearerToken
-    .setTokenTTL(3600) // 1h
+    .setAccessTokenLifetime(3600) // 1h
     .addClientAuthenticationMethod(new ClientSecretBasic()) // client authentication methods
     .addClientAuthenticationMethod(new ClientSecretPost()) // client authentication methods
     .addClientAuthenticationMethod(new NoneAuthMethod()) // client authentication methods
-    .useAccessTokenJwks(true) // activates JWT access token verification with JWKS
-    .validate(async (_, { jwtAccessTokenPayload }) => {
+    .tokenVerifier(async (_, { token }) => {
+        const jwtAccessTokenPayload = await jwksAuthority.verify(token);
         // db query
         const user =
             jwtAccessTokenPayload?.type === 'user' && jwtAccessTokenPayload.sub
@@ -56,8 +72,55 @@ export default OIDCAuthorizationCodeBuilder.create({ logger })
                     email: user.email,
                     type: 'user',
                 },
+                scope: typeof jwtAccessTokenPayload.scope === 'string' ? jwtAccessTokenPayload.scope.split(' ') : [],
             },
         };
+    })
+    .getClientForAuthentication(async ({ clientId }) => {
+        // db query
+        const client = await db.clients.findById(clientId);
+
+        // not found
+        if (!client) {
+            return undefined;
+        }
+        return {
+            id: client.id,
+            grants: ['authorization_code', 'refresh_token'],
+            scopes: ['openid', 'profile', 'email', 'offline_access', 'read', 'write', 'admin', 'api.read'],
+            redirectUris: [],
+            metadata: client.details,
+        };
+    })
+    .setLoginFormRenderer(async (_req, _h, result) => {
+        if (result && 'success' in result) {
+            !result.success && result.error.message
+        }
+        return await renderHtml('authorization-page', {
+            context: {
+                error: result && 'error' in result ? result.error.errorCode : undefined,
+                errorMessage: result && 'error' in result ? result.error.message : undefined,
+                usernameField: 'email',
+                passwordField: 'password'
+            }
+        });
+    })
+    .setConsentFormRenderer(async (request, h, { continueResponse: { scope, context: { client }, user } }, { statusCode }) => {
+        const html = await renderHtml('consent-page', { params: { userEmail: user.email, clientId: client.id, scope } });
+
+        const response = h.response(html).code(statusCode).type("text/html");
+
+        if (!request.state.session) {
+            // create a session and set a cookie to track it
+            const sessionId = crypto.randomUUID();
+            sessionStorage[sessionId] = {
+                userId: user.id,
+                expiresAt: Date.now() + 300000, // 5 minutes
+            };
+            response.state('kaapisession', sessionId);
+        }
+
+        return response;
     })
     .authorizationRoute<object, { Payload: { email?: string; password?: string; step?: string; submit?: string } }>(
         (route) =>
@@ -340,5 +403,5 @@ export default OIDCAuthorizationCodeBuilder.create({ logger })
         write: 'Write access to protected resources.',
         admin: 'Grants administrative or elevated privileges.',
         'api.read': 'Read access to a specific API or resource group.',
-    });
-//.build() // Optionally build this as a standalone flow
+    })
+    .build();
