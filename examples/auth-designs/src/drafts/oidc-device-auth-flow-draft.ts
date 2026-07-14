@@ -23,7 +23,7 @@ const getClient = async (clientId: string) => {
     // client not found
     if (client) {
         return {
-            grants: ['device_code'],
+            grants: ['urn:ietf:params:oauth:grant-type:device_code'],
             id: client.id,
             redirectUris: [],
             scopes: ['openid', 'profile', 'email', 'offline_access'],
@@ -86,7 +86,7 @@ export default KaapiOIDCDeviceAuthorizationFlowBuilder.create({
         }
         return { isValid: false };
     })
-    .setAuthorizationEndpoint('/oauth2/devicecode')
+    .setAuthorizationEndpoint('/oauth2/device_authorization')
     .getClientForAuthentication(async ({ clientId }) => await getClient(clientId))
     .generateDeviceCode(async ({ client, scope }) => {
         // generate codes
@@ -115,7 +115,7 @@ export default KaapiOIDCDeviceAuthorizationFlowBuilder.create({
 
         // device token not found
         if (!deviceToken) {
-            return;
+            return { type: 'error', error: 'authorization_pending' };
         }
 
         // device token expired

@@ -1,5 +1,15 @@
 import type { Request as KaapiRequest, KaapiTools, Lifecycle, ReqRef, ReqRefDefaults } from '@kaapi/kaapi';
-import { OAuth2FlowTokenResponse, StrategyResult, UnauthorizedClientError, UnsupportedGrantTypeError } from '@saurbit/oauth2';
+import {
+    AccessDeniedError,
+    AuthorizationPendingError,
+    ExpiredTokenError,
+    OAuth2Errors,
+    OAuth2FlowTokenResponse,
+    SlowDownError,
+    StrategyResult,
+    UnauthorizedClientError,
+    UnsupportedGrantTypeError
+} from '@saurbit/oauth2';
 import { WebStandardRequestOptions } from './types';
 
 /**
@@ -87,16 +97,32 @@ export function createTokenEndpointHandler(t: KaapiTools, tokenHandler: (request
         if (result.success) {
             return result.tokenResponse;
         }
-        const error = result.error;
+        let error = result.error;
         t.log.error({ error }, 'Error');
+        if (error instanceof OAuth2Errors) {
+            const tmperror = error.errors.find((e) => !(e instanceof UnsupportedGrantTypeError));
+            if (tmperror) {
+                error = tmperror;
+            }
+        }
         if (
             error instanceof UnsupportedGrantTypeError ||
-            error instanceof UnauthorizedClientError
+            error instanceof UnauthorizedClientError ||
+            error instanceof AccessDeniedError ||
+            error instanceof ExpiredTokenError ||
+            error instanceof AuthorizationPendingError ||
+            error instanceof UnsupportedGrantTypeError ||
+            error instanceof SlowDownError
         ) {
             return h
-                .response({ error: error.errorCode, errorDescription: error.message })
-                .code(400);
+                .response({
+                    error: error.errorCode,
+                    errorDescription: error.message,
+                    error_uri: error.errorUri
+                })
+                .code(error.statusCode);
         }
+
         return h.response({ error: 'invalid_request' }).code(400);
     }
 }
