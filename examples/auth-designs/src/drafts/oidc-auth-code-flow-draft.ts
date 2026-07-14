@@ -7,6 +7,7 @@ import {
     verifyCodeVerifier,
 } from '@kaapi/oauth2-auth-design';
 import { jwksAuthority } from '../plugins/jwks';
+import { verifyJwk } from '@saurbit/oauth2-jwt';
 import Boom from '@hapi/boom';
 
 interface RefreshPayload extends JwtPayload {
@@ -16,7 +17,7 @@ interface RefreshPayload extends JwtPayload {
     type?: 'refresh';
 }
 
-const tokenType = new DPoPTokenType(jwksAuthority.verify.bind(jwksAuthority)) // DPoP support
+const tokenType = new DPoPTokenType(verifyJwk) // DPoP support
     .setTokenLifetime(300) // default 300s
     .setReplayDetector(createInMemoryReplayStore()) // cache DPoP tokens
     .validateTokenRequest(() => ({ isValid: true })); // for testing without validating dpop
@@ -94,18 +95,18 @@ export default KaapiOIDCAuthorizationCodeFlowBuilder.create({
             metadata: client.details,
         };
     })
-    .setLoginFormRenderer(async (_req, _h, result) => {
+    .setLoginFormRenderer(async (_req, h, result, { statusCode, errorMessage }) => {
         if (result && 'success' in result) {
             !result.success && result.error.message
         }
-        return await renderHtml('authorization-page', {
+        return h.response(await renderHtml('authorization-page', {
             context: {
                 error: result && 'error' in result ? result.error.errorCode : undefined,
-                errorMessage: result && 'error' in result ? result.error.message : undefined,
+                errorMessage: errorMessage,
                 usernameField: 'email',
                 passwordField: 'password'
             }
-        });
+        })).code(statusCode);
     })
     .setConsentFormRenderer(async (request, h, { continueResponse: { scope, context: { client }, user } }, { statusCode }) => {
         const html = await renderHtml('consent-page', { params: { userEmail: user.email, clientId: client.id, scope } });
@@ -140,7 +141,10 @@ export default KaapiOIDCAuthorizationCodeFlowBuilder.create({
         }
 
         const user = await db.users.findByCredentials(`${parsedData.email}`, `${parsedData.password}`);
-        if (!user) return undefined;
+        if (!user) return {
+            type: 'unauthenticated',
+            message: 'Invalid email or password',
+        };
         return {
             type: "authenticated",
             user: {
