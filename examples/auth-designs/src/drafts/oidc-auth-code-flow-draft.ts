@@ -253,7 +253,8 @@ export default KaapiOIDCAuthorizationCodeFlowBuilder.create({
                     userId: refreshTokenData.sub,
                     name: user.name,
                     email: user.email,
-                    given_name: user.given_name
+                    given_name: user.given_name,
+                    nonce: refreshTokenData.nonce,
                 }
             };
         }
@@ -287,6 +288,7 @@ export default KaapiOIDCAuthorizationCodeFlowBuilder.create({
             name: accessScope.includes("profile") ? `${user.name}` : undefined,
             given_name: accessScope.includes("profile") ? `${user.given_name}` : undefined,
             email: accessScope.includes("email") ? `${user.email}` : undefined,
+            nonce: client.metadata?.nonce ? `${client.metadata?.nonce}` : undefined,
             ...registeredClaims,
         });
 
@@ -298,6 +300,7 @@ export default KaapiOIDCAuthorizationCodeFlowBuilder.create({
                     scope: accessScope.join(" "),
                     ...registeredClaims,
                     client_id: registeredClaims.aud,
+                    nonce: client.metadata?.nonce ? `${client.metadata?.nonce}` : undefined,
                     exp: Date.now() / 1000 + 604_800, // 7 days
                     type: 'refresh',
                 })
@@ -340,6 +343,7 @@ export default KaapiOIDCAuthorizationCodeFlowBuilder.create({
             name: accessScope.includes("profile") ? `${user.name}` : undefined,
             given_name: accessScope.includes("profile") ? `${user.given_name}` : undefined,
             email: accessScope.includes("email") ? `${user.email}` : undefined,
+            nonce: client.metadata?.nonce ? `${client.metadata?.nonce}` : undefined,
             ...registeredClaims,
         });
 
@@ -351,6 +355,7 @@ export default KaapiOIDCAuthorizationCodeFlowBuilder.create({
                     scope: accessScope.join(" "),
                     ...registeredClaims,
                     client_id: registeredClaims.aud,
+                    nonce: client.metadata?.nonce ? `${client.metadata?.nonce}` : undefined,
                     exp: Date.now() / 1000 + 604_800, // 7 days
                     type: 'refresh',
                 })
