@@ -117,11 +117,11 @@ importers:
         specifier: ^1.2.6
         version: 1.2.6
       '@saurbit/oauth2':
-        specifier: 0.1.5
-        version: 0.1.5
+        specifier: 0.1.7
+        version: 0.1.7
       '@saurbit/oauth2-jwt':
-        specifier: 0.1.3
-        version: 0.1.3(@saurbit/oauth2@0.1.5)
+        specifier: 0.1.5
+        version: 0.1.5(@saurbit/oauth2@0.1.7)
       joi:
         specifier: ^18.2.1
         version: 18.2.1
@@ -150,11 +150,11 @@ importers:
         specifier: workspace:^
         version: link:../../packages/oauth2-auth-design
       '@saurbit/oauth2':
-        specifier: ^0.1.6
-        version: 0.1.6
+        specifier: ^0.1.7
+        version: 0.1.7
       '@saurbit/oauth2-jwt':
-        specifier: ^0.1.4
-        version: 0.1.4(@saurbit/oauth2@0.1.6)
+        specifier: ^0.1.5
+        version: 0.1.5(@saurbit/oauth2@0.1.7)
       hapi-scalar:
         specifier: ^1.1.0
         version: 1.1.0
@@ -196,11 +196,11 @@ importers:
         specifier: ^1.2.6
         version: 1.2.6
       '@saurbit/oauth2':
-        specifier: ^0.1.6
-        version: 0.1.6
+        specifier: ^0.1.7
+        version: 0.1.7
       '@saurbit/oauth2-jwt':
-        specifier: ^0.1.4
-        version: 0.1.4(@saurbit/oauth2@0.1.6)
+        specifier: ^0.1.5
+        version: 0.1.5(@saurbit/oauth2@0.1.7)
       arktype:
         specifier: ^2.2.0
         version: 2.2.0
@@ -569,11 +569,11 @@ importers:
         specifier: ^1.2.6
         version: 1.2.6
       '@saurbit/oauth2':
-        specifier: ^0.1.6
-        version: 0.1.6
+        specifier: ^0.1.7
+        version: 0.1.7
       '@saurbit/oauth2-jwt':
-        specifier: ^0.1.4
-        version: 0.1.4(@saurbit/oauth2@0.1.6)
+        specifier: ^0.1.5
+        version: 0.1.5(@saurbit/oauth2@0.1.7)
       html-entities:
         specifier: ^2.6.0
         version: 2.6.0
@@ -1559,21 +1559,13 @@ packages:
   '@rtsao/scc@1.1.0':
     resolution: {integrity: sha512-zt6OdqaDoOnJ1ZYsCYGt9YmWzDXl4vQdKTyJev62gFhRGKdx7mcT54V9KIjg+d2wi9EXsPvAPKe7i7WjfVWB8g==}
 
-  '@saurbit/oauth2-jwt@0.1.3':
-    resolution: {integrity: sha512-FkjTwRkvZ2lj4gp/ssIzHn8x/ttglyYt4Wqb6iLPJrSISTcmh7LNYSCewwteuG//xIfXmt4q7Jct/9MQmYNlxg==}
+  '@saurbit/oauth2-jwt@0.1.5':
+    resolution: {integrity: sha512-Hg/SCV2qsewWEnelqAx1VHOs1lujekWOMuAeKiH0zvUI6niEm1pNe73RkRXed+1QYPgd7K35xECkwJ/nDVDCOQ==}
     peerDependencies:
-      '@saurbit/oauth2': ^0.1.1
+      '@saurbit/oauth2': ^0.1.7
 
-  '@saurbit/oauth2-jwt@0.1.4':
-    resolution: {integrity: sha512-9gNj4/gc4pE42gdl8T3LbsZoxG6vK78nL2znLwrWpSCBQ1ADW/m5UuPq243NeodEoI8ppz2iN7ZTfiY9emi4hw==}
-    peerDependencies:
-      '@saurbit/oauth2': ^0.1.6
-
-  '@saurbit/oauth2@0.1.5':
-    resolution: {integrity: sha512-c1HXz1GZ1ALE5kmmKUch1IQsLK4WsbzAQGJu/Vyu5TGHBOvXsZto+OzXuaavblfezK7Vu2DZclYK3fW4yocMeg==}
-
-  '@saurbit/oauth2@0.1.6':
-    resolution: {integrity: sha512-I2CCfxhh7JKfdYGAc3Spx9wTXxWIO0Xa4VVc5akQ+9IuEstCTvcavZ7lpvvMZcfTaJqGIvFNOFk/rDOLUJWOAQ==}
+  '@saurbit/oauth2@0.1.7':
+    resolution: {integrity: sha512-BpSHGhehd5v5jbNeHH4t4JsxDsqu+qccoL9oIxcebNi1//jQ19lCf9Rw6GGSnM5cunBwK6wh+WuHouyNwkKbxQ==}
 
   '@scalar/client-side-rendering@0.1.12':
     resolution: {integrity: sha512-prwHK4ozTU268BHZ/5OstoKB23JSidDuvddAOp0bVz9c29ZxsyzzxPtPcVgF7X16LiZnS1OzY030FoDCM+iC9Q==}
@@ -5323,19 +5315,12 @@ snapshots:
 
   '@rtsao/scc@1.1.0': {}
 
-  '@saurbit/oauth2-jwt@0.1.3(@saurbit/oauth2@0.1.5)':
+  '@saurbit/oauth2-jwt@0.1.5(@saurbit/oauth2@0.1.7)':
     dependencies:
-      '@saurbit/oauth2': 0.1.5
+      '@saurbit/oauth2': 0.1.7
       jose: 6.2.3
 
-  '@saurbit/oauth2-jwt@0.1.4(@saurbit/oauth2@0.1.6)':
-    dependencies:
-      '@saurbit/oauth2': 0.1.6
-      jose: 6.2.3
-
-  '@saurbit/oauth2@0.1.5': {}
-
-  '@saurbit/oauth2@0.1.6': {}
+  '@saurbit/oauth2@0.1.7': {}
 
   '@scalar/client-side-rendering@0.1.12':
     dependencies:

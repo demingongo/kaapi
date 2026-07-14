@@ -98,11 +98,12 @@ export function createTokenEndpointHandler(t: KaapiTools, tokenHandler: (request
             return result.tokenResponse;
         }
         let error = result.error;
-        t.log.error({ error }, 'Error');
         if (error instanceof OAuth2Errors) {
             const tmperror = error.errors.find((e) => !(e instanceof UnsupportedGrantTypeError));
             if (tmperror) {
                 error = tmperror;
+            } else if (error.errors.length > 0) {
+                error = error.errors[0];
             }
         }
         if (
@@ -114,6 +115,7 @@ export function createTokenEndpointHandler(t: KaapiTools, tokenHandler: (request
             error instanceof UnsupportedGrantTypeError ||
             error instanceof SlowDownError
         ) {
+            t.log.warn({ error, message: error.message });
             return h
                 .response({
                     error: error.errorCode,
@@ -122,7 +124,7 @@ export function createTokenEndpointHandler(t: KaapiTools, tokenHandler: (request
                 })
                 .code(error.statusCode);
         }
-
+        t.log.error({ error, message: error.message });
         return h.response({ error: 'invalid_request' }).code(400);
     }
 }

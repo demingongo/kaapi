@@ -6,6 +6,8 @@ import { generateCode, VERIFICATION_URI } from './utils';
 import {
     KaapiOIDCDeviceAuthorizationFlowBuilder,
 } from '@kaapi/oauth2-auth-design';
+import { KaapiServerRoute } from '@kaapi/kaapi';
+import Joi from 'joi';
 
 interface RefreshPayload extends JwtPayload {
     client_id?: string;
@@ -262,3 +264,31 @@ export default KaapiOIDCDeviceAuthorizationFlowBuilder.create({
         email: "Access to the user's email address and its verification status.",
         offline_access: 'Request a refresh token to access resources when the user is offline.',
     }).build();
+
+export const deviceVerificationRoute: KaapiServerRoute<{ Query: { user_code: string } }> = {
+    method: 'GET',
+    path: '/oauth2/v2/activate',
+    options: {
+        validate: {
+            query: Joi.object({
+                user_code: Joi.string(),
+            }),
+        },
+    },
+    handler: async (request, h) => {
+        const userCode = request.query.user_code;
+
+        const entry = await db.deviceTokens.findByUserCode(userCode);
+        if (!entry) return h.response('Invalid user_code').code(404);
+
+        const decoded = decode<{ clientId: string; scope: string[] }>(entry.id);
+
+        // link the user to the device code in the database 
+        // (in a real application, you would also verify the user's identity and ensure they are authorized to link the device)
+        await db.deviceTokens.updateOneWithId(entry.id, { userId: '248289761001' });
+
+        return h.response(
+            `Device verified successfully for client: ${decoded.clientId}, scopes: ${decoded.scope.join(' ')}`
+        );
+    }
+}

@@ -57,7 +57,7 @@
         "@types/node-jose": "^1.1.13"
     },
     "peerDependencies": {
-        "@saurbit/oauth2": "^0.1.6",
-        "@saurbit/oauth2-jwt": "^0.1.4"
+        "@saurbit/oauth2": "^0.1.7",
+        "@saurbit/oauth2-jwt": "^0.1.5"
     }
 }

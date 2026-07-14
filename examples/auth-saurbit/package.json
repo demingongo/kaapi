@@ -19,8 +19,8 @@
         "@hapi/hoek": "^11.0.7",
         "@kaapi/kaapi": "workspace:^",
         "@kaapi/oauth2-auth-design": "workspace:^",
-        "@saurbit/oauth2": "^0.1.6",
-        "@saurbit/oauth2-jwt": "^0.1.4",
+        "@saurbit/oauth2": "^0.1.7",
+        "@saurbit/oauth2-jwt": "^0.1.5",
         "hapi-scalar": "^1.1.0",
         "joi": "^18.2.1"
     },

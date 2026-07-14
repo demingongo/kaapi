@@ -3,6 +3,7 @@ import { appReady } from './server';
 import Boom from '@hapi/boom';
 import Joi from 'joi';
 import { jwksRotator } from './plugins/jwks';
+import { deviceVerificationRoute } from './drafts/oidc-device-auth-flow-draft';
 
 appReady.then((app) => {
     app.log(`Kaapi server is ready: ${app}`);
@@ -61,6 +62,8 @@ appReady.then((app) => {
             return url;
         }
     );
+
+    app.route(deviceVerificationRoute);
 });
 
 appReady.then((app) => {
