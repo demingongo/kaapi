@@ -22,6 +22,7 @@ const tokenType = new DPoPTokenType(jwksAuthority.verify.bind(jwksAuthority)) //
     .validateTokenRequest(() => ({ isValid: true })); // for testing without validating dpop
 
 export default KaapiOIDCAuthorizationCodeFlowBuilder.create({
+    securitySchemeName: 'oauth2_auth_code_flow',
     usernameField: 'email',
     passwordField: 'password',
     parseAuthorizationEndpointData: async (req) => {

@@ -30,7 +30,7 @@ export const app = new Kaapi({
             failAction: 'log',
         },
     },
-    extend: customAuthDesign,
+    //extend: customAuthDesign,
 });
 
 // cookies
@@ -47,7 +47,7 @@ app.base().state('kaapisession', {
 app.extend(authenticationCodeDesign)
 app.extend(apiKeyAuthDesign)
 */
-//app.extend(customAuthDesign)
+app.extend(customAuthDesign)
 
 // to not set it in all the routes but will be used in routes
 // with no auth defined

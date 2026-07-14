@@ -7,6 +7,11 @@ import { jwksAuthority } from './jwks';
 const mflow = KaapiOIDCMultipleFlowsBuilder.create()
     .setTokenEndpoint('/oauth2/v2/token')
     .setJwksEndpoint('/oauth2/v2/keys') // activates jwks uri
+    .onDiscoveryRequest(async (request) => {
+        return mflow.kaapi().getDiscoveryConfiguration(request, {
+            origin: 'http://localhost:3000', // Use the externally accessible URI for discovery to ensure correct endpoint URLs are provided to clients
+        });
+    })
     .onJwksRequest(async () => {
         return await jwksAuthority.getJwksEndpointResponse();
     })

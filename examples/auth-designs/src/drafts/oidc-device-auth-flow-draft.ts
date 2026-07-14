@@ -38,6 +38,7 @@ const getClient = async (clientId: string) => {
 }
 
 export default KaapiOIDCDeviceAuthorizationFlowBuilder.create({
+    securitySchemeName: 'oauth2_device_authorization_flow',
     onJwksRequest: async () => {
         return await jwksAuthority.getJwksEndpointResponse();
     }

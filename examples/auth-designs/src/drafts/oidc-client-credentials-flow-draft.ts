@@ -6,6 +6,7 @@ import {
 import { jwksAuthority } from '../plugins/jwks';
 
 export default KaapiOIDCClientCredentialsFlowBuilder.create({
+    securitySchemeName: 'oauth2_client_credentials_flow',
     jwksEndpoint: '/.well-known/jwks.json',
     tokenEndpoint: '/oauth2/token',
     onJwksRequest: async () => {
