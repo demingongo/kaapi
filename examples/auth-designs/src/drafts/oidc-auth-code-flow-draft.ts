@@ -281,6 +281,7 @@ export default KaapiOIDCAuthorizationCodeFlowBuilder.create({
 
         const { token: accessToken } = await jwksAuthority.sign({
             scope: accessScope.join(" "),
+            type: 'user',
             ...registeredClaims,
         });
 
@@ -336,6 +337,7 @@ export default KaapiOIDCAuthorizationCodeFlowBuilder.create({
 
         const { token: accessToken } = await jwksAuthority.sign({
             scope: accessScope.join(" "),
+            type: 'user',
             ...registeredClaims,
         });
 
