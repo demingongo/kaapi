@@ -7,7 +7,7 @@ import {
     verifyCodeVerifier,
 } from '@kaapi/oauth2-auth-design';
 import { jwksAuthority } from '../plugins/jwks';
-import { verifyJwk } from '@saurbit/oauth2-jwt';
+import { calculateJwkThumbprint, verifyJwk } from '@saurbit/oauth2-jwt';
 import Boom from '@hapi/boom';
 
 interface RefreshPayload extends JwtPayload {
@@ -17,10 +17,10 @@ interface RefreshPayload extends JwtPayload {
     type?: 'refresh';
 }
 
-const tokenType = new DPoPTokenType(verifyJwk) // DPoP support
+const tokenType = new DPoPTokenType(verifyJwk, calculateJwkThumbprint) // DPoP support
     .setTokenLifetime(300) // default 300s
     .setReplayDetector(createInMemoryReplayStore()) // cache DPoP tokens
-    .validateTokenRequest(() => ({ isValid: true })); // for testing without validating dpop
+//.validateTokenRequest(() => ({ isValid: true })); // for testing without validating dpop
 
 export default KaapiOIDCAuthorizationCodeFlowBuilder.create({
     securitySchemeName: 'oauth2_auth_code_flow',
@@ -51,8 +51,16 @@ export default KaapiOIDCAuthorizationCodeFlowBuilder.create({
     .addClientAuthenticationMethod(new ClientSecretBasic()) // client authentication methods
     .addClientAuthenticationMethod(new ClientSecretPost()) // client authentication methods
     .addClientAuthenticationMethod(new NoneAuthMethod()) // client authentication methods
-    .tokenVerifier(async (_, { token }) => {
+    .tokenVerifier(async (_, { token, tokenTypeValidation }) => {
         const jwtAccessTokenPayload = await jwksAuthority.verify(token);
+
+        // validate the DPoP token if the request is a DPoP request
+        try {
+            tokenType.validateThumbprint(tokenTypeValidation, jwtAccessTokenPayload);
+        } catch (error) {
+            return { isValid: false };
+        }
+
         // db query
         const user =
             jwtAccessTokenPayload?.type === 'user' && jwtAccessTokenPayload.sub
@@ -260,7 +268,7 @@ export default KaapiOIDCAuthorizationCodeFlowBuilder.create({
         }
         return;
     })
-    .generateAccessToken(async ({ client, accessTokenLifetime, origin }) => {
+    .generateAccessToken(async ({ client, accessTokenLifetime, origin, tokenTypeValidation }) => {
 
         // db query
         const user = await db.users.findById(`${client.metadata?.userId}`);
@@ -282,7 +290,8 @@ export default KaapiOIDCAuthorizationCodeFlowBuilder.create({
         const { token: accessToken } = await jwksAuthority.sign({
             scope: accessScope.join(" "),
             type: 'user',
-            ...registeredClaims,
+            // add the DPoP thumbprint to the cnf claim for DPoP token validation
+            ...tokenType.addJwkThumbprintToCnfClaim({ ...registeredClaims }, tokenTypeValidation),
         });
 
         const { token: idToken } = await jwksAuthority.sign({
