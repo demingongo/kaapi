@@ -185,6 +185,9 @@ export interface KaapiOIDCMethods<Refs extends ReqRef = ReqRefDefaults> extends 
  * @template Refs - Kaapi request reference types for the application.
  */
 export interface KaapiOIDCMultipleFlowsMethods<Refs extends ReqRef = ReqRefDefaults> extends Omit<KaapiOIDCMethods<Refs>, 'toAuthDesign'> {
+    /**
+     * Returns an {@link IOAuth2MultipleFlowsAuthDesign} instance that registers all flows and their endpoints on the Kaapi server.
+     */
     toAuthDesign(): IOAuth2MultipleFlowsAuthDesign;
 }
 

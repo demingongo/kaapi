@@ -151,6 +151,7 @@ export class KaapiOIDCMultipleFlows<
           return docs;
         },
 
+        // registers each flow's scheme and strategy on the Kaapi server
         integrateStrategy(t: KaapiTools): void {
           for (const authDesign of authDesigns) {
             authDesign.integrateStrategy(t);
