@@ -1,3 +1,4 @@
+import { OAuth2AuthDesign } from './common.js';
 import type {
     AuthSchemeHandler,
     FailedAuthorizationAction,
@@ -7,7 +8,7 @@ import type {
     KaapiOIDCAdapted,
     KaapiOIDCFlowBuilder,
     KaapiOIDCMethods,
-    WebStandardRequestOptions
+    WebStandardRequestOptions,
 } from './types.ts';
 import { createWebStandardRequest, createTokenEndpointHandler, createSchemeAndStrategy } from './utils.js';
 import {
@@ -32,7 +33,6 @@ import {
     type StrategyResult,
     type StrategyVerifyTokenFunction,
 } from '@saurbit/oauth2';
-import { OAuth2AuthDesign } from './common.js';
 
 //#region Types and Interfaces
 
@@ -72,7 +72,7 @@ export interface KaapiOIDCClientCredentialsFlowOptions<Refs extends ReqRef = Req
     strategyOptions: KaapiOAuth2StrategyOptions<Refs>;
 
     /**
-     * Optional lifecycle method called when the discovery endpoint is requested. 
+     * Optional lifecycle method called when the discovery endpoint is requested.
      * If not provided, a route handler has to be registered to handle the discovery requests, and the flow won't be able to provide a default discovery response.
      */
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -104,7 +104,8 @@ export interface KaapiOIDCClientCredentialsFlowOptions<Refs extends ReqRef = Req
  */
 export class KaapiClientCredentialsFlow<Refs extends ReqRef = ReqRefDefaults>
     extends ClientCredentialsFlow
-    implements KaapiAdapted<Refs> {
+    implements KaapiAdapted<Refs>
+{
     readonly #tokenVerifier: (request: KaapiRequest<Refs>) => Promise<StrategyResult>;
     readonly #authorizeMiddleware: AuthSchemeHandler<Refs>;
 
@@ -144,12 +145,7 @@ export class KaapiClientCredentialsFlow<Refs extends ReqRef = ReqRefDefaults>
                 },
 
                 integrateStrategy(t: KaapiTools): void {
-                    createSchemeAndStrategy(
-                        t,
-                        schemeName,
-                        tokenType,
-                        tokenVerifierHandler,
-                    );
+                    createSchemeAndStrategy(t, schemeName, tokenType, tokenVerifierHandler);
                 },
 
                 integrateHook(t: KaapiTools): void {
@@ -200,8 +196,8 @@ export class KaapiClientCredentialsFlow<Refs extends ReqRef = ReqRefDefaults>
             const kaapiVerifyToken = strategyOptions.verifyToken;
             const verifyToken: StrategyVerifyTokenFunction | undefined = kaapiVerifyToken
                 ? async (_, params) => {
-                    return await kaapiVerifyToken(request, params);
-                }
+                      return await kaapiVerifyToken(request, params);
+                  }
                 : undefined;
 
             return await evaluateStrategy(createWebStandardRequest(request), {
@@ -375,7 +371,8 @@ export class KaapiClientCredentialsFlowBuilder<
  */
 export class KaapiOIDCClientCredentialsFlow<Refs extends ReqRef = ReqRefDefaults>
     extends OIDCClientCredentialsFlow
-    implements KaapiOIDCAdapted<Refs> {
+    implements KaapiOIDCAdapted<Refs>
+{
     readonly #tokenVerifier: (request: KaapiRequest<Refs>) => Promise<StrategyResult>;
     readonly #authorizeMiddleware: AuthSchemeHandler<Refs>;
 
@@ -398,7 +395,10 @@ export class KaapiOIDCClientCredentialsFlow<Refs extends ReqRef = ReqRefDefaults
             return await this.#tokenVerifier(request);
         },
 
-        getDiscoveryConfiguration: <R extends ReqRef = ReqRefDefaults>(request?: KaapiRequest<R>, options?: WebStandardRequestOptions): Record<string, string | string[] | undefined> => {
+        getDiscoveryConfiguration: <R extends ReqRef = ReqRefDefaults>(
+            request?: KaapiRequest<R>,
+            options?: WebStandardRequestOptions
+        ): Record<string, string | string[] | undefined> => {
             return this.getDiscoveryConfiguration(request ? createWebStandardRequest(request, options) : undefined);
         },
 
@@ -428,12 +428,7 @@ export class KaapiOIDCClientCredentialsFlow<Refs extends ReqRef = ReqRefDefaults
                 },
 
                 integrateStrategy(t: KaapiTools): void {
-                    createSchemeAndStrategy(
-                        t,
-                        schemeName,
-                        tokenType,
-                        tokenVerifierHandler,
-                    );
+                    createSchemeAndStrategy(t, schemeName, tokenType, tokenVerifierHandler);
                 },
 
                 integrateHook(t: KaapiTools, skipCommonRoutes: boolean = false): void {
@@ -506,8 +501,8 @@ export class KaapiOIDCClientCredentialsFlow<Refs extends ReqRef = ReqRefDefaults
             const kaapiVerifyToken = strategyOptions.verifyToken;
             const verifyToken: StrategyVerifyTokenFunction | undefined = kaapiVerifyToken
                 ? async (_, params) => {
-                    return await kaapiVerifyToken(request, params);
-                }
+                      return await kaapiVerifyToken(request, params);
+                  }
                 : undefined;
 
             return await evaluateStrategy(createWebStandardRequest(request), {
@@ -583,9 +578,10 @@ export class KaapiOIDCClientCredentialsFlow<Refs extends ReqRef = ReqRefDefaults
  *   .build();
  * ```
  */
-export class KaapiOIDCClientCredentialsFlowBuilder<
-    Refs extends ReqRef = ReqRefDefaults,
-> extends OIDCClientCredentialsFlowBuilder implements KaapiOIDCFlowBuilder {
+export class KaapiOIDCClientCredentialsFlowBuilder<Refs extends ReqRef = ReqRefDefaults>
+    extends OIDCClientCredentialsFlowBuilder
+    implements KaapiOIDCFlowBuilder
+{
     protected strategyOptions: KaapiOAuth2StrategyOptions<Refs> = {};
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -661,9 +657,11 @@ export class KaapiOIDCClientCredentialsFlowBuilder<
      * @param handler A lifecycle method that receives the Kaapi request, response toolkit, and allows you to handle the discovery request.
      * @returns `this` for chaining.
      */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onDiscoveryRequest<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
-        (handler: Lifecycle.Method<R, V> | undefined): this {
+    onDiscoveryRequest<
+        R extends ReqRef = ReqRefDefaults,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>,
+    >(handler: Lifecycle.Method<R, V> | undefined): this {
         this.discoveryRequestHandler = handler;
         return this;
     }
@@ -674,8 +672,9 @@ export class KaapiOIDCClientCredentialsFlowBuilder<
      * @returns `this` for chaining.
      */
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onJwksRequest<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
-        (handler: Lifecycle.Method<R, V> | undefined): this {
+    onJwksRequest<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>(
+        handler: Lifecycle.Method<R, V> | undefined
+    ): this {
         this.jwksRequestHandler = handler;
         return this;
     }

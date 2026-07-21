@@ -1,7 +1,12 @@
-import { AuthDesign, KaapiTools } from "@kaapi/kaapi";
-import type { IOAuth2MultipleFlowsAuthDesign, IOAuth2AuthDesign, OAuth2MultipleFlowsAuthDesignOptions, OAuth2AuthDesignOptions } from "./types";
-import type { BaseAuthUtil } from "@novice1/api-doc-generator/lib/utils/auth/baseAuthUtils";
-import { OAuth2Util, SecuritySchemeObject } from "@novice1/api-doc-generator";
+import type {
+    IOAuth2MultipleFlowsAuthDesign,
+    IOAuth2AuthDesign,
+    OAuth2MultipleFlowsAuthDesignOptions,
+    OAuth2AuthDesignOptions,
+} from './types';
+import { AuthDesign, KaapiTools } from '@kaapi/kaapi';
+import { OAuth2Util, SecuritySchemeObject } from '@novice1/api-doc-generator';
+import type { BaseAuthUtil } from '@novice1/api-doc-generator/lib/utils/auth/baseAuthUtils';
 
 /**
  * OpenAPI documentation utility for OpenID Connect flows.
@@ -11,7 +16,6 @@ import { OAuth2Util, SecuritySchemeObject } from "@novice1/api-doc-generator";
  * individual endpoint URLs.
  */
 export class OIDCAuthUtil extends OAuth2Util {
-
     protected discoveryUrl?: string;
 
     /**
@@ -111,4 +115,3 @@ export class OAuth2MultipleFlowsAuthDesign extends AuthDesign implements IOAuth2
         return this.#options.integrateHook ? this.#options.integrateHook(t, skipCommonRoutes) : undefined;
     }
 }
-

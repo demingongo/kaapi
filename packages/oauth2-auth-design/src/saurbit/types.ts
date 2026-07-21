@@ -162,11 +162,11 @@ export interface KaapiMethods<Refs extends ReqRef = ReqRefDefaults> {
 export interface KaapiOIDCMethods<Refs extends ReqRef = ReqRefDefaults> extends KaapiMethods<Refs> {
     /**
      * Retrieves the OpenID Connect discovery configuration document.
-     * 
-     * Builds the standard provider metadata fields from the flow's configuration and merges in any static 
-     * overrides set via openIdConfiguration. Relative endpoint URLs are resolved against the request's origin 
+     *
+     * Builds the standard provider metadata fields from the flow's configuration and merges in any static
+     * overrides set via openIdConfiguration. Relative endpoint URLs are resolved against the request's origin
      * (or the discovery URL's origin if no request is provided).
-     * 
+     *
      * @param request - Optional Kaapi request object used to determine the full base URL for relative endpoints.
      * @param options - Optional WebStandardRequestOptions object used to customize the request.
      */
@@ -184,7 +184,10 @@ export interface KaapiOIDCMethods<Refs extends ReqRef = ReqRefDefaults> extends 
  *
  * @template Refs - Kaapi request reference types for the application.
  */
-export interface KaapiOIDCMultipleFlowsMethods<Refs extends ReqRef = ReqRefDefaults> extends Omit<KaapiOIDCMethods<Refs>, 'toAuthDesign'> {
+export interface KaapiOIDCMultipleFlowsMethods<Refs extends ReqRef = ReqRefDefaults> extends Omit<
+    KaapiOIDCMethods<Refs>,
+    'toAuthDesign'
+> {
     /**
      * Returns an {@link IOAuth2MultipleFlowsAuthDesign} instance that registers all flows and their endpoints on the Kaapi server.
      */

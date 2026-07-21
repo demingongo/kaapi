@@ -1,3 +1,4 @@
+import { WebStandardRequestOptions } from './types';
 import type { Request as KaapiRequest, KaapiTools, Lifecycle, ReqRef, ReqRefDefaults } from '@kaapi/kaapi';
 import {
     AccessDeniedError,
@@ -8,9 +9,9 @@ import {
     SlowDownError,
     StrategyResult,
     UnauthorizedClientError,
-    UnsupportedGrantTypeError
+    UnsupportedGrantTypeError,
 } from '@saurbit/oauth2';
-import { WebStandardRequestOptions } from './types';
+import { createHash } from 'crypto';
 
 /**
  * Converts a Kaapi (Hapi) {@link KaapiRequest} into a Web Standard {@link Request}.
@@ -90,8 +91,11 @@ export function createWebStandardRequest<Refs extends ReqRef = ReqRefDefaults>(
  *   an {@link OAuth2FlowTokenResponse}.
  * @returns A Hapi lifecycle method suitable for use as a route handler.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function createTokenEndpointHandler(t: KaapiTools, tokenHandler: (request: Request) => Promise<OAuth2FlowTokenResponse>): Lifecycle.Method<any, Lifecycle.ReturnValue<any>> {
+export function createTokenEndpointHandler(
+    t: KaapiTools,
+    tokenHandler: (request: Request) => Promise<OAuth2FlowTokenResponse>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Lifecycle.Method<any, Lifecycle.ReturnValue<any>> {
     return async (req, h) => {
         const result = await tokenHandler(createWebStandardRequest(req));
         if (result.success) {
@@ -120,13 +124,13 @@ export function createTokenEndpointHandler(t: KaapiTools, tokenHandler: (request
                 .response({
                     error: error.errorCode,
                     errorDescription: error.message,
-                    error_uri: error.errorUri
+                    error_uri: error.errorUri,
                 })
                 .code(error.statusCode);
         }
         t.log.error({ error, message: error.message });
         return h.response({ error: 'invalid_request' }).code(400);
-    }
+    };
 }
 
 /**
@@ -142,7 +146,12 @@ export function createTokenEndpointHandler(t: KaapiTools, tokenHandler: (request
  * @param tokenVerifierHandler - Async function that verifies the token extracted from the
  *   incoming {@link KaapiRequest} and returns a {@link StrategyResult}.
  */
-export function createSchemeAndStrategy<Refs extends ReqRef = ReqRefDefaults>(t: KaapiTools, schemeName: string, tokenType: string, tokenVerifierHandler: (request: KaapiRequest<Refs>) => Promise<StrategyResult>): void {
+export function createSchemeAndStrategy<Refs extends ReqRef = ReqRefDefaults>(
+    t: KaapiTools,
+    schemeName: string,
+    tokenType: string,
+    tokenVerifierHandler: (request: KaapiRequest<Refs>) => Promise<StrategyResult>
+): void {
     // Register the auth scheme for the multiple flows
     t.scheme(schemeName, (_server) => {
         return {
@@ -164,4 +173,23 @@ export function createSchemeAndStrategy<Refs extends ReqRef = ReqRefDefaults>(t:
         };
     });
     t.strategy(schemeName, schemeName);
+}
+
+/**
+ * Verifies the code_verifier against a previously saved code_challenge.
+ *
+ * Implements the PKCE (RFC 7636) S256 verification: hashes `codeVerifier` with
+ * SHA-256, encodes the result as Base64url, and compares it to `codeChallenge`.
+ *
+ * @param codeVerifier - The plain-text code verifier sent by the client at the token endpoint.
+ * @param codeChallenge - The Base64url-encoded SHA-256 hash of the code verifier, previously
+ *   stored during the authorization request.
+ * @returns `true` if the verifier matches the challenge; `false` otherwise.
+ */
+export function verifyCodeVerifier(codeVerifier: string, codeChallenge: string) {
+    const base64 = createHash('sha256').update(codeVerifier).digest('base64');
+
+    const base64url = base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+    return base64url === codeChallenge;
 }

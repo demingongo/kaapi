@@ -1,3 +1,28 @@
+import { OAuth2AuthDesign, OIDCAuthUtil } from './common.js';
+import type {
+    AuthSchemeHandler,
+    FailedAuthorizationAction,
+    KaapiAdapted,
+    KaapiMethods,
+    KaapiOAuth2StrategyOptions,
+    KaapiOIDCAdapted,
+    KaapiOIDCFlowBuilder,
+    KaapiOIDCMethods,
+    WebStandardRequestOptions,
+} from './types.ts';
+import { createWebStandardRequest, createTokenEndpointHandler, createSchemeAndStrategy } from './utils.js';
+import {
+    type ReqRef,
+    type ReqRefDefaults,
+    type Request as KaapiRequest,
+    type KaapiTools,
+    type RouteOptions,
+    type RouteExtObject,
+    type Lifecycle,
+    type MergeRefs,
+    type ResponseToolkit,
+} from '@kaapi/kaapi';
+import { ClientAuthentication, GrantType, OAuth2Util } from '@novice1/api-doc-generator';
 import {
     AccessDeniedError,
     AuthorizationCodeEndpointContext,
@@ -22,32 +47,7 @@ import {
     StrategyInsufficientScopeError,
     type StrategyResult,
     type StrategyVerifyTokenFunction,
-} from "@saurbit/oauth2";
-import type {
-    AuthSchemeHandler,
-    FailedAuthorizationAction,
-    KaapiAdapted,
-    KaapiMethods,
-    KaapiOAuth2StrategyOptions,
-    KaapiOIDCAdapted,
-    KaapiOIDCFlowBuilder,
-    KaapiOIDCMethods,
-    WebStandardRequestOptions
-} from "./types.ts";
-import { createWebStandardRequest, createTokenEndpointHandler, createSchemeAndStrategy } from './utils.js';
-import {
-    type ReqRef,
-    type ReqRefDefaults,
-    type Request as KaapiRequest,
-    type KaapiTools,
-    type RouteOptions,
-    type RouteExtObject,
-    type Lifecycle,
-    type MergeRefs,
-    type ResponseToolkit,
-} from '@kaapi/kaapi';
-import { ClientAuthentication, GrantType, OAuth2Util } from "@novice1/api-doc-generator";
-import { OAuth2AuthDesign, OIDCAuthUtil } from "./common.js";
+} from '@saurbit/oauth2';
 
 //#region Types and Interfaces
 
@@ -61,14 +61,17 @@ import { OAuth2AuthDesign, OIDCAuthUtil } from "./common.js";
  * @template V - The expected return value type.
  * @template Result - The flow endpoint result type passed to this handler.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export interface KaapiAuthorizationCodeLifecycleMethod<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>, Result = AuthorizationCodeInitiationResponse | AuthorizationCodeProcessResponse | OIDCAuthorizationCodeInitiationResponse | OIDCAuthorizationCodeProcessResponse> {
-    (
-        this: MergeRefs<R>['Bind'],
-        request: KaapiRequest<R>,
-        h: ResponseToolkit<R>,
-        result: Result
-    ): V
+export interface KaapiAuthorizationCodeLifecycleMethod<
+    R extends ReqRef = ReqRefDefaults,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>,
+    Result =
+        | AuthorizationCodeInitiationResponse
+        | AuthorizationCodeProcessResponse
+        | OIDCAuthorizationCodeInitiationResponse
+        | OIDCAuthorizationCodeProcessResponse,
+> {
+    (this: MergeRefs<R>['Bind'], request: KaapiRequest<R>, h: ResponseToolkit<R>, result: Result): V;
 }
 
 /**
@@ -87,13 +90,23 @@ export interface KaapiAuthorizationCodeLifecycleMethod<R extends ReqRef = ReqRef
  * @param ctxt - Rendering context including HTTP status code, field names, and an optional error message.
  * @returns A Hapi lifecycle return value (typically an HTML response).
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export interface LoginFormRenderer<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>, Result = AuthorizationCodeInitiationResponse | AuthorizationCodeProcessResponse | OIDCAuthorizationCodeInitiationResponse | OIDCAuthorizationCodeProcessResponse> {
-    (request: KaapiRequest<R>, h: ResponseToolkit<R>, result: Result, ctxt: { statusCode: number, usernameField: string, passwordField: string, errorMessage?: string }): V;
+export interface LoginFormRenderer<
+    R extends ReqRef = ReqRefDefaults,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>,
+    Result =
+        | AuthorizationCodeInitiationResponse
+        | AuthorizationCodeProcessResponse
+        | OIDCAuthorizationCodeInitiationResponse
+        | OIDCAuthorizationCodeProcessResponse,
+> {
+    (
+        request: KaapiRequest<R>,
+        h: ResponseToolkit<R>,
+        result: Result,
+        ctxt: { statusCode: number; usernameField: string; passwordField: string; errorMessage?: string }
+    ): V;
 }
-
-
-
 
 /**
  * Custom renderer for the consent form displayed when the authorization endpoint
@@ -108,10 +121,14 @@ export type AuthorizationCodeConsentFormRenderer<
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>,
     C extends AuthorizationCodeEndpointContext = AuthorizationCodeEndpointContext,
-> = LoginFormRenderer<R, V, {
-    type: "continue";
-    continueResponse: AuthorizationCodeEndpointContinueResponse<C>;
-}>;
+> = LoginFormRenderer<
+    R,
+    V,
+    {
+        type: 'continue';
+        continueResponse: AuthorizationCodeEndpointContinueResponse<C>;
+    }
+>;
 
 /**
  * Configuration options for {@link KaapiAuthorizationCodeFlow}.
@@ -126,8 +143,8 @@ export type AuthorizationCodeConsentFormRenderer<
 export interface KaapiAuthorizationCodeFlowOptions<
     AuthReqData extends AuthorizationCodeReqData = AuthorizationCodeReqData,
     Refs extends ReqRef = ReqRefDefaults,
-    AuthRefs extends ReqRef = ReqRefDefaults
-> extends Omit<AuthorizationCodeFlowOptions<AuthReqData>, "strategyOptions"> {
+    AuthRefs extends ReqRef = ReqRefDefaults,
+> extends Omit<AuthorizationCodeFlowOptions<AuthReqData>, 'strategyOptions'> {
     /** Kaapi-specific strategy options, including token verification and failed authorization handling. */
     strategyOptions: KaapiOAuth2StrategyOptions<Refs>;
     /** Handler called on POST requests to parse and return the authorization request data from the Kaapi request. */
@@ -140,13 +157,13 @@ export interface KaapiAuthorizationCodeFlowOptions<
     /**
      * Optional lifecycle method called after initiating the authorization endpoint (GET).
      */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onInitiateAuthorization?: KaapiAuthorizationCodeLifecycleMethod<any, any, AuthorizationCodeInitiationResponse> | undefined;
+    onInitiateAuthorization?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        KaapiAuthorizationCodeLifecycleMethod<any, any, AuthorizationCodeInitiationResponse> | undefined;
     /**
      * Optional lifecycle method called after processing the authorization endpoint (POST).
      */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onProcessAuthorization?: KaapiAuthorizationCodeLifecycleMethod<any, any, AuthorizationCodeProcessResponse> | undefined;
+    onProcessAuthorization?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        KaapiAuthorizationCodeLifecycleMethod<any, any, AuthorizationCodeProcessResponse> | undefined;
 
     /**
      * Optional field name for the username in the default login form. Defaults to "username" if not provided.
@@ -160,8 +177,8 @@ export interface KaapiAuthorizationCodeFlowOptions<
     /**
      * Optional custom form renderer for the authorization endpoint. If not provided, a default login form will be rendered for GET requests, and a simple success/error response will be returned for POST requests.
      */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    loginFormRenderer?: LoginFormRenderer<any, any, AuthorizationCodeInitiationResponse | AuthorizationCodeProcessResponse> | undefined;
+    loginFormRenderer?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        LoginFormRenderer<any, any, AuthorizationCodeInitiationResponse | AuthorizationCodeProcessResponse> | undefined;
 
     /**
      * Optional custom consent form renderer for the authorization endpoint. If not provided, a default consent form will be rendered when the authorization endpoint returns a "continue" response, prompting the user to allow or deny the requested scopes.
@@ -183,11 +200,11 @@ export interface KaapiAuthorizationCodeFlowOptions<
 export interface KaapiAuthorizationCodeFlowBuilderOptions<
     AuthReqData extends AuthorizationCodeReqData = AuthorizationCodeReqData,
     Refs extends ReqRef = ReqRefDefaults,
-    AuthRefs extends ReqRef = ReqRefDefaults
-> extends
-    Partial<Omit<KaapiAuthorizationCodeFlowOptions<AuthReqData, Refs, AuthRefs>, "parseAuthorizationEndpointData">>,
-    Pick<KaapiAuthorizationCodeFlowOptions<AuthReqData, Refs, AuthRefs>, "parseAuthorizationEndpointData"> {
-}
+    AuthRefs extends ReqRef = ReqRefDefaults,
+>
+    extends
+        Partial<Omit<KaapiAuthorizationCodeFlowOptions<AuthReqData, Refs, AuthRefs>, 'parseAuthorizationEndpointData'>>,
+        Pick<KaapiAuthorizationCodeFlowOptions<AuthReqData, Refs, AuthRefs>, 'parseAuthorizationEndpointData'> {}
 
 /**
  * Kaapi-adapted methods for the Authorization Code flow.
@@ -198,7 +215,10 @@ export interface KaapiAuthorizationCodeFlowBuilderOptions<
  * @template Refs - The Kaapi `ReqRef` type for the application.
  * @template AuthRefs - The Kaapi `ReqRef` type for the authorization data.
  */
-export interface KaapiAuthorizationCodeMethods<Refs extends ReqRef = ReqRefDefaults, AuthRefs extends ReqRef = ReqRefDefaults> extends KaapiMethods<Refs> {
+export interface KaapiAuthorizationCodeMethods<
+    Refs extends ReqRef = ReqRefDefaults,
+    AuthRefs extends ReqRef = ReqRefDefaults,
+> extends KaapiMethods<Refs> {
     /**
      * This method is a convenience method that combines the logic of initiating (GET) the authorization code flow for Kaapi.
      * It checks the HTTP method of the request and calls the appropriate method to handle the authorization endpoint logic.
@@ -206,7 +226,7 @@ export interface KaapiAuthorizationCodeMethods<Refs extends ReqRef = ReqRefDefau
      * @returns The initiation response for the authorization code flow.
      */
     initiateAuthorization<R extends ReqRef = ReqRefDefaults>(
-        request: KaapiRequest<R>,
+        request: KaapiRequest<R>
     ): Promise<AuthorizationCodeInitiationResponse>;
 
     /**
@@ -215,9 +235,7 @@ export interface KaapiAuthorizationCodeMethods<Refs extends ReqRef = ReqRefDefau
      * @param request - The Kaapi request object containing the authorization form data.
      * @returns The processing response for the authorization code flow.
      */
-    processAuthorization(
-        request: KaapiRequest<AuthRefs>,
-    ): Promise<AuthorizationCodeProcessResponse>;
+    processAuthorization(request: KaapiRequest<AuthRefs>): Promise<AuthorizationCodeProcessResponse>;
 
     /**
      * This method is a convenience method that handles the authorization endpoint logic for Kaapi.
@@ -226,7 +244,7 @@ export interface KaapiAuthorizationCodeMethods<Refs extends ReqRef = ReqRefDefau
      * @returns The authorization endpoint response, based on the HTTP method.
      */
     handleAuthorizationEndpoint<R extends ReqRef = ReqRefDefaults & AuthRefs>(
-        request: KaapiRequest<R>,
+        request: KaapiRequest<R>
     ): Promise<AuthorizationCodeEndpointResponse>;
 }
 
@@ -247,8 +265,8 @@ export interface KaapiAuthorizationCodeMethods<Refs extends ReqRef = ReqRefDefau
 export interface KaapiOIDCAuthorizationCodeFlowOptions<
     AuthReqData extends AuthorizationCodeReqData = AuthorizationCodeReqData,
     Refs extends ReqRef = ReqRefDefaults,
-    AuthRefs extends ReqRef = ReqRefDefaults
-> extends Omit<OIDCAuthorizationCodeFlowOptions<AuthReqData>, "strategyOptions"> {
+    AuthRefs extends ReqRef = ReqRefDefaults,
+> extends Omit<OIDCAuthorizationCodeFlowOptions<AuthReqData>, 'strategyOptions'> {
     /** Kaapi-specific strategy options, including token verification and failed authorization handling. */
     strategyOptions: KaapiOAuth2StrategyOptions<Refs>;
     /** Handler called on POST requests to parse and return the authorization request data from the Kaapi request. */
@@ -261,16 +279,16 @@ export interface KaapiOIDCAuthorizationCodeFlowOptions<
     /**
      * Optional lifecycle method called after initiating the authorization endpoint (GET).
      */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onInitiateAuthorization?: KaapiAuthorizationCodeLifecycleMethod<any, any, OIDCAuthorizationCodeInitiationResponse> | undefined;
+    onInitiateAuthorization?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        KaapiAuthorizationCodeLifecycleMethod<any, any, OIDCAuthorizationCodeInitiationResponse> | undefined;
     /**
      * Optional lifecycle method called after processing the authorization endpoint (POST).
      */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onProcessAuthorization?: KaapiAuthorizationCodeLifecycleMethod<any, any, OIDCAuthorizationCodeProcessResponse> | undefined;
+    onProcessAuthorization?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        KaapiAuthorizationCodeLifecycleMethod<any, any, OIDCAuthorizationCodeProcessResponse> | undefined;
 
     /**
-     * Optional lifecycle method called when the discovery endpoint is requested. 
+     * Optional lifecycle method called when the discovery endpoint is requested.
      * If not provided, a route handler has to be registered to handle the discovery requests, and the flow won't be able to provide a default discovery response.
      */
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -295,14 +313,15 @@ export interface KaapiOIDCAuthorizationCodeFlowOptions<
     /**
      * Optional custom form renderer for the authorization endpoint. If not provided, a default login form will be rendered for GET requests, and a simple success/error response will be returned for POST requests.
      */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    loginFormRenderer?: LoginFormRenderer<any, any, OIDCAuthorizationCodeInitiationResponse | OIDCAuthorizationCodeProcessResponse> | undefined;
+    loginFormRenderer?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        | LoginFormRenderer<any, any, OIDCAuthorizationCodeInitiationResponse | OIDCAuthorizationCodeProcessResponse>
+        | undefined;
 
     /**
      * Optional custom consent form renderer for the authorization endpoint. If not provided, a default consent form will be rendered when the authorization endpoint returns a "continue" response, prompting the user to allow or deny the requested scopes.
      */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    consentFormRenderer?: AuthorizationCodeConsentFormRenderer<any, any, OIDCAuthorizationCodeEndpointContext> | undefined;
+    consentFormRenderer?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        AuthorizationCodeConsentFormRenderer<any, any, OIDCAuthorizationCodeEndpointContext> | undefined;
 }
 
 /**
@@ -318,13 +337,13 @@ export interface KaapiOIDCAuthorizationCodeFlowOptions<
 export interface KaapiOIDCAuthorizationCodeFlowBuilderOptions<
     AuthReqData extends AuthorizationCodeReqData = AuthorizationCodeReqData,
     Refs extends ReqRef = ReqRefDefaults,
-    AuthRefs extends ReqRef = ReqRefDefaults
-> extends
-    Partial<
-        Omit<KaapiOIDCAuthorizationCodeFlowOptions<AuthReqData, Refs, AuthRefs>, "parseAuthorizationEndpointData">
-    >,
-    Pick<KaapiOIDCAuthorizationCodeFlowOptions<AuthReqData, Refs, AuthRefs>, "parseAuthorizationEndpointData"> {
-}
+    AuthRefs extends ReqRef = ReqRefDefaults,
+>
+    extends
+        Partial<
+            Omit<KaapiOIDCAuthorizationCodeFlowOptions<AuthReqData, Refs, AuthRefs>, 'parseAuthorizationEndpointData'>
+        >,
+        Pick<KaapiOIDCAuthorizationCodeFlowOptions<AuthReqData, Refs, AuthRefs>, 'parseAuthorizationEndpointData'> {}
 
 /**
  * Kaapi-adapted methods for the OIDC Authorization Code flow.
@@ -335,7 +354,10 @@ export interface KaapiOIDCAuthorizationCodeFlowBuilderOptions<
  * @template Refs - The Kaapi `ReqRef` type for the application.
  * @template AuthRefs - The Kaapi `ReqRef` type for the authorization data.
  */
-export interface KaapiOIDCAuthorizationCodeMethods<Refs extends ReqRef = ReqRefDefaults, AuthRefs extends ReqRef = ReqRefDefaults> extends KaapiOIDCMethods<Refs> {
+export interface KaapiOIDCAuthorizationCodeMethods<
+    Refs extends ReqRef = ReqRefDefaults,
+    AuthRefs extends ReqRef = ReqRefDefaults,
+> extends KaapiOIDCMethods<Refs> {
     /**
      * This method is a convenience method that combines the logic of initiating (GET) the authorization code flow for Kaapi.
      * It checks the HTTP method of the request and calls the appropriate method to handle the authorization endpoint logic.
@@ -343,7 +365,7 @@ export interface KaapiOIDCAuthorizationCodeMethods<Refs extends ReqRef = ReqRefD
      * @returns The OIDC initiation response for the authorization code flow.
      */
     initiateAuthorization<R extends ReqRef = ReqRefDefaults>(
-        request: KaapiRequest<R>,
+        request: KaapiRequest<R>
     ): Promise<OIDCAuthorizationCodeInitiationResponse>;
 
     /**
@@ -352,9 +374,7 @@ export interface KaapiOIDCAuthorizationCodeMethods<Refs extends ReqRef = ReqRefD
      * @param request - The Kaapi request object containing the authorization form data.
      * @returns The OIDC processing response for the authorization code flow.
      */
-    processAuthorization(
-        request: KaapiRequest<AuthRefs>,
-    ): Promise<OIDCAuthorizationCodeProcessResponse>;
+    processAuthorization(request: KaapiRequest<AuthRefs>): Promise<OIDCAuthorizationCodeProcessResponse>;
 
     /**
      * This method is a convenience method that handles the authorization endpoint logic for Kaapi.
@@ -363,16 +383,20 @@ export interface KaapiOIDCAuthorizationCodeMethods<Refs extends ReqRef = ReqRefD
      * @returns The OIDC authorization endpoint response, based on the HTTP method.
      */
     handleAuthorizationEndpoint<R extends ReqRef = ReqRefDefaults & AuthRefs>(
-        request: KaapiRequest<R>,
+        request: KaapiRequest<R>
     ): Promise<OIDCAuthorizationCodeEndpointResponse>;
 }
 
 //#endregion
 
-
 //#region Constants
 
-const renderDefaultLoginForm: LoginFormRenderer = (_request, h, _result, { statusCode, errorMessage, usernameField, passwordField }) => {
+const renderDefaultLoginForm: LoginFormRenderer = (
+    _request,
+    h,
+    _result,
+    { statusCode, errorMessage, usernameField, passwordField }
+) => {
     const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -444,12 +468,13 @@ const renderDefaultLoginForm: LoginFormRenderer = (_request, h, _result, { statu
  <body>
   <form class="card" method="POST">
     <p class="subtitle">Sign in to continue</p>
-    ${errorMessage
+    ${
+        errorMessage
             ? `<p class="error" id="error-message">
         ${errorMessage}
     </p>`
             : ''
-        }
+    }
 
     <label for="${usernameField}">${usernameField}</label>
     <div class="field">
@@ -477,14 +502,21 @@ const renderDefaultLoginForm: LoginFormRenderer = (_request, h, _result, { statu
     return h.response(html).type('text/html').code(statusCode);
 };
 
-const renderDefaultConsentForm: AuthorizationCodeConsentFormRenderer = (_request, h, { continueResponse: { scope } }, { statusCode }) => {
+const renderDefaultConsentForm: AuthorizationCodeConsentFormRenderer = (
+    _request,
+    h,
+    { continueResponse: { scope } },
+    { statusCode }
+) => {
     const scopeItems = scope
-        .map(s => `      <li class="scope-item">
+        .map(
+            (s) => `      <li class="scope-item">
         <svg class="scope-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
         </svg>
         <span>${s}</span>
-      </li>`)
+      </li>`
+        )
         .join('\n');
 
     const html = `<!DOCTYPE html>
@@ -570,10 +602,7 @@ ${scopeItems}
 </body>
 </html>`;
 
-
-    return h.response(html)
-        .type('text/html')
-        .code(statusCode)
+    return h.response(html).type('text/html').code(statusCode);
 };
 
 //#endregion
@@ -596,32 +625,30 @@ ${scopeItems}
 export class KaapiAuthorizationCodeFlow<
     Refs extends ReqRef = ReqRefDefaults,
     AuthReqData extends AuthorizationCodeReqData = AuthorizationCodeReqData,
-    AuthRefs extends ReqRef = ReqRefDefaults
-
-> extends AuthorizationCodeFlow<AuthReqData> implements KaapiAdapted<Refs> {
-    readonly #tokenVerifier: (
-        request: KaapiRequest<Refs>,
-    ) => Promise<StrategyResult>;
+    AuthRefs extends ReqRef = ReqRefDefaults,
+>
+    extends AuthorizationCodeFlow<AuthReqData>
+    implements KaapiAdapted<Refs>
+{
+    readonly #tokenVerifier: (request: KaapiRequest<Refs>) => Promise<StrategyResult>;
     readonly #authorizeMiddleware: AuthSchemeHandler<Refs>;
 
     readonly #failedAuthorizationAction: FailedAuthorizationAction<Refs>;
 
-    readonly #parseAuthorizationEndpointData: (
-        request: KaapiRequest<AuthRefs>,
-    ) => Promise<AuthReqData>;
+    readonly #parseAuthorizationEndpointData: (request: KaapiRequest<AuthRefs>) => Promise<AuthReqData>;
 
     readonly #usernameField?: string | undefined;
     readonly #passwordField?: string | undefined;
 
     readonly #onPreHandler?: RouteExtObject<ReqRefDefaults> | RouteExtObject<ReqRefDefaults>[] | undefined;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    readonly #onInitiateAuthorization?: KaapiAuthorizationCodeLifecycleMethod<any, any, AuthorizationCodeInitiationResponse> | undefined;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    readonly #onProcessAuthorization?: KaapiAuthorizationCodeLifecycleMethod<any, any, AuthorizationCodeProcessResponse> | undefined;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    readonly #loginFormRenderer?: LoginFormRenderer<any, any, AuthorizationCodeInitiationResponse | AuthorizationCodeProcessResponse> | undefined;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    readonly #consentFormRenderer?: AuthorizationCodeConsentFormRenderer<any, any, AuthorizationCodeEndpointContext> | undefined;
+    readonly #onInitiateAuthorization?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        KaapiAuthorizationCodeLifecycleMethod<any, any, AuthorizationCodeInitiationResponse> | undefined;
+    readonly #onProcessAuthorization?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        KaapiAuthorizationCodeLifecycleMethod<any, any, AuthorizationCodeProcessResponse> | undefined;
+    readonly #loginFormRenderer?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        LoginFormRenderer<any, any, AuthorizationCodeInitiationResponse | AuthorizationCodeProcessResponse> | undefined;
+    readonly #consentFormRenderer?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        AuthorizationCodeConsentFormRenderer<any, any, AuthorizationCodeEndpointContext> | undefined;
 
     readonly #kaapi: KaapiAuthorizationCodeMethods<Refs, AuthRefs> = {
         authorizeMiddleware: (scopes?: string[]): AuthSchemeHandler<Refs> => {
@@ -636,24 +663,22 @@ export class KaapiAuthorizationCodeFlow<
         },
 
         initiateAuthorization: async <R extends ReqRef = ReqRefDefaults>(
-            request: KaapiRequest<R>,
+            request: KaapiRequest<R>
         ): Promise<AuthorizationCodeInitiationResponse> => {
             return await this.initiateAuthorization(createWebStandardRequest(request));
         },
 
-        processAuthorization: async (
-            request: KaapiRequest<AuthRefs>,
-        ): Promise<AuthorizationCodeProcessResponse> => {
+        processAuthorization: async (request: KaapiRequest<AuthRefs>): Promise<AuthorizationCodeProcessResponse> => {
             return await this.processAuthorization(
                 createWebStandardRequest(request),
-                await this.#parseAuthorizationEndpointData(request),
+                await this.#parseAuthorizationEndpointData(request)
             );
         },
 
         handleAuthorizationEndpoint: async <R extends ReqRef = ReqRefDefaults>(
-            request: KaapiRequest<R>,
+            request: KaapiRequest<R>
         ): Promise<AuthorizationCodeEndpointResponse> => {
-            if (request.method === "get") {
+            if (request.method === 'get') {
                 // In a real implementation, you would render a login page
                 // or consent page here for the user
                 // to authenticate and authorize the client.
@@ -661,38 +686,38 @@ export class KaapiAuthorizationCodeFlow<
 
                 if (!result.success) {
                     return {
-                        type: "error",
+                        type: 'error',
                         ...result,
                     };
                 }
 
                 return {
                     ...result,
-                    type: "initiated",
-                    method: "GET",
+                    type: 'initiated',
+                    method: 'GET',
                 };
             }
 
-            if (request.method === "post") {
+            if (request.method === 'post') {
                 // In a real implementation, you would authenticate the user here,
                 // and if authentication is successful, generate an authorization code,
                 // and redirect the user to the redirect_uri with the code and state as query parameters.
 
                 const result = await this.kaapi().processAuthorization(request as unknown as KaapiRequest<AuthRefs>);
 
-                if (result.type === "error") {
+                if (result.type === 'error') {
                     return result;
                 }
 
                 return {
                     ...result,
-                    method: "POST",
+                    method: 'POST',
                 };
             }
 
             return {
-                type: "error",
-                error: new InvalidRequestError("Unsupported HTTP method"),
+                type: 'error',
+                error: new InvalidRequestError('Unsupported HTTP method'),
                 redirectable: false,
             };
         },
@@ -745,12 +770,7 @@ export class KaapiAuthorizationCodeFlow<
                 },
 
                 integrateStrategy(t: KaapiTools): void {
-                    createSchemeAndStrategy(
-                        t,
-                        schemeName,
-                        tokenType,
-                        tokenVerifierHandler,
-                    );
+                    createSchemeAndStrategy(t, schemeName, tokenType, tokenVerifierHandler);
                 },
 
                 integrateHook(t: KaapiTools): void {
@@ -777,7 +797,7 @@ export class KaapiAuthorizationCodeFlow<
                             ...routesOptions,
                             ext: {
                                 onPreHandler: onPreHandler,
-                            }
+                            },
                         },
                         path: authEndpoint,
                         method: 'GET',
@@ -800,11 +820,11 @@ export class KaapiAuthorizationCodeFlow<
                                     {
                                         statusCode: 200,
                                         usernameField,
-                                        passwordField
+                                        passwordField,
                                     }
                                 );
                             }
-                            return h.response({ error: "invalid_request" }).code(400);
+                            return h.response({ error: 'invalid_request' }).code(400);
                         },
                     });
 
@@ -813,7 +833,7 @@ export class KaapiAuthorizationCodeFlow<
                             ...routesOptions,
                             ext: {
                                 onPreHandler: onPreHandler,
-                            }
+                            },
                         },
                         path: authEndpoint,
                         method: 'POST',
@@ -826,18 +846,18 @@ export class KaapiAuthorizationCodeFlow<
                             }
 
                             // default handling if not handled in post handling
-                            if (result.type === "error") {
+                            if (result.type === 'error') {
                                 const error = result.error;
                                 if (result.redirectable) {
                                     const qs = [
-                                        `error=${encodeURIComponent(error instanceof AccessDeniedError ? error.errorCode : "invalid_request")}`,
+                                        `error=${encodeURIComponent(error instanceof AccessDeniedError ? error.errorCode : 'invalid_request')}`,
                                         `error_description=${encodeURIComponent(
-                                            error instanceof AccessDeniedError ? error.message : "Invalid request"
+                                            error instanceof AccessDeniedError ? error.message : 'Invalid request'
                                         )}`,
                                         result.state ? `state=${encodeURIComponent(result.state)}` : null,
                                     ]
                                         .filter(Boolean)
-                                        .join("&");
+                                        .join('&');
                                     return h.redirect(`${result.redirectUri}?${qs}`);
                                 }
                                 return renderLoginForm(
@@ -850,23 +870,23 @@ export class KaapiAuthorizationCodeFlow<
                                         statusCode: 400,
                                         errorMessage: error.message,
                                         usernameField,
-                                        passwordField
+                                        passwordField,
                                     }
                                 );
                             }
 
-                            if (result.type === "code") {
+                            if (result.type === 'code') {
                                 const {
                                     code,
                                     context: { state, redirectUri },
                                 } = result.authorizationCodeResponse;
                                 const searchParams = new URLSearchParams();
-                                searchParams.set("code", code);
-                                if (state) searchParams.set("state", state);
+                                searchParams.set('code', code);
+                                if (state) searchParams.set('state', state);
                                 return h.redirect(`${redirectUri}?${searchParams.toString()}`);
                             }
 
-                            if (result.type === "continue") {
+                            if (result.type === 'continue') {
                                 return renderConsentForm(
                                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                     req as any,
@@ -876,12 +896,12 @@ export class KaapiAuthorizationCodeFlow<
                                     {
                                         statusCode: 200,
                                         usernameField,
-                                        passwordField
+                                        passwordField,
                                     }
                                 );
                             }
 
-                            if (result.type === "unauthenticated") {
+                            if (result.type === 'unauthenticated') {
                                 return renderLoginForm(
                                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                     req as any,
@@ -890,9 +910,9 @@ export class KaapiAuthorizationCodeFlow<
                                     result,
                                     {
                                         statusCode: 400,
-                                        errorMessage: result.message || "Authentication failed. Please try again.",
+                                        errorMessage: result.message || 'Authentication failed. Please try again.',
                                         usernameField,
-                                        passwordField
+                                        passwordField,
                                     }
                                 );
                             }
@@ -905,9 +925,9 @@ export class KaapiAuthorizationCodeFlow<
                                 result,
                                 {
                                     statusCode: 400,
-                                    errorMessage: "Could not process the request. Please try again.",
+                                    errorMessage: 'Could not process the request. Please try again.',
                                     usernameField,
-                                    passwordField
+                                    passwordField,
                                 }
                             );
                         },
@@ -918,7 +938,7 @@ export class KaapiAuthorizationCodeFlow<
                     return schemeName;
                 },
             });
-        }
+        },
     };
 
     constructor(options: KaapiAuthorizationCodeFlowOptions<AuthReqData, Refs, AuthRefs>) {
@@ -929,10 +949,12 @@ export class KaapiAuthorizationCodeFlow<
             strategyOptions: {},
         });
 
-        this.#failedAuthorizationAction = strategyOptions.failedAuthorizationAction ?? (async () => {
-            const Boom = await import('@hapi/boom');
-            return Boom.unauthorized(null, this.tokenType);
-        });
+        this.#failedAuthorizationAction =
+            strategyOptions.failedAuthorizationAction ??
+            (async () => {
+                const Boom = await import('@hapi/boom');
+                return Boom.unauthorized(null, this.tokenType);
+            });
 
         this.#parseAuthorizationEndpointData = options.parseAuthorizationEndpointData;
 
@@ -940,8 +962,8 @@ export class KaapiAuthorizationCodeFlow<
             const kaapiVerifyToken = strategyOptions.verifyToken;
             const verifyToken: StrategyVerifyTokenFunction | undefined = kaapiVerifyToken
                 ? async (_, params) => {
-                    return await kaapiVerifyToken(request, params);
-                }
+                      return await kaapiVerifyToken(request, params);
+                  }
                 : undefined;
 
             return await evaluateStrategy(createWebStandardRequest(request), {
@@ -969,14 +991,11 @@ export class KaapiAuthorizationCodeFlow<
             const result = await this.kaapi().verifyToken(request);
 
             if (result.success) {
-                if (
-                    scopes.length &&
-                    !scopes.every((n) => result.credentials?.scope?.includes(n))
-                ) {
+                if (scopes.length && !scopes.every((n) => result.credentials?.scope?.includes(n))) {
                     return this.#failedAuthorizationAction(
                         request,
                         h,
-                        new StrategyInsufficientScopeError("Insufficient scope"),
+                        new StrategyInsufficientScopeError('Insufficient scope')
                     );
                 }
                 return h.authenticated({ credentials: result.credentials });
@@ -1040,21 +1059,19 @@ export class KaapiAuthorizationCodeFlow<
 export class KaapiAuthorizationCodeFlowBuilder<
     Refs extends ReqRef = ReqRefDefaults,
     AuthReqData extends AuthorizationCodeReqData = AuthorizationCodeReqData,
-    AuthRefs extends ReqRef = ReqRefDefaults
+    AuthRefs extends ReqRef = ReqRefDefaults,
 > extends AuthorizationCodeFlowBuilder<AuthReqData> {
     protected strategyOptions: KaapiOAuth2StrategyOptions<Refs> = {};
-    protected parseAuthorizationEndpointDataHandler: (
-        request: KaapiRequest<AuthRefs>,
-    ) => Promise<AuthReqData>;
+    protected parseAuthorizationEndpointDataHandler: (request: KaapiRequest<AuthRefs>) => Promise<AuthReqData>;
     protected preHandler?: RouteExtObject<ReqRefDefaults> | RouteExtObject<ReqRefDefaults>[] | undefined;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    protected initiateAuthorization?: KaapiAuthorizationCodeLifecycleMethod<any, any, AuthorizationCodeInitiationResponse> | undefined;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    protected processAuthorization?: KaapiAuthorizationCodeLifecycleMethod<any, any, AuthorizationCodeProcessResponse> | undefined;
+    protected initiateAuthorization?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        KaapiAuthorizationCodeLifecycleMethod<any, any, AuthorizationCodeInitiationResponse> | undefined;
+    protected processAuthorization?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        KaapiAuthorizationCodeLifecycleMethod<any, any, AuthorizationCodeProcessResponse> | undefined;
     protected usernameField?: string | undefined;
     protected passwordField?: string | undefined;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    protected loginFormRenderer?: LoginFormRenderer<any, any, AuthorizationCodeInitiationResponse | AuthorizationCodeProcessResponse> | undefined;
+    protected loginFormRenderer?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        LoginFormRenderer<any, any, AuthorizationCodeInitiationResponse | AuthorizationCodeProcessResponse> | undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     protected consentFormRenderer?: AuthorizationCodeConsentFormRenderer<any, any, any> | undefined;
 
@@ -1081,7 +1098,7 @@ export class KaapiAuthorizationCodeFlowBuilder<
         Refs extends ReqRef = ReqRefDefaults,
         AuthReqData extends AuthorizationCodeReqData = AuthorizationCodeReqData,
     >(
-        options: KaapiAuthorizationCodeFlowBuilderOptions<AuthReqData, Refs>,
+        options: KaapiAuthorizationCodeFlowBuilderOptions<AuthReqData, Refs>
     ): KaapiAuthorizationCodeFlowBuilder<Refs, AuthReqData> {
         return new KaapiAuthorizationCodeFlowBuilder<Refs, AuthReqData>(options);
     }
@@ -1131,9 +1148,7 @@ export class KaapiAuthorizationCodeFlowBuilder<
      * @param handler - Async function that extracts and returns the authorization request data.
      * @returns `this` for chaining.
      */
-    parseAuthorizationEndpointData(
-        handler: (request: KaapiRequest<AuthRefs>) => Promise<AuthReqData>,
-    ): this {
+    parseAuthorizationEndpointData(handler: (request: KaapiRequest<AuthRefs>) => Promise<AuthReqData>): this {
         this.parseAuthorizationEndpointDataHandler = handler;
         return this;
     }
@@ -1153,9 +1168,11 @@ export class KaapiAuthorizationCodeFlowBuilder<
      * @param handler A lifecycle method that receives the Kaapi request, response toolkit, and the result of the initiation step, allowing you to handle rendering a login page, handling errors, etc.
      * @returns `this` for chaining.
      */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onInitiateAuthorization<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
-        (handler: KaapiAuthorizationCodeLifecycleMethod<R, V, AuthorizationCodeInitiationResponse> | undefined): this {
+    onInitiateAuthorization<
+        R extends ReqRef = ReqRefDefaults,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>,
+    >(handler: KaapiAuthorizationCodeLifecycleMethod<R, V, AuthorizationCodeInitiationResponse> | undefined): this {
         this.initiateAuthorization = handler;
         return this;
     }
@@ -1165,9 +1182,11 @@ export class KaapiAuthorizationCodeFlowBuilder<
      * @param handler A lifecycle method that receives the Kaapi request, response toolkit, and the result of the processing step, allowing you to handle rendering a login page, handling errors, etc.
      * @returns `this` for chaining.
      */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onProcessAuthorization<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
-        (handler: KaapiAuthorizationCodeLifecycleMethod<R, V, AuthorizationCodeProcessResponse> | undefined): this {
+    onProcessAuthorization<
+        R extends ReqRef = ReqRefDefaults,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>,
+    >(handler: KaapiAuthorizationCodeLifecycleMethod<R, V, AuthorizationCodeProcessResponse> | undefined): this {
         this.processAuthorization = handler;
         return this;
     }
@@ -1197,8 +1216,11 @@ export class KaapiAuthorizationCodeFlowBuilder<
      * @param renderer A custom form renderer function.
      * @returns `this` for chaining.
      */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    setLoginFormRenderer<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>(renderer: LoginFormRenderer<R, V, AuthorizationCodeInitiationResponse | AuthorizationCodeProcessResponse>): this {
+    setLoginFormRenderer<
+        R extends ReqRef = ReqRefDefaults,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>,
+    >(renderer: LoginFormRenderer<R, V, AuthorizationCodeInitiationResponse | AuthorizationCodeProcessResponse>): this {
         this.loginFormRenderer = renderer;
         return this;
     }
@@ -1208,13 +1230,15 @@ export class KaapiAuthorizationCodeFlowBuilder<
      * @param renderer A custom consent form renderer function.
      * @returns `this` for chaining.
      */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    setConsentFormRenderer<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>, C extends AuthorizationCodeEndpointContext = AuthorizationCodeEndpointContext>(renderer: AuthorizationCodeConsentFormRenderer<R, V, C>): this {
+    setConsentFormRenderer<
+        R extends ReqRef = ReqRefDefaults,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>,
+        C extends AuthorizationCodeEndpointContext = AuthorizationCodeEndpointContext,
+    >(renderer: AuthorizationCodeConsentFormRenderer<R, V, C>): this {
         this.consentFormRenderer = renderer;
         return this;
     }
-
-
 
     /**
      * Builds and returns a configured {@link KaapiAuthorizationCodeFlow} instance.
@@ -1258,36 +1282,35 @@ export class KaapiAuthorizationCodeFlowBuilder<
 export class KaapiOIDCAuthorizationCodeFlow<
     Refs extends ReqRef = ReqRefDefaults,
     AuthReqData extends AuthorizationCodeReqData = AuthorizationCodeReqData,
-    AuthRefs extends ReqRef = ReqRefDefaults
-
-> extends OIDCAuthorizationCodeFlow<AuthReqData> implements KaapiOIDCAdapted<Refs> {
-    readonly #tokenVerifier: (
-        request: KaapiRequest<Refs>,
-    ) => Promise<StrategyResult>;
+    AuthRefs extends ReqRef = ReqRefDefaults,
+>
+    extends OIDCAuthorizationCodeFlow<AuthReqData>
+    implements KaapiOIDCAdapted<Refs>
+{
+    readonly #tokenVerifier: (request: KaapiRequest<Refs>) => Promise<StrategyResult>;
     readonly #authorizeMiddleware: AuthSchemeHandler<Refs>;
 
     readonly #failedAuthorizationAction: FailedAuthorizationAction<Refs>;
 
-    readonly #parseAuthorizationEndpointData: (
-        request: KaapiRequest<AuthRefs>,
-    ) => Promise<AuthReqData>;
+    readonly #parseAuthorizationEndpointData: (request: KaapiRequest<AuthRefs>) => Promise<AuthReqData>;
 
     readonly #usernameField?: string | undefined;
     readonly #passwordField?: string | undefined;
 
     readonly #onPreHandler?: RouteExtObject<ReqRefDefaults> | RouteExtObject<ReqRefDefaults>[] | undefined;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    readonly #onInitiateAuthorization?: KaapiAuthorizationCodeLifecycleMethod<any, any, OIDCAuthorizationCodeInitiationResponse> | undefined;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    readonly #onProcessAuthorization?: KaapiAuthorizationCodeLifecycleMethod<any, any, OIDCAuthorizationCodeProcessResponse> | undefined;
+    readonly #onInitiateAuthorization?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        KaapiAuthorizationCodeLifecycleMethod<any, any, OIDCAuthorizationCodeInitiationResponse> | undefined;
+    readonly #onProcessAuthorization?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        KaapiAuthorizationCodeLifecycleMethod<any, any, OIDCAuthorizationCodeProcessResponse> | undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     readonly #onDiscoveryRequest?: Lifecycle.Method<any, any> | undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     readonly #onJwksRequest?: Lifecycle.Method<any, any> | undefined;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    readonly #loginFormRenderer?: LoginFormRenderer<any, any, OIDCAuthorizationCodeInitiationResponse | OIDCAuthorizationCodeProcessResponse> | undefined;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    readonly #consentFormRenderer?: AuthorizationCodeConsentFormRenderer<any, any, OIDCAuthorizationCodeEndpointContext> | undefined;
+    readonly #loginFormRenderer?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        | LoginFormRenderer<any, any, OIDCAuthorizationCodeInitiationResponse | OIDCAuthorizationCodeProcessResponse>
+        | undefined;
+    readonly #consentFormRenderer?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        AuthorizationCodeConsentFormRenderer<any, any, OIDCAuthorizationCodeEndpointContext> | undefined;
 
     readonly #kaapi: KaapiOIDCAuthorizationCodeMethods<Refs, AuthRefs> = {
         authorizeMiddleware: (scopes?: string[]): AuthSchemeHandler<Refs> => {
@@ -1302,24 +1325,22 @@ export class KaapiOIDCAuthorizationCodeFlow<
         },
 
         initiateAuthorization: async <R extends ReqRef = ReqRefDefaults>(
-            request: KaapiRequest<R>,
+            request: KaapiRequest<R>
         ): Promise<OIDCAuthorizationCodeInitiationResponse> => {
             return await this.initiateAuthorization(createWebStandardRequest(request));
         },
 
-        processAuthorization: async (
-            request: KaapiRequest<AuthRefs>,
-        ): Promise<AuthorizationCodeProcessResponse> => {
+        processAuthorization: async (request: KaapiRequest<AuthRefs>): Promise<AuthorizationCodeProcessResponse> => {
             return await this.processAuthorization(
                 createWebStandardRequest(request),
-                await this.#parseAuthorizationEndpointData(request),
+                await this.#parseAuthorizationEndpointData(request)
             );
         },
 
         handleAuthorizationEndpoint: async <R extends ReqRef = ReqRefDefaults>(
-            request: KaapiRequest<R>,
+            request: KaapiRequest<R>
         ): Promise<AuthorizationCodeEndpointResponse> => {
-            if (request.method === "get") {
+            if (request.method === 'get') {
                 // In a real implementation, you would render a login page
                 // or consent page here for the user
                 // to authenticate and authorize the client.
@@ -1327,43 +1348,46 @@ export class KaapiOIDCAuthorizationCodeFlow<
 
                 if (!result.success) {
                     return {
-                        type: "error",
+                        type: 'error',
                         ...result,
                     };
                 }
 
                 return {
                     ...result,
-                    type: "initiated",
-                    method: "GET",
+                    type: 'initiated',
+                    method: 'GET',
                 };
             }
 
-            if (request.method === "post") {
+            if (request.method === 'post') {
                 // In a real implementation, you would authenticate the user here,
                 // and if authentication is successful, generate an authorization code,
                 // and redirect the user to the redirect_uri with the code and state as query parameters.
 
                 const result = await this.kaapi().processAuthorization(request as unknown as KaapiRequest<AuthRefs>);
 
-                if (result.type === "error") {
+                if (result.type === 'error') {
                     return result;
                 }
 
                 return {
                     ...result,
-                    method: "POST",
+                    method: 'POST',
                 };
             }
 
             return {
-                type: "error",
-                error: new InvalidRequestError("Unsupported HTTP method"),
+                type: 'error',
+                error: new InvalidRequestError('Unsupported HTTP method'),
                 redirectable: false,
             };
         },
 
-        getDiscoveryConfiguration: <R extends ReqRef = ReqRefDefaults>(request?: KaapiRequest<R>, options?: WebStandardRequestOptions): Record<string, string | string[] | undefined> => {
+        getDiscoveryConfiguration: <R extends ReqRef = ReqRefDefaults>(
+            request?: KaapiRequest<R>,
+            options?: WebStandardRequestOptions
+        ): Record<string, string | string[] | undefined> => {
             return this.getDiscoveryConfiguration(request ? createWebStandardRequest(request, options) : undefined);
         },
 
@@ -1395,8 +1419,7 @@ export class KaapiOIDCAuthorizationCodeFlow<
 
             return new OAuth2AuthDesign({
                 docs(): OIDCAuthUtil {
-                    const docs = new OIDCAuthUtil(schemeName)
-                        .setDiscoveryUrl(discoveryUrl);
+                    const docs = new OIDCAuthUtil(schemeName).setDiscoveryUrl(discoveryUrl);
                     if (description) {
                         docs.setDescription(description);
                     }
@@ -1404,12 +1427,7 @@ export class KaapiOIDCAuthorizationCodeFlow<
                 },
 
                 integrateStrategy(t: KaapiTools): void {
-                    createSchemeAndStrategy(
-                        t,
-                        schemeName,
-                        tokenType,
-                        tokenVerifierHandler,
-                    );
+                    createSchemeAndStrategy(t, schemeName, tokenType, tokenVerifierHandler);
                 },
 
                 integrateHook(t: KaapiTools, skipCommonRoutes: boolean = false): void {
@@ -1458,7 +1476,7 @@ export class KaapiOIDCAuthorizationCodeFlow<
                             ...routesOptions,
                             ext: {
                                 onPreHandler: onPreHandler,
-                            }
+                            },
                         },
                         path: authEndpoint,
                         method: 'GET',
@@ -1481,11 +1499,11 @@ export class KaapiOIDCAuthorizationCodeFlow<
                                     {
                                         statusCode: 200,
                                         usernameField,
-                                        passwordField
+                                        passwordField,
                                     }
                                 );
                             }
-                            return h.response({ error: "invalid_request" }).code(400);
+                            return h.response({ error: 'invalid_request' }).code(400);
                         },
                     });
 
@@ -1495,7 +1513,7 @@ export class KaapiOIDCAuthorizationCodeFlow<
                             ...routesOptions,
                             ext: {
                                 onPreHandler: onPreHandler,
-                            }
+                            },
                         },
                         path: authEndpoint,
                         method: 'POST',
@@ -1508,18 +1526,18 @@ export class KaapiOIDCAuthorizationCodeFlow<
                             }
 
                             // default handling if not handled in post handling
-                            if (result.type === "error") {
+                            if (result.type === 'error') {
                                 const error = result.error;
                                 if (result.redirectable) {
                                     const qs = [
-                                        `error=${encodeURIComponent(error instanceof AccessDeniedError ? error.errorCode : "invalid_request")}`,
+                                        `error=${encodeURIComponent(error instanceof AccessDeniedError ? error.errorCode : 'invalid_request')}`,
                                         `error_description=${encodeURIComponent(
-                                            error instanceof AccessDeniedError ? error.message : "Invalid request"
+                                            error instanceof AccessDeniedError ? error.message : 'Invalid request'
                                         )}`,
                                         result.state ? `state=${encodeURIComponent(result.state)}` : null,
                                     ]
                                         .filter(Boolean)
-                                        .join("&");
+                                        .join('&');
                                     return h.redirect(`${result.redirectUri}?${qs}`);
                                 }
                                 return renderLoginForm(
@@ -1532,23 +1550,23 @@ export class KaapiOIDCAuthorizationCodeFlow<
                                         statusCode: 400,
                                         errorMessage: error.message,
                                         usernameField,
-                                        passwordField
+                                        passwordField,
                                     }
                                 );
                             }
 
-                            if (result.type === "code") {
+                            if (result.type === 'code') {
                                 const {
                                     code,
                                     context: { state, redirectUri },
                                 } = result.authorizationCodeResponse;
                                 const searchParams = new URLSearchParams();
-                                searchParams.set("code", code);
-                                if (state) searchParams.set("state", state);
+                                searchParams.set('code', code);
+                                if (state) searchParams.set('state', state);
                                 return h.redirect(`${redirectUri}?${searchParams.toString()}`);
                             }
 
-                            if (result.type === "continue") {
+                            if (result.type === 'continue') {
                                 return renderConsentForm(
                                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                     req as any,
@@ -1558,12 +1576,12 @@ export class KaapiOIDCAuthorizationCodeFlow<
                                     {
                                         statusCode: 200,
                                         usernameField,
-                                        passwordField
+                                        passwordField,
                                     }
                                 );
                             }
 
-                            if (result.type === "unauthenticated") {
+                            if (result.type === 'unauthenticated') {
                                 return renderLoginForm(
                                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                     req as any,
@@ -1572,9 +1590,9 @@ export class KaapiOIDCAuthorizationCodeFlow<
                                     result,
                                     {
                                         statusCode: 400,
-                                        errorMessage: result.message || "Authentication failed. Please try again.",
+                                        errorMessage: result.message || 'Authentication failed. Please try again.',
                                         usernameField,
-                                        passwordField
+                                        passwordField,
                                     }
                                 );
                             }
@@ -1587,9 +1605,9 @@ export class KaapiOIDCAuthorizationCodeFlow<
                                 result,
                                 {
                                     statusCode: 400,
-                                    errorMessage: "Could not process the request. Please try again.",
+                                    errorMessage: 'Could not process the request. Please try again.',
                                     usernameField,
-                                    passwordField
+                                    passwordField,
                                 }
                             );
                         },
@@ -1600,7 +1618,7 @@ export class KaapiOIDCAuthorizationCodeFlow<
                     return schemeName;
                 },
             });
-        }
+        },
     };
 
     constructor(options: KaapiOIDCAuthorizationCodeFlowOptions<AuthReqData, Refs, AuthRefs>) {
@@ -1611,10 +1629,12 @@ export class KaapiOIDCAuthorizationCodeFlow<
             strategyOptions: {},
         });
 
-        this.#failedAuthorizationAction = strategyOptions.failedAuthorizationAction ?? (async () => {
-            const Boom = await import('@hapi/boom');
-            return Boom.unauthorized(null, this.tokenType);
-        });
+        this.#failedAuthorizationAction =
+            strategyOptions.failedAuthorizationAction ??
+            (async () => {
+                const Boom = await import('@hapi/boom');
+                return Boom.unauthorized(null, this.tokenType);
+            });
 
         this.#parseAuthorizationEndpointData = options.parseAuthorizationEndpointData;
 
@@ -1622,8 +1642,8 @@ export class KaapiOIDCAuthorizationCodeFlow<
             const kaapiVerifyToken = strategyOptions.verifyToken;
             const verifyToken: StrategyVerifyTokenFunction | undefined = kaapiVerifyToken
                 ? async (_, params) => {
-                    return await kaapiVerifyToken(request, params);
-                }
+                      return await kaapiVerifyToken(request, params);
+                  }
                 : undefined;
 
             return await evaluateStrategy(createWebStandardRequest(request), {
@@ -1653,14 +1673,11 @@ export class KaapiOIDCAuthorizationCodeFlow<
             const result = await this.kaapi().verifyToken(request);
 
             if (result.success) {
-                if (
-                    scopes.length &&
-                    !scopes.every((n) => result.credentials?.scope?.includes(n))
-                ) {
+                if (scopes.length && !scopes.every((n) => result.credentials?.scope?.includes(n))) {
                     return this.#failedAuthorizationAction(
                         request,
                         h,
-                        new StrategyInsufficientScopeError("Insufficient scope"),
+                        new StrategyInsufficientScopeError('Insufficient scope')
                     );
                 }
                 return h.authenticated({ credentials: result.credentials });
@@ -1724,25 +1741,27 @@ export class KaapiOIDCAuthorizationCodeFlow<
 export class KaapiOIDCAuthorizationCodeFlowBuilder<
     Refs extends ReqRef = ReqRefDefaults,
     AuthReqData extends AuthorizationCodeReqData = AuthorizationCodeReqData,
-    AuthRefs extends ReqRef = ReqRefDefaults
-> extends OIDCAuthorizationCodeFlowBuilder<AuthReqData> implements KaapiOIDCFlowBuilder {
+    AuthRefs extends ReqRef = ReqRefDefaults,
+>
+    extends OIDCAuthorizationCodeFlowBuilder<AuthReqData>
+    implements KaapiOIDCFlowBuilder
+{
     protected strategyOptions: KaapiOAuth2StrategyOptions<Refs> = {};
-    protected parseAuthorizationEndpointDataHandler: (
-        request: KaapiRequest<AuthRefs>,
-    ) => Promise<AuthReqData>;
+    protected parseAuthorizationEndpointDataHandler: (request: KaapiRequest<AuthRefs>) => Promise<AuthReqData>;
     protected preHandler?: RouteExtObject<ReqRefDefaults> | RouteExtObject<ReqRefDefaults>[] | undefined;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    protected initiateAuthorizationHandler?: KaapiAuthorizationCodeLifecycleMethod<any, any, OIDCAuthorizationCodeInitiationResponse> | undefined;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    protected processAuthorizationHandler?: KaapiAuthorizationCodeLifecycleMethod<any, any, OIDCAuthorizationCodeProcessResponse> | undefined;
+    protected initiateAuthorizationHandler?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        KaapiAuthorizationCodeLifecycleMethod<any, any, OIDCAuthorizationCodeInitiationResponse> | undefined;
+    protected processAuthorizationHandler?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        KaapiAuthorizationCodeLifecycleMethod<any, any, OIDCAuthorizationCodeProcessResponse> | undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     protected discoveryRequestHandler?: Lifecycle.Method<any, any> | undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     protected jwksRequestHandler?: Lifecycle.Method<any, any> | undefined;
     protected usernameField?: string | undefined;
     protected passwordField?: string | undefined;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    protected loginFormRenderer?: LoginFormRenderer<any, any, OIDCAuthorizationCodeInitiationResponse | OIDCAuthorizationCodeProcessResponse> | undefined;
+    protected loginFormRenderer?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        | LoginFormRenderer<any, any, OIDCAuthorizationCodeInitiationResponse | OIDCAuthorizationCodeProcessResponse>
+        | undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     protected consentFormRenderer?: AuthorizationCodeConsentFormRenderer<any, any, any> | undefined;
 
@@ -1769,7 +1788,7 @@ export class KaapiOIDCAuthorizationCodeFlowBuilder<
         Refs extends ReqRef = ReqRefDefaults,
         AuthReqData extends AuthorizationCodeReqData = AuthorizationCodeReqData,
     >(
-        options: KaapiOIDCAuthorizationCodeFlowBuilderOptions<AuthReqData, Refs>,
+        options: KaapiOIDCAuthorizationCodeFlowBuilderOptions<AuthReqData, Refs>
     ): KaapiOIDCAuthorizationCodeFlowBuilder<Refs, AuthReqData> {
         return new KaapiOIDCAuthorizationCodeFlowBuilder<Refs, AuthReqData>(options);
     }
@@ -1819,9 +1838,7 @@ export class KaapiOIDCAuthorizationCodeFlowBuilder<
      * @param handler - Async function that extracts and returns the authorization request data.
      * @returns `this` for chaining.
      */
-    parseAuthorizationEndpointData(
-        handler: (request: KaapiRequest<AuthRefs>) => Promise<AuthReqData>,
-    ): this {
+    parseAuthorizationEndpointData(handler: (request: KaapiRequest<AuthRefs>) => Promise<AuthReqData>): this {
         this.parseAuthorizationEndpointDataHandler = handler;
         return this;
     }
@@ -1841,9 +1858,11 @@ export class KaapiOIDCAuthorizationCodeFlowBuilder<
      * @param handler A lifecycle method that receives the Kaapi request, response toolkit, and the result of the initiation step, allowing you to handle rendering a login page, handling errors, etc.
      * @returns `this` for chaining.
      */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onInitiateAuthorization<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
-        (handler: KaapiAuthorizationCodeLifecycleMethod<R, V, OIDCAuthorizationCodeInitiationResponse> | undefined): this {
+    onInitiateAuthorization<
+        R extends ReqRef = ReqRefDefaults,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>,
+    >(handler: KaapiAuthorizationCodeLifecycleMethod<R, V, OIDCAuthorizationCodeInitiationResponse> | undefined): this {
         this.initiateAuthorizationHandler = handler;
         return this;
     }
@@ -1853,9 +1872,11 @@ export class KaapiOIDCAuthorizationCodeFlowBuilder<
      * @param handler A lifecycle method that receives the Kaapi request, response toolkit, and the result of the processing step, allowing you to handle rendering a login page, handling errors, etc.
      * @returns `this` for chaining.
      */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onProcessAuthorization<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
-        (handler: KaapiAuthorizationCodeLifecycleMethod<R, V, OIDCAuthorizationCodeProcessResponse> | undefined): this {
+    onProcessAuthorization<
+        R extends ReqRef = ReqRefDefaults,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>,
+    >(handler: KaapiAuthorizationCodeLifecycleMethod<R, V, OIDCAuthorizationCodeProcessResponse> | undefined): this {
         this.processAuthorizationHandler = handler;
         return this;
     }
@@ -1865,9 +1886,11 @@ export class KaapiOIDCAuthorizationCodeFlowBuilder<
      * @param handler A lifecycle method that receives the Kaapi request, response toolkit, and allows you to handle the discovery request.
      * @returns `this` for chaining.
      */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onDiscoveryRequest<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
-        (handler: Lifecycle.Method<R, V> | undefined): this {
+    onDiscoveryRequest<
+        R extends ReqRef = ReqRefDefaults,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>,
+    >(handler: Lifecycle.Method<R, V> | undefined): this {
         this.discoveryRequestHandler = handler;
         return this;
     }
@@ -1878,8 +1901,9 @@ export class KaapiOIDCAuthorizationCodeFlowBuilder<
      * @returns `this` for chaining.
      */
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onJwksRequest<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>
-        (handler: Lifecycle.Method<R, V> | undefined): this {
+    onJwksRequest<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>(
+        handler: Lifecycle.Method<R, V> | undefined
+    ): this {
         this.jwksRequestHandler = handler;
         return this;
     }
@@ -1909,8 +1933,17 @@ export class KaapiOIDCAuthorizationCodeFlowBuilder<
      * @param renderer A custom form renderer function.
      * @returns `this` for chaining.
      */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    setLoginFormRenderer<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>>(renderer: LoginFormRenderer<R, V, OIDCAuthorizationCodeInitiationResponse | OIDCAuthorizationCodeProcessResponse>): this {
+    setLoginFormRenderer<
+        R extends ReqRef = ReqRefDefaults,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>,
+    >(
+        renderer: LoginFormRenderer<
+            R,
+            V,
+            OIDCAuthorizationCodeInitiationResponse | OIDCAuthorizationCodeProcessResponse
+        >
+    ): this {
         this.loginFormRenderer = renderer;
         return this;
     }
@@ -1920,13 +1953,15 @@ export class KaapiOIDCAuthorizationCodeFlowBuilder<
      * @param renderer A custom consent form renderer function.
      * @returns `this` for chaining.
      */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    setConsentFormRenderer<R extends ReqRef = ReqRefDefaults, V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>, C extends OIDCAuthorizationCodeEndpointContext = OIDCAuthorizationCodeEndpointContext>(renderer: AuthorizationCodeConsentFormRenderer<R, V, C>): this {
+    setConsentFormRenderer<
+        R extends ReqRef = ReqRefDefaults,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        V extends Lifecycle.ReturnValue<any> = Lifecycle.ReturnValue<R>,
+        C extends OIDCAuthorizationCodeEndpointContext = OIDCAuthorizationCodeEndpointContext,
+    >(renderer: AuthorizationCodeConsentFormRenderer<R, V, C>): this {
         this.consentFormRenderer = renderer;
         return this;
     }
-
-
 
     /**
      * Builds and returns a configured {@link KaapiOIDCAuthorizationCodeFlow} instance.
