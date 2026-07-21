@@ -57,3 +57,49 @@
 //    };
 //}
 //
+// @TODO: ease the usage of this function by creating a wrapper around the getClient function
+// that will handle the matching of the request type and
+// call the appropriate handler.
+// This will simplify the code and make it more readable.
+import { AuthorizationCodeTokenRequest, OAuth2GetClientFunction, OAuth2RefreshTokenRequest } from '@saurbit/oauth2';
+
+export function isAuthorizationCodeRequest(
+    tokenRequest: AuthorizationCodeTokenRequest | OAuth2RefreshTokenRequest
+): tokenRequest is AuthorizationCodeTokenRequest {
+    return !!(
+        tokenRequest.grantType === 'authorization_code' &&
+        tokenRequest.code &&
+        tokenRequest.redirectUri &&
+        tokenRequest.clientId &&
+        tokenRequest.tokenTypeValidation
+    );
+}
+
+export function isRefreshTokenRequest(
+    tokenRequest: AuthorizationCodeTokenRequest | OAuth2RefreshTokenRequest
+): tokenRequest is OAuth2RefreshTokenRequest {
+    return !!(
+        tokenRequest.grantType === 'refresh_token' &&
+        tokenRequest.refreshToken &&
+        tokenRequest.clientId &&
+        tokenRequest.tokenTypeValidation
+    );
+}
+
+export type GetClientHandlers = {
+    authorizationCode: OAuth2GetClientFunction<AuthorizationCodeTokenRequest>;
+    refreshToken: OAuth2GetClientFunction<OAuth2RefreshTokenRequest>;
+};
+
+export function matchRequest(
+    tokenRequest: AuthorizationCodeTokenRequest | OAuth2RefreshTokenRequest,
+    handlers: GetClientHandlers
+): ReturnType<OAuth2GetClientFunction<AuthorizationCodeTokenRequest | OAuth2RefreshTokenRequest>> {
+    if (isAuthorizationCodeRequest(tokenRequest)) {
+        return handlers.authorizationCode(tokenRequest);
+    } else if (isRefreshTokenRequest(tokenRequest)) {
+        return handlers.refreshToken(tokenRequest);
+    } else {
+        throw new Error('Invalid token request type');
+    }
+}
