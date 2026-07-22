@@ -61,10 +61,23 @@
 // that will handle the matching of the request type and
 // call the appropriate handler.
 // This will simplify the code and make it more readable.
-import { AuthorizationCodeTokenRequest, OAuth2GetClientFunction, OAuth2RefreshTokenRequest } from '@saurbit/oauth2';
+import {
+    AuthorizationCodeTokenRequest,
+    DeviceAuthorizationTokenRequest,
+    OAuth2GetClientFunction,
+    OAuth2RefreshTokenRequest,
+} from '@saurbit/oauth2';
 
-export function isAuthorizationCodeRequest(
-    tokenRequest: AuthorizationCodeTokenRequest | OAuth2RefreshTokenRequest
+export type RequireAtLeastOne<T> = NonNullable<
+    {
+        [K in keyof T]: Required<Pick<T, K>> & Partial<Omit<T, K>>;
+    }[keyof T]
+>;
+
+export type TokenRequest = AuthorizationCodeTokenRequest | DeviceAuthorizationTokenRequest | OAuth2RefreshTokenRequest;
+
+export function isAuthorizationCodeTokenRequest(
+    tokenRequest: TokenRequest
 ): tokenRequest is AuthorizationCodeTokenRequest {
     return !!(
         tokenRequest.grantType === 'authorization_code' &&
@@ -75,8 +88,19 @@ export function isAuthorizationCodeRequest(
     );
 }
 
+export function isDeviceAuthorizationTokenRequest(
+    tokenRequest: TokenRequest
+): tokenRequest is DeviceAuthorizationTokenRequest {
+    return !!(
+        tokenRequest.grantType === 'urn:ietf:params:oauth:grant-type:device_code' &&
+        tokenRequest.deviceCode &&
+        tokenRequest.clientId &&
+        tokenRequest.tokenTypeValidation
+    );
+}
+
 export function isRefreshTokenRequest(
-    tokenRequest: AuthorizationCodeTokenRequest | OAuth2RefreshTokenRequest
+    tokenRequest: TokenRequest
 ): tokenRequest is OAuth2RefreshTokenRequest {
     return !!(
         tokenRequest.grantType === 'refresh_token' &&
@@ -87,19 +111,22 @@ export function isRefreshTokenRequest(
 }
 
 export type GetClientHandlers = {
-    authorizationCode: OAuth2GetClientFunction<AuthorizationCodeTokenRequest>;
-    refreshToken: OAuth2GetClientFunction<OAuth2RefreshTokenRequest>;
+    authorizationCode?: OAuth2GetClientFunction<AuthorizationCodeTokenRequest>;
+    deviceAuthorization?: OAuth2GetClientFunction<DeviceAuthorizationTokenRequest>;
+    refreshToken?: OAuth2GetClientFunction<OAuth2RefreshTokenRequest>;
 };
 
 export function matchRequest(
-    tokenRequest: AuthorizationCodeTokenRequest | OAuth2RefreshTokenRequest,
-    handlers: GetClientHandlers
-): ReturnType<OAuth2GetClientFunction<AuthorizationCodeTokenRequest | OAuth2RefreshTokenRequest>> {
-    if (isAuthorizationCodeRequest(tokenRequest)) {
+    tokenRequest: TokenRequest,
+    handlers: RequireAtLeastOne<GetClientHandlers>
+): ReturnType<OAuth2GetClientFunction<TokenRequest>> {
+    if (isAuthorizationCodeTokenRequest(tokenRequest) && handlers.authorizationCode) {
         return handlers.authorizationCode(tokenRequest);
-    } else if (isRefreshTokenRequest(tokenRequest)) {
+    } else if (isDeviceAuthorizationTokenRequest(tokenRequest) && handlers.deviceAuthorization) {
+        return handlers.deviceAuthorization(tokenRequest);
+    } else if (isRefreshTokenRequest(tokenRequest) && handlers.refreshToken) {
         return handlers.refreshToken(tokenRequest);
     } else {
-        throw new Error('Invalid token request type');
+        return undefined;
     }
 }
