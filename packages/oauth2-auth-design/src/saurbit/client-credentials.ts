@@ -211,7 +211,7 @@ export class KaapiClientCredentialsFlow<Refs extends ReqRef = ReqRefDefaults>
     }
 
     /**
-     * Builds an {@link AuthSchemeHandler} that verifies the bearer token and,
+     * Builds an {@link AuthSchemeHandler} that verifies the access token and,
      * optionally, enforces the required scopes.
      *
      * @param scopes - Scopes the token must include. Pass an empty array to skip scope enforcement.
@@ -519,7 +519,7 @@ export class KaapiOIDCClientCredentialsFlow<Refs extends ReqRef = ReqRefDefaults
     }
 
     /**
-     * Builds an {@link AuthSchemeHandler} that verifies the bearer token and,
+     * Builds an {@link AuthSchemeHandler} that verifies the access token and,
      * optionally, enforces the required scopes.
      *
      * @param scopes - Scopes the token must include. Pass an empty array to skip scope enforcement.

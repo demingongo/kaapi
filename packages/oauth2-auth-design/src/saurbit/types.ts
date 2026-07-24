@@ -133,7 +133,7 @@ export interface KaapiOAuth2StrategyOptions<Refs extends ReqRef = ReqRefDefaults
  */
 export interface KaapiMethods<Refs extends ReqRef = ReqRefDefaults> {
     /**
-     * Returns a Hapi auth scheme handler that verifies the bearer token on
+     * Returns a Hapi auth scheme handler that verifies the access token on
      * incoming requests and optionally enforces the given scopes.
      *
      * On success, authenticates the request with the verified credentials.
@@ -149,7 +149,7 @@ export interface KaapiMethods<Refs extends ReqRef = ReqRefDefaults> {
      */
     token(request: Request<Refs>): Promise<OAuth2FlowTokenResponse>;
     /**
-     * Extracts and verifies the bearer token from the request.
+     * Extracts and verifies the access token from the request.
      *
      * @param request - The Kaapi {@link Request} for the current request.
      * @returns A {@link StrategyResult} indicating success or failure.

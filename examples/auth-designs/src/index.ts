@@ -4,6 +4,7 @@ import Boom from '@hapi/boom';
 import Joi from 'joi';
 import { jwksRotator } from './plugins/jwks';
 import { deviceVerificationRoute } from './drafts/oidc-device-auth-flow-draft';
+// import oidcAuthCodeFlowDraft from './drafts/oidc-auth-code-flow-draft';
 
 appReady.then((app) => {
     app.log(`Kaapi server is ready: ${app}`);
@@ -55,6 +56,14 @@ appReady.then((app) => {
             method: 'GET',
         },
         (request) => {
+            /*
+            // Demonstrate the use of the Kaapi methods for the auth code flow
+            oidcAuthCodeFlowDraft.kaapi().initiateAuthorization(request);
+            oidcAuthCodeFlowDraft.kaapi().processAuthorization(request);
+            oidcAuthCodeFlowDraft.kaapi().token(request);
+            oidcAuthCodeFlowDraft.kaapi().verifyToken(request);
+            */
+
             app.log.debug('request.app.oauth2?.proofThumbprint:', request.app.oauth2?.dpopThumbprint);
             const forwardedProto = request.headers['x-forwarded-proto'];
             const protocol = forwardedProto ? forwardedProto : request.server.info.protocol;
