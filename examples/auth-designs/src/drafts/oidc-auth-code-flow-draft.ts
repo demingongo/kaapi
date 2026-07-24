@@ -3,6 +3,7 @@ import db from './database';
 import { decode, encode } from './encoder';
 import renderHtml from './render-html';
 import {
+    createClientResolver,
     KaapiOIDCAuthorizationCodeFlowBuilder,
     verifyCodeVerifier,
 } from '@kaapi/oauth2-auth-design';
@@ -183,90 +184,91 @@ export default KaapiOIDCAuthorizationCodeFlowBuilder.create({
         // db query
         const client = await db.clients.findById(info.clientId);
         if (!client) return undefined;
-        if (info.grantType === 'authorization_code') {
-            const { code, clientSecret, codeVerifier } = info
-            const decodedCode = decode(code);
-            const scope = decodedCode.scope;
-            const codeChallenge = decodedCode.codeChallenge;
-            const userId = decodedCode.user;
-            const nonce = decodedCode.nonce;
-            // db query
-            const user = await db.users.findById(userId);
-            // client or user not found
-            if (!client || !user) {
-                return;
-            }
-            // secret or code verifier validation
-            if (clientSecret) {
-                if (client.secret != clientSecret) {
+
+        return await createClientResolver({
+            authorizationCode: async ({ code, clientSecret, codeVerifier }) => {
+                const decodedCode = decode(code);
+                const scope = decodedCode.scope;
+                const codeChallenge = decodedCode.codeChallenge;
+                const userId = decodedCode.user;
+                const nonce = decodedCode.nonce;
+                // db query
+                const user = await db.users.findById(userId);
+                // client or user not found
+                if (!client || !user) {
                     return;
                 }
-            } else if (codeVerifier) {
-                if (!verifyCodeVerifier(codeVerifier, codeChallenge)) {
+                // secret or code verifier validation
+                if (clientSecret) {
+                    if (client.secret != clientSecret) {
+                        return;
+                    }
+                } else if (codeVerifier) {
+                    if (!verifyCodeVerifier(codeVerifier, codeChallenge)) {
+                        return;
+                    }
+                } else {
                     return;
                 }
-            } else {
-                return;
-            }
-            return {
-                grants: ['authorization_code', 'refresh_token'],
-                id: client.id,
-                scopes: ['openid', 'profile', 'email', 'offline_access', 'read', 'write', 'admin', 'api.read'],
-                redirectUris: [],
-                metadata: {
-                    accessScope: scope,
-                    nonce,
-                    userId,
-                    name: user.name,
-                    email: user.email,
-                    given_name: user.given_name
+                return {
+                    grants: ['authorization_code', 'refresh_token'],
+                    id: client.id,
+                    scopes: ['openid', 'profile', 'email', 'offline_access', 'read', 'write', 'admin', 'api.read'],
+                    redirectUris: [],
+                    metadata: {
+                        accessScope: scope,
+                        nonce,
+                        userId,
+                        name: user.name,
+                        email: user.email,
+                        given_name: user.given_name
+                    }
                 }
+            },
+            refreshToken: async ({ clientId, refreshToken, scope }) => {
+                const refreshTokenData = await jwksAuthority.verify<RefreshPayload>(refreshToken);
+
+                const createBoomError = (errorCode: string, errorDescription: string) => {
+                    const errorResponse = Boom.badRequest(errorCode);
+                    errorResponse.output.payload.error = errorCode;
+                    errorResponse.output.payload.error_description = errorDescription;
+                    return errorResponse;
+                };
+
+                // validate the refresh token and its association with the client
+                if (!refreshTokenData) throw createBoomError("invalid_grant", "Invalid refresh token");
+
+                if (refreshTokenData.client_id !== clientId)
+                    throw createBoomError("invalid_grant", "Invalid client for refresh token");
+
+
+                const user = await db.users.findById(`${refreshTokenData.sub}`);
+                if (!user) return undefined;
+
+                const olderScope = refreshTokenData.scope ? refreshTokenData.scope.split(' ') : [];
+
+                // narrow the scope if the client requests a subset
+                const requestedScope = Array.isArray(scope) ? scope : [];
+                const accessScope = requestedScope.length
+                    ? olderScope.filter((s) => requestedScope.includes(s))
+                    : olderScope;
+
+                return {
+                    grants: ['authorization_code', 'refresh_token'],
+                    id: client.id,
+                    scopes: ['openid', 'profile', 'email', 'offline_access', 'read', 'write', 'admin', 'api.read'],
+                    redirectUris: [],
+                    metadata: {
+                        accessScope: accessScope,
+                        userId: refreshTokenData.sub,
+                        name: user.name,
+                        email: user.email,
+                        given_name: user.given_name,
+                        nonce: refreshTokenData.nonce,
+                    }
+                };
             }
-        } else if (info.grantType === 'refresh_token') {
-            // todo
-            const refreshTokenData = await jwksAuthority.verify<RefreshPayload>(info.refreshToken);
-
-            const createBoomError = (errorCode: string, errorDescription: string) => {
-                const errorResponse = Boom.badRequest(errorCode);
-                errorResponse.output.payload.error = errorCode;
-                errorResponse.output.payload.error_description = errorDescription;
-                return errorResponse;
-            };
-
-            // validate the refresh token and its association with the client
-            if (!refreshTokenData) throw createBoomError("invalid_grant", "Invalid refresh token");
-
-            if (refreshTokenData.client_id !== info.clientId)
-                throw createBoomError("invalid_grant", "Invalid client for refresh token");
-
-
-            const user = await db.users.findById(`${refreshTokenData.sub}`);
-            if (!user) return undefined;
-
-            const olderScope = refreshTokenData.scope ? refreshTokenData.scope.split(' ') : [];
-
-            // narrow the scope if the client requests a subset
-            const requestedScope = Array.isArray(info.scope) ? info.scope : [];
-            const accessScope = requestedScope.length
-                ? olderScope.filter((s) => requestedScope.includes(s))
-                : olderScope;
-
-            return {
-                grants: ['authorization_code', 'refresh_token'],
-                id: client.id,
-                scopes: ['openid', 'profile', 'email', 'offline_access', 'read', 'write', 'admin', 'api.read'],
-                redirectUris: [],
-                metadata: {
-                    accessScope: accessScope,
-                    userId: refreshTokenData.sub,
-                    name: user.name,
-                    email: user.email,
-                    given_name: user.given_name,
-                    nonce: refreshTokenData.nonce,
-                }
-            };
-        }
-        return;
+        })(info);
     })
     .generateAccessToken(async ({ client, accessTokenLifetime, origin, tokenTypeValidation }) => {
 
