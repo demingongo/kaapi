@@ -391,7 +391,7 @@ export interface KaapiOIDCAuthorizationCodeMethods<
 
 //#region Constants
 
-const renderDefaultLoginForm: LoginFormRenderer = (
+export const renderDefaultLoginForm: LoginFormRenderer = (
     _request,
     h,
     _result,
@@ -502,7 +502,7 @@ const renderDefaultLoginForm: LoginFormRenderer = (
     return h.response(html).type('text/html').code(statusCode);
 };
 
-const renderDefaultConsentForm: AuthorizationCodeConsentFormRenderer = (
+export const renderDefaultConsentForm: AuthorizationCodeConsentFormRenderer = (
     _request,
     h,
     { continueResponse: { scope } },
