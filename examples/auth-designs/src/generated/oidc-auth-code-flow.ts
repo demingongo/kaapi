@@ -141,14 +141,14 @@ export const oidcAuthCodeFlow: KaapiOIDCAuthorizationCodeFlow<ReqRefDefaults, {
     .setAuthorizationEndpoint('/authorize')
     .getClientForAuthentication((data) => {
         const client = VALID_CLIENTS.find((c) => c.client_id === data.clientId);
-        if (!client) return undefined;
+        if (!client) return;
 
         // filter client's allowed scoped
         const requestedScopes = data.scope ? data.scope : [];
         const grantedScopes = requestedScopes.length
             ? requestedScopes.filter((s) => client.allowed_scopes.includes(s))
             : client.allowed_scopes;
-        if (grantedScopes.length === 0) return undefined;
+        if (grantedScopes.length === 0) return;
 
         return {
             id: client.client_id,
@@ -448,12 +448,7 @@ export const oidcAuthCodeFlow: KaapiOIDCAuthorizationCodeFlow<ReqRefDefaults, {
         });
 
         // rotate: issue a new refresh token to replace the one consumed in getClient
-        const refreshToken = (() => {
-            if (accessScope.includes("offline_access")) {
-                return crypto.randomUUID();
-            }
-            return undefined;
-        })();
+        const refreshToken = accessScope.includes("offline_access") ? crypto.randomUUID() : undefined;
 
         if (refreshToken) {
             refreshTokenStorage.set(refreshToken, {
