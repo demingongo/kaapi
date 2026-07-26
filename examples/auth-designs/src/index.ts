@@ -45,8 +45,8 @@ appReady.then((app) => {
         },
         (req) =>
             'Hello!' +
-            (req.auth.credentials.user && 'name' in req.auth.credentials.user
-                ? ` ${req.auth.credentials.user.name}`
+            (req.auth.credentials.user && 'username' in req.auth.credentials.user
+                ? ` ${req.auth.credentials.user.username}`
                 : '')
     );
 

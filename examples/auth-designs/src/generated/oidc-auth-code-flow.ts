@@ -29,7 +29,7 @@ const VALID_CLIENTS = [
     },
 ];
 
-const REGISTERED_USERS = [{ id: 'user-1234', username: 'user', password: 'password', email: 'user@email.com' }];
+const REGISTERED_USERS = [{ id: 'user-1234', username: 'user', password: 'crossterm', email: 'user@email.com' }];
 
 const codeStorage: Map<
     string,
@@ -105,6 +105,7 @@ export const oidcAuthCodeFlow: KaapiOIDCAuthorizationCodeFlow<ReqRefDefaults, {
         const consent = typeof payload?.consent === "string" && ["allow", "deny"].includes(payload.consent) ? (payload.consent as "allow" | "deny") : undefined;
         const cookieSession = req.state[COOKIE_SESSION_NAME] && typeof req.state[COOKIE_SESSION_NAME] === "string" ? req.state[COOKIE_SESSION_NAME] : undefined;
 
+        console.log("parseAuthorizationEndpointData:", { username, password, consent, cookieSession });
         return {
             username,
             password,
@@ -114,7 +115,7 @@ export const oidcAuthCodeFlow: KaapiOIDCAuthorizationCodeFlow<ReqRefDefaults, {
     },
 })
     // The name of the security scheme in the OpenAPI specification
-    .setSecuritySchemeName('${kebabCase(this.#values.name)}')
+    .setSecuritySchemeName('authCodeFlow')
     // Access token type
     .setTokenType(new BearerTokenType())
     // Access token TTL (used in generateAccessToken handler)
@@ -132,9 +133,21 @@ export const oidcAuthCodeFlow: KaapiOIDCAuthorizationCodeFlow<ReqRefDefaults, {
         read: 'Grants read-only access to protected resources',
         write: 'Grants write access to protected resources',
     })
+    // Discovery
+    .setDiscoveryUrl('/.well-known/openid-configuration')
+    .onDiscoveryRequest(async (request) => {
+        return oidcAuthCodeFlow.kaapi().getDiscoveryConfiguration(request, {
+            // origin: 'http://localhost:3000', // Use the externally accessible URI for discovery to ensure correct endpoint URLs are provided to clients
+        });
+    })
+    // JWKS
+    .setJwksEndpoint('/oauth2/v2/keys') // activates jwks uri
+    .onJwksRequest(async () => {
+        return await jwksAuthority.getJwksEndpointResponse();
+    })
     // Additional OpenID Connect configuration
     .setOpenIdConfiguration({
-        claims_supported: ["sub", "aud", "iss", "exp", "iat", "nbf", "name", "email", "username"],
+        claims_supported: ["sub", "aud", "iss", "exp", "iat", "nbf", "email", "username"],
     })
 
     // Authorization
@@ -160,7 +173,7 @@ export const oidcAuthCodeFlow: KaapiOIDCAuthorizationCodeFlow<ReqRefDefaults, {
     .setConsentFormRenderer(async (request, h, result, ctxt) => {
         const response = await renderDefaultConsentForm(request, h, result, ctxt);
 
-        if (response && !request.state.session) {
+        if (response && !request.state[COOKIE_SESSION_NAME]) {
             // set a cookie to track session
             const sessionId = crypto.randomUUID();
             sessionStorage.set(sessionId, {
@@ -173,6 +186,31 @@ export const oidcAuthCodeFlow: KaapiOIDCAuthorizationCodeFlow<ReqRefDefaults, {
         return response;
     })
     .getUserForAuthentication((_ctxt, parsedData) => {
+        // get user from session cookie if available
+        if (parsedData.cookieSession) {
+            const session = sessionStorage.get(parsedData.cookieSession);
+            if (session) {
+                if (session.expiresAt <= Date.now()) {
+                    // Session expired, clean up
+                    sessionStorage.delete(parsedData.cookieSession);
+                } else if (session.expiresAt > Date.now()) {
+                    const user = REGISTERED_USERS.find((u) => u.id === session.userId);
+                    if (user) {
+                        return {
+                            type: "authenticated",
+                            user: {
+                                id: user.id,
+                                email: user.email,
+                                username: user.username,
+                                consentStatus: parsedData.consent, // carry the consent decision  forward
+                            },
+                        };
+                    }
+                }
+            }
+        }
+
+        // get user from username/password if available
         const user = REGISTERED_USERS.find((u) => u.username === parsedData.username && u.password === parsedData.password);
         if (!user) return;
         return {
@@ -249,14 +287,20 @@ export const oidcAuthCodeFlow: KaapiOIDCAuthorizationCodeFlow<ReqRefDefaults, {
         },
     })
     .generateAuthorizationCode((grantContext, user) => {
+        // invalid user, return undefined to indicate an error
         if (!user.id) {
             return;
         }
 
+        // acces denied
         if (user.consentStatus === "deny") {
-            return { type: "deny" };
+            return {
+                type: "deny",
+                message: "The user has denied consent for this application.",
+            };
         }
 
+        // user consented
         if (user.consentStatus === "allow") {
             const code = crypto.randomUUID();
             codeStorage.set(code, {
@@ -267,8 +311,13 @@ export const oidcAuthCodeFlow: KaapiOIDCAuthorizationCodeFlow<ReqRefDefaults, {
                 codeChallenge: grantContext.codeChallenge,
                 nonce: grantContext.nonce,
             });
+            return {
+                type: "code",
+                code,
+            };
         }
 
+        // user has not yet provided consent, continue to the consent form
         return { type: "continue" };
     })
 
@@ -493,11 +542,12 @@ export const oidcAuthCodeFlow: KaapiOIDCAuthorizationCodeFlow<ReqRefDefaults, {
         }
         return { isValid: false };
     })
-
-    // JWKS
-    .onJwksRequest(async () => {
-        return await jwksAuthority.getJwksEndpointResponse();
-    })
     .build();
+
+//#endregion
+
+//#region Auth Design
+
+export const oidcAuthCodeFlowDesign = oidcAuthCodeFlow.kaapi().toAuthDesign();
 
 //#endregion
