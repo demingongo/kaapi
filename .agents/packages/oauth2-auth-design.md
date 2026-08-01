@@ -3,11 +3,12 @@
 **npm**: `@kaapi/oauth2-auth-design` · **version**: 0.0.45  
 **Source**: `packages/oauth2-auth-design/src/`  
 **Build**: `tsc` → `lib/` · **Format**: CommonJS (`NodeNext`)  
-**Dependencies**: `@hapi/boom`, `@hapi/hoek`, `@kaapi/cli`, `@kaapi/kaapi`, `@novice1/api-doc-generator`, `html-entities`, `jose`, `node-jose`, `tslib`
+**Dependencies**: `@hapi/boom`, `@hapi/hoek`, `@kaapi/cli`, `@kaapi/kaapi`, `@novice1/api-doc-generator`, `tslib`  
+**Peer Dependencies**: `@saurbit/oauth2 ^0.1.11`, `@saurbit/oauth2-jwt ^0.1.7`
 
 **Entry points**:
 
-- `.` → main index (flows, utils, token types, error codes)
+- `.` → main index (flow builders, Kaapi adapters, delegate types)
 - `./cli` → `OAuth2FlowGenerator`, `OAuth2UtilGenerator` (CLI code generators for `@kaapi/cli`)
 
 ---
@@ -31,190 +32,168 @@ Full OAuth2/OIDC authentication flows as Kaapi plugins. Each flow is an `AuthDes
 src/
   index.ts
   cli.ts                              ← OAuth2FlowGenerator, OAuth2UtilGenerator (for @kaapi/cli)
-  flows/
-    common.ts                         ← error codes, base types, OAuth2AuthDesign abstract
-    authorization-code.ts             ← OAuth2AuthorizationCode
-    client-credentials.ts             ← OAuth2ClientCredentials
-    device-authorization.ts           ← OAuth2DeviceAuthorization
-    oidc-multiple-flows.ts            ← MultipleFlows
-    auth-code/
-      authorization-route.ts          ← IOAuth2ACAuthorizationRoute and friends
-      token-route.ts                  ← IOAuth2ACTokenRoute and friends
-      authorization-utils.ts          ← PKCE helpers
-    client-creds/
-      token-route.ts                  ← IOAuth2ClientCredentialsTokenRoute and friends
-    device-auth/
-      authorization-route.ts          ← IOAuth2DeviceAuthorizationRoute and friends
-      token-route.ts                  ← IOAuth2DeviceAuthTokenRoute and friends
+  saurbit/
+    common.ts                         ← OAuth2AuthDesign, OAuth2MultipleFlowsAuthDesign, OIDCAuthUtil
+    types.ts                          ← OAuth2AuthDesignOptions, IOAuth2AuthDesign, KaapiOAuth2StrategyOptions,
+                                         KaapiStrategyOptions, FailedAuthorizationAction, AuthSchemeHandler
+    utils.ts                          ← createWebStandardRequest, createTokenEndpointHandler, createSchemeAndStrategy
+    authorization-code.ts             ← KaapiAuthorizationCodeFlow, KaapiAuthorizationCodeFlowBuilder,
+                                         KaapiOIDCAuthorizationCodeFlow, KaapiOIDCAuthorizationCodeFlowBuilder
+    client-credentials.ts             ← KaapiClientCredentialsFlow, KaapiClientCredentialsFlowBuilder,
+                                         KaapiOIDCClientCredentialsFlow, KaapiOIDCClientCredentialsFlowBuilder
+    device-authorization.ts           ← KaapiDeviceAuthorizationFlow, KaapiDeviceAuthorizationFlowBuilder,
+                                         KaapiOIDCDeviceAuthorizationFlow, KaapiOIDCDeviceAuthorizationFlowBuilder
+    oidc-multiple-flow.ts             ← KaapiOIDCMultipleFlows, KaapiOIDCFlow
   generators/
     oauth2-flow-generator.ts
     oauth2-util-generator.ts
   utils/
-    client-auth-methods.ts            ← ClientAuthMethod, ClientSecretBasic, ClientSecretPost, NoneAuthMethod, DPoPAuthMethod
-    in-memory-key-store.ts            ← InMemoryKeyStore, createInMemoryKeyStore
-    jwt-authority.ts                  ← JwtAuthority, JwksRotator, JwksKeyStore
-    jwt-utils.ts                      ← createJwtAccessToken, createIdToken, verifyJwt
-    replay-store.ts                   ← InMemoryReplayStore, ReplayDetector
-    token-types.ts                    ← BearerToken, DPoPToken, TokenType
-    verify-code-verifier.ts           ← PKCE code verifier
+    client-resolver.ts                ← OAuth2TokenRequest, resolveClient helpers
 ```
 
 ---
 
 ## OAuth2 Flow Classes
 
-All four flow classes extend `AuthDesign` from `@kaapi/kaapi` and therefore implement `KaapiPlugin`.
+Each grant type comes as a Kaapi-adapted class that wraps the corresponding `@saurbit/oauth2` flow. All Kaapi flow classes implement `KaapiAdapted` and expose `.kaapi()` for use inside route handlers. Wrap them with `OAuth2AuthDesign` (or `KaapiOIDCMultipleFlows`) to integrate with `app.extend()`.
 
-### `OAuth2AuthorizationCode`
+### `KaapiAuthorizationCodeFlow` / `KaapiOIDCAuthorizationCodeFlow`
 
-Authorization Code flow (RFC 6749 §4.1). Optionally with PKCE (RFC 7636).
+Authorization Code flow (RFC 6749 §4.1), optionally with OIDC. Built via `KaapiAuthorizationCodeFlowBuilder` / `KaapiOIDCAuthorizationCodeFlowBuilder`.
 
 ```ts
-import { OAuth2AuthorizationCode } from '@kaapi/oauth2-auth-design';
+import { KaapiOIDCAuthorizationCodeFlowBuilder, OAuth2AuthDesign } from '@kaapi/oauth2-auth-design';
 
-const flow = new OAuth2AuthorizationCode({
-    authorizationRoute: new MyAuthorizationRoute(),
-    tokenRoute: new MyTokenRoute(),
-    refreshTokenRoute: new MyRefreshRoute(), // optional
+const flow = KaapiOIDCAuthorizationCodeFlowBuilder.create()
+    .setAuthorizationEndpoint('/oauth2/authorize')
+    .setTokenEndpoint('/oauth2/token')
+    .clientSecretBasicAuthenticationMethod()
+    .getClient(async (req) => lookupClient(req))
+    .parseAuthorizationEndpointData(async (req) => parseAuthReq(req))
+    .generateAccessToken(async (ctx) => signJwt(ctx))
+    .tokenVerifier((request, { token }) => verifyJwt(token))
+    .build();
+
+const authDesign = new OAuth2AuthDesign({
+    docs: () => flow.docs(),
+    integrateStrategy: (t) => flow.integrateStrategy(t),
+    getStrategyName: () => flow.getStrategyName(),
+    integrateHook: (t) => flow.integrateHook(t),
 });
 
-// Enable/disable PKCE:
-flow.withPkce(); // PKCE required (default)
-flow.withoutPkce(); // PKCE optional
-
-await app.extend(flow);
+await app.extend(authDesign);
 ```
 
-### `OAuth2ClientCredentials`
+### `KaapiClientCredentialsFlow` / `KaapiOIDCClientCredentialsFlow`
 
-Client Credentials flow (RFC 6749 §4.4). Machine-to-machine, no user involved.
+Client Credentials flow (RFC 6749 §4.4). Machine-to-machine; built via `KaapiClientCredentialsFlowBuilder` / `KaapiOIDCClientCredentialsFlowBuilder`.
 
 ```ts
-import { OAuth2ClientCredentials } from '@kaapi/oauth2-auth-design';
+import { KaapiClientCredentialsFlowBuilder, OAuth2AuthDesign } from '@kaapi/oauth2-auth-design';
 
-const flow = new OAuth2ClientCredentials({
-    tokenRoute: new MyTokenRoute(),
-});
-await app.extend(flow);
+const flow = KaapiClientCredentialsFlowBuilder.create()
+    .setTokenEndpoint('/oauth2/token')
+    .clientSecretBasicAuthenticationMethod()
+    .getClient(async (tokenRequest) => lookupClient(tokenRequest))
+    .generateAccessToken(async (ctx) => signJwt(ctx))
+    .tokenVerifier((request, { token }) => verifyJwt(token))
+    .build();
+
+await app.extend(
+    new OAuth2AuthDesign({
+        docs: () => flow.docs(),
+        integrateStrategy: (t) => flow.integrateStrategy(t),
+        getStrategyName: () => flow.getStrategyName(),
+        integrateHook: (t) => flow.integrateHook(t),
+    })
+);
 ```
 
-### `OAuth2DeviceAuthorization`
+### `KaapiDeviceAuthorizationFlow` / `KaapiOIDCDeviceAuthorizationFlow`
 
-Device Authorization Grant (RFC 8628). For devices without browsers.
+Device Authorization Grant (RFC 8628). Built via `KaapiDeviceAuthorizationFlowBuilder` / `KaapiOIDCDeviceAuthorizationFlowBuilder`.
 
-```ts
-import { OAuth2DeviceAuthorization } from '@kaapi/oauth2-auth-design';
+### `KaapiOIDCMultipleFlows`
 
-const flow = new OAuth2DeviceAuthorization({
-    authorizationRoute: new MyDeviceAuthRoute(),
-    tokenRoute: new MyDeviceTokenRoute(),
-    refreshTokenRoute: new MyRefreshRoute(), // optional
-});
-await app.extend(flow);
-```
-
-### `MultipleFlows`
-
-Groups multiple OAuth2 flows under one OIDC security scheme. Shares a JWKS endpoint and key store. Produces an OIDC discovery document route automatically.
+Aggregates multiple OIDC flows under a single auth scheme. Registers a JWKS endpoint and an OIDC discovery document route automatically.
 
 ```ts
-import { MultipleFlows } from '@kaapi/oauth2-auth-design';
+import { KaapiOIDCMultipleFlows, OAuth2MultipleFlowsAuthDesign } from '@kaapi/oauth2-auth-design';
 
-const oidc = new MultipleFlows({
-    flows: [authCodeFlow, clientCredsFlow, deviceFlow],
+const multiFlow = new KaapiOIDCMultipleFlows({
+    flows: [oidcAuthCodeFlow, oidcClientCredsFlow],
+    discoveryUrl: '/.well-known/openid-configuration',
+    securitySchemeName: 'oidc',
+    jwksEndpoint: '/.well-known/jwks.json',
     tokenEndpoint: '/oauth2/token',
-    jwksOptions: { keyStore: new InMemoryKeyStore() },
     openidConfiguration: { issuer: 'https://auth.example.com' },
 });
-await app.extend(oidc);
+
+await app.extend(
+    new OAuth2MultipleFlowsAuthDesign({
+        docs: () => multiFlow.docs(),
+        integrateStrategy: (t) => multiFlow.integrateStrategy(t),
+        getStrategyName: () => multiFlow.getStrategyName(),
+        integrateHook: (t) => multiFlow.integrateHook(t),
+    })
+);
 ```
 
----
+### `OAuth2AuthDesign` / `OAuth2MultipleFlowsAuthDesign`
 
-## Route Interfaces
+Delegate adapters that wrap any flow's methods into an `AuthDesign` / `KaapiPlugin` for use with `app.extend()`. Take an `OAuth2AuthDesignOptions` / `OAuth2MultipleFlowsAuthDesignOptions` object.
 
-Each flow requires you to implement route interfaces that contain your business logic. The flow class wires them to Hapi routes, handles the OAuth2 protocol logic, and auto-generates docs.
+### `OIDCAuthUtil`
 
-### Authorization Code Routes
-
-#### `IOAuth2ACAuthorizationRoute`
-
-The `/authorize` endpoint — shows the login/consent page.
-
-- `handle(request, h)` → redirects to client with `code`, or shows error
-
-Default implementation: `DefaultOAuth2ACAuthorizationRoute`  
-Abstract base: `OAuth2ACAuthorizationRoute`
-
-#### `IOAuth2ACTokenRoute`
-
-The `/token` endpoint for Authorization Code flow.
-
-- `handle(request, h, context)` → returns access token, refresh token, optionally ID token
-
-Default implementation: `DefaultOAuth2ACTokenRoute`  
-Abstract base: `OAuth2ACTokenRoute`
-
-#### `IOAuth2RefreshTokenRoute`
-
-Shared refresh token endpoint.
-
-- `handle(request, h, context)` → returns new access + refresh tokens
-
-Default implementation: `DefaultOAuth2RefreshTokenRoute`
-
-### Client Credentials Routes
-
-#### `IOAuth2ClientCredentialsTokenRoute`
-
-The `/token` endpoint for Client Credentials flow.
-
-- `handle(request, h, context)` → validates client, returns access token
-
-Default implementation: `DefaultOAuth2ClientCredentialsTokenRoute`
-
-### Device Authorization Routes
-
-#### `IOAuth2DeviceAuthorizationRoute`
-
-The device authorization endpoint.
-
-- `handle(request, h)` → returns `device_code`, `user_code`, `verification_uri`, `interval`, `expires_in`
-
-Default implementation: `DefaultOAuth2DeviceAuthorizationRoute`  
-Abstract base: (implements `IOAuth2DeviceAuthorizationRoute`)
-
-#### `IOAuth2DeviceAuthTokenRoute`
-
-The token polling endpoint for Device flow.
-
-- `handle(request, h, context)` → returns tokens when device is authorized, or `authorization_pending` / `slow_down`
-
-Default implementation: `DefaultOAuth2DeviceAuthTokenRoute`
-
-### JWKS Routes
-
-#### `IJWKSRoute`
-
-Exposes the public JWKS endpoint (`/.well-known/jwks.json`).
-
-Default implementation: `DefaultJWKSRoute`
+Extends `@novice1/api-doc-generator`'s `OAuth2Util` to produce an `openIdConnect` security scheme in OpenAPI output, using the discovery document URL.
 
 ---
 
-## JWT Authority
+## Strategy & Integration Types
 
-### `JwtAuthority`
+### `KaapiOAuth2StrategyOptions<Refs>`
 
-Generates RSA-2048 key pairs, signs JWTs (RS256), verifies JWTs, and serves JWKS.
+Passed to all flow builders as `strategyOptions`. Controls token verification and failed-authorization handling.
 
 ```ts
-import { JwtAuthority, InMemoryKeyStore, createInMemoryKeyStore } from '@kaapi/oauth2-auth-design';
+interface KaapiOAuth2StrategyOptions<Refs> {
+    verifyToken?: StrategyVerifyTokenFunction<Request<Refs>>; // from @saurbit/oauth2
+    failedAuthorizationAction?: FailedAuthorizationAction<Refs>;
+}
 
+// FailedAuthorizationAction: custom handler for 401 scenarios
+type FailedAuthorizationAction<Refs> = (
+    request: Request<Refs>,
+    h: ResponseToolkit<Refs>,
+    error: StrategyError // from @saurbit/oauth2
+) => Lifecycle.ReturnValue<Refs>;
+```
+
+### `OAuth2AuthDesignOptions`
+
+Delegate interface for `OAuth2AuthDesign`:
+
+| Field               | Required | Description                                                     |
+| ------------------- | -------- | --------------------------------------------------------------- |
+| `docs()`            | yes      | Returns the OpenAPI/Postman `BaseAuthUtil` for this auth scheme |
+| `integrateStrategy` | yes      | Registers the Hapi auth scheme and strategy via `KaapiTools`    |
+| `getStrategyName()` | yes      | Returns the registered strategy name string                     |
+| `integrateHook?`    | no       | Registers token-endpoint routes on the server                   |
+
+---
+
+## JWT & Token Utilities (from `@saurbit/oauth2-jwt`)
+
+JWT key management, token signing/verification, token types, and replay detection are **not bundled** in `@kaapi/oauth2-auth-design` directly. Install the `@saurbit/oauth2-jwt` peer dependency and import from there:
+
+```ts
+import { JwtAuthority, InMemoryKeyStore, createInMemoryKeyStore, JwksRotator } from '@saurbit/oauth2-jwt';
+import { BearerToken, DPoPToken, InMemoryReplayStore } from '@saurbit/oauth2-jwt';
+
+// Create a key store and authority
 const keyStore = createInMemoryKeyStore();
 const authority = new JwtAuthority({ keyStore });
 
-// Generate a new key pair
 await authority.generateKey();
 
 // Sign a JWT
@@ -223,84 +202,31 @@ const token = await authority.sign({ sub: 'user123', scope: 'read:orders' }, { e
 // Verify
 const payload = await authority.verify(token);
 
-// Get JWKS for the public endpoint
-const jwks = await authority.getJwks();
-```
-
-### `JwksRotator`
-
-Automatic key rotation:
-
-```ts
-import { JwksRotator } from '@kaapi/oauth2-auth-design';
-
-const rotator = new JwksRotator(authority, {
-    intervalMs: 24 * 60 * 60 * 1000, // rotate every 24h
-});
+// Automatic key rotation
+const rotator = new JwksRotator(authority, { intervalMs: 24 * 60 * 60 * 1000 });
 rotator.start();
-rotator.stop();
 ```
 
-### `JwksKeyStore` (interface)
-
-Pluggable key store interface. Implement for Redis, database, etc.:
-
-```ts
-interface JwksKeyStore {
-    getKeys(): Promise<JWK.Key[]>;
-    addKey(key: JWK.Key): Promise<void>;
-    removeKey(kid: string): Promise<void>;
-}
-```
-
-### `InMemoryKeyStore` / `createInMemoryKeyStore()`
-
-Default in-memory implementation. Not suitable for multi-instance deployments.
-
-```ts
-import { createInMemoryKeyStore } from '@kaapi/oauth2-auth-design';
-
-const keyStore = createInMemoryKeyStore();
-```
+Pass the authority's `.getJwks()` result to your OIDC flow builder's JWKS handler.
 
 ---
 
-## Token Types
+## Token Types & Client Auth Methods (from `@saurbit/oauth2`)
 
-### `BearerToken`
-
-Standard OAuth2 Bearer token (RFC 6750). Validates `Authorization: Bearer <token>` header.
+`BearerToken`, `DPoPToken`, `TokenType`, `ClientSecretBasic`, `ClientSecretPost`, `NoneAuthMethod`, `DPoPAuthMethod`, and error classes (`AccessDeniedError`, `InvalidRequestError`, etc.) all come from the `@saurbit/oauth2` peer dependency. Import directly from `@saurbit/oauth2`.
 
 ```ts
-import { BearerToken } from '@kaapi/oauth2-auth-design';
-
-const bearerToken = new BearerToken({ authority });
-// Use as the TokenType in your flow's token route
+import { ClientSecretBasic, ClientSecretPost } from '@saurbit/oauth2';
+import { BearerToken, DPoPToken, InMemoryReplayStore } from '@saurbit/oauth2-jwt';
 ```
 
-### `DPoPToken`
-
-DPoP (Demonstrating Proof of Possession, RFC 9449) token. Validates both Bearer JWT and the DPoP proof JWT in the `DPoP` header.
-
-```ts
-import { DPoPToken } from '@kaapi/oauth2-auth-design';
-
-const dpopToken = new DPoPToken({ authority, replayStore: new InMemoryReplayStore() });
-```
-
-### `TokenType` (interface)
-
-Interface both `BearerToken` and `DPoPToken` implement. Implement for custom token validation.
-
-### `InMemoryReplayStore` / `ReplayDetector`
-
-DPoP replay attack detection. `InMemoryReplayStore` tracks seen DPoP proof JTIs.
+Flow builders expose convenience methods for client auth — e.g. `.clientSecretBasicAuthenticationMethod()` on `KaapiClientCredentialsFlowBuilder` — so you usually don't need to import these directly.
 
 ---
 
-## Client Authentication Methods
+## Client Authentication Methods (from `@saurbit/oauth2`)
 
-Used by token endpoints to authenticate the client (application requesting tokens).
+Client authentication classes come from the `@saurbit/oauth2` peer dependency. Flow builders expose convenience methods (e.g. `.clientSecretBasicAuthenticationMethod()`) so direct imports are rarely needed.
 
 | Class               | Method                | Description                                          |
 | ------------------- | --------------------- | ---------------------------------------------------- |
@@ -310,80 +236,38 @@ Used by token endpoints to authenticate the client (application requesting token
 | `DPoPAuthMethod`    | custom                | DPoP-bound client authentication                     |
 
 ```ts
-import { ClientSecretBasic, ClientSecretPost } from '@kaapi/oauth2-auth-design';
-
-// Pass to flow constructor to restrict allowed auth methods:
-const flow = new OAuth2ClientCredentials({
-    tokenRoute: myTokenRoute,
-    authMethods: [new ClientSecretBasic(), new ClientSecretPost()],
-});
+import { ClientSecretBasic, ClientSecretPost } from '@saurbit/oauth2';
 ```
 
 ---
 
-## Error Codes
+## Error Codes (from `@saurbit/oauth2`)
 
-Frozen constant objects for OAuth2 error codes. Use these instead of string literals.
+OAuth2 error code constants and error classes (`OAuth2ErrorCode`, `StandardOAuth2ErrorCode`, `ExtendedOAuth2ErrorCode`, `OAuth2TokenErrorCode`, `DeviceFlowOAuth2ErrorCode`, `AllOAuth2ErrorCode`, `AccessDeniedError`, `InvalidRequestError`, etc.) come from the `@saurbit/oauth2` peer dependency.
 
 ```ts
-import {
-    OAuth2ErrorCode,
-    // Standard + extended OIDC errors
-    StandardOAuth2ErrorCode,
-    // RFC 6749 standard errors
-    ExtendedOAuth2ErrorCode,
-    // OIDC-specific: login_required, consent_required, etc.
-    OAuth2TokenErrorCode,
-    // invalid_token, insufficient_scope
-    DeviceFlowOAuth2ErrorCode,
-    // authorization_pending, slow_down, expired_token
-    AllOAuth2ErrorCode, // All of the above combined
-} from '@kaapi/oauth2-auth-design';
+import { OAuth2ErrorCode, StandardOAuth2ErrorCode } from '@saurbit/oauth2';
 
-// Usage:
 throw Boom.badRequest(OAuth2ErrorCode.INVALID_REQUEST);
 ```
 
-`StandardOAuth2ErrorCode` values: `INVALID_REQUEST`, `UNAUTHORIZED_CLIENT`, `ACCESS_DENIED`, `UNSUPPORTED_RESPONSE_TYPE`, `INVALID_SCOPE`, `SERVER_ERROR`, `TEMPORARILY_UNAVAILABLE`, `INVALID_CLIENT`, `INVALID_GRANT`, `UNSUPPORTED_GRANT_TYPE`
-
-`ExtendedOAuth2ErrorCode` values: `LOGIN_REQUIRED`, `INTERACTION_REQUIRED`, `CONSENT_REQUIRED`, `ACCOUNT_LOCKED`, `PASSWORD_EXPIRED`
-
-`DeviceFlowOAuth2ErrorCode` values: `ACCESS_DENIED`, `AUTHORIZATION_PENDING`, `SLOW_DOWN`, `EXPIRED_TOKEN`
-
 ---
 
-## JWT Utilities
+## JWT Utilities (from `@saurbit/oauth2-jwt`)
 
-```ts
-import { createJwtAccessToken, createIdToken, verifyJwt } from '@kaapi/oauth2-auth-design';
-
-// Create a signed access token
-const accessToken = await createJwtAccessToken(authority, {
-    sub: 'user123',
-    scope: 'read:orders write:orders',
-    aud: 'my-api',
-});
-
-// Create an OIDC ID token
-const idToken = await createIdToken(authority, {
-    sub: 'user123',
-    email: 'user@example.com',
-    nonce: 'abc123',
-});
-
-// Verify any JWT
-const payload = await verifyJwt(authority, token);
-```
+`createJwtAccessToken`, `createIdToken`, `verifyJwt` and related utilities have moved to the `@saurbit/oauth2-jwt` peer dependency. See the [JWT & Token Utilities](#jwt--token-utilities-from-saurbitjwt) section above.
 
 ---
 
 ## PKCE Utilities
 
+`verifyCodeVerifier` is exported directly from `@kaapi/oauth2-auth-design`.
+
 ```ts
 import { verifyCodeVerifier } from '@kaapi/oauth2-auth-design';
 
-// Verify PKCE code verifier against code challenge
-const isValid = await verifyCodeVerifier(codeVerifier, codeChallenge, codeChallengeMethod);
+// Verify PKCE code verifier against code challenge (SHA-256)
+const isValid = verifyCodeVerifier(codeVerifier, codeChallenge);
 ```
 
 ---

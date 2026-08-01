@@ -15,7 +15,7 @@ Full architecture and API references are in `.agents/`:
 - `.agents/packages/server.md` — `@kaapi/server`: `KaapiServer`, `KaapiServerRoute`, built-in auth scheme
 - `.agents/packages/kaapi.md` — `@kaapi/kaapi`: `Kaapi` class, `ILogger`, `IMessaging`, auth designs, doc generation
 - `.agents/packages/kafka-messaging.md` — `@kaapi/kafka-messaging`: `KafkaMessaging`, publish/subscribe, consumer groups
-- `.agents/packages/oauth2-auth-design.md` — `@kaapi/oauth2-auth-design`: OAuth2/OIDC flows, JWT authority, token types
+- `.agents/packages/oauth2-auth-design.md` — `@kaapi/oauth2-auth-design`: OAuth2/OIDC flows, `@saurbit/oauth2` adapters, flow builders
 - `.agents/packages/cli.md` — `@kaapi/cli`: `FileGenerator`, `kaapi.config.mjs`, CLI scaffolding
 - `.agents/packages/validators.md` — `@kaapi/validator-{arktype,valibot,zod}`: request validation plugins
 - `.agents/packages/logger.md` — `@kaapi/logger`: logger utilities
