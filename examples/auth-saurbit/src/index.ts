@@ -1,9 +1,9 @@
-import { app } from "./app";
-import { healthRoute } from "./routes/health";
+import { app } from './app';
+import { healthRoute } from './routes/health';
 
 app
-    // health check endpoint
-    .route(healthRoute);
+  // health check endpoint
+  .route(healthRoute);
 
 // start the server
 await app.listen();

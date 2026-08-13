@@ -9,15 +9,15 @@ export interface Client {
 
 export const VALID_CLIENTS: Client[] = [
   {
-    client_id: "example-client",
-    client_secret: "s3cr3tK3y123!",
-    allowed_scopes: ["openid", "profile", "email", "offline_access", "health:read"],
+    client_id: 'example-client',
+    client_secret: 's3cr3tK3y123!',
+    allowed_scopes: ['openid', 'profile', 'email', 'offline_access', 'health:read'],
     internal: false,
   },
   {
-    client_id: "machine-client",
-    client_secret: "machine",
-    allowed_scopes: ["health:read"],
+    client_id: 'machine-client',
+    client_secret: 'machine',
+    allowed_scopes: ['health:read'],
     internal: true,
   },
 ];
@@ -31,5 +31,11 @@ export interface User {
 }
 
 export const REGISTERED_USERS: User[] = [
-  { id: "user-1234", username: "user", password: "crossterm", email: "user@email.com", fullName: "User FullName" },
+  {
+    id: 'user-1234',
+    username: 'user',
+    password: 'crossterm',
+    email: 'user@email.com',
+    fullName: 'User FullName',
+  },
 ];

@@ -1,4 +1,4 @@
-import { createInMemoryKeyStore, JoseJwksAuthority, JwksRotator } from "@saurbit/oauth2-jwt";
+import { createInMemoryKeyStore, JoseJwksAuthority, JwksRotator } from '@saurbit/oauth2-jwt';
 
 const jwksStore = createInMemoryKeyStore();
 

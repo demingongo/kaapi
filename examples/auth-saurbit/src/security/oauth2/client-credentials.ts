@@ -1,27 +1,30 @@
-import { VALID_CLIENTS } from "../../data/users";
-import { jwksAuthority } from "../jwks";
-import { KaapiClientCredentialsFlowBuilder } from "@kaapi/oauth2-auth-design";
+import { VALID_CLIENTS } from '../../data/users';
+import { jwksAuthority } from '../jwks';
+import { KaapiClientCredentialsFlowBuilder } from '@kaapi/oauth2-auth-design';
 
 export const clientCredentialsFlow = new KaapiClientCredentialsFlowBuilder({
-  securitySchemeName: "clientCredentials",
+  securitySchemeName: 'clientCredentials',
 })
   .setScopes({
-    "health:read": "Access to health check endpoint.",
+    'health:read': 'Access to health check endpoint.',
   })
-  .setTokenEndpoint("/oauth2/token")
-  .setDescription("Client Credentials flow for machine-to-machine authentication.")
+  .setTokenEndpoint('/oauth2/token')
+  .setDescription('Client Credentials flow for machine-to-machine authentication.')
   .clientSecretBasicAuthenticationMethod()
   .setAccessTokenLifetime(300) // 5 minutes
   .getClient((tokenRequest) => {
     const client = VALID_CLIENTS.find(
-      (c) => c.client_id === tokenRequest.clientId && c.client_secret === tokenRequest.clientSecret && c.internal
+      (c) =>
+        c.client_id === tokenRequest.clientId &&
+        c.client_secret === tokenRequest.clientSecret &&
+        c.internal
     );
     if (!client) {
       return undefined;
     }
     return {
       id: client.client_id,
-      grants: ["client_credentials"],
+      grants: ['client_credentials'],
       scopes: client.allowed_scopes,
       redirectUris: [],
     };
@@ -38,7 +41,7 @@ export const clientCredentialsFlow = new KaapiClientCredentialsFlowBuilder({
     };
 
     const { token: accessToken } = await jwksAuthority.sign({
-      scope: grantContext.scope.join(" "),
+      scope: grantContext.scope.join(' '),
       ...registeredClaims,
     });
     return { accessToken };
@@ -46,7 +49,7 @@ export const clientCredentialsFlow = new KaapiClientCredentialsFlowBuilder({
   .tokenVerifier(async (_, { token }) => {
     try {
       const payload = await jwksAuthority.verify(token);
-      if (payload && typeof payload.scope === "string") {
+      if (payload && typeof payload.scope === 'string') {
         const client = VALID_CLIENTS.find((c) => c.client_id === payload.sub);
         if (client) {
           return {
@@ -55,7 +58,7 @@ export const clientCredentialsFlow = new KaapiClientCredentialsFlowBuilder({
               app: {
                 id: client.client_id,
               },
-              scope: payload.scope.split(" "),
+              scope: payload.scope.split(' '),
             },
           };
         }
@@ -65,7 +68,7 @@ export const clientCredentialsFlow = new KaapiClientCredentialsFlowBuilder({
         {
           error: error instanceof Error ? { name: error.name, message: error.message } : error,
         },
-        "Token verification error:"
+        'Token verification error:'
       );
     }
     return { isValid: false };
