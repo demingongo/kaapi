@@ -19,7 +19,48 @@ import { ReqRefDefaults, ResponseObject } from '@kaapi/kaapi';
 
 //#region (To be replaced with persistent storage) Storage for clients, users, codes, refresh tokens and sessions
 
-const VALID_CLIENTS = [
+interface CodeData {
+    clientId: string;
+    scope: string[];
+    userId: string;
+    expiresAt: number;
+    codeChallenge?: string | undefined;
+    nonce?: string | undefined;
+    [key: string]: unknown;
+}
+
+interface RefreshTokenData {
+    clientId: string;
+    userId: string;
+    scope: string[];
+    expiresAt: number;
+    [key: string]: unknown;
+}
+
+interface SessionData {
+    userId: string;
+    expiresAt: number;
+    [key: string]: unknown;
+}
+
+interface ClientData {
+    client_id: string;
+    client_secret: string;
+    allowed_scopes: string[];
+    grant_types: string[];
+    redirect_uris: string[];
+    [key: string]: unknown;
+}
+
+interface UserData {
+    id: string;
+    username: string;
+    password: string;
+    email: string;
+    [key: string]: unknown;
+}
+
+const VALID_CLIENTS: ClientData[] = [
     {
         client_id: 'service-api-client',
         client_secret: 's3cr3tK3y123!',
@@ -29,37 +70,62 @@ const VALID_CLIENTS = [
     },
 ];
 
-const REGISTERED_USERS = [{ id: 'user-1234', username: 'user', password: 'crossterm', email: 'user@email.com' }];
+const REGISTERED_USERS: UserData[] = [{ id: 'user-1234', username: 'user', password: 'crossterm', email: 'user@email.com' }];
 
 const codeStorage: Map<
     string,
-    {
-        clientId: string;
-        scope: string[];
-        userId: string;
-        expiresAt: number;
-        codeChallenge?: string | undefined;
-        nonce?: string | undefined;
-    }
+    CodeData
 > = new Map();
 
 const refreshTokenStorage: Map<
     string,
-    {
-        clientId: string;
-        userId: string;
-        scope: string[];
-        expiresAt: number;
-    }
+    RefreshTokenData
 > = new Map();
 
 const sessionStorage: Map<
     string,
-    {
-        userId: string;
-        expiresAt: number;
-    }
+    SessionData
 > = new Map();
+
+async function getClient(clientId: string): Promise<ClientData | undefined> {
+    return VALID_CLIENTS.find((c) => c.client_id === clientId);
+}
+
+async function storeCode(code: string, data: CodeData) {
+    codeStorage.set(code, data);
+}
+
+async function getCodeData(code: string): Promise<CodeData | undefined> {
+    return codeStorage.get(code);
+}
+
+async function deleteCode(code: string): Promise<void> {
+    codeStorage.delete(code);
+}
+
+async function storeRefreshToken(token: string, data: RefreshTokenData) {
+    refreshTokenStorage.set(token, data);
+}
+
+async function getRefreshTokenData(token: string): Promise<RefreshTokenData | undefined> {
+    return refreshTokenStorage.get(token);
+}
+
+async function deleteRefreshToken(token: string): Promise<void> {
+    refreshTokenStorage.delete(token);
+}
+
+async function storeSession(sessionId: string, data: SessionData) {
+    sessionStorage.set(sessionId, data);
+}
+
+async function getSessionData(sessionId: string): Promise<SessionData | undefined> {
+    return sessionStorage.get(sessionId);
+}
+
+async function deleteSession(sessionId: string): Promise<void> {
+    sessionStorage.delete(sessionId);
+}
 
 //#endregion
 
@@ -152,8 +218,8 @@ export const oidcAuthCodeFlow: KaapiOIDCAuthorizationCodeFlow<ReqRefDefaults, {
 
     // Authorization
     .setAuthorizationEndpoint('/authorize')
-    .getClientForAuthentication((data) => {
-        const client = VALID_CLIENTS.find((c) => c.client_id === data.clientId);
+    .getClientForAuthentication(async (data) => {
+        const client = await getClient(data.clientId);
         if (!client) return;
 
         // filter client's allowed scoped
@@ -176,7 +242,7 @@ export const oidcAuthCodeFlow: KaapiOIDCAuthorizationCodeFlow<ReqRefDefaults, {
         if (response && !request.state[COOKIE_SESSION_NAME]) {
             // set a cookie to track session
             const sessionId = crypto.randomUUID();
-            sessionStorage.set(sessionId, {
+            await storeSession(sessionId, {
                 userId: `${result.continueResponse.user.id}`,
                 expiresAt: Date.now() + COOKIE_SESSION_MAX_AGE,
             });
@@ -185,14 +251,14 @@ export const oidcAuthCodeFlow: KaapiOIDCAuthorizationCodeFlow<ReqRefDefaults, {
 
         return response;
     })
-    .getUserForAuthentication((_ctxt, parsedData) => {
+    .getUserForAuthentication(async (_ctxt, parsedData) => {
         // get user from session cookie if available
         if (parsedData.cookieSession) {
-            const session = sessionStorage.get(parsedData.cookieSession);
+            const session = await getSessionData(parsedData.cookieSession);
             if (session) {
                 if (session.expiresAt <= Date.now()) {
                     // Session expired, clean up
-                    sessionStorage.delete(parsedData.cookieSession);
+                    await deleteSession(parsedData.cookieSession);
                 } else if (session.expiresAt > Date.now()) {
                     const user = REGISTERED_USERS.find((u) => u.id === session.userId);
                     if (user) {
@@ -240,18 +306,18 @@ export const oidcAuthCodeFlow: KaapiOIDCAuthorizationCodeFlow<ReqRefDefaults, {
             const cookieSession = typeof request.state[COOKIE_SESSION_NAME] === "string" ? request.state[COOKIE_SESSION_NAME] : undefined;
             if (cookieSession) {
                 try {
-                    const session = sessionStorage.get(cookieSession);
+                    const session = await getSessionData(cookieSession);
                     if (session) {
                         if (session.expiresAt <= Date.now()) {
                             // Session expired, clean up 
-                            sessionStorage.delete(cookieSession);
+                            await deleteSession(cookieSession);
                         } else {
                             const user = REGISTERED_USERS.find((u) => u.id === session.userId);
                             if (user) {
                                 const processedAuthorization = await oidcAuthCodeFlow.kaapi().processAuthorization(request);
                                 // Render consent page if we have a valid session
                                 if (processedAuthorization.type === "continue") {
-                                    sessionStorage.set(cookieSession, { ...session, expiresAt: Date.now() + COOKIE_SESSION_MAX_AGE }); // refresh session expiration
+                                    await storeSession(cookieSession, { ...session, expiresAt: Date.now() + COOKIE_SESSION_MAX_AGE }); // refresh session expiration
                                     return (renderDefaultConsentForm(request, h, processedAuthorization, {
                                         statusCode: 200,
                                         passwordField: PASSWORD_FIELD,
@@ -261,7 +327,7 @@ export const oidcAuthCodeFlow: KaapiOIDCAuthorizationCodeFlow<ReqRefDefaults, {
 
                                 // If the session is invalid, clear the session cookie and show the login form
                                 if (processedAuthorization.type === "unauthenticated") {
-                                    sessionStorage.delete(cookieSession);
+                                    await deleteSession(cookieSession);
                                     return (renderDefaultLoginForm(request, h, processedAuthorization, {
                                         statusCode: 200,
                                         passwordField: PASSWORD_FIELD,
@@ -275,7 +341,7 @@ export const oidcAuthCodeFlow: KaapiOIDCAuthorizationCodeFlow<ReqRefDefaults, {
                                 }
                             } else {
                                 // User not found, clean up session
-                                sessionStorage.delete(cookieSession);
+                                await deleteSession(cookieSession);
                             }
                         }
                     }
@@ -286,7 +352,7 @@ export const oidcAuthCodeFlow: KaapiOIDCAuthorizationCodeFlow<ReqRefDefaults, {
             return h.continue;
         },
     })
-    .generateAuthorizationCode((grantContext, user) => {
+    .generateAuthorizationCode(async (grantContext, user) => {
         // invalid user, return undefined to indicate an error
         if (!user.id) {
             return;
@@ -303,7 +369,7 @@ export const oidcAuthCodeFlow: KaapiOIDCAuthorizationCodeFlow<ReqRefDefaults, {
         // user consented
         if (user.consentStatus === "allow") {
             const code = crypto.randomUUID();
-            codeStorage.set(code, {
+            await storeCode(code, {
                 clientId: grantContext.client.id,
                 scope: grantContext.scope,
                 userId: `${user.id}`,
@@ -324,14 +390,14 @@ export const oidcAuthCodeFlow: KaapiOIDCAuthorizationCodeFlow<ReqRefDefaults, {
     // Token exchange
     .setTokenEndpoint('/token')
     .getClient(async (tokenRequest) => {
-        const client = VALID_CLIENTS.find((c) => c.client_id === tokenRequest.clientId);
+        const client = await getClient(tokenRequest.clientId);
         if (!client) return;
 
         return await createClientResolver({
             authorizationCode: async ({ code, clientId, clientSecret, codeVerifier }) => {
-                const codeData = codeStorage.get(code);
+                const codeData = await getCodeData(code);
                 if (!codeData) return;
-                codeStorage.delete(code); // remove the code after use
+                await deleteCode(code); // remove the code after use
                 if (codeData.clientId !== clientId) return;
                 if (codeData.expiresAt < Date.now()) return;
 
@@ -371,7 +437,7 @@ export const oidcAuthCodeFlow: KaapiOIDCAuthorizationCodeFlow<ReqRefDefaults, {
                 }
             },
             refreshToken: async ({ clientId, refreshToken, scope }) => {
-                const refreshTokenData = refreshTokenStorage.get(refreshToken);
+                const refreshTokenData = await getRefreshTokenData(refreshToken);
 
                 const createBoomError = (errorCode: string, errorDescription: string) => {
                     const errorResponse = Boom.badRequest(errorCode);
@@ -387,7 +453,7 @@ export const oidcAuthCodeFlow: KaapiOIDCAuthorizationCodeFlow<ReqRefDefaults, {
                     throw createBoomError("invalid_grant", "Invalid client for refresh token");
 
 
-                refreshTokenStorage.delete(refreshToken); // remove the refresh token after use
+                await deleteRefreshToken(refreshToken); // remove the refresh token after use
 
                 if (refreshTokenData.expiresAt < Date.now()) throw createBoomError("invalid_grant", "Refresh token has expired");
 
@@ -452,7 +518,7 @@ export const oidcAuthCodeFlow: KaapiOIDCAuthorizationCodeFlow<ReqRefDefaults, {
         const refreshToken = accessScope.includes("offline_access") ? crypto.randomUUID() : undefined;
 
         if (refreshToken) {
-            refreshTokenStorage.set(refreshToken, {
+            await storeRefreshToken(refreshToken, {
                 clientId: grantContext.client.id,
                 userId: `${grantContext.client.metadata?.userId}`,
                 scope: accessScope,
@@ -500,7 +566,7 @@ export const oidcAuthCodeFlow: KaapiOIDCAuthorizationCodeFlow<ReqRefDefaults, {
         const refreshToken = accessScope.includes("offline_access") ? crypto.randomUUID() : undefined;
 
         if (refreshToken) {
-            refreshTokenStorage.set(refreshToken, {
+            await storeRefreshToken(refreshToken, {
                 clientId: grantContext.client.id,
                 userId: `${grantContext.client.metadata?.userId}`,
                 scope: accessScope,
