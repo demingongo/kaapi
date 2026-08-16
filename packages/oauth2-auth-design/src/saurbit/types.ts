@@ -155,7 +155,10 @@ export interface KaapiMethods<Refs extends ReqRef = ReqRefDefaults> {
      * @returns A {@link StrategyResult} indicating success or failure.
      */
     verifyToken(request: Request<Refs>): Promise<StrategyResult>;
-
+    /**
+     * Returns an {@link IOAuth2AuthDesign} instance.
+     * It is used to register the flow and its endpoints on the Kaapi server and generate OpenAPI/Postman documentation.
+     */
     toAuthDesign(): IOAuth2AuthDesign;
 }
 
