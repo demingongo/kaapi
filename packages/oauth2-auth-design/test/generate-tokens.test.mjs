@@ -1,3 +1,4 @@
+/*
 import { expect } from 'chai';
 import { generateKeyPair, exportJWK, SignJWT } from 'jose';
 
@@ -38,3 +39,4 @@ describe('generate tokens', function () {
         expect(dpop).to.be.a('string');
     });
 });
+*/

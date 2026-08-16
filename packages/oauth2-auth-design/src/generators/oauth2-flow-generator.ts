@@ -12,22 +12,22 @@ const FLOW_OPTIONS: {
     label: string;
     hint: string;
 }[] = [
-        {
-            value: FLOW_ENUM.oidcAuthCode,
-            label: 'OIDC Authorization Code',
-            hint: '',
-        },
-        {
-            value: FLOW_ENUM.oidcClientCredentials,
-            label: 'OIDC Client Credentials',
-            hint: '',
-        },
-        {
-            value: FLOW_ENUM.oidcDeviceAuth,
-            label: 'OIDC Device Authorization',
-            hint: '',
-        },
-    ];
+    {
+        value: FLOW_ENUM.oidcAuthCode,
+        label: 'OIDC Authorization Code',
+        hint: '',
+    },
+    {
+        value: FLOW_ENUM.oidcClientCredentials,
+        label: 'OIDC Client Credentials',
+        hint: '',
+    },
+    {
+        value: FLOW_ENUM.oidcDeviceAuth,
+        label: 'OIDC Device Authorization',
+        hint: '',
+    },
+];
 
 export class OAuth2FlowGenerator implements FileGenerator {
     get type(): FileGeneratorType {
