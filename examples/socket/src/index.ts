@@ -5,9 +5,10 @@ import { createServerApp, ListenerBuilder, NspBuilder } from '@novice1/socket';
 import errorHandler from '@novice1/socket/lib/utils/errorHandler';
 import { explodeData } from '@novice1/socket/lib/utils/explodeData';
 import Joi from 'joi';
-import fs from 'node:fs/promises';
+import fs from 'node:fs';
 import path from 'node:path';
-import Stream from 'node:stream';
+import Stream, { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 
 //#region init
 
@@ -175,7 +176,12 @@ app.route<{
 
         const pic = req.payload.picture;
 
-        await fs.writeFile(path.join(__dirname, '..', 'uploads', pic.hapi.filename), pic._data);
+        const filePath = path.join(__dirname, '..', 'uploads', pic.hapi.filename);
+
+        await pipeline(
+            pic._data as Readable,
+            fs.createWriteStream(filePath)
+        );
 
         return 'ok';
     }

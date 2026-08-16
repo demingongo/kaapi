@@ -37,7 +37,7 @@ export function createWebStandardRequest<Refs extends ReqRef = ReqRefDefaults>(
 
     // Build the Web Standard Request options object
     const headers: Record<string, string> = {};
-    for (const [key, value] of Object.entries(request.headers)) {
+    for (const [key, value] of Object.entries(request.raw.req.headers)) {
         if (value) headers[key] = Array.isArray(value) ? value.join(', ') : value;
     }
     const requestOptions: {
@@ -52,7 +52,7 @@ export function createWebStandardRequest<Refs extends ReqRef = ReqRefDefaults>(
     // Attach the body if it is a mutation request
     if (['POST', 'PUT', 'PATCH'].includes(requestOptions.method)) {
         // Check if the content-type matches URL-encoded form data
-        const isUrlEncoded = request.headers['content-type']?.includes('application/x-www-form-urlencoded');
+        const isUrlEncoded = request.raw.req.headers['content-type']?.includes('application/x-www-form-urlencoded');
 
         if (isUrlEncoded && request.payload) {
             // Convert Hapi's parsed key-value payload object into a standard URL search string

@@ -1,9 +1,10 @@
 import inert from '@hapi/inert';
 import { Kaapi, BearerAuthDesign } from '@kaapi/kaapi';
 import Joi from 'joi';
-import fs from 'node:fs/promises';
+import fs from 'node:fs';
 import path from 'node:path';
-import Stream from 'node:stream';
+import Stream, { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 
 // 1. Setup bearer auth strategy
 const bearerAuthDesign = new BearerAuthDesign({
@@ -99,7 +100,10 @@ app.route<{
 
         // Save the resume file
         const uploadPath = path.join(__dirname, '..', 'uploads', resume.hapi.filename);
-        await fs.writeFile(uploadPath, resume._data);
+        await pipeline(
+            resume._data as Readable,
+            fs.createWriteStream(uploadPath)
+        );
 
         return {
             message: 'Profile updated',

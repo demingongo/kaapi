@@ -3,7 +3,8 @@ import { FlatCompat } from '@eslint/eslintrc';
 import js from '@eslint/js';
 import stylisticJs from '@stylistic/eslint-plugin';
 import typescriptEslint from '@typescript-eslint/eslint-plugin';
-import importPlugin from 'eslint-plugin-import';
+import { importX } from 'eslint-plugin-import-x';
+import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescript'
 import { defineConfig } from 'eslint/config';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -23,15 +24,13 @@ export default defineConfig([
         extends: compat.extends(
             'eslint:recommended',
             'plugin:@typescript-eslint/recommended',
-            'plugin:import/recommended',
-            'plugin:import/typescript'
         ),
         files: ['{src,test}/**/*.ts', '**/*.mts'],
 
         plugins: {
             '@typescript-eslint': typescriptEslint,
             '@stylistic': stylisticJs,
-            import: importPlugin,
+            'import-x': importX,
         },
         rules: {
             '@stylistic/quotes': ['error', 'single'],
@@ -44,14 +43,14 @@ export default defineConfig([
                     varsIgnorePattern: '^_',
                 },
             ],
-            'import/no-cycle': ['error', { maxDepth: Infinity }],
+            'import-x/no-cycle': ['error', { maxDepth: Infinity }],
         },
         settings: {
-            'import/resolver': {
-                typescript: {
+            'import-x/resolver-next': [
+                createTypeScriptImportResolver({
                     project: './tsconfig.json',
-                },
-            },
+                })
+            ],
         },
     }
 ]);

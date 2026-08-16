@@ -362,7 +362,7 @@ const fileFieldSchema: SchemaObject3_1 = {
             },
         },
         async (request, h) => {
-            const bb = busboy({ headers: request.headers });
+            const bb = busboy({ headers: request.raw.req.headers });
 
             let savedFilename = '';
 
