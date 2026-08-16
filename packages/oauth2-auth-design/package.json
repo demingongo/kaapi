@@ -47,14 +47,13 @@
         "@kaapi/cli": "workspace:^",
         "@kaapi/kaapi": "workspace:^",
         "@novice1/api-doc-generator": "^1.2.6",
-        "html-entities": "^2.6.0",
-        "jose": "^6.2.3",
-        "node-jose": "^2.2.0",
         "tslib": "^2.8.1"
     },
     "devDependencies": {
-        "@types/mocha": "^10.0.10",
-        "@types/node-jose": "^1.1.13",
-        "uuid": "^14.0.0"
+        "@types/mocha": "^10.0.10"
+    },
+    "peerDependencies": {
+        "@saurbit/oauth2": "^0.1.11",
+        "@saurbit/oauth2-jwt": "^0.1.7"
     }
 }

@@ -65,6 +65,18 @@ export class InMemoryDeviceTokens extends InMemoryCollection<DeviceToken> {
     async deleteOneWithId(id: string) {
         delete this.documents[id];
     }
+
+    async findByUserCode(userCode: string) {
+        let result: DeviceToken | undefined;
+        for (const k in this.documents) {
+            const token = this.documents[k];
+            if (token.userCode === userCode) {
+                result = token;
+                break;
+            }
+        }
+        return result;
+    }
 }
 
 const users = new InMemoryUsers();

@@ -1,0 +1,76 @@
+import { VALID_CLIENTS } from '../../data/users';
+import { jwksAuthority } from '../jwks';
+import { KaapiClientCredentialsFlowBuilder } from '@kaapi/oauth2-auth-design';
+
+export const clientCredentialsFlow = new KaapiClientCredentialsFlowBuilder({
+  securitySchemeName: 'clientCredentials',
+})
+  .setScopes({
+    'health:read': 'Access to health check endpoint.',
+  })
+  .setTokenEndpoint('/oauth2/token')
+  .setDescription('Client Credentials flow for machine-to-machine authentication.')
+  .clientSecretBasicAuthenticationMethod()
+  .setAccessTokenLifetime(300) // 5 minutes
+  .getClient((tokenRequest) => {
+    const client = VALID_CLIENTS.find(
+      (c) =>
+        c.client_id === tokenRequest.clientId &&
+        c.client_secret === tokenRequest.clientSecret &&
+        c.internal
+    );
+    if (!client) {
+      return undefined;
+    }
+    return {
+      id: client.client_id,
+      grants: ['client_credentials'],
+      scopes: client.allowed_scopes,
+      redirectUris: [],
+    };
+  })
+  .generateAccessToken(async (grantContext) => {
+    const registeredClaims = {
+      exp: Math.floor(Date.now() / 1000) + grantContext.accessTokenLifetime,
+      iat: Math.floor(Date.now() / 1000),
+      nbf: Math.floor(Date.now() / 1000),
+      iss: grantContext.origin,
+      aud: grantContext.client.id,
+      jti: crypto.randomUUID(),
+      sub: grantContext.client.id,
+    };
+
+    const { token: accessToken } = await jwksAuthority.sign({
+      scope: grantContext.scope.join(' '),
+      ...registeredClaims,
+    });
+    return { accessToken };
+  })
+  .tokenVerifier(async (_, { token }) => {
+    try {
+      const payload = await jwksAuthority.verify(token);
+      if (payload && typeof payload.scope === 'string') {
+        const client = VALID_CLIENTS.find((c) => c.client_id === payload.sub);
+        if (client) {
+          return {
+            isValid: true,
+            credentials: {
+              app: {
+                id: client.client_id,
+              },
+              scope: payload.scope.split(' '),
+            },
+          };
+        }
+      }
+    } catch (error) {
+      console.error(
+        {
+          error: error instanceof Error ? { name: error.name, message: error.message } : error,
+        },
+        'Token verification error:'
+      );
+    }
+    return { isValid: false };
+  })
+  .build();

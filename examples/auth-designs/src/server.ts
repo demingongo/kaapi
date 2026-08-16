@@ -1,7 +1,8 @@
 // server.ts
-import { customAuthDesign } from './plugins/customAuthDesign';
+//import { customAuthDesign } from './plugins/customAuthDesign';
 import { Kaapi } from '@kaapi/kaapi';
 import { randomBytes } from 'node:crypto';
+import { oidcAuthCodeFlowDesign } from './generated/oidc-auth-code-flow';
 
 //import logger from './drafts/logger'
 
@@ -30,7 +31,7 @@ export const app = new Kaapi({
             failAction: 'log',
         },
     },
-    extend: customAuthDesign,
+    //extend: customAuthDesign,
 });
 
 // cookies
@@ -41,6 +42,12 @@ app.base().state('kaapisession', {
     encoding: 'iron',
     password: randomBytes(32).toString('base64url'),
 });
+app.base().state('idp_session', {
+    ttl: 8.64e+7, // 24 hours
+    isHttpOnly: true,
+    encoding: 'iron',
+    password: randomBytes(32).toString('base64url'),
+});
 
 // register plugins
 /*
@@ -48,11 +55,13 @@ app.extend(authenticationCodeDesign)
 app.extend(apiKeyAuthDesign)
 */
 //app.extend(customAuthDesign)
+app.extend(oidcAuthCodeFlowDesign);
 
 // to not set it in all the routes but will be used in routes
 // with no auth defined
 app.base().auth.default({
-    strategies: customAuthDesign.getStrategies(), //['oauth2-authorization-code'],
+    //strategies: customAuthDesign.getStrategies(), //['oauth2-authorization-code'],
+    strategies: [oidcAuthCodeFlowDesign.getStrategyName()],
     mode: 'try',
 });
 app.log('default strategy:', app.base().auth.settings.default);

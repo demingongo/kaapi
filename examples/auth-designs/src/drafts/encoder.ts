@@ -3,6 +3,6 @@ export function encode(payload: object): string {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function decode(str: string): any {
+export function decode<T = any>(str: string): T {
     return JSON.parse(Buffer.from(str, 'base64url').toString('utf8'));
 }

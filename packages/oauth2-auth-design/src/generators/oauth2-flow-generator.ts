@@ -135,42 +135,141 @@ import {
     NoneAuthMethod,
     OAuth2ErrorCode,
 } from '@kaapi/oauth2-auth-design';
+import { ClientSecretBasic, ClientSecretPost, BearerTokenType, JwtPayload, NoneAuthMethod } from '@saurbit/oauth2';
+import { createInMemoryKeyStore, JoseJwksAuthority, JwksRotator } from "@saurbit/oauth2-jwt";
+import {
+    createClientResolver,
+    KaapiOIDCAuthorizationCodeFlowBuilder,
+    verifyCodeVerifier,
+} from '@kaapi/oauth2-auth-design';
 
 const VALID_CLIENTS = [
     {
         client_id: 'service-api-client',
         client_secret: 's3cr3tK3y123!',
-        allowed_scopes: ['openid', 'profile', 'email', 'read', 'write'],
+        allowed_scopes: ['openid', 'profile', 'email', 'offline_access', 'read', 'write'],
+        grant_types: ['authorization_code', 'refresh_token'],
+        redirect_uris: [],
     },
 ];
 
 const REGISTERED_USERS = [{ id: 'user-1234', username: 'user', password: 'password', email: 'user@email.com' }];
 
-const authCodesStore: Map<
+const codeStorage: Map<
     string,
-    { clientId: string; scopes: string[]; userId: string; codeChallenge?: string | undefined }
+    { 
+        clientId: string; 
+        scope: string[]; 
+        userId: string; 
+        expiresAt: number;
+        codeChallenge?: string | undefined;
+        nonce?: string | undefined;
+    }
 > = new Map();
 
-export const oidcAuthCodeBuilder = OIDCAuthorizationCodeBuilder.create()
+const refreshTokenStorage: Map<
+  string,
+  {
+    clientId: string;
+    userId: string;
+    scope: string[];
+    expiresAt: number;
+  }
+> = new Map();
+
+const jwksStore = createInMemoryKeyStore();
+
+// Signs JWTs and exposes the public JWKS endpoint
+export const jwksAuthority = new JoseJwksAuthority(jwksStore, 8.64e6); // 100-day key lifetime
+
+// Rotates keys every 91 days and cleans up expired ones
+export const jwksRotator = new JwksRotator({
+  keyGenerator: jwksAuthority,
+  rotationTimestampStore: jwksStore,
+  rotationIntervalMs: 7.884e9, // 91 days
+});
+
+export const oidcAuthCodeFlow = KaapiOIDCAuthorizationCodeFlowBuilder.create({
+    parseAuthorizationEndpointData: async (req) => {
+        const payload = req.payload as Record<string, unknown>;
+        const username = typeof payload?.username === "string" ? payload.username : undefined;
+        const password = typeof payload?.password === "string" ? payload.password : undefined;
+        
+        return {
+            username,
+            password
+        };
+    },
+})
     // the name of the strategy
-    .strategyName('${kebabCase(this.#values.name)}')
-    // access token TTL (used in generateToken controller)
-    .setTokenTtl(3600)
-    // activate auto parsing of access token (jwtAccessTokenPayload + createJwtAccessToken)
-    .useAccessTokenJwks(true)
+    .setSecuritySchemeName('${kebabCase(this.#values.name)}')
+    // access token TTL (used in generateAccessToken handler)
+    .setAccessTokenLifetime(3600)
     // Client authentication methods
     .addClientAuthenticationMethod(new ClientSecretBasic())
     .addClientAuthenticationMethod(new ClientSecretPost())
     .addClientAuthenticationMethod(new NoneAuthMethod())
-    .setTokenType(new BearerToken())
+    .setTokenType(new BearerTokenType())
     // Define scopes
     .setScopes({
+        openid: 'Required for OpenID Connect; enables ID token issuance.',
         profile: 'Access to basic profile information such as name and picture.',
         email: "Access to the user's email address and its verification status.",
+        offline_access: 'Request a refresh token to access resources when the user is offline.',
         read: 'Grants read-only access to protected resources',
         write: 'Grants write access to protected resources',
     })
+    .setOpenIdConfiguration({
+        claims_supported: ["sub", "aud", "iss", "exp", "iat", "nbf", "name", "email", "username"],
+    })
 
+    // Authorization
+    .getClientForAuthentication((data) => {
+        const client = VALID_CLIENTS.find((c) => c.client_id === data.clientId);
+        if (!client) return undefined;
+        
+        // filter client's allowed scoped
+        const requestedScopes = data.scope ? data.scope : [];
+        const grantedScopes = requestedScopes.length
+          ? requestedScopes.filter((s) => client.allowed_scopes.includes(s))
+          : client.allowed_scopes;
+        if (grantedScopes.length === 0) return undefined;
+        
+        return {
+          id: client.client_id,
+          grants: client.grant_types,
+          redirectUris: client.redirect_uris,
+          scopes: client.allowed_scopes,
+        };
+    })
+    .getUserForAuthentication((_ctxt, parsedData) => {
+      const user = REGISTERED_USERS.find((u) => u.username === parsedData.username && u.password === parsedData.password);
+      if (!user) return undefined;
+      return {
+        type: "authenticated",
+        user: {
+          id: user.id,
+          email: user.email,
+          username: user.username,
+        },
+      };
+    })
+    .generateAuthorizationCode((grantContext, user) => {
+        if (!user.id) {
+          return undefined;
+        }
+        
+        const code = crypto.randomUUID();
+        codeStorage.set(code, { 
+          clientId: grantContext.client.id,
+          scope: grantContext.scope, 
+          userId:  \`\${user.id}\`, 
+          expiresAt: Date.now() + 60000,
+          codeChallenge: grantContext.codeChallenge,
+          nonce: grantContext.nonce, 
+        });
+        return { type: "code", code };
+    })
     // Authorization
     .authorizationRoute<object, { Payload: { username?: string; password?: string } }>((route) =>
         route
@@ -212,404 +311,391 @@ export const oidcAuthCodeBuilder = OIDCAuthorizationCodeBuilder.create()
     )
 
     // Token exchange
-    .tokenRoute((route) =>
-        route.generateToken(
-            async ({
-                clientId,
-                ttl,
-                tokenType,
-                code,
-                clientSecret,
-                codeVerifier,
-                createJwtAccessToken,
-                createIdToken,
-                verifyCodeVerifier,
-            }) => {
-                const entry = authCodesStore.get(code);
-                if (!entry || entry.clientId !== clientId) return null;
+    .getClient(async (tokenRequest) => {
+        const client = VALID_CLIENTS.find((c) => c.client_id === tokenRequest.clientId);
+        if (!client) return;
 
-                const client = VALID_CLIENTS.find((c) => c.client_id === clientId);
-                if (!client) {
-                    return {
-                        error: OAuth2ErrorCode.INVALID_CLIENT,
-                        error_description: 'Client authentication failed.',
-                    };
-                }
+        return await createClientResolver({
+            authorizationCode: async ({ code, clientId, clientSecret, codeVerifier }) => {
+                const codeData = codeStorage.get(code);
+                if (!codeData) return;
+                codeStorage.delete(code); // remove the code after use
+                if (codeData.clientId !== clientId) return;
+                if (codeData.expiresAt < Date.now()) return;
 
-                if (entry.codeChallenge && codeVerifier) {
-                    if (!verifyCodeVerifier(codeVerifier, entry.codeChallenge)) {
-                        return {
-                            error: OAuth2ErrorCode.INVALID_GRANT,
-                            error_description: 'Invalid authorization grant.',
-                        };
+                const scope = codeData.scope;
+                const codeChallenge = codeData.codeChallenge;
+                const userId = codeData.userId;
+                const nonce = codeData.nonce;
+                
+                const user = REGISTERED_USERS.find((u) => u.id === codeData.userId);
+                if (!user) return;
+
+                // secret or code verifier validation
+                if (clientSecret) {
+                    if (client.client_secret != clientSecret) {
+                        return;
                     }
-                } else if (clientSecret) {
-                    if (client.client_secret !== clientSecret) {
-                        return {
-                            error: OAuth2ErrorCode.INVALID_CLIENT,
-                            error_description: 'Client authentication failed.',
-                        };
+                } else if (codeVerifier && codeChallenge) {
+                    // Public client — verify PKCE code_verifier against the stored code_challenge
+                    if (!verifyCodeVerifier(codeVerifier, codeChallenge)) {
+                        return;
                     }
                 } else {
-                    return {
-                        error: OAuth2ErrorCode.INVALID_REQUEST,
-                        error_description: 'Missing or invalid request parameter.',
-                    };
+                    return;
                 }
 
-                const user = REGISTERED_USERS.find((u) => u.id === entry.userId);
-                if (!user) {
-                    return {
-                        error: OAuth2ErrorCode.INVALID_GRANT,
-                        error_description: 'Invalid authorization grant.',
-                    };
+                return {
+                    grants: client.grant_types,
+                    id: client.id,
+                    scopes: client.allowed_scopes,
+                    redirectUris: client.redirectUris,
+                    metadata: {
+                        accessScope: scope,
+                        nonce,
+                        userId,
+                        userEmail: user.email
+                    }
                 }
-
-                // Generate a signed JWT access token
-                const { token: accessToken } = await createJwtAccessToken!({
-                    sub: entry.userId,
-                    client_id: clientId,
-                    scope: entry.scopes,
-                });
-
-                // Generate a signed JWT id token
-                const idToken = entry.scopes.includes('openid')
-                    ? (await createIdToken!({ sub: entry.userId, name: user.username, aud: clientId })).token
-                    : undefined;
-
-                // Return token response
-                return new OAuth2TokenResponse({ access_token: accessToken })
-                    .setExpiresIn(ttl)
-                    .setTokenType(tokenType)
-                    .setScope(entry.scopes)
-                    .setIdToken(idToken);
-            }
-        )
-    )
-
-    // Access Token Validation
-    .validate(async (_req, { jwtAccessTokenPayload }) => {
-        if (!jwtAccessTokenPayload?.sub) return { isValid: false };
-        return {
-            isValid: true,
-            credentials: {
-                user: {
-                    id: jwtAccessTokenPayload.sub,
-                    clientId: jwtAccessTokenPayload.client_id,
-                },
-                scope: Array.isArray(jwtAccessTokenPayload.scope) ? jwtAccessTokenPayload.scope : [],
             },
-        };
+            refreshToken: async ({ clientId, refreshToken, scope }) => {
+                const refreshTokenData = refreshTokenStorage.get(refreshToken);
+
+                const createBoomError = (errorCode: string, errorDescription: string) => {
+                    const errorResponse = Boom.badRequest(errorCode);
+                    errorResponse.output.payload.error = errorCode;
+                    errorResponse.output.payload.error_description = errorDescription;
+                    return errorResponse;
+                };
+
+                // validate the refresh token and its association with the client
+                if (!refreshTokenData) throw createBoomError("invalid_grant", "Invalid refresh token");
+
+                if (refreshTokenData.clientId !== clientId)
+                    throw createBoomError("invalid_grant", "Invalid client for refresh token");
+
+
+                refreshTokenStorage.delete(refreshToken); // remove the refresh token after use
+
+                if (refreshTokenData.expiresAt < Date.now()) throw createBoomError("invalid_grant", "Refresh token has expired");
+
+                const user = REGISTERED_USERS.find((u) => u.id === refreshTokenData.userId);
+                if (!user) return;
+
+                const olderScope = refreshTokenData.scope || [];
+
+                // narrow the scope if the client requests a subset
+                const requestedScope = Array.isArray(scope) ? scope : [];
+                const accessScope = requestedScope.length
+                    ? olderScope.filter((s) => requestedScope.includes(s))
+                    : olderScope;
+
+                return {
+                    grants: client.grant_types,
+                    id: client.id,
+                    scopes: client.allowed_scopes,
+                    redirectUris: client.redirect_uris,
+                    metadata: {
+                        accessScope: accessScope,
+                        userId: refreshTokenData.userId,
+                        userEmail: user.email,
+                    }
+                };
+            }
+        })(tokenRequest);
+    })
+  .generateAccessToken(async (grantContext) => {
+    if (typeof grantContext.client.metadata?.userId != 'string') {
+      return;
+    }
+
+    const accessScope = Array.isArray(grantContext.client.metadata?.accessScope)
+      ? grantContext.client.metadata.accessScope
+      : [];
+
+    const registeredClaims = {
+      exp: Math.floor(Date.now() / 1000) + grantContext.accessTokenLifetime,
+      iat: Math.floor(Date.now() / 1000),
+      nbf: Math.floor(Date.now() / 1000),
+      iss: grantContext.origin,
+      aud: grantContext.client.id,
+      jti: crypto.randomUUID(),
+      sub: \`\${grantContext.client.metadata?.userId}\`,
+    };
+
+    const { token: accessToken } = await jwksAuthority.sign({
+      scope: accessScope.join(" "),
+      ...registeredClaims,
+    });
+
+    const { token: idToken } = await jwksAuthority.sign({
+      username: \`\${grantContext.client.metadata?.username}\`,
+      email: accessScope.includes("email") ? \`\${grantContext.client.metadata?.userEmail}\` : undefined,
+      nonce: grantContext.client.metadata?.nonce ? \`\${grantContext.client.metadata?.nonce}\` : undefined,
+      ...registeredClaims,
+    });
+
+    // generate the refresh token if the "offline_access" scope was requested,
+    // and store it in the refresh token storage with an expiration time
+    const refreshToken = accessScope.includes("offline_access") ? crypto.randomUUID() : undefined;
+
+    if (refreshToken) {
+        refreshTokenStorage.set(refreshToken, {
+            clientId: grantContext.client.id,
+            userId: \`\${grantContext.client.metadata?.userId}\`,
+            scope: accessScope,
+            expiresAt: Date.now() + 30 * 24 * 3600 * 1000, // 30 days
+        });
+    }
+
+    return {
+      accessToken,
+      scope: accessScope,
+      idToken,
+      refreshToken,
+    };
+  })
+  .generateAccessTokenFromRefreshToken(async (grantContext) => {
+    if (typeof grantContext.client.metadata?.userId != 'string') {
+      return;
+    }
+    const accessScope = Array.isArray(grantContext.client.metadata?.accessScope)
+      ? grantContext.client.metadata.accessScope
+      : [];
+
+    const registeredClaims = {
+      exp: Math.floor(Date.now() / 1000) + grantContext.accessTokenLifetime,
+      iat: Math.floor(Date.now() / 1000),
+      nbf: Math.floor(Date.now() / 1000),
+      iss: grantContext.origin,
+      aud: grantContext.client.id,
+      jti: crypto.randomUUID(),
+      sub: \`\${grantContext.client.metadata?.userId}\`,
+    };
+
+    const { token: accessToken } = await jwksAuthority.sign({
+      scope: accessScope.join(" "),
+      ...registeredClaims,
+    });
+
+    const { token: idToken } = await jwksAuthority.sign({
+      username: \`\${grantContext.client.metadata?.username}\`,
+      email: accessScope.includes("email") ? \`\${grantContext.client.metadata?.userEmail}\` : undefined,
+      ...registeredClaims,
+    });
+
+    // rotate: issue a new refresh token to replace the one consumed in getClient
+    const refreshToken = (() => {
+      if (accessScope.includes("offline_access")) {
+        return crypto.randomUUID();
+      }
+      return undefined;
+    })();
+
+    if (refreshToken) {
+      refreshTokenStorage[refreshToken] = {
+        clientId: grantContext.client.id,
+        userId: \`\${grantContext.client.metadata?.userId}\`,
+        scope: accessScope,
+        expiresAt: Date.now() + 30 * 24 * 3600 * 1000, // 30 days
+      };
+    }
+
+    return {
+      accessToken,
+      scope: accessScope,
+      idToken,
+      refreshToken,
+    };
+  })
+    // Access Token Validation
+
+    .tokenVerifier(async (_, { token }) => {
+        try {
+          const payload = await jwksAuthority.verify(token);
+          if (payload && typeof payload.scope === "string") {
+            const user = REGISTERED_USERS.find((u) => u.id === payload.sub);
+            if (user) {
+              return {
+                isValid: true,
+                credentials: {
+                  user: {
+                    id: user.id,
+                    email: user.email,
+                    username: user.username,
+                  },
+                  scope: payload.scope.split(" "),
+                },
+              };
+            }
+          }
+        } catch (error) {
+          console.error(
+            "Token verification error:", error
+          );
+        }
+        return { isValid: false };
     })
         
     // JWKS
-    .jwksRoute((route) => route.setPath('/discovery/v1.0/keys')) // activates jwks uri
-    .setPublicKeyExpiry(86400) // 24h
-    .setJwksKeyStore(createInMemoryKeyStore()) // store for JWKS
-    .setJwksRotatorOptions({
-        intervalMs: 7.884e9, // 91 days
-        timestampStore: createInMemoryKeyStore(),
-    });
+    .onJwksRequest(async () => {
+        return await jwksAuthority.getJwksEndpointResponse();
+    })
+    .build();
 `;
     }
 
     #getOidcClientCredentialsContent(): string {
         return `// generated by @kaapi/oauth2-auth-design
 
+//#region Imports
+
+import { ClientSecretBasic, ClientSecretPost, BearerTokenType } from '@saurbit/oauth2';
+import { createInMemoryKeyStore, JoseJwksAuthority, JwksRotator } from "@saurbit/oauth2-jwt";
 import {
-    OIDCClientCredentialsBuilder,
-    OAuth2TokenResponse,
-    OAuth2ErrorCode,
-    ClientSecretBasic,
-    ClientSecretPost,
-    BearerToken,
-    createInMemoryKeyStore,
+    KaapiOIDCClientCredentialsFlow,
+    KaapiOIDCClientCredentialsFlowBuilder
 } from '@kaapi/oauth2-auth-design';
+
+//#endregion
+
+//#region (To be replaced with persistent storage) Storage for clients
 
 const VALID_CLIENTS = [
     {
         client_id: 'internal-service',
         client_secret: 'Int3rnalK3y!',
-        allowed_scopes: ['read', 'write', 'admin'],
+        grant_types: ['client_credentials'],
+        allowed_scopes: ['openid', 'read', 'write', 'admin'],
+        redirect_uris: [],
     },
 ];
 
-export const oidcClientCredentialsBuilder = OIDCClientCredentialsBuilder.create()
-    // the name of the strategy
-    .strategyName('${kebabCase(this.#values.name)}')
-    // access token ttl (used in generateToken controller)
-    .setTokenTtl(600)
-    // activate auto parsing of access token (jwtAccessTokenPayload + createJwtAccessToken)
-    .useAccessTokenJwks(true)
+async function getClientById(clientId: string) {
+    return VALID_CLIENTS.find((c) => c.client_id === clientId);
+}
+
+async function getClientByCredentials(clientId: string, clientSecret: string) {
+    return VALID_CLIENTS.find((c) => c.client_id === clientId && c.client_secret === clientSecret);
+}
+
+//#endregion
+
+//#region (To be replaced with persistent storage) JWKS Authority and Rotator
+
+const jwksStore = createInMemoryKeyStore();
+
+// Signs JWTs and exposes the public JWKS endpoint
+export const jwksAuthority = new JoseJwksAuthority(jwksStore, 8.64e6); // 100-day key lifetime
+
+// Rotates keys every 91 days and cleans up expired ones
+export const jwksRotator = new JwksRotator({
+    keyGenerator: jwksAuthority,
+    rotationTimestampStore: jwksStore,
+    rotationIntervalMs: 7.884e9, // 91 days
+});
+
+//#endregion
+
+//#region OIDC Client Credentials Flow
+
+export const oidcClientCredentialsFlow: KaapiOIDCClientCredentialsFlow = KaapiOIDCClientCredentialsFlowBuilder.create()
+    // The name of the security scheme in the OpenAPI specification
+    .setSecuritySchemeName('${kebabCase(this.#values.name)}')
+    // Access token type
+    .setTokenType(new BearerTokenType())
+    // Access token TTL (used in generateAccessToken handler)
+    .setAccessTokenLifetime(600)
     // Client authentication methods
     .addClientAuthenticationMethod(new ClientSecretBasic())
     .addClientAuthenticationMethod(new ClientSecretPost())
-    .setTokenType(new BearerToken())
-    // Define available scopes
+    // Define scopes
     .setScopes({
         read: 'Grants read-only access to protected resources',
         write: 'Grants write access to protected resources',
         admin: 'Administrative access',
     })
-
-    // Token exchange
-    .tokenRoute((route) =>
-        route.generateToken(async ({ clientId, clientSecret, ttl, tokenType, scope, createJwtAccessToken }) => {
-            // Validate client credentials
-            const client = VALID_CLIENTS.find((c) => c.client_id === clientId && c.client_secret === clientSecret);
-
-            if (!client) {
-                return {
-                    error: OAuth2ErrorCode.INVALID_CLIENT,
-                    error_description: 'Invalid client_id or client_secret',
-                };
-            }
-
-            // Determine requested scopes
-            const requestedScopes = (scope ?? '').split(/\\s+/).filter(Boolean);
-
-            // Compute granted scopes
-            let grantedScopes = client.allowed_scopes;
-            if (requestedScopes.length > 0) {
-                grantedScopes = requestedScopes.filter((s) => client.allowed_scopes.includes(s));
-            }
-
-            if (grantedScopes.length === 0) {
-                return {
-                    error: OAuth2ErrorCode.INVALID_SCOPE,
-                    error_description: 'No valid scopes granted for this client',
-                };
-            }
-
-            // Generate a signed JWT access token
-            const { token: accessToken } = await createJwtAccessToken!({
-                sub: clientId,
-                app: true,
-                scope: grantedScopes,
-            });
-
-            // Return token response
-            return new OAuth2TokenResponse({ access_token: accessToken })
-                .setExpiresIn(ttl)
-                .setTokenType(tokenType)
-                .setScope(grantedScopes.join(' '));
-        })
-    )
-
-    // Access Token Validation
-    .validate(async (_req, { jwtAccessTokenPayload }) => {
-        if (!jwtAccessTokenPayload?.sub || !jwtAccessTokenPayload.app) return { isValid: false };
-        return {
-            isValid: true,
-            credentials: {
-                app: {
-                    id: jwtAccessTokenPayload.sub,
-                },
-                scope: Array.isArray(jwtAccessTokenPayload.scope) ? jwtAccessTokenPayload.scope : [],
-            },
-        };
+    // Discovery
+    .setDiscoveryUrl('/.well-known/openid-configuration')
+    .onDiscoveryRequest(async (request) => {
+        return oidcClientCredentialsFlow.kaapi().getDiscoveryConfiguration(request, {
+            // origin: 'http://localhost:3000', // Use the externally accessible URI for discovery to ensure correct endpoint URLs are provided to clients
+        });
     })
-
     // JWKS
-    .jwksRoute((route) => route.setPath('/discovery/v1.0/keys')) // activates jwks uri
-    .setPublicKeyExpiry(86400) // 24h
-    .setJwksKeyStore(createInMemoryKeyStore()) // store for JWKS
-    .setJwksRotatorOptions({
-        intervalMs: 7.884e9, // 91 days
-        timestampStore: createInMemoryKeyStore(),
-    });
+    .setJwksEndpoint('/oauth2/v2/keys') // activates jwks uri
+    .onJwksRequest(async () => {
+        return await jwksAuthority.getJwksEndpointResponse();
+    })
+    // Additional OpenID Connect configuration
+    .setOpenIdConfiguration({
+        claims_supported: ["sub", "aud", "iss", "exp", "iat", "nbf"],
+    })
+    // Token exchange
+    .setTokenEndpoint('/token')
+    .getClient(async ({ clientId, clientSecret }) => {
+        const client = await getClientByCredentials(clientId, clientSecret);
+        if (!client) return;
+
+        return {
+            grants: client.grant_types,
+            id: client.client_id,
+            scopes: client.allowed_scopes,
+            redirectUris: client.redirect_uris,
+        }
+    })
+    .generateAccessToken(async (grantContext) => {
+        const registeredClaims = {
+            exp: Math.floor(Date.now() / 1000) + grantContext.accessTokenLifetime,
+            iat: Math.floor(Date.now() / 1000),
+            nbf: Math.floor(Date.now() / 1000),
+            iss: grantContext.origin,
+            aud: grantContext.client.id,
+            jti: crypto.randomUUID(),
+            sub: grantContext.client.id,
+        };
+
+        const { token: accessToken } = await jwksAuthority.sign({
+            scope: grantContext.scope.join(" "),
+            ...registeredClaims,
+        });
+        return { accessToken };
+    })
+    // Access Token Validation
+    .tokenVerifier(async (_, { token }) => {
+        try {
+            const payload = await jwksAuthority.verify(token);
+            if (payload && typeof payload.scope === "string" && payload.aud && payload.aud === payload.sub) {
+                const client = await getClientById(payload.sub);
+                if (client) {
+                    return {
+                        isValid: true,
+                        credentials: {
+                            app: {
+                                id: client.client_id,
+                            },
+                            scope: payload.scope.split(" "),
+                        },
+                    };
+                }
+            }
+        } catch (error) {
+            console.error(
+                "Token verification error:", error
+            );
+        }
+        return { isValid: false };
+    })
+    .build();
+
+//#endregion
 `;
     }
 
     #getOidcDeviceAuthContent(): string {
         return `// generated by @kaapi/oauth2-auth-design
 
-import {
-    BearerToken,
-    OIDCAuthorizationCodeBuilder,
-    createInMemoryKeyStore,
-    createMatchAuthCodeResult,
-    OAuth2TokenResponse,
-    ClientSecretBasic,
-    ClientSecretPost,
-    NoneAuthMethod,
-    OAuth2ErrorCode,
-} from '@kaapi/oauth2-auth-design';
-
-const VALID_CLIENTS = [
-    {
-        client_id: 'service-api-client',
-        client_secret: 's3cr3tK3y123!',
-        allowed_scopes: ['openid', 'profile', 'email', 'read', 'write'],
-    },
-];
-
-const REGISTERED_USERS = [{ id: 'user-1234', username: 'user', password: 'password', email: 'user@email.com' }];
-
-const authCodesStore: Map<
-    string,
-    { clientId: string; scopes: string[]; userId: string; codeChallenge?: string | undefined }
-> = new Map();
-
-export const oidcAuthCodeBuilder = OIDCAuthorizationCodeBuilder.create()
-    // the name of the strategy
-    .strategyName('${kebabCase(this.#values.name)}')
-    // access token TTL (used in generateToken controller)
-    .setTokenTtl(3600)
-    // activate auto parsing of access token (jwtAccessTokenPayload + createJwtAccessToken)
-    .useAccessTokenJwks(true)
-    // Client authentication methods
-    .addClientAuthenticationMethod(new ClientSecretBasic())
-    .addClientAuthenticationMethod(new ClientSecretPost())
-    .addClientAuthenticationMethod(new NoneAuthMethod())
-    .setTokenType(new BearerToken())
-    // Define scopes
-    .setScopes({
-        profile: 'Access to basic profile information such as name and picture.',
-        email: "Access to the user's email address and its verification status.",
-        read: 'Grants read-only access to protected resources',
-        write: 'Grants write access to protected resources',
-    })
-
-    // Authorization
-    .authorizationRoute<object, { Payload: { username?: string; password?: string } }>((route) =>
-        route
-            .setPath('/oauth2/v1.0/authorize')
-            .setUsernameField('username')
-            .setPasswordField('password')
-            .generateCode(async ({ clientId, codeChallenge, scope }, req, _h) => {
-                // client exists?
-                const client = VALID_CLIENTS.find((c) => c.client_id === clientId);
-                if (!client) return null;
-
-                // filter client's allowed scoped
-                const requestedScopes = (scope ?? '').split(/\\s+/).filter(Boolean);
-                const grantedScopes = requestedScopes.length
-                    ? requestedScopes.filter((s) => client.allowed_scopes.includes(s))
-                    : client.allowed_scopes;
-                if (grantedScopes.length === 0) return null;
-
-                // user exists?
-                const user = REGISTERED_USERS.find(
-                    (u) => u.username === req.payload.username && u.password === req.payload.password
-                );
-                if (!user) return null;
-
-                // generate code
-                const code = \`auth-${Date.now()}\`;
-                authCodesStore.set(code, { clientId, scopes: grantedScopes, userId: user.id, codeChallenge });
-                return { type: 'code', value: code };
-            })
-            .finalizeAuthorization(async (ctx, _params, _req, h) => {
-                // redirect to callback url (could do something else depending on the code result)
-                const matcher = createMatchAuthCodeResult({
-                    code: async () => h.redirect(ctx.fullRedirectUri),
-                    continue: async () => h.redirect(ctx.fullRedirectUri),
-                    deny: async () => h.redirect(ctx.fullRedirectUri),
-                });
-                return matcher(ctx.authorizationResult);
-            })
-    )
-
-    // Token exchange
-    .tokenRoute((route) =>
-        route.generateToken(
-            async ({
-                clientId,
-                ttl,
-                tokenType,
-                code,
-                clientSecret,
-                codeVerifier,
-                createJwtAccessToken,
-                createIdToken,
-                verifyCodeVerifier,
-            }) => {
-                const entry = authCodesStore.get(code);
-                if (!entry || entry.clientId !== clientId) return null;
-
-                const client = VALID_CLIENTS.find((c) => c.client_id === clientId);
-                if (!client) {
-                    return {
-                        error: OAuth2ErrorCode.INVALID_CLIENT,
-                        error_description: 'Client authentication failed.',
-                    };
-                }
-
-                if (entry.codeChallenge && codeVerifier) {
-                    if (!verifyCodeVerifier(codeVerifier, entry.codeChallenge)) {
-                        return {
-                            error: OAuth2ErrorCode.INVALID_GRANT,
-                            error_description: 'Invalid authorization grant.',
-                        };
-                    }
-                } else if (clientSecret) {
-                    if (client.client_secret !== clientSecret) {
-                        return {
-                            error: OAuth2ErrorCode.INVALID_CLIENT,
-                            error_description: 'Client authentication failed.',
-                        };
-                    }
-                } else {
-                    return {
-                        error: OAuth2ErrorCode.INVALID_REQUEST,
-                        error_description: 'Missing or invalid request parameter.',
-                    };
-                }
-
-                const user = REGISTERED_USERS.find((u) => u.id === entry.userId);
-                if (!user) {
-                    return {
-                        error: OAuth2ErrorCode.INVALID_GRANT,
-                        error_description: 'Invalid authorization grant.',
-                    };
-                }
-
-                // Generate a signed JWT access token
-                const { token: accessToken } = await createJwtAccessToken!({
-                    sub: entry.userId,
-                    client_id: clientId,
-                    scope: entry.scopes,
-                });
-
-                // Generate a signed JWT id token
-                const idToken = entry.scopes.includes('openid')
-                    ? (await createIdToken!({ sub: entry.userId, name: user.username, aud: clientId })).token
-                    : undefined;
-
-                // Return token response
-                return new OAuth2TokenResponse({ access_token: accessToken })
-                    .setExpiresIn(ttl)
-                    .setTokenType(tokenType)
-                    .setScope(entry.scopes)
-                    .setIdToken(idToken);
-            }
-        )
-    )
-
-    // Access Token Validation
-    .validate(async (_req, { jwtAccessTokenPayload }) => {
-        if (!jwtAccessTokenPayload?.sub) return { isValid: false };
-        return {
-            isValid: true,
-            credentials: {
-                user: {
-                    id: jwtAccessTokenPayload.sub,
-                    clientId: jwtAccessTokenPayload.client_id,
-                },
-                scope: Array.isArray(jwtAccessTokenPayload.scope) ? jwtAccessTokenPayload.scope : [],
-            },
-        };
-    })
-        
-    // JWKS
-    .jwksRoute((route) => route.setPath('/discovery/v1.0/keys')) // activates jwks uri
-    .setPublicKeyExpiry(86400) // 24h
-    .setJwksKeyStore(createInMemoryKeyStore()) // store for JWKS
-    .setJwksRotatorOptions({
-        intervalMs: 7.884e9, // 91 days
-        timestampStore: createInMemoryKeyStore(),
-    });
+// TODO: Implement OIDC Device Authorization Flow
 `;
     }
 }

@@ -61,5 +61,5 @@ export const customAuthDesign = new GroupAuthDesign([
     basicAuthDesign,
     apiKeyAuthDesign,
     bearerAuthDesign,
-    multipleFlows,
+    multipleFlows.kaapi().toAuthDesign(),
 ]);

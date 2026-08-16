@@ -372,7 +372,9 @@ const route = applyModifiers(
     { method: 'POST', path: '/items', handler: () => ({ ok: true }) },
     {
         overrideResponses: true,
-        responses: new ResponseDocsModifier(201, { schema: mySchema }),
+        responses: new ResponseDocsModifier()
+            .setCode(201)
+            .addMediaType('application/json', { schema: mySchema }),
     }
 );
 

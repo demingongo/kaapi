@@ -1,6 +1,12 @@
 {
-    "watch": ["src", ".env", ".env.development.local"],
+    "watch": [
+        "src",
+        ".env",
+        ".env.development.local"
+    ],
     "ext": "ts,json",
-    "ignore": ["src/**/*.spec.ts"],
-    "exec": "ts-node ./src/index-backup.ts"
+    "ignore": [
+        "src/**/*.spec.ts"
+    ],
+    "exec": "ts-node ./src/index.ts"
 }
