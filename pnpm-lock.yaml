@@ -266,7 +266,7 @@ importers:
         specifier: ^11.0.7
         version: 11.0.7
       '@hapi/inert':
-        specifier: ^7.1.1
+        specifier: ^7.1.2
         version: 7.1.2
       '@kaapi/kaapi':
         specifier: workspace:^
@@ -299,7 +299,7 @@ importers:
   examples/kaapi-server:
     dependencies:
       '@hapi/hapi':
-        specifier: ^21.4.9
+        specifier: ^21.4.10
         version: 21.4.10
       '@kaapi/server':
         specifier: workspace:^
@@ -314,13 +314,13 @@ importers:
         specifier: ^10.0.1
         version: 10.0.1
       '@hapi/hapi':
-        specifier: ^21.4.9
+        specifier: ^21.4.10
         version: 21.4.10
       '@hapi/hoek':
         specifier: ^11.0.7
         version: 11.0.7
       '@hapi/inert':
-        specifier: ^7.1.1
+        specifier: ^7.1.2
         version: 7.1.2
       '@kaapi/kaapi':
         specifier: workspace:^
@@ -353,7 +353,7 @@ importers:
         specifier: ^11.0.7
         version: 11.0.7
       '@hapi/inert':
-        specifier: ^7.1.1
+        specifier: ^7.1.2
         version: 7.1.2
       '@kaapi/kaapi':
         specifier: workspace:^
@@ -380,7 +380,7 @@ importers:
         specifier: ^11.0.7
         version: 11.0.7
       '@hapi/inert':
-        specifier: ^7.1.1
+        specifier: ^7.1.2
         version: 7.1.2
       '@kaapi/kaapi':
         specifier: workspace:^
@@ -414,13 +414,13 @@ importers:
         specifier: ^10.0.1
         version: 10.0.1
       '@hapi/hapi':
-        specifier: ^21.4.9
+        specifier: ^21.4.10
         version: 21.4.10
       '@hapi/hoek':
         specifier: ^11.0.7
         version: 11.0.7
       '@hapi/inert':
-        specifier: ^7.1.1
+        specifier: ^7.1.2
         version: 7.1.2
       '@kaapi/kaapi':
         specifier: workspace:^
@@ -488,7 +488,7 @@ importers:
         specifier: ^10.0.1
         version: 10.0.1
       '@hapi/hapi':
-        specifier: ^21.4.9
+        specifier: ^21.4.10
         version: 21.4.10
       '@kaapi/server':
         specifier: workspace:^
@@ -588,7 +588,7 @@ importers:
         specifier: ^10.0.1
         version: 10.0.1
       '@hapi/hapi':
-        specifier: ^21.4.9
+        specifier: ^21.4.10
         version: 21.4.10
       '@hapi/hoek':
         specifier: ^11.0.7

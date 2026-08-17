@@ -16,9 +16,9 @@
     "packageManager": "pnpm@10.8.0",
     "dependencies": {
         "@hapi/boom": "^10.0.1",
-        "@hapi/hapi": "^21.4.9",
+        "@hapi/hapi": "^21.4.10",
         "@hapi/hoek": "^11.0.7",
-        "@hapi/inert": "^7.1.1",
+        "@hapi/inert": "^7.1.2",
         "@kaapi/kaapi": "workspace:^",
         "@kaapi/validator-zod": "workspace:^",
         "@novice1/api-doc-generator": "^1.2.6",

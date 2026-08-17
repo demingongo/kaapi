@@ -31,7 +31,7 @@
     },
     "dependencies": {
         "@hapi/boom": "^10.0.1",
-        "@hapi/hapi": "^21.4.9",
+        "@hapi/hapi": "^21.4.10",
         "@kaapi/server": "workspace:^",
         "@novice1/api-doc-generator": "^1.2.6",
         "jsontoxml": "^1.0.1",
