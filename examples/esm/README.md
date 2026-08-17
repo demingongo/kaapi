@@ -17,12 +17,12 @@ This project includes a robust and modular set of npm scripts designed to stream
 
 ### 🔧 Core Scripts
 
-| Script  | Description                                                                                             |
-| ------- | ------------------------------------------------------------------------------------------------------- |
-| `build` | Bundles the source code using `tsup` with ESM output, cleans previous builds, and generates a metafile. |
-| `start` | Runs the compiled output from the `dist` directory.                                                     |
-| `dev`   | Starts a hot-reloading development server using `tsx`, with `.env` support.                             |
-| `clean` | Removes build and coverage artifacts using `shx` for cross-platform compatibility.                      |
+| Script  | Description                                                                                               |
+| ------- | --------------------------------------------------------------------------------------------------------- |
+| `build` | Bundles the source code using `tsdown` with ESM output, cleans previous builds, and generates a metafile. |
+| `start` | Runs the compiled output from the `dist` directory.                                                       |
+| `dev`   | Starts a hot-reloading development server using `tsx`, with `.env` support.                               |
+| `clean` | Removes build and coverage artifacts using `shx` for cross-platform compatibility.                        |
 
 ---
 
@@ -64,7 +64,7 @@ This setup is designed to be lean, fast, and scalable — ideal for solo develop
 
 ## 🧰 Core Strengths of this Script Suite
 
-- ⚡ **Fast builds** with `tsup`  
+- ⚡ **Fast builds** with `tsdown`  
   Efficient bundling with ESM output, ideal for modern Node and browser environments.
 
 - 🧠 **Type safety** with `tsc --noEmit`  

@@ -221,7 +221,7 @@ const route = withSchema(schema).route<{ Params: { id: string } }>({
 | `@kaapi/cli`                | CJS          | `tsc`      | Two sub-exports: `/definitions`, `/utils`          |
 | `@kaapi/validator-valibot`  | CJS          | `tsc`      | `module: NodeNext`                                 |
 | `@kaapi/validator-zod`      | CJS          | `tsc`      | `module: NodeNext`                                 |
-| `@kaapi/validator-arktype`  | **ESM only** | `tsup`     | Requires ESM consumer; `.js` extensions in imports |
+| `@kaapi/validator-arktype`  | **ESM only** | `tsdown`   | Requires ESM consumer; `.js` extensions in imports |
 
 ---
 

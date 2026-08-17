@@ -35,12 +35,11 @@
         "kaukau": "^4.2.1",
         "mocha": "^11.8.0",
         "shx": "^0.4.0",
-        "tsup": "^8.5.1",
         "tsx": "^4.22.3",
         "type-coverage": "^2.29.7"
     },
     "scripts": {
-        "build": "npm run check && tsup src --format esm --outDir dist --clean --metafile",
+        "build": "npm run check && tsdown src/**/*.ts --format esm --out-dir dist --clean --sourcemap --unbundle --no-fixed-extension",
         "check": "tsc --noEmit",
         "check:deps": "depcruise src --validate",
         "ci": "npm run verify",

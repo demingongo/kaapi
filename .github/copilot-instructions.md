@@ -28,7 +28,7 @@ Read the relevant file before making changes to any package.
 
 - All packages are under `@kaapi/` npm scope, currently at version `0.0.45`
 - **Import from `@kaapi/kaapi`** — it re-exports everything from `@kaapi/server` and `@hapi/hapi`
-- **All packages are CommonJS** (`NodeNext`) except `@kaapi/validator-arktype` which is **ESM-only** (built with `tsup`)
+- **All packages are CommonJS** (`NodeNext`) except `@kaapi/validator-arktype` which is **ESM-only** (built with `tsdown`)
 - Extensions implement `KaapiPlugin { integrate(t: KaapiTools) }` and register via `app.extend(plugin)`
 - HTTP errors use `@hapi/boom` (`Boom.badRequest()`, `Boom.unauthorized()`, etc.)
 - Validation runs in Hapi's `onPreHandler` lifecycle; use `withSchema(schema).route(...)` to define typed routes

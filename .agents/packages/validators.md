@@ -24,7 +24,7 @@ The `onPreHandler` hook runs before each handler, reads the schema from `request
 
 ## `@kaapi/validator-arktype`
 
-> **ESM-only**. Your project (or the file importing this) must use ESM (`"type": "module"` in `package.json`, or `.mjs` extension). Built with `tsup`.
+> **ESM-only**. Your project (or the file importing this) must use ESM (`"type": "module"` in `package.json`, or `.mjs` extension). Built with `tsdown`.
 
 ### Setup
 

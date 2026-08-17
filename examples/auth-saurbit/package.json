@@ -5,7 +5,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc --noEmit && tsup src --format esm --outDir dist --clean --metafile --sourcemap",
+    "build": "tsc --noEmit && tsdown src/**/*.ts --format esm --out-dir dist --clean --sourcemap --unbundle --no-fixed-extension --no-dts",
     "dev": "tsx watch src/index.ts",
     "format": "prettier --write ./",
     "oneshot": "tsx watch src/oneshot.ts",

@@ -1,5 +1,5 @@
-import { FileGenerator, FileGeneratorType, Question, QuestionType } from '@kaapi/cli';
-import { kebabCase } from '@kaapi/cli/dist/utils';
+import { FileGenerator, FileGeneratorType, Question, QuestionType } from '@kaapi/cli/definitions';
+import { kebabCase } from '@kaapi/cli/utils';
 
 export class EsmAppLauncher implements FileGenerator {
     get type(): FileGeneratorType {

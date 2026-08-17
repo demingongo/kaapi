@@ -50,8 +50,8 @@ All user-facing code imports from `@kaapi/kaapi`, which fully re-exports `@kaapi
 - **TypeScript**: all packages; base config at `tsconfig.base.json`
     - `module: NodeNext`, `moduleResolution: NodeNext`, `strict: true`, `target: ES6`
 - **Module format**: CommonJS by default (`NodeNext` = CJS when `package.json` has no `"type"`)
-    - **Exception**: `@kaapi/validator-arktype` is **ESM-only** (built with `tsup`, requires consumers to use ESM)
-- **Build**: `tsc` for most packages; `tsup` for `validator-arktype`; output always to `lib/`
+    - **Exception**: `@kaapi/validator-arktype` is **ESM-only** (built with `tsdown`, requires consumers to use ESM)
+- **Build**: `tsc` for most packages; `tsdown` for `validator-arktype`; output always to `lib/`
 - **Tests**: `kaukau` runner (Mocha-based), test files in `test/`
 - **Linting**: ESLint with `eslint.config.mjs` per package
 

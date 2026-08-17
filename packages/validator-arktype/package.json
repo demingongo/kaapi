@@ -12,7 +12,7 @@
         }
     },
     "scripts": {
-        "build": "tsup src !src/**/*.d.ts --format esm --outDir lib --clean --metafile --dts --sourcemap && node ./scripts/buildDT.mjs",
+        "build": "tsdown src/**/*.ts --format esm --out-dir lib --clean --dts --sourcemap --unbundle --no-fixed-extension && node ./scripts/buildDT.mjs",
         "check": "tsc --noEmit",
         "check:deps": "depcruise src --validate",
         "ci": "npm run verify",
