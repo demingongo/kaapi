@@ -118,8 +118,7 @@ export const validatorValibot: KaapiPlugin = {
             register: async function (server) {
                 server.ext('onPreHandler', async (request: Request, h: ResponseToolkit) => {
                     const routeValidation = request?.route?.settings?.plugins?.valibot as
-                        | ValidatorValibotSchema
-                        | undefined;
+                        ValidatorValibotSchema | undefined;
                     try {
                         // Initialize empty objects to hold the parsed data and corresponding Valibot schemas
                         const data: Record<string, unknown> = {};

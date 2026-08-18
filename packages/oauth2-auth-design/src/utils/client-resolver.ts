@@ -23,9 +23,7 @@ export type AtLeastOne<T> = NonNullable<
  * This type is used to determine the appropriate client resolver based on the grant type.
  */
 export type OAuth2TokenRequest =
-    | AuthorizationCodeTokenRequest
-    | DeviceAuthorizationTokenRequest
-    | OAuth2RefreshTokenRequest;
+    AuthorizationCodeTokenRequest | DeviceAuthorizationTokenRequest | OAuth2RefreshTokenRequest;
 
 /**
  * Determines if the given token request is an Authorization Code Token Request.

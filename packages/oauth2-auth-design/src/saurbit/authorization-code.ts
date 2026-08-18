@@ -157,12 +157,14 @@ export interface KaapiAuthorizationCodeFlowOptions<
     /**
      * Optional lifecycle method called after initiating the authorization endpoint (GET).
      */
-    onInitiateAuthorization?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onInitiateAuthorization?:
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         KaapiAuthorizationCodeLifecycleMethod<any, any, AuthorizationCodeInitiationResponse> | undefined;
     /**
      * Optional lifecycle method called after processing the authorization endpoint (POST).
      */
-    onProcessAuthorization?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onProcessAuthorization?:
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         KaapiAuthorizationCodeLifecycleMethod<any, any, AuthorizationCodeProcessResponse> | undefined;
 
     /**
@@ -177,7 +179,8 @@ export interface KaapiAuthorizationCodeFlowOptions<
     /**
      * Optional custom form renderer for the authorization endpoint. If not provided, a default login form will be rendered for GET requests, and a simple success/error response will be returned for POST requests.
      */
-    loginFormRenderer?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    loginFormRenderer?:
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         LoginFormRenderer<any, any, AuthorizationCodeInitiationResponse | AuthorizationCodeProcessResponse> | undefined;
 
     /**
@@ -279,12 +282,14 @@ export interface KaapiOIDCAuthorizationCodeFlowOptions<
     /**
      * Optional lifecycle method called after initiating the authorization endpoint (GET).
      */
-    onInitiateAuthorization?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onInitiateAuthorization?:
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         KaapiAuthorizationCodeLifecycleMethod<any, any, OIDCAuthorizationCodeInitiationResponse> | undefined;
     /**
      * Optional lifecycle method called after processing the authorization endpoint (POST).
      */
-    onProcessAuthorization?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onProcessAuthorization?:
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         KaapiAuthorizationCodeLifecycleMethod<any, any, OIDCAuthorizationCodeProcessResponse> | undefined;
 
     /**
@@ -313,14 +318,16 @@ export interface KaapiOIDCAuthorizationCodeFlowOptions<
     /**
      * Optional custom form renderer for the authorization endpoint. If not provided, a default login form will be rendered for GET requests, and a simple success/error response will be returned for POST requests.
      */
-    loginFormRenderer?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    loginFormRenderer?:
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         | LoginFormRenderer<any, any, OIDCAuthorizationCodeInitiationResponse | OIDCAuthorizationCodeProcessResponse>
         | undefined;
 
     /**
      * Optional custom consent form renderer for the authorization endpoint. If not provided, a default consent form will be rendered when the authorization endpoint returns a "continue" response, prompting the user to allow or deny the requested scopes.
      */
-    consentFormRenderer?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    consentFormRenderer?:
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         AuthorizationCodeConsentFormRenderer<any, any, OIDCAuthorizationCodeEndpointContext> | undefined;
 }
 
@@ -641,13 +648,17 @@ export class KaapiAuthorizationCodeFlow<
     readonly #passwordField?: string | undefined;
 
     readonly #onPreHandler?: RouteExtObject<ReqRefDefaults> | RouteExtObject<ReqRefDefaults>[] | undefined;
-    readonly #onInitiateAuthorization?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    readonly #onInitiateAuthorization?:
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         KaapiAuthorizationCodeLifecycleMethod<any, any, AuthorizationCodeInitiationResponse> | undefined;
-    readonly #onProcessAuthorization?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    readonly #onProcessAuthorization?:
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         KaapiAuthorizationCodeLifecycleMethod<any, any, AuthorizationCodeProcessResponse> | undefined;
-    readonly #loginFormRenderer?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    readonly #loginFormRenderer?:
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         LoginFormRenderer<any, any, AuthorizationCodeInitiationResponse | AuthorizationCodeProcessResponse> | undefined;
-    readonly #consentFormRenderer?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    readonly #consentFormRenderer?:
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         AuthorizationCodeConsentFormRenderer<any, any, AuthorizationCodeEndpointContext> | undefined;
 
     readonly #kaapi: KaapiAuthorizationCodeMethods<Refs, AuthRefs> = {
@@ -1064,13 +1075,16 @@ export class KaapiAuthorizationCodeFlowBuilder<
     protected strategyOptions: KaapiOAuth2StrategyOptions<Refs> = {};
     protected parseAuthorizationEndpointDataHandler: (request: KaapiRequest<AuthRefs>) => Promise<AuthReqData>;
     protected preHandler?: RouteExtObject<ReqRefDefaults> | RouteExtObject<ReqRefDefaults>[] | undefined;
-    protected initiateAuthorization?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    protected initiateAuthorization?:
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         KaapiAuthorizationCodeLifecycleMethod<any, any, AuthorizationCodeInitiationResponse> | undefined;
-    protected processAuthorization?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    protected processAuthorization?:
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         KaapiAuthorizationCodeLifecycleMethod<any, any, AuthorizationCodeProcessResponse> | undefined;
     protected usernameField?: string | undefined;
     protected passwordField?: string | undefined;
-    protected loginFormRenderer?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    protected loginFormRenderer?:
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         LoginFormRenderer<any, any, AuthorizationCodeInitiationResponse | AuthorizationCodeProcessResponse> | undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     protected consentFormRenderer?: AuthorizationCodeConsentFormRenderer<any, any, any> | undefined;
@@ -1298,18 +1312,22 @@ export class KaapiOIDCAuthorizationCodeFlow<
     readonly #passwordField?: string | undefined;
 
     readonly #onPreHandler?: RouteExtObject<ReqRefDefaults> | RouteExtObject<ReqRefDefaults>[] | undefined;
-    readonly #onInitiateAuthorization?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    readonly #onInitiateAuthorization?:
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         KaapiAuthorizationCodeLifecycleMethod<any, any, OIDCAuthorizationCodeInitiationResponse> | undefined;
-    readonly #onProcessAuthorization?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    readonly #onProcessAuthorization?:
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         KaapiAuthorizationCodeLifecycleMethod<any, any, OIDCAuthorizationCodeProcessResponse> | undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     readonly #onDiscoveryRequest?: Lifecycle.Method<any, any> | undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     readonly #onJwksRequest?: Lifecycle.Method<any, any> | undefined;
-    readonly #loginFormRenderer?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    readonly #loginFormRenderer?:
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         | LoginFormRenderer<any, any, OIDCAuthorizationCodeInitiationResponse | OIDCAuthorizationCodeProcessResponse>
         | undefined;
-    readonly #consentFormRenderer?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    readonly #consentFormRenderer?:
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         AuthorizationCodeConsentFormRenderer<any, any, OIDCAuthorizationCodeEndpointContext> | undefined;
 
     readonly #kaapi: KaapiOIDCAuthorizationCodeMethods<Refs, AuthRefs> = {
@@ -1749,9 +1767,11 @@ export class KaapiOIDCAuthorizationCodeFlowBuilder<
     protected strategyOptions: KaapiOAuth2StrategyOptions<Refs> = {};
     protected parseAuthorizationEndpointDataHandler: (request: KaapiRequest<AuthRefs>) => Promise<AuthReqData>;
     protected preHandler?: RouteExtObject<ReqRefDefaults> | RouteExtObject<ReqRefDefaults>[] | undefined;
-    protected initiateAuthorizationHandler?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    protected initiateAuthorizationHandler?:
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         KaapiAuthorizationCodeLifecycleMethod<any, any, OIDCAuthorizationCodeInitiationResponse> | undefined;
-    protected processAuthorizationHandler?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    protected processAuthorizationHandler?:
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         KaapiAuthorizationCodeLifecycleMethod<any, any, OIDCAuthorizationCodeProcessResponse> | undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     protected discoveryRequestHandler?: Lifecycle.Method<any, any> | undefined;
@@ -1759,7 +1779,8 @@ export class KaapiOIDCAuthorizationCodeFlowBuilder<
     protected jwksRequestHandler?: Lifecycle.Method<any, any> | undefined;
     protected usernameField?: string | undefined;
     protected passwordField?: string | undefined;
-    protected loginFormRenderer?: // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    protected loginFormRenderer?:
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         | LoginFormRenderer<any, any, OIDCAuthorizationCodeInitiationResponse | OIDCAuthorizationCodeProcessResponse>
         | undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -712,8 +712,7 @@ export class KafkaMessaging implements IMessaging {
         let groupIdPrefix: string | undefined;
         let logOffsets = false;
         let onError:
-            | ((error: unknown, message: unknown, context: KafkaMessagingContext) => void | Promise<void>)
-            | undefined;
+            ((error: unknown, message: unknown, context: KafkaMessagingContext) => void | Promise<void>) | undefined;
 
         if (config) {
             const {
