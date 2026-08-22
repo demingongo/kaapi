@@ -53,7 +53,7 @@
         "@types/mocha": "^10.0.10"
     },
     "peerDependencies": {
-        "@saurbit/oauth2": "^0.1.11",
-        "@saurbit/oauth2-jwt": "^0.1.7"
+        "@saurbit/oauth2": "^0.1.13",
+        "@saurbit/oauth2-jwt": "^0.1.9"
     }
 }

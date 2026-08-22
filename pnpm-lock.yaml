@@ -117,11 +117,11 @@ importers:
         specifier: ^1.2.6
         version: 1.2.6
       '@saurbit/oauth2':
-        specifier: 0.1.11
-        version: 0.1.11
+        specifier: ^0.1.13
+        version: 0.1.13
       '@saurbit/oauth2-jwt':
-        specifier: 0.1.7
-        version: 0.1.7(@saurbit/oauth2@0.1.11)
+        specifier: ^0.1.9
+        version: 0.1.9(@saurbit/oauth2@0.1.13)
       joi:
         specifier: ^18.2.1
         version: 18.2.3
@@ -150,11 +150,11 @@ importers:
         specifier: workspace:^
         version: link:../../packages/oauth2-auth-design
       '@saurbit/oauth2':
-        specifier: ^0.1.11
-        version: 0.1.11
+        specifier: ^0.1.13
+        version: 0.1.13
       '@saurbit/oauth2-jwt':
-        specifier: ^0.1.7
-        version: 0.1.7(@saurbit/oauth2@0.1.11)
+        specifier: ^0.1.9
+        version: 0.1.9(@saurbit/oauth2@0.1.13)
       hapi-scalar:
         specifier: ^1.1.0
         version: 1.1.0
@@ -196,11 +196,11 @@ importers:
         specifier: ^1.2.6
         version: 1.2.6
       '@saurbit/oauth2':
-        specifier: ^0.1.11
-        version: 0.1.11
+        specifier: ^0.1.13
+        version: 0.1.13
       '@saurbit/oauth2-jwt':
-        specifier: ^0.1.7
-        version: 0.1.7(@saurbit/oauth2@0.1.11)
+        specifier: ^0.1.9
+        version: 0.1.9(@saurbit/oauth2@0.1.13)
       arktype:
         specifier: ^2.2.0
         version: 2.2.3
@@ -566,11 +566,11 @@ importers:
         specifier: ^1.2.6
         version: 1.2.6
       '@saurbit/oauth2':
-        specifier: ^0.1.11
-        version: 0.1.11
+        specifier: ^0.1.13
+        version: 0.1.13
       '@saurbit/oauth2-jwt':
-        specifier: ^0.1.7
-        version: 0.1.7(@saurbit/oauth2@0.1.11)
+        specifier: ^0.1.9
+        version: 0.1.9(@saurbit/oauth2@0.1.13)
       tslib:
         specifier: ^2.8.1
         version: 2.8.1
@@ -1339,13 +1339,13 @@ packages:
   '@rolldown/pluginutils@1.0.1':
     resolution: {integrity: sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw==}
 
-  '@saurbit/oauth2-jwt@0.1.7':
-    resolution: {integrity: sha512-9Qzzlckl8vEvDrg967WTZ/VY078L19JW3D5+OeFOWDYE1S5kciLCYm8UDWqDLIBH1fZDSOHd46qMd5/w9d0EEA==}
+  '@saurbit/oauth2-jwt@0.1.9':
+    resolution: {integrity: sha512-bUIUUuH05eb+1R0eBaJE/V1VB3bws18Nl4F2B91e/s4h3bVGqX8Bg/utG7h4lcYJCPOL331p7g2xSpEXm6E8yA==}
     peerDependencies:
-      '@saurbit/oauth2': ^0.1.8
+      '@saurbit/oauth2': ^0.1.13
 
-  '@saurbit/oauth2@0.1.11':
-    resolution: {integrity: sha512-v32WshU0Y7JOed3kuii9UKnZETAiA3q3aX5weTw8tNdD31J3vVyVigm9iCCUrLQUwZC/oYp96Y0JENHc8Vyq+Q==}
+  '@saurbit/oauth2@0.1.13':
+    resolution: {integrity: sha512-XuqeGBOxw0Lwzaf2poYR1EXzO1PekWnGZA7sIsq4kR8/a2aEYshF/MYPpuy2qoH7/BFnw5o/yRLsyX9pZ1JAKA==}
 
   '@scalar/client-side-rendering@0.1.13':
     resolution: {integrity: sha512-p8V4HgEWjaCpqsnhclg1pTfjE9JA0AWRr0ocBQHexoHo+pqnSs1d83Mv9rjH7R0FZJrlCSandZZeY3DMX2gYXQ==}
@@ -4751,12 +4751,12 @@ snapshots:
 
   '@rolldown/pluginutils@1.0.1': {}
 
-  '@saurbit/oauth2-jwt@0.1.7(@saurbit/oauth2@0.1.11)':
+  '@saurbit/oauth2-jwt@0.1.9(@saurbit/oauth2@0.1.13)':
     dependencies:
-      '@saurbit/oauth2': 0.1.11
+      '@saurbit/oauth2': 0.1.13
       jose: 6.2.9
 
-  '@saurbit/oauth2@0.1.11': {}
+  '@saurbit/oauth2@0.1.13': {}
 
   '@scalar/client-side-rendering@0.1.13':
     dependencies:

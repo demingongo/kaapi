@@ -4,7 +4,7 @@
 **Source**: `packages/oauth2-auth-design/src/`  
 **Build**: `tsc` → `lib/` · **Format**: CommonJS (`NodeNext`)  
 **Dependencies**: `@hapi/boom`, `@hapi/hoek`, `@kaapi/cli`, `@kaapi/kaapi`, `@novice1/api-doc-generator`, `tslib`  
-**Peer Dependencies**: `@saurbit/oauth2 ^0.1.11`, `@saurbit/oauth2-jwt ^0.1.7`
+**Peer Dependencies**: `@saurbit/oauth2 ^0.1.13`, `@saurbit/oauth2-jwt ^0.1.9`
 
 **Entry points**:
 
