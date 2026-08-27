@@ -1,6 +1,6 @@
 {
     "name": "@kaapi/oauth2-auth-design",
-    "version": "0.0.47",
+    "version": "0.0.48",
     "private": false,
     "description": "OAuth2 auth design for kaapi",
     "main": "lib/index.js",
@@ -53,7 +53,7 @@
         "@types/mocha": "^10.0.10"
     },
     "peerDependencies": {
-        "@saurbit/oauth2": "^0.1.13",
-        "@saurbit/oauth2-jwt": "^0.1.9"
+        "@saurbit/oauth2": "^0.1.14",
+        "@saurbit/oauth2-jwt": "^0.1.10"
     }
 }

@@ -117,11 +117,11 @@ importers:
         specifier: ^1.2.6
         version: 1.2.6
       '@saurbit/oauth2':
-        specifier: ^0.1.13
-        version: 0.1.13
+        specifier: ^0.1.14
+        version: 0.1.14
       '@saurbit/oauth2-jwt':
-        specifier: ^0.1.9
-        version: 0.1.9(@saurbit/oauth2@0.1.13)
+        specifier: ^0.1.10
+        version: 0.1.10(@saurbit/oauth2@0.1.14)
       joi:
         specifier: ^18.2.1
         version: 18.2.3
@@ -150,11 +150,11 @@ importers:
         specifier: workspace:^
         version: link:../../packages/oauth2-auth-design
       '@saurbit/oauth2':
-        specifier: ^0.1.13
-        version: 0.1.13
+        specifier: ^0.1.14
+        version: 0.1.14
       '@saurbit/oauth2-jwt':
-        specifier: ^0.1.9
-        version: 0.1.9(@saurbit/oauth2@0.1.13)
+        specifier: ^0.1.10
+        version: 0.1.10(@saurbit/oauth2@0.1.14)
       hapi-scalar:
         specifier: ^1.1.0
         version: 1.1.0
@@ -196,11 +196,11 @@ importers:
         specifier: ^1.2.6
         version: 1.2.6
       '@saurbit/oauth2':
-        specifier: ^0.1.13
-        version: 0.1.13
+        specifier: ^0.1.14
+        version: 0.1.14
       '@saurbit/oauth2-jwt':
-        specifier: ^0.1.9
-        version: 0.1.9(@saurbit/oauth2@0.1.13)
+        specifier: ^0.1.10
+        version: 0.1.10(@saurbit/oauth2@0.1.14)
       arktype:
         specifier: ^2.2.0
         version: 2.2.3
@@ -566,11 +566,11 @@ importers:
         specifier: ^1.2.6
         version: 1.2.6
       '@saurbit/oauth2':
-        specifier: ^0.1.13
-        version: 0.1.13
+        specifier: ^0.1.14
+        version: 0.1.14
       '@saurbit/oauth2-jwt':
-        specifier: ^0.1.9
-        version: 0.1.9(@saurbit/oauth2@0.1.13)
+        specifier: ^0.1.10
+        version: 0.1.10(@saurbit/oauth2@0.1.14)
       tslib:
         specifier: ^2.8.1
         version: 2.8.1
@@ -1339,13 +1339,13 @@ packages:
   '@rolldown/pluginutils@1.0.1':
     resolution: {integrity: sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw==}
 
-  '@saurbit/oauth2-jwt@0.1.9':
-    resolution: {integrity: sha512-bUIUUuH05eb+1R0eBaJE/V1VB3bws18Nl4F2B91e/s4h3bVGqX8Bg/utG7h4lcYJCPOL331p7g2xSpEXm6E8yA==}
+  '@saurbit/oauth2-jwt@0.1.10':
+    resolution: {integrity: sha512-L4q+WMxu8CaLXqe+BBLGGU11cx2ZMSC8DUurM3w8WuKQLOcYSlcAHthcQGT/j0x4qgzY9ZlypTrUK6SzBH33jg==}
     peerDependencies:
-      '@saurbit/oauth2': ^0.1.13
+      '@saurbit/oauth2': ^0.1.14
 
-  '@saurbit/oauth2@0.1.13':
-    resolution: {integrity: sha512-XuqeGBOxw0Lwzaf2poYR1EXzO1PekWnGZA7sIsq4kR8/a2aEYshF/MYPpuy2qoH7/BFnw5o/yRLsyX9pZ1JAKA==}
+  '@saurbit/oauth2@0.1.14':
+    resolution: {integrity: sha512-GWmBmCk9f5hIYIvzrnx4P0pnBgpXK95qKPYX0Fpbg+TWb/g+YdtBoxAjpVazdk75hpJA835OkbwzVn/2Qu1BKw==}
 
   '@scalar/client-side-rendering@0.1.13':
     resolution: {integrity: sha512-p8V4HgEWjaCpqsnhclg1pTfjE9JA0AWRr0ocBQHexoHo+pqnSs1d83Mv9rjH7R0FZJrlCSandZZeY3DMX2gYXQ==}
@@ -2818,8 +2818,8 @@ packages:
     resolution: {integrity: sha512-N5A3KTWQpPWT4ExxxPlUx7WmykGXRzhNidWhV41d6Abu9YfI2NyWCJuxdPnslJCPWtbRpSVOWSnSS6GakLM/Rg==}
     engines: {node: '>= 20'}
 
-  jose@6.2.9:
-    resolution: {integrity: sha512-XrchZOFZUl/T3vTwRe8XK+cJrGtMF4th1ARnDfwbBXFKThGhlsxEE4Zu03AD/bjJSt/9jT/mxrOCkJWOg77aPA==}
+  jose@6.2.10:
+    resolution: {integrity: sha512-iiW7J9qRFlGxvCOIBDBDxFePQSn7ZMAnrYGhrrOo6siO/MIqwfyilLR27pkfDgUk+raLuzADS8A3S/KLBisc0g==}
 
   js-stringify@1.0.2:
     resolution: {integrity: sha512-rtS5ATOo2Q5k1G+DADISilDA6lv79zIiwFd6CcjuIxGKLFm5C+RLImRscVap9k55i+MOZwgliw+NejvkLuGD5g==}
@@ -4751,12 +4751,12 @@ snapshots:
 
   '@rolldown/pluginutils@1.0.1': {}
 
-  '@saurbit/oauth2-jwt@0.1.9(@saurbit/oauth2@0.1.13)':
+  '@saurbit/oauth2-jwt@0.1.10(@saurbit/oauth2@0.1.14)':
     dependencies:
-      '@saurbit/oauth2': 0.1.13
-      jose: 6.2.9
+      '@saurbit/oauth2': 0.1.14
+      jose: 6.2.10
 
-  '@saurbit/oauth2@0.1.13': {}
+  '@saurbit/oauth2@0.1.14': {}
 
   '@scalar/client-side-rendering@0.1.13':
     dependencies:
@@ -6232,7 +6232,7 @@ snapshots:
       '@hapi/topo': 6.0.2
       '@standard-schema/spec': 1.1.0
 
-  jose@6.2.9: {}
+  jose@6.2.10: {}
 
   js-stringify@1.0.2: {}
 
