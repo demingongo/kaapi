@@ -27,7 +27,7 @@ await app.extend(new MyPlugin());
 
 | Property                           | Type                        | Description                              |
 | ---------------------------------- | --------------------------- | ---------------------------------------- |
-| `log`                              | `ILogger`                   | Framework logger                         |
+| `log`                              | `IKaapiAppLogger`           | Framework logger                         |
 | `server`                           | `Hapi.Server`               | Raw Hapi server instance                 |
 | `openapi`                          | `KaapiOpenAPI \| undefined` | OpenAPI doc builder                      |
 | `postman`                          | `KaapiPostman \| undefined` | Postman doc builder                      |

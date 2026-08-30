@@ -46,7 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `createTopic()` and `waitForTopicReady()` utilities
 - `shutdown()` for graceful disconnection
 - `safeDisconnect()` with timeout protection
-- Integration with Kaapi's `ILogger`
+- Integration with Kaapi's `IKaapiAppLogger`
 
 [Unreleased]: https://github.com/demingongo/kaapi/compare/v0.0.41...HEAD
 [0.0.41]: https://github.com/demingongo/kaapi/commits/v0.0.41

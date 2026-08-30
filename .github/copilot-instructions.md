@@ -13,7 +13,7 @@ Full architecture and API references are in `.agents/`:
 - `.agents/AGENTS.md` — monorepo overview, package registry, dependency graph, workspace setup
 - `.agents/conventions.md` — plugin system, `withSchema()`, `IMessaging`, auth patterns, module formats, error handling
 - `.agents/packages/server.md` — `@kaapi/server`: `KaapiServer`, `KaapiServerRoute`, built-in auth scheme
-- `.agents/packages/kaapi.md` — `@kaapi/kaapi`: `Kaapi` class, `ILogger`, `IMessaging`, auth designs, doc generation
+- `.agents/packages/kaapi.md` — `@kaapi/kaapi`: `Kaapi` class, `IKaapiAppLogger`, `IMessaging`, auth designs, doc generation
 - `.agents/packages/kafka-messaging.md` — `@kaapi/kafka-messaging`: `KafkaMessaging`, publish/subscribe, consumer groups
 - `.agents/packages/oauth2-auth-design.md` — `@kaapi/oauth2-auth-design`: OAuth2/OIDC flows, `@saurbit/oauth2` adapters, flow builders
 - `.agents/packages/cli.md` — `@kaapi/cli`: `FileGenerator`, `kaapi.config.mjs`, CLI scaffolding

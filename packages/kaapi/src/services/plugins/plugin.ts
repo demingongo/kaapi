@@ -1,6 +1,6 @@
 import { KaapiOpenAPI, KaapiPostman } from '../docs/generators';
 import { KaapiGroupAuthUtil } from '../docs/utils';
-import { ILogger } from '../log';
+import { IKaapiAppLogger } from '../log';
 import {
     HandlerDecorations,
     InternalRouteOptionType,
@@ -31,7 +31,7 @@ import { BaseAuthUtil } from '@novice1/api-doc-generator/lib/utils/auth/baseAuth
  * ```
  */
 export interface KaapiTools {
-    readonly log: ILogger;
+    readonly log: IKaapiAppLogger;
     route<Refs extends ReqRef = ReqRefDefaults>(
         serverRoute: KaapiServerRoute<Refs>,
         handler?: HandlerDecorations | Lifecycle.Method<Refs, Lifecycle.ReturnValue<Refs>>

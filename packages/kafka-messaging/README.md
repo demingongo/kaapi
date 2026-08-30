@@ -20,7 +20,7 @@ It abstracts Kafka's producer/consumer logic and provides a simple interface to:
 - Singleton producer with race-condition safe initialization
 - Lazy admin initialization to minimize connections
 - KafkaJS-compatible configuration
-- Structured logging via Kaapi's `ILogger`
+- Structured logging via Kaapi's `IKaapiAppLogger`
 - Typed message handling with TypeScript
 - Graceful shutdown with detailed summary
 
@@ -48,20 +48,20 @@ const messaging = new KafkaMessaging({
     brokers: ['localhost:9092'],
     name: 'my-service',
     address: 'service-1',
-    logger: createLogger(), // optional, use Kaapi ILogger
+    logger: createLogger(), // optional, use Kaapi IKaapiAppLogger
 });
 ```
 
 The constructor accepts a `KafkaMessagingConfig` object, which extends `KafkaConfig` from [kafkajs](https://kafka.js.org/):
 
-| Option     | Type             | Description                                                               |
-| ---------- | ---------------- | ------------------------------------------------------------------------- |
-| `brokers`  | `string[]`       | List of Kafka broker addresses (e.g. `['localhost:9092']`). **Required.** |
-| `clientId` | `string`         | Unique client identifier for Kafka.                                       |
-| `logger`   | `ILogger`        | Optional logger implementing Kaapi's `ILogger` interface.                 |
-| `address`  | `string`         | Optional unique service address for routing and identification.           |
-| `name`     | `string`         | Optional human-readable name for service tracking/monitoring.             |
-| `producer` | `ProducerConfig` | Optional default KafkaJS producer configuration.                          |
+| Option     | Type              | Description                                                               |
+| ---------- | ----------------- | ------------------------------------------------------------------------- |
+| `brokers`  | `string[]`        | List of Kafka broker addresses (e.g. `['localhost:9092']`). **Required.** |
+| `clientId` | `string`          | Unique client identifier for Kafka.                                       |
+| `logger`   | `IKaapiAppLogger` | Optional logger implementing Kaapi's `IKaapiAppLogger` interface.         |
+| `address`  | `string`          | Optional unique service address for routing and identification.           |
+| `name`     | `string`          | Optional human-readable name for service tracking/monitoring.             |
+| `producer` | `ProducerConfig`  | Optional default KafkaJS producer configuration.                          |
 
 ---
 

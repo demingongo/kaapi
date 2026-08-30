@@ -1,15 +1,12 @@
+import type { ILogger } from '@kaapi/logger';
 import winston from 'winston';
 
-export interface ILogger {
+export { ILogger } from '@kaapi/logger';
+
+export interface IKaapiAppLogger extends ILogger {
     (...args: unknown[]): void;
-    silly: (...args: unknown[]) => void;
-    debug: (...args: unknown[]) => void;
-    verbose: (...args: unknown[]) => void;
-    info: (...args: unknown[]) => void;
-    warn: (...args: unknown[]) => void;
     warning: (...args: unknown[]) => void;
     err: (...args: unknown[]) => void;
-    error: (...args: unknown[]) => void;
 }
 
 function wrap(loggerFn: winston.LeveledLogMethod) {
@@ -34,7 +31,7 @@ function wrap(loggerFn: winston.LeveledLogMethod) {
     };
 }
 
-export function createLogger(options?: winston.LoggerOptions): ILogger {
+export function createLogger(options?: winston.LoggerOptions): IKaapiAppLogger {
     const wlogger = winston.createLogger(options);
 
     return Object.assign(wrap(wlogger.info), {
@@ -46,5 +43,6 @@ export function createLogger(options?: winston.LoggerOptions): ILogger {
         warning: wrap(wlogger.warn),
         err: wrap(wlogger.error),
         error: wrap(wlogger.error),
+        fatal: wrap(wlogger.error),
     });
 }

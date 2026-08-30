@@ -77,16 +77,16 @@ pnpm --filter @kaapi/cli kaapi generate
 
 ## Navigation Guide
 
-| Topic                                                        | File                                                               |
-| ------------------------------------------------------------ | ------------------------------------------------------------------ |
-| Plugin system, coding conventions, cross-cutting patterns    | [conventions.md](./conventions.md)                                 |
-| `KaapiServer`, `KaapiServerRoute`, auth scheme               | [packages/server.md](./packages/server.md)                         |
-| `Kaapi` class, `ILogger`, `IMessaging`, auth designs, docs   | [packages/kaapi.md](./packages/kaapi.md)                           |
-| Kafka messaging backend                                      | [packages/kafka-messaging.md](./packages/kafka-messaging.md)       |
-| OAuth2/OIDC flows, flow builders, `@saurbit/oauth2` adapters | [packages/oauth2-auth-design.md](./packages/oauth2-auth-design.md) |
-| `kaapi` CLI, `FileGenerator`, `kaapi.config.mjs`             | [packages/cli.md](./packages/cli.md)                               |
-| Request validation (ArkType / Valibot / Zod)                 | [packages/validators.md](./packages/validators.md)                 |
-| Logger utilities                                             | [packages/logger.md](./packages/logger.md)                         |
+| Topic                                                              | File                                                               |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| Plugin system, coding conventions, cross-cutting patterns          | [conventions.md](./conventions.md)                                 |
+| `KaapiServer`, `KaapiServerRoute`, auth scheme                     | [packages/server.md](./packages/server.md)                         |
+| `Kaapi` class, `IKaapiAppLogger`, `IMessaging`, auth designs, docs | [packages/kaapi.md](./packages/kaapi.md)                           |
+| Kafka messaging backend                                            | [packages/kafka-messaging.md](./packages/kafka-messaging.md)       |
+| OAuth2/OIDC flows, flow builders, `@saurbit/oauth2` adapters       | [packages/oauth2-auth-design.md](./packages/oauth2-auth-design.md) |
+| `kaapi` CLI, `FileGenerator`, `kaapi.config.mjs`                   | [packages/cli.md](./packages/cli.md)                               |
+| Request validation (ArkType / Valibot / Zod)                       | [packages/validators.md](./packages/validators.md)                 |
+| Logger utilities                                                   | [packages/logger.md](./packages/logger.md)                         |
 
 ---
 

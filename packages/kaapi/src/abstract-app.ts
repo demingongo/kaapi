@@ -1,6 +1,6 @@
 import type { KaapiOpenAPIHelperClass } from './services/docs/generators';
 import type { RouteModifierObject } from './services/docs/modifiers';
-import { ILogger } from './services/log';
+import { IKaapiAppLogger } from './services/log';
 import {
     IMessaging,
     IMessagingContext,
@@ -23,7 +23,7 @@ export interface KaapiPluginConfiguration {
 }
 
 export interface IKaapiApp extends IMessaging {
-    log: ILogger;
+    log: IKaapiAppLogger;
     emit: IPublishMethod;
     on: ISubscribeMethod;
     server(): KaapiServer;
@@ -34,7 +34,7 @@ export interface IKaapiApp extends IMessaging {
 }
 
 export abstract class AbstractKaapiApp implements IKaapiApp {
-    abstract log: ILogger;
+    abstract log: IKaapiAppLogger;
     abstract emit<T = unknown>(topic: string, message: T): Promise<void>;
     abstract on<T = unknown>(
         topic: string,

@@ -1,7 +1,7 @@
 import { IKaapiApp, AbstractKaapiApp } from './abstract-app';
 import { createDocsRouter, DocsConfig, DocsUIOptions } from './services/docs/docs';
 import { formatRequestRoute, formatRoutes, KaapiOpenAPI, KaapiPostman } from './services/docs/generators';
-import { createLogger, ILogger } from './services/log';
+import { createLogger, IKaapiAppLogger, ILogger } from './services/log';
 import { IMessaging, IMessagingContext, IMessagingSubscribeConfig } from './services/messaging';
 import { KaapiPlugin, KaapiTools } from './services/plugins/plugin';
 import { HandlerDecorations, Lifecycle, ReqRef, ReqRefDefaults, Server } from '@hapi/hapi';
@@ -9,6 +9,20 @@ import { KaapiServer, KaapiServerOptions, KaapiServerRoute } from '@kaapi/server
 import { SchemaObject3_1 } from '@novice1/api-doc-generator';
 import qs from 'qs';
 import winston from 'winston';
+
+function wrapLogger(logger: ILogger) {
+    return Object.assign((...args: unknown[]) => logger.info(...args), {
+        silly: (...args: unknown[]) => logger.silly(...args),
+        debug: (...args: unknown[]) => logger.debug(...args),
+        verbose: (...args: unknown[]) => logger.verbose(...args),
+        info: (...args: unknown[]) => logger.info(...args),
+        warn: (...args: unknown[]) => logger.warn(...args),
+        warning: (...args: unknown[]) => logger.warn(...args),
+        err: (...args: unknown[]) => logger.error(...args),
+        error: (...args: unknown[]) => logger.error(...args),
+        fatal: (...args: unknown[]) => logger.fatal(...args),
+    });
+}
 
 export interface KaapiAppOptions extends KaapiServerOptions {
     logger?: ILogger;
@@ -19,7 +33,7 @@ export interface KaapiAppOptions extends KaapiServerOptions {
 }
 
 export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
-    public readonly log;
+    public readonly log: IKaapiAppLogger;
 
     protected messaging?: IMessaging;
 
@@ -50,20 +64,20 @@ export class Kaapi extends AbstractKaapiApp implements IKaapiApp {
 
         this.#defaultServerOpts = serverOpts;
 
-        this.log =
-            logger ||
-            createLogger({
-                transports: [
-                    new winston.transports.Console({
-                        format: winston.format.combine(
-                            winston.format.colorize(),
-                            winston.format.splat(),
-                            winston.format.simple()
-                        ),
-                    }),
-                ],
-                ...(loggerOptions || {}),
-            });
+        this.log = logger
+            ? wrapLogger(logger)
+            : createLogger({
+                  transports: [
+                      new winston.transports.Console({
+                          format: winston.format.combine(
+                              winston.format.colorize(),
+                              winston.format.splat(),
+                              winston.format.simple()
+                          ),
+                      }),
+                  ],
+                  ...(loggerOptions || {}),
+              });
         this.messaging = messaging;
 
         if (!this.messaging) {

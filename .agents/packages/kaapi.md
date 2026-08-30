@@ -19,7 +19,7 @@ src/
   app.ts                                ← Kaapi class (main entry point)
   declarations.d.ts                     ← Hapi module augmentation
   services/
-    log.ts                              ← ILogger, createLogger
+    log.ts                              ← IKaapiAppLogger, createLogger
     messaging.ts                        ← IMessaging, IMessagingContext, IPublishMethod, ISubscribeMethod
     docs/
       docs.ts                           ← DocsConfig, createDocsRouter
@@ -89,7 +89,7 @@ Extends `KaapiServerOptions` (from `@kaapi/server`) with:
 
 | Member                             | Type                        | Description                                            |
 | ---------------------------------- | --------------------------- | ------------------------------------------------------ |
-| `log`                              | `ILogger`                   | Application logger                                     |
+| `log`                              | `IKaapiAppLogger`           | Application logger                                     |
 | `openapi`                          | `KaapiOpenAPI`              | OpenAPI doc builder                                    |
 | `postman`                          | `KaapiPostman`              | Postman collection builder                             |
 | `server(opts?)`                    | `() => KaapiServer`         | Returns (creates if needed) the `KaapiServer` instance |
@@ -108,7 +108,7 @@ Extends `KaapiServerOptions` (from `@kaapi/server`) with:
 
 ```ts
 interface IKaapiApp extends IMessaging {
-    log: ILogger;
+    log: IKaapiAppLogger;
     emit: IPublishMethod;
     on: ISubscribeMethod;
     server(): KaapiServer;
@@ -140,12 +140,12 @@ interface KaapiPluginConfiguration {
 
 ---
 
-## `ILogger`
+## `IKaapiAppLogger`
 
 Winston-based logger callable both as a function and via level methods.
 
 ```ts
-interface ILogger {
+interface IKaapiAppLogger {
     (...args: unknown[]): void; // logs at 'info' level
     silly: (...args: unknown[]) => void;
     debug: (...args: unknown[]) => void;
@@ -158,7 +158,7 @@ interface ILogger {
 }
 ```
 
-`createLogger(options?: winston.LoggerOptions): ILogger` — factory function. Arguments are automatically serialized (objects → JSON, Errors → stack trace).
+`createLogger(options?: winston.LoggerOptions): IKaapiAppLogger` — factory function. Arguments are automatically serialized (objects → JSON, Errors → stack trace).
 
 ---
 
@@ -205,7 +205,7 @@ interface KaapiPlugin {
 
 ```ts
 interface KaapiTools {
-    readonly log: ILogger;
+    readonly log: IKaapiAppLogger;
     server: Hapi.Server;
     openapi?: KaapiOpenAPI;
     postman?: KaapiPostman;
@@ -372,9 +372,7 @@ const route = applyModifiers(
     { method: 'POST', path: '/items', handler: () => ({ ok: true }) },
     {
         overrideResponses: true,
-        responses: new ResponseDocsModifier()
-            .setCode(201)
-            .addMediaType('application/json', { schema: mySchema }),
+        responses: new ResponseDocsModifier().setCode(201).addMediaType('application/json', { schema: mySchema }),
     }
 );
 
@@ -416,7 +414,7 @@ declare module '@hapi/hapi' {
 - Selected Winston types (`LoggerOptions`, `Logger`, `Container`, etc.)
 - All doc generators, modifiers, utilities (including `applyModifiers`)
 - All plugin interfaces + built-in auth designs
-- `ILogger`, `createLogger`
+- `IKaapiAppLogger`, `ILogger`, `createLogger`
 - `IMessaging`, `IMessagingContext`, `IPublishMethod`, `ISubscribeMethod`, `IMessagingSubscribeConfig`
 - `AbstractKaapiApp`, `IKaapiApp`, `KaapiPluginConfiguration`
 - `Kaapi`, `KaapiAppOptions`

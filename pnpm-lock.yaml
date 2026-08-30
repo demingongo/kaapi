@@ -487,6 +487,9 @@ importers:
       '@hapi/hapi':
         specifier: ^21.4.10
         version: 21.4.10
+      '@kaapi/logger':
+        specifier: workspace:^
+        version: link:../logger
       '@kaapi/server':
         specifier: workspace:^
         version: link:../server
