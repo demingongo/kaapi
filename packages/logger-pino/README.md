@@ -56,3 +56,31 @@ log.silly('Kaapi built-in level');
 log.notice('Your new notice log level!');
 log.alert('Your new alert log level!');
 ```
+
+### Usage with pino-pretty
+
+```ts
+import { createPinoLogger } from '@kaapi/logger-pino';
+
+const log = createPinoLogger({
+    level: 'trace',
+    transport: {
+        target: 'pino-pretty',
+        options: {
+            colorize: true,
+            customLevels: 'verbose:25',
+            customColors: 'verbose:cyan',
+            useOnlyCustomProps: false,
+        },
+    },
+});
+
+log.silly('Silly log');
+log.trace('Trace log');
+log.debug('Debug log');
+log.verbose('Verbose log');
+log.info('Info log');
+log.warn('Warn log');
+log.error('Error log');
+log.fatal('Fatal log');
+```
