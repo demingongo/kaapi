@@ -1,3 +1,4 @@
+import { describe, it } from 'mocha';
 import { formatPinoLogArgs } from '../src';
 import { expect } from 'chai';
 
