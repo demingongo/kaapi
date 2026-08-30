@@ -1,6 +1,6 @@
 {
     "name": "@kaapi/logger",
-    "version": "0.0.49",
+    "version": "0.0.50",
     "private": false,
     "description": "logger",
     "main": "lib/index.js",

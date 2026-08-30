@@ -1,6 +1,6 @@
 {
     "name": "@kaapi/logger-pino",
-    "version": "0.0.49",
+    "version": "0.0.50",
     "private": false,
     "type": "commonjs",
     "description": "A customized Pino logger wrapper featuring predefined 'silly' and 'verbose' log levels.",

@@ -1,0 +1,9 @@
+eslint.config.mjs
+src/
+tsconfig.json
+scripts
+test
+kaukau-*.mjs
+.c8rc.json
+kaukau.config.mjs
+.prettierignore
