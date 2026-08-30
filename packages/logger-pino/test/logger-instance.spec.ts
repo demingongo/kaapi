@@ -9,9 +9,9 @@ describe('Logger Instance', () => {
         },
     });
 
-    beforeEach(async () => {});
+    beforeEach(async () => { });
 
-    afterEach(async () => {});
+    afterEach(async () => { });
 
     it('should create a logger instance with custom levels', () => {
         expect(log).to.not.be.an('undefined');

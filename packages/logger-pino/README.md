@@ -32,3 +32,27 @@ const app = new Kaapi({
 app.log.info('Using Pino to log');
 app.log.silly('This is a highly detailed silly trace log!');
 ```
+
+## Advanced Custom Levels
+
+If you need to introduce extra custom levels beyond the built-in silly and verbose options, import the internalCustomLevels object. This ensures your custom settings merge seamlessly with Kaapi's defaults without overwriting them:
+
+```ts
+import { createPinoLogger, internalCustomLevels } from '@kaapi/logger-pino';
+
+// Define your custom type constraints so TypeScript catches typo errors
+type ExtendedLevels = 'notice' | 'alert';
+
+const log = createPinoLogger<ExtendedLevels>({
+    customLevels: {
+        ...internalCustomLevels,
+        notice: 35,
+        alert: 55,
+    },
+});
+
+log.info('Standard log message');
+log.silly('Kaapi built-in level');
+log.notice('Your new notice log level!');
+log.alert('Your new alert log level!');
+```
