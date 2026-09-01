@@ -1,6 +1,6 @@
 # `@kaapi/server` — Package Reference
 
-**npm**: `@kaapi/server` · **version**: 0.0.45  
+**npm**: `@kaapi/server` · **version**: 0.0.51  
 **Source**: `packages/server/src/index.ts` (single file)  
 **Build**: `tsc` → `lib/` · **Format**: CommonJS (`NodeNext`)  
 **Dependencies**: `@hapi/boom`, `@hapi/hapi`, `@hapi/hoek`, `tslib`

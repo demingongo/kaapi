@@ -10,15 +10,16 @@ This monorepo uses **pnpm workspaces**. Focus on `packages/` — `examples/` con
 
 | Package                       | npm name                    | Version | Description                                                                           |
 | ----------------------------- | --------------------------- | ------- | ------------------------------------------------------------------------------------- |
-| `packages/server`             | `@kaapi/server`             | 0.0.45  | Low-level Hapi.js wrapper with built-in `kaapi-auth` Bearer scheme                    |
-| `packages/kaapi`              | `@kaapi/kaapi`              | 0.0.45  | **Main framework** — wraps server, adds logging, messaging, plugins, docs             |
-| `packages/kafka-messaging`    | `@kaapi/kafka-messaging`    | 0.0.45  | KafkaJS-based `IMessaging` implementation                                             |
-| `packages/oauth2-auth-design` | `@kaapi/oauth2-auth-design` | 0.0.45  | OAuth2/OIDC auth flows as Kaapi plugins (Auth Code, Client Credentials, Device, OIDC) |
-| `packages/cli`                | `@kaapi/cli`                | 0.0.45  | Interactive `kaapi` CLI for scaffolding plugins, auth designs, etc.                   |
-| `packages/validator-arktype`  | `@kaapi/validator-arktype`  | 0.0.45  | ArkType-based request validation plugin (ESM-only)                                    |
-| `packages/validator-valibot`  | `@kaapi/validator-valibot`  | 0.0.45  | Valibot-based request validation plugin                                               |
-| `packages/validator-zod`      | `@kaapi/validator-zod`      | 0.0.45  | Zod v4-based request validation plugin                                                |
-| `packages/logger`             | `@kaapi/logger`             | 0.0.45  | Logger utilities for Kaapi                                                            |
+| `packages/server`             | `@kaapi/server`             | 0.0.51  | Low-level Hapi.js wrapper with built-in `kaapi-auth` Bearer scheme                    |
+| `packages/kaapi`              | `@kaapi/kaapi`              | 0.0.51  | **Main framework** — wraps server, adds logging, messaging, plugins, docs             |
+| `packages/kafka-messaging`    | `@kaapi/kafka-messaging`    | 0.0.51  | KafkaJS-based `IMessaging` implementation                                             |
+| `packages/oauth2-auth-design` | `@kaapi/oauth2-auth-design` | 0.0.51  | OAuth2/OIDC auth flows as Kaapi plugins (Auth Code, Client Credentials, Device, OIDC) |
+| `packages/cli`                | `@kaapi/cli`                | 0.0.51  | Interactive `kaapi` CLI for scaffolding plugins, auth designs, etc.                   |
+| `packages/validator-arktype`  | `@kaapi/validator-arktype`  | 0.0.51  | ArkType-based request validation plugin (ESM-only)                                    |
+| `packages/validator-valibot`  | `@kaapi/validator-valibot`  | 0.0.51  | Valibot-based request validation plugin                                               |
+| `packages/validator-zod`      | `@kaapi/validator-zod`      | 0.0.51  | Zod v4-based request validation plugin                                                |
+| `packages/logger`             | `@kaapi/logger`             | 0.0.51  | Logger utilities for Kaapi                                                            |
+| `packages/logger-pino`        | `@kaapi/logger-pino`        | 0.0.51  | Pino-based `ILogger` implementation with custom `silly`/`verbose` levels              |
 
 ---
 
@@ -28,16 +29,19 @@ This monorepo uses **pnpm workspaces**. Focus on `packages/` — `examples/` con
 @kaapi/server           ← foundation, no internal deps
       ↑
 @kaapi/kaapi            ← main framework (re-exports @kaapi/server + @hapi/hapi)
-      ↑
-      ├── @kaapi/kafka-messaging   (IMessaging backend)
-      ├── @kaapi/validator-arktype (validation plugin)
-      ├── @kaapi/validator-valibot (validation plugin)
-      ├── @kaapi/validator-zod     (validation plugin)
-      └── @kaapi/oauth2-auth-design
-              ↑ also depends on
-          @kaapi/cli               (for code generation)
+  ↑ (also depends on @kaapi/logger)
+  ├── @kaapi/kafka-messaging   (IMessaging backend)
+  ├── @kaapi/validator-arktype (validation plugin)
+  ├── @kaapi/validator-valibot (validation plugin)
+  ├── @kaapi/validator-zod     (validation plugin)
+  └── @kaapi/oauth2-auth-design
+          ↑ also depends on
+      @kaapi/cli               (for code generation)
 
 @kaapi/logger           ← standalone logger utilities, no internal deps
+      ↑
+      ├── @kaapi/kaapi             (framework; see above)
+      └── @kaapi/logger-pino       (Pino-based ILogger implementation)
 ```
 
 All user-facing code imports from `@kaapi/kaapi`, which fully re-exports `@kaapi/server` and `@hapi/hapi`.
@@ -87,6 +91,7 @@ pnpm --filter @kaapi/cli kaapi generate
 | `kaapi` CLI, `FileGenerator`, `kaapi.config.mjs`                   | [packages/cli.md](./packages/cli.md)                               |
 | Request validation (ArkType / Valibot / Zod)                       | [packages/validators.md](./packages/validators.md)                 |
 | Logger utilities                                                   | [packages/logger.md](./packages/logger.md)                         |
+| Pino-based logger implementation                                   | [packages/logger-pino.md](./packages/logger-pino.md)               |
 
 ---
 

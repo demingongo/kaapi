@@ -1,6 +1,6 @@
 # `@kaapi/cli` — Package Reference
 
-**npm**: `@kaapi/cli` · **version**: 0.0.45  
+**npm**: `@kaapi/cli` · **version**: 0.0.51  
 **Source**: `packages/cli/src/`  
 **Build**: `tsc` → `dist/` · **Format**: CommonJS (`NodeNext`)  
 **Binary**: `kaapi` (via `package.json` `bin` field)  

@@ -1,6 +1,6 @@
 # `@kaapi/kafka-messaging` — Package Reference
 
-**npm**: `@kaapi/kafka-messaging` · **version**: 0.0.45  
+**npm**: `@kaapi/kafka-messaging` · **version**: 0.0.51  
 **Source**: `packages/kafka-messaging/src/index.ts` (single file)  
 **Build**: `tsc` → `lib/` · **Format**: CommonJS (`NodeNext`)  
 **Dependencies**: `@kaapi/kaapi`, `kafkajs`, `tslib`

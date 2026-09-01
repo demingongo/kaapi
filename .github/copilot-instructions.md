@@ -19,6 +19,7 @@ Full architecture and API references are in `.agents/`:
 - `.agents/packages/cli.md` — `@kaapi/cli`: `FileGenerator`, `kaapi.config.mjs`, CLI scaffolding
 - `.agents/packages/validators.md` — `@kaapi/validator-{arktype,valibot,zod}`: request validation plugins
 - `.agents/packages/logger.md` — `@kaapi/logger`: logger utilities
+- `.agents/packages/logger-pino.md` — `@kaapi/logger-pino`: Pino-based `ILogger` implementation
 
 Read the relevant file before making changes to any package.
 
@@ -26,7 +27,7 @@ Read the relevant file before making changes to any package.
 
 ## Key Facts
 
-- All packages are under `@kaapi/` npm scope, currently at version `0.0.45`
+- All packages are under `@kaapi/` npm scope, currently at version `0.0.51`
 - **Import from `@kaapi/kaapi`** — it re-exports everything from `@kaapi/server` and `@hapi/hapi`
 - **All packages are CommonJS** (`NodeNext`) except `@kaapi/validator-arktype` which is **ESM-only** (built with `tsdown`)
 - Extensions implement `KaapiPlugin { integrate(t: KaapiTools) }` and register via `app.extend(plugin)`
